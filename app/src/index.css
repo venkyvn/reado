@@ -1,29 +1,403 @@
+/* Design tokens + component styles — đủ cho walking skeleton (không phải design
+ * system R2). Nguyên tắc UI/UX đã soi ref/ui-ux-pro-max.md: touch target ≥ 48px,
+ * contrast AA, chip không wrap nội dung, không cần font ngoài. */
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  color-scheme: light dark;
+  color-scheme: light;
+  --bg: #f8fafc;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #cbd5e1;
+  --accent: #2563eb;
+  --card: #ffffff;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
-  min-height: 100dvh;
-  background: #f8fafc;
-  color: #0f172a;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #0f172a;
-    color: #f8fafc;
-  }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
 }
 
 #root {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+h1 {
+  font-size: 24px;
+  margin: 8px 0 12px;
+}
+
+h2 {
+  font-size: 17px;
+  margin: 16px 0 8px;
+}
+
+p {
+  margin: 8px 0;
+}
+
+.shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 16px 72px;
+  width: 100%;
+  flex: 1;
+}
+
+.pad {
+  padding-top: 16px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.fine {
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.dim {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.primary {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 15px 18px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  min-height: 48px;
+}
+
+.primary.alt {
+  background: #334155;
+}
+
+.primary:active:not(:disabled) {
+  background: #1e293b;
+}
+
+.secondary {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  min-height: 48px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.btn-row .primary,
+.btn-row .secondary {
+  flex: 1;
+  margin: 0;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  margin: 6px 0 12px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+label input {
+  display: block;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 0;
+}
+
+.banner {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin: 12px 0;
+}
+
+.banner-warn {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+.banner-warn a {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.banner-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.errorbox {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.errorbox .fine {
+  color: #991b1b;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.chip-verified {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.chip-suspect {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.chip-unverified {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.brand {
+  font-size: 30px;
+  margin: 20px 0 4px;
+}
+
+.home .primary {
+  margin-top: 16px;
+}
+
+.home .primary + .primary {
+  margin-top: 14px;
+}
+
+.dump {
+  font-size: 13px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.dump li {
+  border-bottom: 1px dashed var(--line);
+  padding: 6px 0;
+}
+
+.crop-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 8px 0;
+}
+
+.crop-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 55vh;
+  width: auto;
+  height: auto;
+  touch-action: none;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.crop-box {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: rgba(37, 99, 235, 0.12);
+  pointer-events: none;
+}
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  margin: 14px auto;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.analyzing {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.boot-loading {
+  text-align: center;
+  padding: 80px 0;
+  color: var(--muted);
+}
+
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.kv td {
+  padding: 8px 4px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.kv-k {
+  color: var(--muted);
+  width: 42%;
+}
+
+.kv-ok {
+  color: #166534;
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0f172a;
+    --ink: #f1f5f9;
+    --muted: #94a3b8;
+    --line: #334155;
+    --card: #1e293b;
+  }
+
+  .primary {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .primary.alt {
+    background: #cbd5e1;
+  }
+
+  .secondary,
+  input,
+  select {
+    background: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .chip-verified {
+    background: #14532d;
+    color: #bbf7d0;
+  }
+
+  .chip-suspect {
+    background: #422006;
+    color: #fde68a;
+  }
+
+  .chip-unverified {
+    background: #450a0a;
+    color: #fecaca;
+  }
+
+  .banner-warn {
+    background: #422006;
+    border-color: #92400e;
+    color: #fde68a;
+  }
+
+  .banner-error {
+    background: #450a0a;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+
+  .errorbox {
+    background: #450a0a;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+
+  .errorbox .fine {
+    color: #fecaca;
+  }
+
+  .dump li {
+    border-bottom-color: var(--line);
+  }
 }

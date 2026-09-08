@@ -1,25 +1,53 @@
 /**
- * App skeleton — task 1.3 (Phase 1).
- * Mục tiêu duy nhất: PWA chạy được, mở được OFFLINE (NFR-03). Chưa có feature nào —
- * màn hình Home thật (FR-01 capture, FR-18 con số nợ...) nằm ở Phase 2.
+ * App.tsx — điểm vào React duy nhất: chờ bootstrap (SQLite + services) rồi giao
+ * quyền render cho AppRoot. Giai đoạn chờ hiện màn "Đang mở kho dữ liệu…"; lỗi
+ * bootstrap là lỗi HIỂN THỊ ĐƯỢC, không phải màn hình trắng.
  */
-import './App.css'
+import { useEffect, useState } from "react";
+import { bootstrap } from "./app/bootstrap";
+import type { BootstrapResult } from "./app/bootstrap";
+import { AppRoot } from "./ui/AppRoot";
 
 function App() {
-  return (
-    <main style={{ padding: 24, maxWidth: 480, margin: '0 auto', flex: 1 }}>
-      <h1 style={{ margin: '24px 0 4px' }}>Reado</h1>
-      <p style={{ margin: 0, opacity: 0.7 }}>
-        Skeleton Phase 1 — PWA &amp; offline shell đã lên.
-      </p>
-      <p style={{ margin: '8px 0 24px', opacity: 0.7 }}>
-        Chụp trang → song ngữ → từ vựng → ôn tập: bắt đầu từ Phase 2.
-      </p>
-      <button type="button" disabled title="Sẽ nối ở Phase 2 (FR-01)">
-        📷 Chụp trang sách
-      </button>
-    </main>
-  )
+  const [boot, setBoot] = useState<BootstrapResult | null>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // StrictMode (dev) mount 2 lần: dùng cờ cancell để lần đầu bị bỏ, không
+    // để bootstrap chạy đè nhau.
+    let cancelled = false;
+    bootstrap()
+      .then((result) => {
+        if (!cancelled) setBoot(result);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setBootError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (bootError) {
+    return (
+      <main className="shell">
+        <div className="banner banner-error">
+          Không khởi động được kho dữ liệu: {bootError}
+        </div>
+      </main>
+    );
+  }
+  if (!boot) {
+    return (
+      <main className="shell">
+        <div className="boot-loading">
+          <div className="spinner" aria-hidden="true" />
+          <p>Đang mở kho dữ liệu…</p>
+        </div>
+      </main>
+    );
+  }
+  return <AppRoot boot={boot} />;
 }
 
-export default App
+export default App;

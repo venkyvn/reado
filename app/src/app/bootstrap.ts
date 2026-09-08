@@ -15,6 +15,8 @@ export interface BootstrapResult {
   services: AppServices;
   /** Cảnh báo vận hành (VFS/OPFS/WAL) — app phải HIỂN THỊ, không nuốt. */
   storageWarnings: string[];
+  /** "opfs" = lưu thật; "memory" = mất khi đóng — app phải cảnh báo rõ. */
+  storageMode: "opfs" | "memory";
 }
 
 export async function bootstrap(): Promise<BootstrapResult> {
@@ -35,5 +37,5 @@ export async function bootstrap(): Promise<BootstrapResult> {
     timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
   };
 
-  return { services, storageWarnings: kernel.warnings };
+  return { services, storageWarnings: kernel.warnings, storageMode: kernel.mode };
 }
