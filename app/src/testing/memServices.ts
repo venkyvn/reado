@@ -4,12 +4,17 @@
  * Dùng cho test: use-case chạy trên storage THẬT (kernel in-memory + migrate +
  * seed + repos thật), chỉ AI provider là fake (network không vào test). Clock và
  * timezone injectable — kịch bản giờ giấc (day cutoff, due) chạy tất định.
+ *
+ * Test chạy trong Node nên không có Web Worker/OPFS: dùng lõi đồng bộ in-process
+ * (`initSyncDb` + `createLocalAppDb`) — cùng một bộ SQL/migrate/seed như browser,
+ * chỉ khác chỗ DB sống. Vì vậy test vẫn chứng minh được hành vi thật của repos.
  */
 import type { AiProvider } from "../domain/ai";
 import { createScheduler } from "../domain/scheduler";
 import type { AppServices } from "../domain/services";
-import { initAppDb } from "../storage/db";
+import { createLocalAppDb } from "../storage/db";
 import { openMemoryKernel } from "../storage/kernel";
+import { initSyncDb } from "../storage/syncDb";
 import { createRepos } from "../storage/repos";
 
 export interface MemServicesOptions {
@@ -25,7 +30,7 @@ export function makeFakeAi(impl: AiProvider["analyzePage"]): AiProvider {
 
 export async function createMemServices(opts: MemServicesOptions = {}): Promise<AppServices> {
   const kernel = await openMemoryKernel();
-  const appDb = initAppDb(kernel);
+  const appDb = createLocalAppDb(initSyncDb(kernel).db);
   const repos = createRepos(appDb);
   const settings = await repos.settings.get();
   const scheduler = createScheduler({

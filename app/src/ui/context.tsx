@@ -12,6 +12,8 @@ export interface AppEnv {
   services: AppServices;
   storageWarnings: string[];
   storageMode: "opfs" | "memory";
+  /** Marker lần mở trước — bằng chứng dữ liệu sống qua reload (null = chưa persist). */
+  previousBootAt: string | null;
 }
 
 const AppEnvContext = createContext<AppEnv | null>(null);

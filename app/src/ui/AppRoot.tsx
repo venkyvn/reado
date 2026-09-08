@@ -42,6 +42,7 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
     services: boot.services,
     storageWarnings: boot.storageWarnings,
     storageMode: boot.storageMode,
+    previousBootAt: boot.previousBootAt,
   };
 
   return (

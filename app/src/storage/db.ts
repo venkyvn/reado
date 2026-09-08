@@ -1,95 +1,115 @@
 /**
- * storage/db.ts — AppDb: wrapper mỏng quanh handle oo1 của sqlite-wasm.
+ * storage/db.ts — `AppDb`: facade BẤT ĐỒNG BỘ mà repos/domain nhìn thấy.
  *
- * UI/domain KHÔNG nhìn thấy file này (chỉ repos thật dùng nó) — dependency rule
- * giữ nguyên: domain định interface, storage implement. Mọi câu SQL trong repo
- * đi qua `all/get/exec`; mọi ghi đa bước đi qua `transaction`.
+ * Vì sao async: DB SQLite sống trong Web Worker (VFS OPFS không chạy được ở main
+ * thread — xem syncDb.ts), nên mỗi câu SQL là một vòng postMessage. Repos vốn đã
+ * là hàm async nên chỉ cần thêm `await`; domain/usecase/UI không đổi một dòng.
+ *
+ * Hai transport cho cùng một facade:
+ * - `createLocalAppDb`  : in-process (Node/vitest, :memory:) — await là hình thức.
+ * - `openWorkerStorage` : RPC sang Worker (browser, OPFS) — xem workerStorage.ts.
+ *
+ * Khoá (mutex) là phần quan trọng: `transaction` phải giữ độc quyền suốt khối ghi,
+ * nếu không một lời gọi concurrent khác sẽ chen câu SQL của nó VÀO GIỮA transaction
+ * của mình (cùng một connection). `tx` truyền vào callback cố ý KHÔNG khoá — khoá
+ * đã được giữ rồi, khoá lại thì chết cứng (deadlock).
  */
-import type { Kernel } from "./kernel";
-import { migrate } from "./migrate";
-import { ensureDefaultCollection, ensureSettingsRow } from "./seed";
+import type { BindValue, SyncDb } from "./syncDb";
 
-export type BindValue = string | number | null | Uint8Array;
+export type { BindValue };
 
 export interface AppDb {
-  kernel: Kernel;
   /** Chạy SQL không cần kết quả (INSERT/UPDATE/PRAGMA/DDL). */
-  exec(sql: string, bind?: BindValue[]): void;
+  exec(sql: string, bind?: BindValue[]): Promise<void>;
   /** SELECT trả danh sách hàng object (key giữ nguyên alias SQL). */
-  all<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): T[];
+  all<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T[]>;
   /** SELECT lấy hàng đầu (hoặc undefined). */
-  get<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): T | undefined;
+  get<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T | undefined>;
   /** Gói khối ghi trong BEGIN IMMEDIATE/COMMIT; lỗi → ROLLBACK + ném lại. */
-  transaction<T>(fn: (tx: AppDb) => T): T;
+  transaction<T>(fn: (tx: AppDb) => Promise<T> | T): Promise<T>;
 }
 
-/** Handle oo1 typed hẹp — tránh đánh nhau với overload đồ sộ của package. */
-interface Oo1Handle {
-  exec(opts: { sql: string; bind?: BindValue[] }): unknown;
-  exec(opts: { sql: string; bind?: BindValue[]; rowMode: "object"; returnValue: "resultRows" }): unknown;
+/** Cách AppDb nói chuyện với DB thật: in-process hoặc qua Worker RPC. */
+export interface DbTransport {
+  exec(sql: string, bind?: BindValue[]): Promise<void>;
+  all<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T[]>;
 }
 
-export function createAppDb(kernel: Kernel): AppDb {
-  const handle = kernel.db as unknown as Oo1Handle;
+export function createAppDb(transport: DbTransport): AppDb {
+  // Hàng đợi tuần tự: mỗi op chờ op trước xong hẳn (kể cả khi op trước ném lỗi).
+  let tail: Promise<unknown> = Promise.resolve();
 
-  function exec(sql: string, bind?: BindValue[]): void {
-    handle.exec({ sql, bind });
+  function exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const run = tail.then(fn, fn);
+    tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
-  function all<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): T[] {
-    const rows = handle.exec({ sql, bind, rowMode: "object", returnValue: "resultRows" });
-    return (rows ?? []) as T[];
+
+  async function rawExec(sql: string, bind?: BindValue[]): Promise<void> {
+    await transport.exec(sql, bind);
   }
-  function get<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): T | undefined {
-    return all<T>(sql, bind)[0];
+  async function rawAll<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T[]> {
+    return transport.all<T>(sql, bind);
   }
-  function transaction<T>(fn: (tx: AppDb) => T): T {
-    handle.exec({ sql: "BEGIN IMMEDIATE" });
-    try {
-      const out = fn(appDb);
-      handle.exec({ sql: "COMMIT" });
-      return out;
-    } catch (e) {
+  async function rawGet<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T | undefined> {
+    const rows = await transport.all<T>(sql, bind);
+    return rows[0];
+  }
+
+  /** Facade KHÔNG khoá — chỉ dùng bên trong transaction (khoá đã được giữ). */
+  const tx: AppDb = {
+    exec: rawExec,
+    all: rawAll,
+    get: rawGet,
+    transaction() {
+      // Transaction lồng nhau: SQLite không hỗ trợ BEGIN trong BEGIN. Báo rõ thay
+      // vì để SQLite ném lỗi khó hiểu.
+      throw new Error("transaction lồng nhau không được hỗ trợ");
+    },
+  };
+
+  function execGuarded(sql: string, bind?: BindValue[]): Promise<void> {
+    return exclusive(() => transport.exec(sql, bind));
+  }
+  function allGuarded<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T[]> {
+    return exclusive(() => transport.all<T>(sql, bind));
+  }
+  async function getGuarded<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T | undefined> {
+    const rows = await exclusive(() => transport.all<T>(sql, bind));
+    return rows[0];
+  }
+  function transactionGuarded<T>(fn: (t: AppDb) => Promise<T> | T): Promise<T> {
+    return exclusive(async () => {
+      await transport.exec("BEGIN IMMEDIATE");
       try {
-        handle.exec({ sql: "ROLLBACK" });
-      } catch {
-        // rollback hỏng thì transaction gốc vẫn phải chết — không che lỗi chính.
+        const out = await fn(tx);
+        await transport.exec("COMMIT");
+        return out;
+      } catch (e) {
+        try {
+          await transport.exec("ROLLBACK");
+        } catch {
+          // rollback hỏng thì transaction gốc vẫn phải chết — không che lỗi chính.
+        }
+        throw e;
       }
-      throw e;
-    }
+    });
   }
 
-  const appDb: AppDb = { kernel, exec, all, get, transaction };
-  return appDb;
+  return { exec: execGuarded, all: allGuarded, get: getGuarded, transaction: transactionGuarded };
 }
 
-/**
- * Mở + migrate + seed. Trả AppDb sẵn sàng dùng, kèm danh sách cảnh báo vận hành
- * (VFS, journal_mode...) để app hiển thị — không nuốt im lặng.
- */
-export function initAppDb(kernel: Kernel): AppDb {
-  const appDb = createAppDb(kernel);
-  const pragmaWarnings = applyPragmas(appDb);
-  kernel.warnings.push(...pragmaWarnings);
-  migrate(appDb);
-  ensureDefaultCollection(appDb);
-  ensureSettingsRow(appDb);
-  return appDb;
-}
-
-function applyPragmas(appDb: AppDb): string[] {
-  const warnings: string[] = [];
-  // FK enforcement tuyệt đối bật — schema dựa vào on delete cascade.
-  appDb.exec("PRAGMA foreign_keys = ON");
-  // WAL mong muốn (solution-design mục 5: an toàn dữ liệu + snapshot) nhưng tuỳ
-  // thuộc VFS — không phải lỗi nếu fallback (ghi vẫn qua transaction).
-  try {
-    const row = appDb.get<{ journal_mode: string }>("PRAGMA journal_mode = WAL");
-    const mode = String(row?.journal_mode ?? "").toLowerCase();
-    if (mode !== "wal") {
-      warnings.push(`journal_mode = ${mode || "(rỗng)"} — VFS này không hỗ trợ WAL; dữ liệu vẫn an toàn nhờ transaction.`);
-    }
-  } catch (e) {
-    warnings.push(`Không áp được WAL: ${e instanceof Error ? e.message : String(e)}`);
-  }
-  return warnings;
+/** Transport in-process: bọc lõi đồng bộ (Node/vitest, hoặc fallback memory). */
+export function createLocalAppDb(sync: SyncDb): AppDb {
+  return createAppDb({
+    async exec(sql, bind) {
+      sync.exec(sql, bind);
+    },
+    async all<T = Record<string, unknown>>(sql: string, bind?: BindValue[]): Promise<T[]> {
+      return sync.all<T>(sql, bind);
+    },
+  });
 }

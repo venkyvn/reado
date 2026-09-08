@@ -13,8 +13,9 @@ function App() {
   const [bootError, setBootError] = useState<string | null>(null);
 
   useEffect(() => {
-    // StrictMode (dev) mount 2 lần: dùng cờ cancell để lần đầu bị bỏ, không
-    // để bootstrap chạy đè nhau.
+    // StrictMode (dev) mount 2 lần. Cờ `cancelled` chỉ bỏ KẾT QUẢ của lần mount đầu
+    // (tránh setState lên component đã unmount); việc bootstrap không chạy đôi là do
+    // singleton trong app/bootstrap.ts đảm nhiệm — hai chuyện khác nhau.
     let cancelled = false;
     bootstrap()
       .then((result) => {

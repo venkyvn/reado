@@ -6,25 +6,29 @@
  *    bất biến hệ thống: không có dòng nào khác được is_default=1.
  * 2. Hàng settings id=1 — phần còn lại theo DEFAULT của DDL.
  *
- * Cả hai idempotent: chạy lại không sinh trùng.
+ * Cả hai idempotent: chạy lại không sinh trùng (chạy mỗi lần boot — kể cả boot
+ * lại trên OPFS đã có data).
+ *
+ * Chạy trên `SyncDb`: seed diễn ra nơi DB sống (Worker hoặc in-process), cùng lúc
+ * với migrate — xem syncDb.ts.
  */
-import type { AppDb } from "./db";
+import type { SyncDb } from "./syncDb";
 import { newId, toUtcIso } from "../domain/utils";
 
-export function ensureDefaultCollection(appDb: AppDb): void {
-  const existing = appDb.get<{ id: string }>(
+export function ensureDefaultCollection(db: SyncDb): void {
+  const existing = db.get<{ id: string }>(
     "select id from collections where is_default = 1 limit 1",
   );
   if (existing) return;
-  appDb.exec("insert into collections (id, name, is_default, created_at) values (?, ?, 1, ?)", [
+  db.exec("insert into collections (id, name, is_default, created_at) values (?, ?, 1, ?)", [
     newId(),
     "Kho tạm",
     toUtcIso(new Date()),
   ]);
 }
 
-export function ensureSettingsRow(appDb: AppDb): void {
-  const existing = appDb.get<{ id: number }>("select id from settings where id = 1");
+export function ensureSettingsRow(db: SyncDb): void {
+  const existing = db.get<{ id: number }>("select id from settings where id = 1");
   if (existing) return;
-  appDb.exec("insert into settings (id) values (1)");
+  db.exec("insert into settings (id) values (1)");
 }

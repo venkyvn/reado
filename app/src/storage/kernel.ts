@@ -1,13 +1,18 @@
 /**
  * storage/kernel.ts — mở SQLite-WASM, chọn VFS.
  *
- * - Browser: `oo1.OpfsDb` (VFS "opfs" của sqlite.org/wasm) → lưu thật vào OPFS.
- *   Cần SharedArrayBuffer ⇒ cần COOP/COEP headers (vite.config.ts đã bật cho
- *   dev/preview; production phải cấu hình phía host — SPIKE storage).
- *   Lưu ý: VFS "opfs" không chạy Safari < 17 (owner test iPhone, iOS hiện
- *   đại — ổn; nếu hỏng, SPIKE sẽ hiện rõ ở màn /storage-check).
- * - Không OPFS (thiếu COI, trình duyệt cũ, hoặc Node test): in-memory, và app
- *   phải HIỂN THỊ cảnh báo dữ liệu không được lưu — không giả vờ persist.
+ * Chạy ở ĐÂU thì OPFS mới sống (đo thật bằng `npm run e2e:opfs` trên Chrome 152):
+ * - **Web Worker**: VFS "opfs" cài được (lib đòi `WorkerGlobalScope` vì nó dùng
+ *   `Atomics.wait()`), VFS "opfs-sahpool" cũng được (cần `createSyncAccessHandle`,
+ *   chỉ Worker mới có). → persist thật, đây là đường browser dùng (dbWorker.ts).
+ * - **Main thread**: cả hai VFS đều bị từ chối → chỉ còn `:memory:` → mất khi F5.
+ *   App vì thế PHẢI mở DB trong Worker; mở ở main thread là bug (đã từng xảy ra).
+ * - **Node/vitest**: không có OPFS → `:memory:`, đúng ý cho test.
+ *
+ * VFS "opfs" cần SharedArrayBuffer ⇒ cần COOP/COEP (vite.config.ts đã bật cho
+ * dev/preview; production phải cấu hình phía host). VFS "opfs-sahpool" KHÔNG cần
+ * SAB/COOP-COEP nên được giữ làm nhánh dự phòng — đổi lại nó không hỗ trợ WAL và
+ * file DB nằm dạng opaque trong pool (applyPragmas sẽ báo journal_mode thật).
  */
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
 import wasmUrl from "@sqlite.org/sqlite-wasm/sqlite3.wasm?url";
@@ -21,6 +26,9 @@ export interface Kernel {
   mode: StorageMode;
   warnings: string[];
 }
+
+/** Một tên file duy nhất cho mọi nhánh OPFS — đổi tên là orphan data cũ. */
+const DB_FILE = "reado.db";
 
 // Type của package chỉ khai `init()` không tham số; runtime thật nhận Emscripten
 // Module config (locateFile) — kiểm trong index.mjs của sqlite-wasm 3.53.
@@ -48,6 +56,15 @@ function locateWasmFile(): string {
   return wasmUrl;
 }
 
+/** Đang ở Worker scope? (sqlite-wasm dùng đúng tiêu chí này để cho phép VFS "opfs".) */
+function inWorkerScope(): boolean {
+  return typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== "undefined";
+}
+
+function message(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 export async function openMemoryKernel(): Promise<Kernel> {
   const sqlite3 = await initModule();
   return { sqlite3, db: new sqlite3.oo1.DB(":memory:"), mode: "memory", warnings: [] };
@@ -56,27 +73,52 @@ export async function openMemoryKernel(): Promise<Kernel> {
 export async function openKernel(): Promise<Kernel> {
   const sqlite3 = await initModule();
   const warnings: string[] = [];
+  const worker = inWorkerScope();
+  const hasIsolated =
+    typeof globalThis.crossOriginIsolated === "boolean" && globalThis.crossOriginIsolated;
 
-  const hasIsolated = typeof globalThis.crossOriginIsolated === "boolean" && globalThis.crossOriginIsolated;
-
-  if (sqlite3.oo1.OpfsDb && hasIsolated) {
+  // Nhánh 1 — VFS "opfs": VFS chính theo docs sqlite.org/wasm (dùng async proxy
+  // worker, cần SAB ⇒ cần COOP/COEP). `OpfsDb` chỉ tồn tại khi VFS cài thành công.
+  if (sqlite3.oo1.OpfsDb) {
     try {
-      const db = new sqlite3.oo1.OpfsDb("reado.db");
+      const db = new sqlite3.oo1.OpfsDb(DB_FILE);
+      warnings.push('VFS "opfs" (async proxy worker) — dữ liệu lưu thật trên máy.');
       return { sqlite3, db, mode: "opfs", warnings };
     } catch (e) {
-      warnings.push(
-        `Mở OPFS thất bại (${e instanceof Error ? e.message : String(e)}) — chạy bộ nhớ tạm; ` +
-          "dữ liệu SẼ MẤT khi đóng tab. Xem /?screen=storage-check.",
-      );
+      warnings.push(`Mở VFS "opfs" thất bại (${message(e)}) — thử VFS dự phòng.`);
     }
-  } else if (!hasIsolated) {
-    warnings.push(
-      "Thiếu crossOriginIsolated (server phải gửi COOP/COEP) — chạy bộ nhớ tạm; " +
-        "dữ liệu SẼ MẤT khi đóng tab. Xem /?screen=storage-check.",
-    );
   } else {
-    warnings.push("VFS OPFS không được đăng ký — chạy bộ nhớ tạm; dữ liệu SẼ MẤT khi đóng tab.");
+    warnings.push(
+      worker
+        ? 'VFS "opfs" không được đăng ký trong Worker (thiếu SharedArrayBuffer/COOP-COEP?) — thử VFS dự phòng.'
+        : 'VFS "opfs" không chạy được ở main thread (sqlite-wasm đòi Worker vì cần Atomics.wait) — thử VFS dự phòng.',
+    );
   }
 
+  // Nhánh 2 — VFS "opfs-sahpool": không cần proxy worker/SAB, nhưng vẫn cần Worker
+  // (createSyncAccessHandle không có ở main thread). Capacity ≥ 2× số file DB vì
+  // journal; ta có 1 DB nên 8 là rộng rãi và có thể nới bằng addCapacity().
+  if (typeof sqlite3.installOpfsSAHPoolVfs === "function") {
+    try {
+      await sqlite3.installOpfsSAHPoolVfs({ initialCapacity: 8, clearOnInit: false });
+      const db = new sqlite3.oo1.DB(DB_FILE, "c", "opfs-sahpool");
+      warnings.push('VFS "opfs-sahpool" (dự phòng) — dữ liệu lưu thật trên máy.');
+      return { sqlite3, db, mode: "opfs", warnings };
+    } catch (e) {
+      warnings.push(`Cài VFS "opfs-sahpool" thất bại (${message(e)}).`);
+    }
+  }
+
+  // Nhánh 3 — không persist được: nói rõ, đừng giả vờ.
+  if (!worker) {
+    warnings.push(
+      "Đang ở main thread nên không VFS OPFS nào dùng được — chạy bộ nhớ tạm; dữ liệu SẼ MẤT khi đóng tab hoặc F5.",
+    );
+  }
+  if (!hasIsolated) {
+    warnings.push(
+      "Thiếu crossOriginIsolated (server phải gửi COOP/COEP) — VFS \"opfs\" không dùng được.",
+    );
+  }
   return { sqlite3, db: new sqlite3.oo1.DB(":memory:"), mode: "memory", warnings };
 }

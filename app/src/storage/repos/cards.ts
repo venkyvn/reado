@@ -6,6 +6,9 @@
  * trong doc: SQLite không bind list trực tiếp — khi scopeCollectionIds khác
  * null thì nở placeholder `IN (?, ?, ...)` theo số phần tử. Ở R1 scope luôn
  * null (FR-18 thuộc Phase 3) nhưng nhánh nở vẫn có sẵn cho đúng hợp đồng.
+ *
+ * Mọi lời gọi `appDb` đều `await`: DB nằm trong Worker (facade RPC — xem db.ts),
+ * quên await là câu SQL chạy lạc khỏi transaction.
  */
 import type { CardsRepository, ListDueParams, SrsFields } from "../../domain/repositories";
 import type { CardRow, CardState, CardWithContext } from "../../domain/types";
@@ -78,22 +81,24 @@ function dueQuery(opts: ListDueParams, stateClause: string): { sql: string; bind
 export function createCardsRepo(appDb: AppDb): CardsRepository {
   return {
     async insertBatch(rows) {
-      appDb.transaction((tx) => {
-        for (const r of rows) insertCardRow(tx, r);
+      await appDb.transaction(async (tx) => {
+        for (const r of rows) await insertCardRow(tx, r);
       });
     },
     async listDueReviews(opts) {
       const q = dueQuery(opts, `in ('review','relearning')`);
-      return appDb.all<CardSql>(q.sql, q.bind).map(mapCard);
+      const rows = await appDb.all<CardSql>(q.sql, q.bind);
+      return rows.map(mapCard);
     },
     async listDueNews(opts) {
       const q = dueQuery(opts, `= 'new'`);
-      return appDb.all<CardSql>(q.sql, q.bind).map(mapCard);
+      const rows = await appDb.all<CardSql>(q.sql, q.bind);
+      return rows.map(mapCard);
     },
     async loadWithContext(cardIds) {
       if (cardIds.length === 0) return [];
       const ph = cardIds.map(() => "?").join(", ");
-      const rows = appDb.all<CardSql & {
+      const rows = await appDb.all<CardSql & {
         term: string;
         pos: string;
         meaning_vi: string;
@@ -137,8 +142,8 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
 
 /** Cập nhật TOÀN BỘ field FSRS + lịch — bản SQL duy nhất cho chấm thẻ và undo
  *  (điều cấm #8: due_at luôn đọc từ DB, không tính lại ở UI). */
-export function updateSrsFieldsSql(appDb: AppDb, cardId: string, f: SrsFields): void {
-  appDb.exec(
+export async function updateSrsFieldsSql(appDb: AppDb, cardId: string, f: SrsFields): Promise<void> {
+  await appDb.exec(
     `update cards set state = ?, stability = ?, difficulty = ?, reps = ?, lapses = ?,
                       learning_steps = ?, scheduled_days = ?, last_review_at = ?, due_at = ?
      where id = ?`,

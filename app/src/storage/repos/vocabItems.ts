@@ -4,6 +4,9 @@
  * persistCapture lưu vocab_items + cards tương ứng trong MỘT transaction:
  * nếu tách ra, một nửa lô lưu được nửa kia không mà không gì báo — đúng tinh
  * thần điều cấm #3 (ghi đa bước liên quan nhau phải cùng transaction).
+ *
+ * Callback transaction là ASYNC + `await` từng câu: DB nằm trong Worker (RPC),
+ * quên await thì COMMIT đóng trước khi INSERT chạy.
  */
 import type { VocabItemsRepository } from "../../domain/repositories";
 import type { Pos, VocabItemRow } from "../../domain/types";
@@ -42,21 +45,23 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
   return {
     async persistCapture(vocabRows, cardRows) {
       if (vocabRows.length === 0) return;
-      appDb.transaction((tx) => {
+      await appDb.transaction(async (tx) => {
         for (const v of vocabRows) {
-          tx.exec(
+          await tx.exec(
             `insert into vocab_items (id, collection_id, term, term_normalized, pos, ipa, meaning_vi, example, cefr, created_at)
              values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [v.id, v.collectionId, v.term, v.termNormalized, v.pos, v.ipa, v.meaningVi, v.example, v.cefr, v.createdAt],
           );
         }
-        for (const c of cardRows) insertCardRow(tx, c);
+        for (const c of cardRows) await insertCardRow(tx, c);
       });
     },
     async listByCollection(collectionId) {
-      return appDb
-        .all<VocabSql>("select * from vocab_items where collection_id = ? order by created_at asc", [collectionId])
-        .map(map);
+      const rows = await appDb.all<VocabSql>(
+        "select * from vocab_items where collection_id = ? order by created_at asc",
+        [collectionId],
+      );
+      return rows.map(map);
     },
   };
 }

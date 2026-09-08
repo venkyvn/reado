@@ -3,6 +3,8 @@
  *
  * updatePartial chỉ nhận field qua whitelist: patch field lạ bị bỏ qua trong
  * im lặng sẽ thành bug khó dò, nên ném lỗi — đúng điều cấm "không nuốt im lặng".
+ *
+ * `await` mọi lời gọi appDb: DB nằm trong Worker (facade RPC — xem db.ts).
  */
 import type { SettingsRepository } from "../../domain/repositories";
 import type { Cefr, Settings } from "../../domain/types";
@@ -65,7 +67,7 @@ function toSql(): string {
 export function createSettingsRepo(appDb: AppDb): SettingsRepository {
   return {
     async get() {
-      const row = appDb.get<SettingsSql>(toSql());
+      const row = await appDb.get<SettingsSql>(toSql());
       if (!row) throw new Error("settings row (id=1) không tồn tại — seed chưa chạy");
       return map(row);
     },
@@ -80,9 +82,9 @@ export function createSettingsRepo(appDb: AppDb): SettingsRepository {
         bind.push(typeof value === "boolean" ? (value ? 1 : 0) : (value as string | number));
       }
       if (sets.length > 0) {
-        appDb.exec(`update settings set ${sets.join(", ")} where id = 1`, bind);
+        await appDb.exec(`update settings set ${sets.join(", ")} where id = 1`, bind);
       }
-      const row = appDb.get<SettingsSql>(toSql());
+      const row = await appDb.get<SettingsSql>(toSql());
       if (!row) throw new Error("settings row biến mất sau update");
       return map(row);
     },

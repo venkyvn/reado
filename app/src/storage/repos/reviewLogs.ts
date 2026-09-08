@@ -5,6 +5,9 @@
  * - appendGrade: insert log (ảnh chụp TRƯỚC khi chấm) + update card → cùng tx.
  *   Nếu log không ghi mà card đã đổi, review đó mất khỏi training data vĩnh viễn.
  * - rollbackGrade: delete log bấm nhầm + khôi phục card về snapshot trước chấm.
+ *
+ * Callback của `transaction` là ASYNC và mọi câu SQL bên trong phải `await`:
+ * DB nằm trong Worker (facade RPC), nếu quên await thì COMMIT chạy trước INSERT.
  */
 import type { ReviewLogsRepository } from "../../domain/repositories";
 import type { CardState, ReviewLogRow } from "../../domain/types";
@@ -46,8 +49,8 @@ function map(row: LogSql): ReviewLogRow {
 export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
   return {
     async appendGrade(log, cardId, fields) {
-      appDb.transaction((tx) => {
-        tx.exec(
+      await appDb.transaction(async (tx) => {
+        await tx.exec(
           `insert into review_logs (id, card_id, mode, rating, state_before, stability_before,
                                      difficulty_before, learning_steps_before, due_before,
                                      elapsed_days, scheduled_days, reviewed_at)
@@ -67,17 +70,17 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
             log.reviewedAt,
           ],
         );
-        updateSrsFieldsSql(tx, cardId, fields);
+        await updateSrsFieldsSql(tx, cardId, fields);
       });
     },
     async rollbackGrade(logId, cardId, fields) {
-      appDb.transaction((tx) => {
-        tx.exec("delete from review_logs where id = ?", [logId]);
-        updateSrsFieldsSql(tx, cardId, fields);
+      await appDb.transaction(async (tx) => {
+        await tx.exec("delete from review_logs where id = ?", [logId]);
+        await updateSrsFieldsSql(tx, cardId, fields);
       });
     },
     async countIntroducedNew(fromUtc, toUtc) {
-      const row = appDb.get<{ c: number | bigint }>(
+      const row = await appDb.get<{ c: number | bigint }>(
         `select count(*) as c from review_logs
          where state_before = 'new' and reviewed_at >= ? and reviewed_at < ?`,
         [fromUtc, toUtc],
@@ -85,7 +88,7 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
       return Number(row?.c ?? 0);
     },
     async getById(logId) {
-      const row = appDb.get<LogSql>("select * from review_logs where id = ?", [logId]);
+      const row = await appDb.get<LogSql>("select * from review_logs where id = ?", [logId]);
       return row ? map(row) : null;
     },
   };
