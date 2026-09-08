@@ -5,6 +5,9 @@
 --   2. timestamptz → TEXT ISO-8601 UTC `...Z` (giữ tính tuyệt đối; "ngày" tính ở tầng đọc)
 --   3. jsonb       → TEXT chứa JSON (fsrs_params) — R1 không query JSON
 --
+-- Doc giải thích đầy đủ (mỗi bảng vì sao, indexes, seed, bẫy, khác biệt vs solution-design):
+-- docs/db-schema.md — file SQL này là NGUỒN DDL THẬT, doc chỉ giải thích.
+--
 -- Ghichú 2026-09-08: DEFAULT cefr_level ở đây là 'B1' (owner xác nhận B1 ở task
 -- 0.5), KHÁC văn bản solution-design ghi 'B2' — mâu thuẫn đã ghi MVP_PLAN mục 4.
 -- KV dựa vào "Chốt về product" (B1) chứ không theo typo trong bản nháp DDL.
