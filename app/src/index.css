@@ -143,7 +143,8 @@ button:disabled {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   padding: 12px;
   font: inherit;
@@ -153,6 +154,15 @@ select {
   background: #fff;
   color: var(--ink);
   margin: 6px 0 12px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.hidden {
+  display: none;
 }
 
 label {
@@ -334,6 +344,90 @@ label input {
   font-weight: 600;
 }
 
+/* Màn duyệt từ (FR-03/FR-09) — card rút gọn, mở inline (UI-2 chốt). */
+.vocab-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.vocab-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+
+.vocab-card.vocab-off {
+  opacity: 0.55;
+}
+
+.vocab-card.vocab-alert {
+  border-color: #fca5a5;
+  box-shadow: inset 3px 0 0 #dc2626;
+}
+
+.vocab-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vocab-head input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.vocab-term {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.vocab-head .fine {
+  flex: none;
+}
+
+.vocab-head .chip {
+  flex: none;
+}
+
+.vocab-chev {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  flex: none;
+}
+
+.vocab-meaning {
+  margin: 2px 0 0 30px;
+  font-size: 14px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.vocab-edit {
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+  padding-top: 4px;
+}
+
+.vocab-edit .grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -355,7 +449,8 @@ label input {
 
   .secondary,
   input,
-  select {
+  select,
+  textarea {
     background: #1e293b;
     color: #f1f5f9;
   }
@@ -373,6 +468,11 @@ label input {
   .chip-unverified {
     background: #450a0a;
     color: #fecaca;
+  }
+
+  .vocab-card.vocab-alert {
+    border-color: #991b1b;
+    box-shadow: inset 3px 0 0 #f87171;
   }
 
   .banner-warn {

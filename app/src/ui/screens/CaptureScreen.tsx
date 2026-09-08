@@ -6,7 +6,7 @@
  * Chất lượng ảnh (M-03): không crop/không xoay → gửi bytes gốc; có chỉnh →
  * re-encode JPEG 0.95 (xem imageToolkit.ts).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent } from "react";
 import type { AnalysisResult, CollectionRow } from "../../domain/types";
 import type { PageImage } from "../../domain/ai";
@@ -39,15 +39,19 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [busySubmit, setBusySubmit] = useState(false);
 
-  const [analyzing, setAnalyzing] = useState<PageImage | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [payload, setPayload] = useState<{ image: PageImage; collectionId: string } | null>(null);
 
-  // Identity ỔN ĐỊNH — AnalyzePanel dùng làm dep của useCallback/effect; nếu
-  // truyền arrow inline thì mỗi lần render là một hàm mới → effect chạy lại.
-  const handleAnalysisDone = useCallback((r: AnalysisResult) => {
-    setResult(r);
-    setAnalyzing(null);
-  }, []);
+  // payloadRef cho handleAnalysisDone đọc collectionId mà KHÔNG phụ thuộc
+  // render — handleAnalysisDone phải giữ identity ổn định (dep của AnalyzePanel).
+  const payloadRef = useRef<{ image: PageImage; collectionId: string } | null>(null);
+
+  const handleAnalysisDone = useCallback(
+    (r: AnalysisResult) => {
+      const current = payloadRef.current;
+      if (current) navigate({ name: "vocabEdit", analysis: r, collectionId: current.collectionId });
+    },
+    [navigate],
+  );
 
   useEffect(() => {
     void services.repos.collections.list().then((list) => {
@@ -128,11 +132,15 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
 
   async function submit() {
     if (!canvas || !file || busySubmit) return;
+    const collectionId = targetCollectionId;
+    if (!collectionId) return;
     setBusySubmit(true);
     setFormError(null);
     try {
       const prepared = await prepareForAnalysis(canvas, crop, file, rotation);
-      setAnalyzing({ base64: prepared.base64, mime: prepared.mime });
+      const next = { image: { base64: prepared.base64, mime: prepared.mime }, collectionId };
+      payloadRef.current = next;
+      setPayload(next);
     } catch (err) {
       setFormError(`Xử lý ảnh lỗi — ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -162,44 +170,11 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
     setRotation(0);
     setCrop(null);
     setDrag(null);
-    setResult(null);
     setFormError(null);
   }
 
-  if (analyzing) {
-    return <AnalyzePanel image={analyzing} onDone={handleAnalysisDone} onCancel={() => setAnalyzing(null)} />;
-  }
-
-  if (result) {
-    // Màn duyệt/sửa từ thật đến ở STEP UI-2 — xem tạm ở đây để SOP vẫn chạy được.
-    const seconds =
-      Number.isFinite(result.latencyMs) ? (result.latencyMs / 1000).toFixed(1) : null;
-    return (
-      <div className="pad">
-        <h1>Kết quả phân tích (tạm)</h1>
-        <p className="muted">
-          {result.vocabulary.length} từ trích xuất · {result.segments.length} đoạn ·{" "}
-          {seconds ? `${seconds}s` : "?"} · prompt v{result.promptVersion}
-        </p>
-        <ul className="dump">
-          {result.vocabulary.slice(0, 20).map((v, i) => (
-            <li key={i}>
-              <strong>{v.term}</strong> <span className="fine">({v.pos})</span> — {v.meaningVi}{" "}
-              <span className={`chip chip-${v.verification}`}>{v.verification}</span>
-            </li>
-          ))}
-        </ul>
-        {result.vocabulary.length > 20 && (
-          <p className="muted">… còn {result.vocabulary.length - 20} từ</p>
-        )}
-        <button type="button" className="secondary" onClick={resetAll}>
-          📷 Chụp trang khác
-        </button>
-        <button type="button" className="primary" onClick={() => navigate({ name: "home" })}>
-          Về trang chủ
-        </button>
-      </div>
-    );
+  if (payload) {
+    return <AnalyzePanel image={payload.image} onDone={handleAnalysisDone} onCancel={() => setPayload(null)} />;
   }
 
   return (
