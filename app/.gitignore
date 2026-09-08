@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Cert dev tự ký (npm run cert) — SAN chứa IP LAN riêng từng máy, không commit
+certs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

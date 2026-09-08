@@ -49,6 +49,17 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
 
   return (
     <AppEnvContext.Provider value={env}>
+      {!globalThis.isSecureContext && (
+        <div className="banner banner-error">
+          Trang này mở qua http:// + IP LAN nên trình duyệt chặn lưu trữ (OPFS) và
+          offline — dữ liệu sẽ mất khi đóng tab. Mở app bằng <b>https://</b> cùng địa
+          chỉ (xem màn{" "}
+          <a href="#storageweb" onClick={() => navigate({ name: "storageCheck" })}>
+            Kiểm tra lưu trữ
+          </a>{" "}
+          để có URL chính xác).
+        </div>
+      )}
       {env.storageMode !== "opfs" && (
         <div className="banner banner-warn">
           Không mở được kho lưu trữ OPFS — dữ liệu SẼ MẤT khi đóng tab.{" "}

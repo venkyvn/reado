@@ -98,7 +98,9 @@ function applyPragmas(db: SyncDb): string[] {
     const row = db.get<{ journal_mode: string }>("PRAGMA journal_mode = WAL");
     const mode = String(row?.journal_mode ?? "").toLowerCase();
     if (mode !== "wal") {
-      warnings.push(`journal_mode = ${mode || "(rỗng)"} — VFS này không hỗ trợ WAL; dữ liệu vẫn an toàn nhờ transaction.`);
+      warnings.push(
+        `journal_mode = ${mode || "(rỗng)"} — VFS này không hỗ trợ WAL; từng transaction vẫn nguyên tử, còn dữ liệu có BỀN qua F5 hay không thì do nhánh OPFS (cảnh báo phía trên) quyết.`,
+      );
     }
   } catch (e) {
     warnings.push(`Không áp được WAL: ${e instanceof Error ? e.message : String(e)}`);

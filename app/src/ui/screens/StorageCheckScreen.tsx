@@ -1,12 +1,18 @@
 /**
  * ui/screens/StorageCheckScreen.tsx — trang SPIKE storage (mở bằng
- * ?screen=storage-check): bằng chứng OPFS trên iPhone — mode, crossOriginIsolated,
- * cảnh báo, write/read round-trip, marker sống qua reload, số liệu kho.
- * KHÔNG hiện giá trị API key — chỉ hiện "đã/chưa cấu hình".
+ * ?screen=storage-check): bằng chứng OPFS trên iPhone — secure context,
+ * crossOriginIsolated, mode, Service Worker, cảnh báo, write/read round-trip,
+ * marker sống qua reload, số liệu kho.
  *
- * Hàng "Sống qua F5" là phép thử quyết định cho bug 2026-09-08 (lưu từ xong F5
- * mất sạch): nó đọc marker của LẦN MỞ TRƯỚC. DB memory thì hàng này không bao giờ
- * xanh, dù mọi phép ghi trong phiên đều thành công.
+ * Bài học 2026-09-08: iPhone mở qua http:// + IP LAN → KHÔNG secure context →
+ * OPFS + Service Worker bị trình duyệt chặn toàn bộ (ba cảnh báo fallback, nhìn
+ * như lỗi code nhưng là ràng buộc nền tảng). Hàng "Secure context" đứng ĐẦU để
+ * lần sau nhìn một phát là biết. Cách sửa: mở https:// (dev: `npm run cert` +
+ * `npm run dev:https`) — cert tự ký nên iOS hỏi chấp nhận MỘT lần.
+ *
+ * Hàng "Sống qua F5" là phép thử quyết định cho bug lưu từ xong F5 mất sạch:
+ * nó đọc marker của LẦN MỞ TRƯỚC. DB memory thì hàng này không bao giờ xanh,
+ * dù mọi phép ghi trong phiên đều thành công.
  */
 import { useEffect, useState } from "react";
 import type { Screen } from "../AppRoot";
@@ -18,6 +24,10 @@ interface CheckInfo {
   dueCards: number;
   keyConfigured: boolean;
 }
+
+// Cổng https của `dev:https` (package.json) — server https DUY NHẤT ở chế độ dev.
+// Không phải giá trị đoán; nếu đổi script thì đổi cả đây.
+const HTTPS_DEV_PORT = 5174;
 
 /** ISO → giờ địa phương dễ đọc; chuỗi lạ thì trả nguyên văn thay vì "Invalid Date". */
 function formatLocal(iso: string): string {
@@ -31,10 +41,13 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
   const [writeTest, setWriteTest] = useState<"idle" | "ok" | "fail">("idle");
   const [fatal, setFatal] = useState<string | null>(null);
 
-  const crossOriginIsolated =
-    typeof (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated === "boolean"
-      ? (globalThis as { crossOriginIsolated: boolean }).crossOriginIsolated
-      : false;
+  const secureContext = globalThis.isSecureContext === true;
+  const crossOriginIsolated = globalThis.crossOriginIsolated === true;
+  const origin = window.location.origin;
+  const hostname = new URL(origin).hostname;
+  const httpsSuggestion = `https://${hostname}:${HTTPS_DEV_PORT}/`;
+  const swActive =
+    "serviceWorker" in navigator && navigator.serviceWorker.controller !== null;
 
   useEffect(() => {
     void (async () => {
@@ -77,11 +90,29 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
 
       <table className="kv">
         <tbody>
-          <Row label="OPFS active" ok={storageMode === "opfs"} value={storageMode === "opfs" ? "Có — lưu thật trên máy" : "KHÔNG — mất khi đóng tab"} />
+          <Row
+            label="Secure context"
+            ok={secureContext}
+            value={
+              secureContext
+                ? `Có — ${origin}`
+                : `KHÔNG — trình duyệt chặn OPFS & offline ở ${origin}. Mở: ${httpsSuggestion}`
+            }
+          />
           <Row
             label="crossOriginIsolated"
             ok={crossOriginIsolated}
-            value={crossOriginIsolated ? "Có (SharedArrayBuffer OK)" : "KHÔNG — OPFS không dùng được"}
+            value={crossOriginIsolated ? "Có (SharedArrayBuffer OK)" : "KHÔNG — VFS opfs không dùng được"}
+          />
+          <Row label="OPFS active" ok={storageMode === "opfs"} value={storageMode === "opfs" ? "Có — lưu thật trên máy" : "KHÔNG — mất khi đóng tab"} />
+          <Row
+            label="Service Worker"
+            ok={swActive}
+            value={
+              swActive
+                ? "Đang điều khiển trang — offline được"
+                : "Chưa có (dev server không phục vụ SW — test offline cần build + preview:https, rồi reload lần nữa)"
+            }
           />
           <Row label="Write/read SQLite" ok={writeTest === "ok"} value={writeTest === "ok" ? "Ghi + đọc lại OK" : writeTest === "fail" ? "LỖI" : "…"} />
           <Row
@@ -116,9 +147,11 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
       )}
 
       <p className="fine">
-        SPIKE task 2.4-đi-kiện (solution-design 14.2): trên iPhone mở trang này và xem
-        hàng “OPFS active”. Muốn chắc dữ liệu không mất: F5 thêm MỘT lần nữa — hàng
-        “Sống qua F5” phải hiện giờ của lần mở vừa rồi.
+        SPIKE task 2.4-đi-kiện (solution-design 14.2): trên iPhone mở {httpsSuggestion}
+        và xem hàng “OPFS active”. Muốn chắc dữ liệu không mất: F5 thêm MỘT lần nữa —
+        hàng “Sống qua F5” phải hiện giờ của lần mở vừa rồi. Lưu ý: dữ liệu nằm THEO
+        origin — mở bằng http hay https là hai kho khác nhau, không thấy từ cũ là vì
+        đó (không phải mất).
       </p>
 
       <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>

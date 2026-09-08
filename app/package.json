@@ -10,10 +10,14 @@
     "lint": "oxlint",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
+    "cert": "node scripts/gen-cert.mjs",
+    "dev:https": "READO_HTTPS=1 vite --host --port 5174 --strictPort",
+    "preview:https": "READO_HTTPS=1 vite preview --host --port 4174 --strictPort",
     "e2e": "node e2e/capture-flow.mjs",
     "e2e:storage": "node e2e/storage-persist.mjs",
     "e2e:opfs": "node e2e/opfs-capability.mjs",
-    "e2e:export": "node e2e/export-flow.mjs"
+    "e2e:export": "node e2e/export-flow.mjs",
+    "e2e:secure": "node e2e/secure-context.mjs"
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "^3.53.4-build1",

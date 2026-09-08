@@ -13,6 +13,14 @@
  * dev/preview; production phải cấu hình phía host). VFS "opfs-sahpool" KHÔNG cần
  * SAB/COOP-COEP nên được giữ làm nhánh dự phòng — đổi lại nó không hỗ trợ WAL và
  * file DB nằm dạng opaque trong pool (applyPragmas sẽ báo journal_mode thật).
+ *
+ * Điều kiện TIÊN QUYẾT của cả hai nhánh OPFS: **secure context** (OPFS chỉ tồn
+ * tại trong secure context; crossOriginIsolated cũng đòi secure context). Trang
+ * mở qua http:// + IP LAN KHÔNG secure — chỉ localhost/127.0.0.1 và https://
+ * được trình duyệt đặc cách. Đo thật 2026-09-08: iPhone mở http://192.168.1.200
+ * → dính đủ ba cảnh báo fallback; mở https (cert dev tự ký, `npm run cert` +
+ * `npm run dev:https`) → OPFS chạy bình thường. Vì thế có "nhánh 0" bên dưới:
+ * chặn sớm thay vì để ba nhánh thử mò rồi rải cảnh báo loạn xạ.
  */
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
 import wasmUrl from "@sqlite.org/sqlite-wasm/sqlite3.wasm?url";
@@ -74,6 +82,19 @@ export async function openKernel(): Promise<Kernel> {
   const sqlite3 = await initModule();
   const warnings: string[] = [];
   const worker = inWorkerScope();
+
+  // Nhánh 0 — secure context là tiên quyết của OPFS lẫn crossOriginIsolated.
+  // `=== false` (không phải truthy check) vì ở Node/`vitest` giá trị là undefined
+  // — test không phải browser thì không đi nhánh này mà rơi xuống đường memory
+  // quen thuộc của mấy nhánh dưới.
+  const secureFlag = (globalThis as { isSecureContext?: boolean }).isSecureContext;
+  if (secureFlag === false) {
+    warnings.push(
+      "Trang không phải SECURE CONTEXT (đang mở qua http:// + IP LAN — trình duyệt chỉ đặc cách localhost và https://). OPFS và Service Worker bị chặn HOÀN TOÀN nên mọi VFS bền đều vô nghĩa; đang chạy bộ nhớ tạm và dữ liệu SẼ MẤT khi đóng tab/F5. Hãy mở app bằng https:// (dev: `npm run cert` + `npm run dev:https`).",
+    );
+    return { sqlite3, db: new sqlite3.oo1.DB(":memory:"), mode: "memory", warnings };
+  }
+
   const hasIsolated =
     typeof globalThis.crossOriginIsolated === "boolean" && globalThis.crossOriginIsolated;
 
@@ -117,7 +138,7 @@ export async function openKernel(): Promise<Kernel> {
   }
   if (!hasIsolated) {
     warnings.push(
-      "Thiếu crossOriginIsolated (server phải gửi COOP/COEP) — VFS \"opfs\" không dùng được.",
+      'Thiếu crossOriginIsolated (server phải gửi COOP/COEP) — VFS "opfs" không dùng được.',
     );
   }
   return { sqlite3, db: new sqlite3.oo1.DB(":memory:"), mode: "memory", warnings };
