@@ -428,6 +428,193 @@ label input {
   gap: 8px;
 }
 
+/* Màn ôn tập (FR-11/FR-12). */
+.review-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.undo-pill {
+  display: block;
+  margin: 0 auto 8px;
+  padding: 8px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 36px;
+}
+
+.review-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px 20px;
+  margin: 10px 0;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.review-card.flipped {
+  align-items: flex-start;
+  text-align: left;
+  cursor: default;
+}
+
+.review-term {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.review-pos {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.review-flip-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 22px;
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.review-back-head {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.review-ipa {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.review-meaning {
+  font-size: 19px;
+  margin: 4px 0 16px;
+}
+
+.review-example {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.review-example p {
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+.review-collection {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.review-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.grade-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.grade-btn {
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.grade-again {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.grade-hard {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.grade-good {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.grade-easy {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+@media (prefers-color-scheme: dark) {
+  .grade-btn {
+    background: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .grade-again {
+    background: #450a0a;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+
+  .grade-hard {
+    background: #422006;
+    border-color: #92400e;
+    color: #fde68a;
+  }
+
+  .grade-good {
+    background: #14532d;
+    border-color: #22c55e;
+    color: #bbf7d0;
+  }
+
+  .grade-easy {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;

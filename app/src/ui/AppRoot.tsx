@@ -15,6 +15,7 @@ import { CaptureScreen } from "./screens/CaptureScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
+import { ReviewScreen } from "./screens/ReviewScreen";
 
 export type Screen =
   | { name: "home" }
@@ -59,16 +60,7 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         {screen.name === "vocabEdit" && (
           <VocabEditScreen analysis={screen.analysis} collectionId={screen.collectionId} navigate={navigate} />
         )}
-        {screen.name === "review" && (
-          // step UI-3 thay bằng màn ôn thật (FR-11/FR-12)
-          <div className="pad">
-            <h1>Ôn tập</h1>
-            <p className="muted">Màn ôn tập sẽ đến ở step kế.</p>
-            <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>
-              ← Về trang chủ
-            </button>
-          </div>
-        )}
+        {screen.name === "review" && <ReviewScreen navigate={navigate} />}
         {screen.name === "storageCheck" && <StorageCheckScreen navigate={navigate} />}
       </main>
     </AppEnvContext.Provider>
