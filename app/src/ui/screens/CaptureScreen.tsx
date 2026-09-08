@@ -41,6 +41,21 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
 
   const [payload, setPayload] = useState<{ image: PageImage; collectionId: string } | null>(null);
 
+  // BUG ĐÃ GẶP THẬT (owner test 2026-09-08: upload ảnh xong KHÔNG thấy hình):
+  // React set attribute width/height lên <canvas> khi mount/đổi giá trị, và theo
+  // spec HTML việc đó XOÁ bitmap — canvas còn đúng kích thước nhưng trong suốt.
+  // Ảnh vẫn gửi được vì prepareForAnalysis đọc bytes gốc của File, nên flow chạy
+  // mà preview thì trắng. Sửa: giữ canvas NGUỒN trong state, vẽ lại vào canvas
+  // do React quản lý (viewRef) SAU mỗi lần DOM cập nhật.
+  const viewRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !canvas) return;
+    const ctx = view.getContext("2d");
+    if (ctx) ctx.drawImage(canvas, 0, 0);
+  }, [canvas]);
+
   // payloadRef cho handleAnalysisDone đọc collectionId mà KHÔNG phụ thuộc
   // render — handleAnalysisDone phải giữ identity ổn định (dep của AnalyzePanel).
   const payloadRef = useRef<{ image: PageImage; collectionId: string } | null>(null);
@@ -222,6 +237,7 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
           <p className="hint">Kéo (drag) trên ảnh để chọn vùng cần giữ — không bắt buộc.</p>
           <div className="crop-wrap">
             <canvas
+              ref={viewRef}
               className="crop-canvas"
               width={canvas.width}
               height={canvas.height}
