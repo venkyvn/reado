@@ -62,6 +62,17 @@ function expandIn(column: string, ids: string[] | null): { clause: string; bind:
 const CARD_COLS = `id, vocab_item_id, direction, state, stability, difficulty, reps, lapses,
   learning_steps, scheduled_days, last_review_at, due_at, suspended_at`;
 
+/**
+ * Thêm alias vào từng cột của CARD_COLS — bắt buộc khi JOIN, vì `id` và
+ * `created_at`-style column tồn tại ở cả cards lẫn vocab_items (SQLite báo
+ * "ambiguous column name"). Giữ CARD_COLS làm nguồn tên cột duy nhất.
+ */
+function cardCols(alias: string): string {
+  return CARD_COLS.split(",")
+    .map((c) => `${alias}.${c.trim()}`)
+    .join(", ");
+}
+
 function dueQuery(opts: ListDueParams, stateClause: string): { sql: string; bind: (string | number | null)[] } {
   const scope = expandIn("c.vocab_item_id", opts.scopeCollectionIds);
   const bind: (string | number | null)[] = [opts.nowUtc, ...scope.bind];
@@ -136,6 +147,18 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
         if (full) out.push(full);
       }
       return out;
+    },
+    async listByScope(collectionId) {
+      // Export cần card theo collection, mà cards không giữ collection_id → JOIN
+      // sang vocab_items. Alias bắt buộc (xem cardCols).
+      const rows = await appDb.all<CardSql>(
+        `select ${cardCols("c")} from cards c
+           join vocab_items v on v.id = c.vocab_item_id
+          where (? is null or v.collection_id = ?)
+          order by c.due_at asc`,
+        [collectionId, collectionId],
+      );
+      return rows.map(mapCard);
     },
   };
 }

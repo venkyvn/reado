@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "e2e": "node e2e/capture-flow.mjs",
     "e2e:storage": "node e2e/storage-persist.mjs",
-    "e2e:opfs": "node e2e/opfs-capability.mjs"
+    "e2e:opfs": "node e2e/opfs-capability.mjs",
+    "e2e:export": "node e2e/export-flow.mjs"
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "^3.53.4-build1",

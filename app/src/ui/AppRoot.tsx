@@ -1,7 +1,7 @@
 /**
  * ui/AppRoot.tsx — shell + router màn hình kiểu state machine (không cần
  * react-router cho R1). Màn hình Phase 2: home / capture / vocabEdit / review /
- * storageCheck (?screen=storage-check cho SPIKE iPhone).
+ * storageCheck (?screen=storage-check cho SPIKE iPhone). Phase 3: export (FR-16).
  *
  * Một điểm THẬT duy nhất giữ state điều hướng; mỗi màn hình chỉ nhận navigate
  * + payload hẹp — không màn nào tự ý biết màn khác.
@@ -12,6 +12,7 @@ import type { AnalysisResult } from "../domain/types";
 import { AppEnvContext } from "./context";
 import type { AppEnv } from "./context";
 import { CaptureScreen } from "./screens/CaptureScreen";
+import { ExportScreen } from "./screens/ExportScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
@@ -22,7 +23,8 @@ export type Screen =
   | { name: "capture" }
   | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string }
   | { name: "review" }
-  | { name: "storageCheck" };
+  | { name: "storageCheck" }
+  | { name: "export" };
 
 function initialScreen(): Screen {
   if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen") === "storage-check") {
@@ -63,6 +65,7 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         )}
         {screen.name === "review" && <ReviewScreen navigate={navigate} />}
         {screen.name === "storageCheck" && <StorageCheckScreen navigate={navigate} />}
+        {screen.name === "export" && <ExportScreen navigate={navigate} />}
       </main>
     </AppEnvContext.Provider>
   );

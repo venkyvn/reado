@@ -91,5 +91,19 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
       const row = await appDb.get<LogSql>("select * from review_logs where id = ?", [logId]);
       return row ? map(row) : null;
     },
+    async listByScope(collectionId) {
+      // Lọc theo collection phải đi qua HAI lần JOIN (log → card → item), vì
+      // review_logs không tự giữ collection_id — schema cố ý không nhân bản
+      // thông tin scope xuống log.
+      const rows = await appDb.all<LogSql>(
+        `select l.* from review_logs l
+           join cards c on c.id = l.card_id
+           join vocab_items v on v.id = c.vocab_item_id
+          where (? is null or v.collection_id = ?)
+          order by l.reviewed_at asc`,
+        [collectionId, collectionId],
+      );
+      return rows.map(map);
+    },
   };
 }

@@ -18,6 +18,10 @@ export function HomeScreen({ navigate }: { navigate: (s: Screen) => void }) {
       </button>
 
       <p style={{ marginTop: 24 }}>
+        <a className="dim" href="#export" onClick={() => navigate({ name: "export" })}>
+          ⬇︎ Xuất dữ liệu (Anki / JSON)
+        </a>
+        {" · "}
         <a className="dim" href="#storage" onClick={() => navigate({ name: "storageCheck" })}>
           Kiểm tra lưu trữ (SPIKE)
         </a>

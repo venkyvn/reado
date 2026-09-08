@@ -38,6 +38,11 @@ export interface VocabItemsRepository {
    */
   persistCapture(vocabRows: VocabItemRow[], cardRows: CardRow[]): Promise<void>;
   listByCollection(collectionId: string): Promise<VocabItemRow[]>;
+  /**
+   * FR-16 export: `null` = TẤT CẢ collection, khác null = đúng một.
+   * Cùng quy ước "null là toàn cục" với `ListDueParams.scopeCollectionIds`.
+   */
+  listByScope(collectionId: string | null): Promise<VocabItemRow[]>;
 }
 
 /** Bộ field FSRS + lịch của một card (chấm thẻ và undo đều ghi nguyên bộ). */
@@ -61,6 +66,8 @@ export interface CardsRepository {
   listDueNews(opts: ListDueParams): Promise<CardRow[]>;
   /** Lấy dữ liệu hiển thị thẻ (FR-12) theo đúng thứ tự id truyền vào. */
   loadWithContext(cardIds: string[]): Promise<CardWithContext[]>;
+  /** FR-16 export: card của mọi item trong scope; `null` = tất cả collection. */
+  listByScope(collectionId: string | null): Promise<CardRow[]>;
 }
 
 export interface ReviewLogsRepository {
@@ -81,6 +88,8 @@ export interface ReviewLogsRepository {
    *  từ counter (FR-11 criterion: counter và log lệch nhau là lỗi vô hình). */
   countIntroducedNew(fromUtc: string, toUtc: string): Promise<number>;
   getById(logId: string): Promise<ReviewLogRow | null>;
+  /** FR-16 export: log của mọi card trong scope; `null` = tất cả collection. */
+  listByScope(collectionId: string | null): Promise<ReviewLogRow[]>;
 }
 
 export interface SettingsRepository {

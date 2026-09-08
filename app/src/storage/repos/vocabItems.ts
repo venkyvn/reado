@@ -63,5 +63,16 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
       );
       return rows.map(map);
     },
+    async listByScope(collectionId) {
+      // `? is null` = lấy tất cả collection (FR-16 export toàn bộ kho). Bind cùng
+      // một giá trị hai lần — SQLite không cho dùng lại một positional param.
+      const rows = await appDb.all<VocabSql>(
+        `select * from vocab_items
+          where (? is null or collection_id = ?)
+          order by created_at asc, term asc`,
+        [collectionId, collectionId],
+      );
+      return rows.map(map);
+    },
   };
 }
