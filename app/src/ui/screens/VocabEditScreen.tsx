@@ -150,7 +150,11 @@ export function VocabEditScreen({ analysis, collectionId, navigate }: {
         {items.length} từ · {unverifiedCount} chưa xác minh (đỏ — mặc định KHÔNG chọn) · vào{" "}
         {collectionName ? `“${collectionName}”` : "collection"}
       </p>
-      <p className="hint">Chạm vào thẻ để mở sửa; bỏ chọn = không lưu item đó.</p>
+      <p className="hint" title="NFR-02: đo & ghi lại mỗi lần gọi">
+        {Number.isFinite(analysis.latencyMs) ? `${(analysis.latencyMs / 1000).toFixed(1)}s` : "?"} ·{" "}
+        {analysis.usage.promptTokens + analysis.usage.candidatesTokens} tokens · prompt v
+        {analysis.promptVersion} — chạm thẻ để mở sửa; bỏ chọn = không lưu item đó.
+      </p>
 
       {saveError && <div className="banner banner-error">{saveError}</div>}
 
