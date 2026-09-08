@@ -10,6 +10,7 @@ import type {
   CardWithContext,
   CardRow,
   CollectionRow,
+  LibraryItemRow,
   ReviewLogRow,
   Settings,
   VocabItemRow,
@@ -43,6 +44,21 @@ export interface VocabItemsRepository {
    * Cùng quy ước "null là toàn cục" với `ListDueParams.scopeCollectionIds`.
    */
   listByScope(collectionId: string | null): Promise<VocabItemRow[]>;
+  /**
+   * FR-08 Vocabulary List: toàn bộ kho kèm tên collection + trạng thái ôn tập,
+   * lọc được theo từng tiêu chí trong `filter` (null = "không lọc tiêu chí đó",
+   * ba tiêu chí cùng áp một lúc được). Sắp theo `term` (không phân biệt hoa
+   * thường) để các dòng cùng `term` khác nghĩa NẰM CẠNH NHAU — FR-08 criterion
+   * 3 cấm gộp chúng thành một dòng.
+   */
+  listLibrary(filter: LibraryFilter): Promise<LibraryItemRow[]>;
+}
+
+/** Bộ lọc FR-08 — mỗi trường null nghĩa là "không lọc theo tiêu chí này". */
+export interface LibraryFilter {
+  collectionId: string | null;
+  cefr: string | null;
+  state: CardState | null;
 }
 
 /** Bộ field FSRS + lịch của một card (chấm thẻ và undo đều ghi nguyên bộ). */

@@ -16,6 +16,9 @@ export function HomeScreen({ navigate }: { navigate: (s: Screen) => void }) {
       <button type="button" className="primary big alt" onClick={() => navigate({ name: "review" })}>
         🃏 Ôn tập hôm nay
       </button>
+      <button type="button" className="secondary big" onClick={() => navigate({ name: "vocabLibrary" })}>
+        📚 Kho từ vựng
+      </button>
 
       <p style={{ marginTop: 24 }}>
         <a className="dim" href="#export" onClick={() => navigate({ name: "export" })}>

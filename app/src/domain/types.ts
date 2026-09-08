@@ -70,6 +70,17 @@ export interface VocabItemRow {
   createdAt: string;
 }
 
+/**
+ * FR-08 Vocabulary List: một dòng trong danh sách kho từ — từ + collection NAME
+ * (join ngay ở tầng repo) + CARD_STATE hiện tại để lọc "trạng thái ôn tập"
+ * (criterion 2 của FR-08). Cùng một `term` nhiều nghĩa = NHIỀU dòng
+ * (criterion 3: không gộp) — phân biệt bằng pos + câu gốc khi hiển thị.
+ */
+export interface LibraryItemRow extends VocabItemRow {
+  collectionName: string;
+  cardState: CardState;
+}
+
 export interface CardRow {
   id: string;
   vocabItemId: string;

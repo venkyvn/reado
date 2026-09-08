@@ -246,6 +246,27 @@ label input {
   color: #991b1b;
 }
 
+/* FR-08: chip trạng thái ôn tập (cardState) trong danh sách kho từ. */
+.chip-state-new {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.chip-state-learning {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.chip-state-review {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.chip-state-relearning {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .brand {
   font-size: 30px;
   margin: 20px 0 4px;

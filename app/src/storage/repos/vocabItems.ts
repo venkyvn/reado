@@ -9,7 +9,8 @@
  * quên await thì COMMIT đóng trước khi INSERT chạy.
  */
 import type { VocabItemsRepository } from "../../domain/repositories";
-import type { Pos, VocabItemRow } from "../../domain/types";
+import type { LibraryFilter } from "../../domain/repositories";
+import type { LibraryItemRow, Pos, VocabItemRow } from "../../domain/types";
 import { insertCardRow } from "./cardsSql";
 import type { AppDb } from "../db";
 
@@ -39,6 +40,27 @@ function map(row: VocabSql): VocabItemRow {
     cefr: row.cefr as VocabItemRow["cefr"],
     createdAt: row.created_at,
   };
+}
+
+interface LibrarySql extends VocabSql {
+  collection_name: string;
+  card_state: LibraryItemRow["cardState"];
+}
+
+function mapLibrary(row: LibrarySql): LibraryItemRow {
+  return { ...map(row), collectionName: row.collection_name, cardState: row.card_state };
+}
+
+/** Ba mức lọc null-tự-do của FR-08: "? is null" là bỏ qua tiêu chí đó. Cột phải
+ *  ghi ĐỦ tiền tố bảng — alias (`card_state`) KHÔNG dùng được trong WHERE. */
+const FILTER_COLS = {
+  collection_id: "v.collection_id",
+  cefr: "v.cefr",
+  card_state: "c.state",
+} as const;
+type FilterKey = keyof typeof FILTER_COLS;
+function filterClauses(keys: readonly FilterKey[]): string {
+  return keys.map((k) => `  and (? is null or ${FILTER_COLS[k]} = ?)`).join("\n");
 }
 
 export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
@@ -73,6 +95,26 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
         [collectionId, collectionId],
       );
       return rows.map(map);
+    },
+    async listLibrary(filter: LibraryFilter) {
+      // JOIN cards để lấy state (mỗi item có đúng 1 card ở R1) và collections để
+      // lấy TÊN. collate nocase để "Run" và "run" nằm cạnh nhau; bên trong cùng
+      // term thì theo thứ tự lưu — pos + câu gốc phân biệt các nghĩa (FR-08 c3).
+      const rows = await appDb.all<LibrarySql>(
+        `select v.*, col.name as collection_name, c.state as card_state
+          from vocab_items v
+          join cards c on c.vocab_item_id = v.id
+          join collections col on col.id = v.collection_id
+          where 1 = 1
+          ${filterClauses(["collection_id", "cefr", "card_state"])}
+          order by v.term collate nocase asc, v.created_at asc`,
+        [
+          filter.collectionId, filter.collectionId,
+          filter.cefr, filter.cefr,
+          filter.state, filter.state,
+        ],
+      );
+      return rows.map(mapLibrary);
     },
   };
 }
