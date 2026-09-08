@@ -1,0 +1,17 @@
+# Secrets — .env luôn bị chặn, .env.example được track (task 0.2)
+.env
+.env.*
+!.env.example
+
+# Dependencies & build (match ở mọi cấp, kể cả app/)
+node_modules/
+dist/
+
+# OS noise
+.DS_Store
+
+# Phase 0: ảnh mẫu của owner là dữ liệu tạm + bản quyền sách — không commit
+# (xem scripts/verify/README.md); output chứa số đo mỗi lần chạy
+scripts/verify/samples/*
+!scripts/verify/samples/.gitkeep
+scripts/verify/output/
