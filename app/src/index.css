@@ -605,6 +605,53 @@ label input {
   color: #1e40af;
 }
 
+/* FR-14: khối số trang chủ — đến hạn / tồn (nhãn riêng) / trang phân tích /
+   streak. Giá trị dùng tabular-nums để đổi số không làm hàng nhảy lung tung. */
+.stats {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px 14px;
+  margin: 20px 0 0;
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  flex: 1;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-unit {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Phần tồn — con số RIÊNG có nhãn riêng (FR-14 criterion 3), tông cảnh báo nhẹ
+   để không đọc nhầm thành "việc hôm nay". */
+.stat-deferred .stat-value {
+  color: #b45309;
+}
+
 @media (prefers-color-scheme: dark) {
   .grade-btn {
     background: #1e293b;
@@ -703,6 +750,10 @@ label input {
 
   .errorbox .fine {
     color: #fecaca;
+  }
+
+  .stat-deferred .stat-value {
+    color: #fbbf24;
   }
 
   .dump li {

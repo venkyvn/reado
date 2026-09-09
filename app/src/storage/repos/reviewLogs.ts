@@ -87,6 +87,14 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
       );
       return Number(row?.c ?? 0);
     },
+    async listReviewedAts() {
+      // FR-14 streak: chỉ cần timestamp, tăng dần. Việc gom "ngày ôn" (giờ
+      // chuyển ngày + múi giờ) thuộc domain — SQL không biết dayBounds.
+      const rows = await appDb.all<{ reviewed_at: string }>(
+        `select reviewed_at from review_logs order by reviewed_at asc`,
+      );
+      return rows.map((r) => r.reviewed_at);
+    },
     async getById(logId) {
       const row = await appDb.get<LogSql>("select * from review_logs where id = ?", [logId]);
       return row ? map(row) : null;

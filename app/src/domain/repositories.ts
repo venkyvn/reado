@@ -6,6 +6,7 @@
  * không chạm repo trực tiếp; nó đi qua use-case (domain/usecases/).
  */
 import type {
+  AnalysisRecord,
   CardState,
   CardWithContext,
   CardRow,
@@ -103,6 +104,10 @@ export interface ReviewLogsRepository {
   /** Đếm thẻ mới ĐÃ GIỚI THIỆU trong ngày học [fromUtc, toUtc) — từ log, không
    *  từ counter (FR-11 criterion: counter và log lệch nhau là lỗi vô hình). */
   countIntroducedNew(fromUtc: string, toUtc: string): Promise<number>;
+  /** Mọi reviewed_at (UTC ISO, tăng dần) — đầu vào tính streak của FR-14.
+   *  "Ngày ôn" phải tính lại ở domain qua dayBounds (giờ chuyển ngày + múi
+   *  giờ device), nên repo chỉ trả timestamp thô, không nửa vời nhóm sẵn. */
+  listReviewedAts(): Promise<string[]>;
   getById(logId: string): Promise<ReviewLogRow | null>;
   /** FR-16 export: log của mọi card trong scope; `null` = tất cả collection. */
   listByScope(collectionId: string | null): Promise<ReviewLogRow[]>;
@@ -113,10 +118,18 @@ export interface SettingsRepository {
   updatePartial(patch: Partial<Settings>): Promise<Settings>;
 }
 
+/** Bảng analyses (migration v2) — sự kiện "đã phân tích một trang thành công". */
+export interface AnalysesRepository {
+  insert(record: AnalysisRecord): Promise<void>;
+  /** Tổng số trang đã phân tích (FR-14 — đếm từ sự kiện, không phải counter). */
+  countAll(): Promise<number>;
+}
+
 export interface ReadoRepos {
   collections: CollectionsRepository;
   vocabItems: VocabItemsRepository;
   cards: CardsRepository;
   logs: ReviewLogsRepository;
   settings: SettingsRepository;
+  analyses: AnalysesRepository;
 }

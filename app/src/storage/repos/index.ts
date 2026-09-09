@@ -3,6 +3,7 @@
  */
 import type { ReadoRepos } from "../../domain/repositories";
 import type { AppDb } from "../db";
+import { createAnalysesRepo } from "./analyses";
 import { createCardsRepo } from "./cards";
 import { createCollectionsRepo } from "./collections";
 import { createReviewLogsRepo } from "./reviewLogs";
@@ -16,5 +17,6 @@ export function createRepos(appDb: AppDb): ReadoRepos {
     cards: createCardsRepo(appDb),
     logs: createReviewLogsRepo(appDb),
     settings: createSettingsRepo(appDb),
+    analyses: createAnalysesRepo(appDb),
   };
 }

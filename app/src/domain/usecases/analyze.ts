@@ -9,6 +9,7 @@ import type { PageImage } from "../ai";
 import { AnalysisError } from "../errors";
 import type { AppServices } from "../services";
 import type { AnalysisResult } from "../types";
+import { newId, toUtcIso } from "../utils";
 
 export async function analyzePage(
   svc: AppServices,
@@ -27,5 +28,33 @@ export async function analyzePage(
     apiKey: settings.aiApiKey,
     model,
     cefrLevel: settings.cefrLevel,
+  });
+}
+
+/**
+ * FR-14 "số trang đã phân tích": ghi MỘT sự kiện vào bảng analyses sau khi một
+ * trang được phân tích THÀNH CÔNG và kết quả tới được tay người dùng.
+ *
+ * Vì sao để UI gọi thay vì ghi ngay trong analyzePage: dev chạy StrictMode làm
+ * effect 2 lần → 2 lần gọi AI thật, lần thứ nhất bị runId-guard bỏ. UI gọi hàm
+ * này SAU guard nên đếm đúng 1 sự kiện cho 1 trang người dùng thấy được — kể cả
+ * ở dev. Bên cạnh con đếm, dòng này lưu số đo NFR-02 (latency/token/provider/
+ * model/prompt_version) làm dữ liệu cho M-03. KHÔNG lưu key, KHÔNG lưu ảnh.
+ */
+export async function recordAnalyzedPage(
+  svc: AppServices,
+  result: AnalysisResult,
+): Promise<void> {
+  const settings = await svc.repos.settings.get();
+  await svc.repos.analyses.insert({
+    id: newId(),
+    analyzedAt: toUtcIso(svc.now()),
+    cefr: settings.cefrLevel,
+    provider: settings.aiProvider,
+    model: settings.aiModel,
+    promptVersion: result.promptVersion,
+    latencyMs: Number.isFinite(result.latencyMs) ? Math.round(result.latencyMs) : null,
+    tokensIn: result.usage.promptTokens,
+    tokensOut: result.usage.candidatesTokens,
   });
 }

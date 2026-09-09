@@ -139,3 +139,22 @@ export interface CardWithContext extends CardRow {
   example: string;
   collectionName: string;
 }
+
+/**
+ * Bảng analyses (migration v2) — MỘT dòng = MỘT trang đã phân tích THÀNH CÔNG.
+ * Nguồn đếm "số trang đã phân tích" của FR-14 (đếm từ sự kiện thật, không phải
+ * counter) + nơi lưu số đo NFR-02 cho M-03 về sau. Không chứa api_key (#9),
+ * không chứa ảnh (NFR-04).
+ */
+export interface AnalysisRecord {
+  id: string;
+  /** UTC ISO-8601 thời điểm phân tích hoàn tất. */
+  analyzedAt: string;
+  cefr: Cefr | null;
+  provider: string | null;
+  model: string | null;
+  promptVersion: number | null;
+  latencyMs: number | null;
+  tokensIn: number | null;
+  tokensOut: number | null;
+}

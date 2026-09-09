@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisResult } from "../domain/types";
 import type { PageImage } from "../domain/ai";
 import { AnalysisError } from "../domain/errors";
-import { analyzePage } from "../domain/usecases/analyze";
+import { analyzePage, recordAnalyzedPage } from "../domain/usecases/analyze";
 import { useAppEnv } from "./context";
 
 export function AnalyzePanel({ image, onDone, onCancel }: {
@@ -41,6 +41,15 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
       try {
         const result = await analyzePage(services, image);
         if (runId !== runIdRef.current) return; // đã huỷ / retry mới hơn
+        // FR-14: ghi sự kiện "đã phân tích trang" SAU guard — StrictMode dev
+        // chạy effect 2 lần, guard này chặn lần phản hồi cũ nên chỉ đếm 1 sự
+        // kiện. Lỗi ghi không chặn đường chính (kết quả AI quan trọng hơn con
+        // đếm) nhưng không nuốt im lặng — console.error vẫn lưu dấu vết.
+        try {
+          await recordAnalyzedPage(services, result);
+        } catch (e) {
+          console.error("Không ghi được sự kiện phân tích vào analyses:", e);
+        }
         setBusy(false);
         onDone(result);
       } catch (e) {

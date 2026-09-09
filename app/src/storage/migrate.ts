@@ -21,6 +21,33 @@ interface Migration {
 
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: "schema R1", sql: schemaSql },
+  {
+    // v2 — bảng sự kiện "đã phân tích một trang" (task 3.5, FR-14 + NFR-02):
+    //   - FR-14 "số trang đã phân tích" = COUNT(*) ở đây. Sự kiện thật chứ
+    //     KHÔNG phải counter trong settings — cùng luật "đếm từ log, không từ
+    //     cột counter" của FR-11 (counter và log lệch nhau là lỗi vô hình).
+    //   - NFR-02 "đo và ghi lại": mỗi lần gọi lưu latency + token bên cạnh
+    //     provider/model/cefr/prompt_version — là dữ liệu M-03 cần về sau.
+    //   - KHÔNG ghi api_key (điều cấm #9). Ảnh không lưu (NFR-04) — chỉ số đo.
+    // Ghi chú đánh số: bảng tags/synonyms/antonyms của task 3.12 giờ là v3
+    // (docs/rich-vocab-cram-ddl.md đã ghi chỗ này).
+    version: 2,
+    name: "analyses FR-14/NFR-02",
+    sql: `
+      create table analyses (
+        id             text primary key,
+        analyzed_at    text not null,   -- UTC ISO-8601
+        cefr           text,            -- cefr_level dùng cho lần gọi này
+        provider       text,
+        model          text,
+        prompt_version integer,
+        latency_ms     integer,
+        tokens_in      integer,
+        tokens_out     integer
+      );
+      create index idx_analyses_time on analyses (analyzed_at);
+    `,
+  },
 ];
 
 /** Áp các migration chưa chạy (trong một transaction), trả version hiện tại. */
