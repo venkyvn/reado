@@ -874,3 +874,120 @@ label input {
     border-bottom-color: var(--line);
   }
 }
+
+/* ---------- Màn đọc song ngữ FR-05/FR-06 (task 3.3) ---------- */
+
+.seg {
+  margin: 0 0 14px;
+}
+
+.seg-src {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 2px;
+  white-space: pre-wrap;
+}
+
+.seg-tr {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #475569;
+  margin: 0 0 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.seg-vocab {
+  background: #fef08a;
+  border-radius: 5px;
+  padding: 1px 3px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.seg-vocab:active {
+  background: #fde047;
+}
+
+.seg-gloss {
+  display: inline-block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: 2px 6px 2px 4px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.seg-gloss .ipa {
+  color: var(--muted);
+}
+
+.read-page {
+  border-top: 1px dashed var(--line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.read-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.read-page-no {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+button.read-revise {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 8px 0;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.read-summary {
+  margin: 8px 0 4px;
+}
+
+.read-summary summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 0;
+  color: var(--ink);
+}
+
+.read-summary p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+@media (prefers-color-scheme: dark) {
+  .seg-tr {
+    color: #cbd5e1;
+  }
+
+  .seg-vocab {
+    background: #713f12;
+    color: #fef9c3;
+  }
+
+  .seg-vocab:active {
+    background: #854d0e;
+  }
+
+  .read-summary p {
+    color: #cbd5e1;
+  }
+}

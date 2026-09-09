@@ -18,7 +18,11 @@ import type { HomeStats } from "../../domain/usecases/homeStats";
 import { getHomeStats } from "../../domain/usecases/homeStats";
 import { useAppEnv } from "../context";
 
-export function HomeScreen({ navigate }: { navigate: (s: Screen) => void }) {
+export function HomeScreen({ navigate, onResumeReading }: {
+  navigate: (s: Screen) => void;
+  /** FR-05 c.4: phiên đọc còn trang trong buffer → nút quay lại đọc. */
+  onResumeReading?: { pageCount: number; onClick: () => void } | null;
+}) {
   const { services } = useAppEnv();
   const [stats, setStats] = useState<HomeStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +49,11 @@ export function HomeScreen({ navigate }: { navigate: (s: Screen) => void }) {
       <button type="button" className="primary big" onClick={() => navigate({ name: "capture" })}>
         📷 Chụp trang sách
       </button>
+      {onResumeReading && (
+        <button type="button" className="secondary big" onClick={onResumeReading.onClick}>
+          📖 Đọc lại phiên vừa chụp ({onResumeReading.pageCount} trang trong buffer)
+        </button>
+      )}
       <button type="button" className="primary big alt" onClick={() => navigate({ name: "review" })}>
         🃏 Ôn tập hôm nay{stats ? ` (${stats.dueToday})` : ""}
       </button>

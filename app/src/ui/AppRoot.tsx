@@ -16,6 +16,9 @@ import { CaptureScreen } from "./screens/CaptureScreen";
 import { CramScreen } from "./screens/CramScreen";
 import { ExportScreen } from "./screens/ExportScreen";
 import { HomeScreen } from "./screens/HomeScreen";
+import { ReadScreen } from "./screens/ReadScreen";
+import type { SessionPage } from "./screens/ReadScreen";
+import { appendSessionPage } from "./readSegments";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
 import { VocabLibraryScreen } from "./screens/VocabLibraryScreen";
@@ -25,6 +28,7 @@ export type Screen =
   | { name: "home" }
   | { name: "capture" }
   | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string }
+  | { name: "readSession" }
   | { name: "review" }
   | { name: "cram" }
   | { name: "storageCheck" }
@@ -42,6 +46,16 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const navigate = useCallback((s: Screen) => {
     setScreen(s);
+    window.scrollTo(0, 0);
+  }, []);
+
+  // FR-05 c.4 (Q-10 chốt): buffer phiên đọc — 10 trang GẦN NHẤT, sống ở state
+  // AppRoot nên F5/đóng tab = hết phiên = buffer xoá. Trang KHÔNG bao giờ ghi
+  // xuống DB (NFR-04: không lưu ảnh, không lưu văn bản trang).
+  const [sessionPages, setSessionPages] = useState<SessionPage[]>([]);
+  const handleAnalyzed = useCallback((analysis: AnalysisResult, collectionId: string) => {
+    setSessionPages((prev) => appendSessionPage(prev, { analysis, collectionId }));
+    setScreen({ name: "readSession" });
     window.scrollTo(0, 0);
   }, []);
 
@@ -74,8 +88,18 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         </div>
       )}
       <main className="shell">
-        {screen.name === "home" && <HomeScreen navigate={navigate} />}
-        {screen.name === "capture" && <CaptureScreen navigate={navigate} />}
+        {screen.name === "home" && (
+          <HomeScreen
+            navigate={navigate}
+            onResumeReading={
+              sessionPages.length > 0
+                ? { pageCount: sessionPages.length, onClick: () => navigate({ name: "readSession" }) }
+                : null
+            }
+          />
+        )}
+        {screen.name === "capture" && <CaptureScreen navigate={navigate} onAnalyzed={handleAnalyzed} />}
+        {screen.name === "readSession" && <ReadScreen pages={sessionPages} navigate={navigate} />}
         {screen.name === "vocabEdit" && (
           <VocabEditScreen analysis={screen.analysis} collectionId={screen.collectionId} navigate={navigate} />
         )}

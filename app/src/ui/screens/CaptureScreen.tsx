@@ -23,7 +23,13 @@ interface DragState {
   y1: number;
 }
 
-export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
+export function CaptureScreen({ navigate, onAnalyzed }: {
+  navigate: (s: Screen) => void;
+  /** FR-05: kết quả phân tích đi qua AppRoot — gắn vào buffer phiên đọc rồi
+   *  MỞ MÀN ĐỌC (PRD mục 6: Analyze → Đọc song ngữ → Summary → Chọn từ),
+   *  không nhảy thẳng sang duyệt từ nữa. */
+  onAnalyzed: (analysis: AnalysisResult, collectionId: string) => void;
+}) {
   const { services } = useAppEnv();
 
   const [collections, setCollections] = useState<CollectionRow[]>([]);
@@ -63,9 +69,9 @@ export function CaptureScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const handleAnalysisDone = useCallback(
     (r: AnalysisResult) => {
       const current = payloadRef.current;
-      if (current) navigate({ name: "vocabEdit", analysis: r, collectionId: current.collectionId });
+      if (current) onAnalyzed(r, current.collectionId);
     },
-    [navigate],
+    [onAnalyzed],
   );
 
   useEffect(() => {
