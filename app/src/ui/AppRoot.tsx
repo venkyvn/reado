@@ -2,24 +2,30 @@
  * ui/AppRoot.tsx — shell + router màn hình kiểu state machine (không cần
  * react-router cho R1). Màn hình Phase 2: home / capture / vocabEdit / review /
  * storageCheck (?screen=storage-check cho SPIKE iPhone). Phase 3: export (FR-16,
- * task 3.7) + vocabLibrary (FR-08, task 3.4).
+ * task 3.7) + vocabLibrary (FR-08, task 3.4) + settings (FR-15, task 3.6) +
+ * collectionDetail (task 3.15).
  *
  * Một điểm THẬT duy nhất giữ state điều hướng; mỗi màn hình chỉ nhận navigate
  * + payload hẹp — không màn nào tự ý biết màn khác.
+ *
+ * Task 3.15 (Q-10-reopen 2026-09-09): buffer phiên đọc in-memory đã BỎ — phiên
+ * đọc là dữ liệu bền trong bảng `reading_sessions` (10 mới nhất mỗi collection),
+ * AnalyzePanel tự ghi sau khi phân tích thành công nên AppRoot không giữ trang
+ * nào trong state nữa. Luật "lưu 1 lần" (bug 6723302) giờ persist qua
+ * `saved_at` trong DB — mở lại app vẫn nhớ trang nào đã lưu.
  */
 import { useCallback, useState } from "react";
 import type { BootstrapResult } from "../app/bootstrap";
 import type { AnalysisResult } from "../domain/types";
-import { newId, toUtcIso } from "../domain/utils";
+import { markReadingSessionSaved, persistReadingSession } from "../domain/usecases/readingSessions";
 import { AppEnvContext } from "./context";
 import type { AppEnv } from "./context";
 import { CaptureScreen } from "./screens/CaptureScreen";
+import { CollectionDetailScreen } from "./screens/CollectionDetailScreen";
 import { CramScreen } from "./screens/CramScreen";
 import { ExportScreen } from "./screens/ExportScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { ReadScreen } from "./screens/ReadScreen";
-import type { SessionPage } from "./screens/ReadScreen";
-import { appendSessionPage, markPageSaved } from "./readSegments";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
@@ -30,13 +36,14 @@ export type Screen =
   | { name: "home" }
   | { name: "capture" }
   | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string; pageId: string }
-  | { name: "readSession" }
+  | { name: "readSession"; sessionId?: string }
   | { name: "review" }
   | { name: "cram" }
   | { name: "storageCheck" }
   | { name: "export" }
   | { name: "settings" }
-  | { name: "vocabLibrary" };
+  | { name: "vocabLibrary" }
+  | { name: "collectionDetail"; collectionId: string };
 
 function initialScreen(): Screen {
   if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen") === "storage-check") {
@@ -52,22 +59,36 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
     window.scrollTo(0, 0);
   }, []);
 
-  // FR-05 c.4 (Q-10 chốt): buffer phiên đọc — 10 trang GẦN NHẤT, sống ở state
-  // AppRoot nên F5/đóng tab = hết phiên = buffer xoá. Trang KHÔNG bao giờ ghi
-  // xuống DB (NFR-04: không lưu ảnh, không lưu văn bản trang).
-  const [sessionPages, setSessionPages] = useState<SessionPage[]>([]);
-  const handleAnalyzed = useCallback((analysis: AnalysisResult, collectionId: string) => {
-    setSessionPages((prev) => appendSessionPage(prev, { pageId: newId(), analysis, collectionId }));
-    setScreen({ name: "readSession" });
-    window.scrollTo(0, 0);
-  }, []);
+  // Task 3.15 (Q-10-reopen): sau khi AnalyzePanel đã ghi analyses (analysisId),
+  // persist PHIÊN ĐỌC vào reading_sessions (text + dịch — ảnh vẫn cấm) rồi mở
+  // màn đọc. Ghi hỏng không chặn người dùng xem kết quả (màn duyệt từ vẫn lưu
+  // được từ) nhưng phải lưu dấu vết — không nuốt im lặng.
+  const handleAnalyzed = useCallback(
+    (analysis: AnalysisResult, collectionId: string, analysisId: string) => {
+      if (analysisId !== "") {
+        void persistReadingSession(boot.services, analysisId, collectionId, analysis).catch((e: unknown) => {
+          console.error("Không persist được phiên đọc:", e);
+        });
+      }
+      setScreen({ name: "readSession" });
+      window.scrollTo(0, 0);
+    },
+    [boot.services],
+  );
 
   // FR-09 + chống lưu trùng (bug owner báo 2026-09-09): ngay khi màn duyệt từ
-  // save xong, đánh dấu trang gốc trong buffer là "đã lưu" → màn đọc làm mờ +
-  // khoá nút "Chọn từ" của trang đó, không thể lưu lại lần hai trong phiên.
-  const handlePageSaved = useCallback((pageId: string, savedCount: number) => {
-    setSessionPages((prev) => markPageSaved(prev, pageId, toUtcIso(new Date()), savedCount));
-  }, []);
+  // save xong, PERSIST cờ "đã lưu" vào reading_sessions (task 3.15 — trước đây
+  // chỉ ở state, chết theo phiên). Màn đọc đọc lại từ DB nên khoá theo người
+  // dùng cả sau khi F5.
+  const handlePageSaved = useCallback(
+    (pageId: string, savedCount: number) => {
+      void markReadingSessionSaved(boot.services, pageId, savedCount).catch((e: unknown) => {
+        // Không nuốt im lặng: cờ hỏng = user có thể lưu trùng lần sau.
+        console.error("Không persist được cờ 'đã lưu' của phiên đọc:", e);
+      });
+    },
+    [boot.services],
+  );
 
   const env: AppEnv = {
     services: boot.services,
@@ -98,18 +119,9 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         </div>
       )}
       <main className="shell">
-        {screen.name === "home" && (
-          <HomeScreen
-            navigate={navigate}
-            onResumeReading={
-              sessionPages.length > 0
-                ? { pageCount: sessionPages.length, onClick: () => navigate({ name: "readSession" }) }
-                : null
-            }
-          />
-        )}
+        {screen.name === "home" && <HomeScreen navigate={navigate} />}
         {screen.name === "capture" && <CaptureScreen navigate={navigate} onAnalyzed={handleAnalyzed} />}
-        {screen.name === "readSession" && <ReadScreen pages={sessionPages} navigate={navigate} />}
+        {screen.name === "readSession" && <ReadScreen navigate={navigate} sessionId={screen.sessionId} />}
         {screen.name === "vocabEdit" && (
           <VocabEditScreen
             analysis={screen.analysis}
@@ -125,6 +137,9 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         {screen.name === "export" && <ExportScreen navigate={navigate} />}
         {screen.name === "settings" && <SettingsScreen navigate={navigate} />}
         {screen.name === "vocabLibrary" && <VocabLibraryScreen navigate={navigate} />}
+        {screen.name === "collectionDetail" && (
+          <CollectionDetailScreen collectionId={screen.collectionId} navigate={navigate} />
+        )}
       </main>
     </AppEnvContext.Provider>
   );

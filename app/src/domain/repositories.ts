@@ -12,6 +12,7 @@ import type {
   CardRow,
   CollectionRow,
   LibraryItemRow,
+  ReadingSessionRow,
   ReviewLogRow,
   RichVocabFields,
   Settings,
@@ -153,6 +154,24 @@ export interface AnalysesRepository {
   countAll(): Promise<number>;
 }
 
+/**
+ * Kho phiên đọc bền (task 3.15, Q-10-reopen): 1 dòng = 1 trang đã phân tích.
+ * Trim 10 mới nhất/collection nằm trong cùng transaction với insert nên DB
+ * KHÔNG BAO GIỜ vượt giới hạn — invariant được chứng minh bằng test, không phải
+ * hy vọng.
+ */
+export interface ReadingSessionsRepository {
+  /** Ghi 1 phiên + trim còn 10 mới nhất của collection đó — MỘT transaction. */
+  insert(record: ReadingSessionRow): Promise<void>;
+  /** Phiên của MỘT collection, created_at DESC, tối đa 10. */
+  listByCollection(collectionId: string): Promise<ReadingSessionRow[]>;
+  /** Phiên gần nhất MỌI collection, created_at DESC, tối đa `limit`. */
+  listRecent(limit: number): Promise<ReadingSessionRow[]>;
+  getById(id: string): Promise<ReadingSessionRow | null>;
+  /** Luật "lưu 1 lần" (bug 6723302): đánh dấu trang đã lưu — persist theo DB. */
+  markSaved(id: string, savedAt: string, savedCount: number): Promise<void>;
+}
+
 export interface ReadoRepos {
   collections: CollectionsRepository;
   vocabItems: VocabItemsRepository;
@@ -160,4 +179,5 @@ export interface ReadoRepos {
   logs: ReviewLogsRepository;
   settings: SettingsRepository;
   analyses: AnalysesRepository;
+  readingSessions: ReadingSessionsRepository;
 }

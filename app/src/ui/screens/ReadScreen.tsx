@@ -9,54 +9,79 @@
  * - FR-05 c.2: nút MỘT chạm ẩn/hiện TOÀN BỘ bản dịch trên mọi trang của phiên.
  * - FR-05 c.3: từ vựng của trang xuất hiện trong đoạn được tô nền; chạm →
  *   nghĩa + IPA hiện NGAY TẠI CHỖ (inline) — xem readSegments.ts.
- * - FR-05 c.4: buffer − 10 trang GẦN NHẤT của phiên, xoá khi hết phiên
- *   (Q-10 chốt). Phiên sống ở state AppRoot (chết khi F5/đóng tab — đúng
- *   "xoá hết phiên"); các trang xếp cũ → mới, cuộn ngược xem được.
+ * - FR-05 c.4 (Q-10-reopen, task 3.15): phiên đọc là dữ liệu BỀN trong bảng
+ *   `reading_sessions` — 10 phiên mới nhất mỗi collection, mở lại app vẫn còn.
+ *   Màn này chỉ là mặt cắt: 10 phiên gần nhất MỌI collection (cũ → mới); xem
+ *   đầy đủ theo collection ở Collection Detail View.
  * - FR-06: summary_vi thu gọn MẶC ĐỊNH (design principle 6 — không phá tự đọc).
  * - FR-09 chống lưu trùng (bug owner báo 2026-09-09): trang ĐÃ lưu vào kho thì
- *   nút "Chọn từ" bị LÀM MỜ + KHOÁ — "Lưu" chỉ xảy ra một lần mỗi trang trong
- *   phiên (AppRoot đánh dấu `savedAt`/`savedCount` ngay khi save xong).
+ *   nút "Chọn từ" bị LÀM MỜ + KHOÁ — "Lưu" chỉ xảy ra một lần mỗi trang. Cờ
+ *   `saved_at`/`saved_count` PERSIST trong `reading_sessions` (task 3.15) nên
+ *   khoá vẫn đúng cả sau khi F5/mở lại app.
  *
  * Nằm NGOÀI phạm vi bản này (ghi nhận ở MVP_PLAN mục 4): cảnh báo trang sắp
  * trôi khỏi buffer khi chưa chọn từ nào (FR-05 c.5 — task ghi rõ để R2 được).
  */
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { CollectionRow } from "../../domain/types";
+import type { CollectionRow, ReadingSessionRow } from "../../domain/types";
 import type { Screen } from "../AppRoot";
-import { buildGlossIndex, glossIndexMap, splitWithGloss } from "../readSegments";
-import type { GlossEntry, ReadNode, SessionPage } from "../readSegments";
-import { READ_SESSION_MAX } from "../readSegments";
+import { analysisFromSession, buildGlossIndex, glossIndexMap, splitWithGloss } from "../readSegments";
+import type { GlossEntry, ReadNode } from "../readSegments";
+import { getReadingSession, listRecentReadingSessions, READ_SCREEN_SESSIONS } from "../../domain/usecases/readingSessions";
 import { useAppEnv } from "../context";
 
-export type { SessionPage } from "../readSegments";
-export { READ_SESSION_MAX } from "../readSegments";
-
-export function ReadScreen({ pages, navigate }: {
-  pages: SessionPage[];
+export function ReadScreen({ navigate, sessionId }: {
   navigate: (s: Screen) => void;
+  /** sessionId = phiên bấm "Mở màn đọc" ở Collection Detail — bảo đảm phiên đó
+   *  hiện ra kể cả khi đã trôi khỏi 10 phiên gần nhất TOÀN CỤC (màn này chỉ
+   *  liệt kê 10 cái), và auto-cuộn tới đúng nó. Undefined = mở thường từ
+   *  Home/Capture: liệt kê 10 phiên gần nhất mọi collection. */
+  sessionId?: string;
 }) {
   const { services } = useAppEnv();
+  // Nguồn duy nhất là DB (task 3.15): mới nhất TRƯỚC từ query, hiển thị cũ → mới.
+  const [pages, setPages] = useState<ReadingSessionRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showTranslations, setShowTranslations] = useState(true);
   /** key dạng `p{pageIndex}:{matchKey}` — gloss mở 1 cái mỗi lần, không đụng trang khác. */
   const [openGloss, setOpenGloss] = useState<string | null>(null);
   const [collectionNames, setCollectionNames] = useState<Map<string, string>>(new Map());
-  /** Neo cuối buffer để auto-cuộn tới trang MỚI NHẤT khi mở màn đọc. */
+  /** Neo cuối dãy để auto-cuộn tới trang MỚI NHẤT khi mở màn đọc thường. */
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [pages.length]);
-
-  useEffect(() => {
     let alive = true;
+    void (async () => {
+      const rows = await listRecentReadingSessions(services, READ_SCREEN_SESSIONS);
+      if (!alive) return;
+      let list = rows;
+      // Phiên được yêu cầu riêng mà đã trôi khỏi 10 phiên gần nhất toàn cục:
+      // kéo thêm nó vào (sau reverse nó nằm đầu dãy cũ → mới, đúng "phiên cũ").
+      if (sessionId && !rows.some((r) => r.id === sessionId)) {
+        const focus = await getReadingSession(services, sessionId);
+        if (focus) list = [...rows, focus];
+      }
+      setPages([...list].reverse()); // cũ → mới cho thứ tự đọc
+    })().catch((e: unknown) => {
+      if (alive) setLoadError(e instanceof Error ? e.message : String(e));
+    });
     void services.repos.collections.list().then((list: CollectionRow[]) => {
-      if (!alive) setCollectionNames(new Map(list.map((c) => [c.id, c.name])));
+      if (alive) setCollectionNames(new Map(list.map((c) => [c.id, c.name])));
     });
     return () => {
       alive = false;
     };
-  }, [services]);
+  }, [services, sessionId]);
+
+  useEffect(() => {
+    if (pages === null) return;
+    if (sessionId) {
+      document.getElementById(`session-${sessionId}`)?.scrollIntoView({ block: "start" });
+    } else {
+      endRef.current?.scrollIntoView({ block: "end" });
+    }
+  }, [pages, sessionId]);
 
   return (
     <div className="pad read-screen">
@@ -74,12 +99,15 @@ export function ReadScreen({ pages, navigate }: {
         {showTranslations ? "🙈 Ẩn toàn bộ bản dịch" : "👁 Hiện toàn bộ bản dịch"}
       </button>
 
-      {pages.length === 0 ? (
-        <p className="muted">Phiên đọc trống — chụp một trang để bắt đầu.</p>
+      {loadError && <div className="errorbox">Không đọc được phiên đọc — {loadError}</div>}
+      {pages === null ? (
+        !loadError && <p className="muted">Đang đọc phiên…</p>
+      ) : pages.length === 0 ? (
+        <p className="muted">Chưa có trang nào — chụp một trang để bắt đầu.</p>
       ) : (
         pages.map((page, pi) => (
           <PageBlock
-            key={`p${pi}`}
+            key={page.id}
             pageIndex={pi}
             page={page}
             collectionName={collectionNames.get(page.collectionId) ?? null}
@@ -101,8 +129,7 @@ export function ReadScreen({ pages, navigate }: {
       </div>
 
       <p className="hint">
-        Phiên giữ {pages.length}/{READ_SESSION_MAX} trang gần nhất — khi F5 hoặc đóng tab là hết phiên,
-        buffer xoá. Trang KHÔNG được lưu (NFR-04); từ vựng đi tiếp khi bạn bấm “Chọn từ”.
+        {pages === null ? "" : `Đang hiện ${pages.length} phiên đọc gần nhất — mỗi collection giữ tối đa ${READ_SCREEN_SESSIONS} phiên, cũ nhất tự trôi khi có trang mới. Ảnh trang không lưu; chỉ text + dịch.`}
       </p>
       <div ref={endRef} />
     </div>
@@ -111,55 +138,61 @@ export function ReadScreen({ pages, navigate }: {
 
 function PageBlock({ pageIndex, page, collectionName, showTranslations, openGloss, onToggleGloss, navigate }: {
   pageIndex: number;
-  page: SessionPage;
+  page: ReadingSessionRow;
   collectionName: string | null;
   showTranslations: boolean;
   openGloss: string | null;
   onToggleGloss: (key: string) => void;
   navigate: (s: Screen) => void;
 }) {
-  const { analysis } = page;
-  const entries = useMemo(() => buildGlossIndex(analysis.vocabulary), [analysis.vocabulary]);
+  const entries = useMemo(() => buildGlossIndex(page.vocabulary), [page.vocabulary]);
   const glossByKey = useMemo(() => glossIndexMap(entries), [entries]);
 
   const glossKey = (matchKey: string) => `p${pageIndex}:${matchKey}`;
+  const savedAt = page.savedAt;
+  const savedCount = page.savedCount;
 
   return (
-    <section className="read-page">
+    <section className="read-page" id={`session-${page.id}`}>
       <header className="read-page-head">
         <span className="read-page-no">
           Trang {pageIndex + 1} {collectionName ? `· ${collectionName}` : ""}
         </span>
-        {page.savedCount != null ? (
+        {savedAt != null ? (
           <button
             type="button"
             className="read-revise saved"
             disabled
             title="Trang này đã lưu vào kho từ — mở 📚 Kho từ vựng để xem"
           >
-            ✅ Đã lưu ({page.savedCount} từ)
+            ✅ Đã lưu ({savedCount} từ)
           </button>
         ) : (
           <button
             type="button"
             className="read-revise"
             onClick={() =>
-              navigate({ name: "vocabEdit", analysis, collectionId: page.collectionId, pageId: page.pageId })
+              navigate({
+                name: "vocabEdit",
+                analysis: analysisFromSession(page),
+                collectionId: page.collectionId,
+                pageId: page.id,
+              })
             }
           >
-            📝 Chọn từ ({analysis.vocabulary.length}) →
+            📝 Chọn từ ({page.vocabCount}) →
           </button>
         )}
       </header>
 
-      {analysis.summaryVi.trim() !== "" && (
+      {page.summaryVi.trim() !== "" && (
         <details className="read-summary">
           <summary>📌 Tóm tắt trang</summary>
-          <p>{analysis.summaryVi}</p>
+          <p>{page.summaryVi}</p>
         </details>
       )}
 
-      {analysis.segments.map((s, si) => (
+      {page.segments.map((s, si) => (
         <SegmentBlock
           key={si}
           sourceEn={s.sourceEn}

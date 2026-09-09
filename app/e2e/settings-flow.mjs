@@ -15,19 +15,28 @@
  *
  * Chạy: npm run e2e:settings   (cần dev server ở localhost:5173)
  */
+import { rmSync } from "node:fs";
 import puppeteer from "puppeteer-core";
 
 const BASE = process.argv[2] ?? "http://localhost:5173/";
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PROFILE = "/tmp/reado-e2e-settings-profile";
+// Profile cũ = DB cũ → giá trị cài đặt của lần chạy trước còn nguyên (C1, key...)
+// Mỗi lượt chạy phải là DB mới — xoá profile ngay khi start.
+rmSync(PROFILE, { recursive: true, force: true });
 const SECRET = "AIza-e2e-secret-key-12345";
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
+  // --no-sandbox --disable-gpu (2026-09-09): Chrome trong DSH seatbelt chết process
+  // con với "GPU process isn't usable / sandbox initialization failed" — môi trường,
+  // không phải bug app (xem journal 3.5). Headless + profile /tmp dùng một lần.
   args: [
     "--no-first-run",
     "--disable-crash-reporter",
+    "--no-sandbox",
+    "--disable-gpu",
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],

@@ -190,3 +190,25 @@ export interface AnalysisRecord {
   tokensIn: number | null;
   tokensOut: number | null;
 }
+
+/**
+ * Một PHIÊN ĐỌC đã lưu bền (task 3.15, Q-10-reopen 2026-09-09): 1 dòng = 1 trang
+ * đã phân tích thành công. Chỉ text + dịch (A-08 của PRD sai → nới NFR-04 phần
+ * text; ẢNH VẪN CẤM). `id` trùng `analyses.id` của lần gọi — provenance trực
+ * tiếp. `savedAt` null = trang chưa được "Chọn từ → Lưu" (luật lưu 1 lần).
+ */
+export interface ReadingSessionRow {
+  id: string;
+  collectionId: string;
+  segments: Segment[];
+  /** Vocabulary nguyên vẹn của trang (JSON) — gloss tô từ + "Chọn từ" của
+   *  trang CHƯA lưu đều cần nó. Có thể stale sau khi user sửa ở màn duyệt:
+   *  gloss chỉ là trợ giúp đọc, nguồn sự thật là vocab_items. */
+  vocabulary: AnalyzedItem[];
+  summaryVi: string;
+  /** Số từ AI trích xuất trên trang — cho thẻ tóm tắt ở danh sách. */
+  vocabCount: number;
+  createdAt: string;
+  savedAt: string | null;
+  savedCount: number;
+}

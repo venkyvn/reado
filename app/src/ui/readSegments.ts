@@ -12,49 +12,32 @@
  *   GIỮA token), term nhiều từ khớp cửa sổ token liên tiếp và ưu tiên term
  *   DÀI trước; vùng đã khớp không bị khớp chồng. Khoảng trắng + dấu câu giữ
  *   NGUYÊN văn (ghép các node lại = đúng chuỗi gốc).
+ *
+ * ⚰ Bia mộ (2026-09-09): `SessionPage`/`appendSessionPage`/`markPageSaved`/
+ * `READ_SESSION_MAX` (buffer phiên in-memory theo Q-10 cũ) đã XÓA — thay bằng
+ * bảng `reading_sessions` bền theo collection (task 3.15, Q-10-reopen; MVP_PLAN
+ * mục 4 hàng "Buffer phiên đọc để Ở ĐÂU" là bia mộ của quyết định cũ).
  */
-import type { AnalyzedItem, AnalysisResult } from "../domain/types";
+import type { AnalyzedItem, AnalysisResult, ReadingSessionRow } from "../domain/types";
 import { normalizePageText } from "../domain/verify";
 
-/** Một trang trong buffer phiên đọc (FR-05 c.4). */
-export interface SessionPage {
-  /** id ổn định TRONG PHIÊN — neo để đánh dấu trang "đã lưu" (chống lưu trùng). */
-  pageId: string;
-  analysis: AnalysisResult;
-  collectionId: string;
-  /** Trang này ĐÃ được lưu vào kho (FR-03/FR-09) lúc `savedAt`, gồm `savedCount`
-   *  từ. Màn đọc KHÔNG cho vào "Chọn từ" lần hai với trang đã lưu — bug owner
-   *  báo 2026-09-09 (đọc lại phiên → lưu lại → trùng từ). Chỉ sống trong phiên
-   *  như cả buffer: F5/đóng tab = hết phiên = bị xoá (Q-10). */
-  savedAt?: string;
-  savedCount?: number;
-}
-
-/** Q-10 chốt 2026-09-08: buffer giữ 10 trang GẦN NHẤT, phần cũ trôi đi. */
-export const READ_SESSION_MAX = 10;
-
-/** Nối trang mới phân tích vào cuối buffer, cắt về READ_SESSION_MAX. */
-export function appendSessionPage(pages: SessionPage[], page: SessionPage): SessionPage[] {
-  return [...pages, page].slice(-READ_SESSION_MAX);
-}
-
-/**
- * Đánh dấu trang `pageId` đã lưu vào kho (FR-09) — thuần, không đột biến.
- * pageId không có trong buffer (vd: trang đã trôi khỏi 10 trang gần nhất) thì
- * trả về bản sao y nguyên — không lỗi, không đánh nhầm trang khác.
- */
-export function markPageSaved(
-  pages: SessionPage[],
-  pageId: string,
-  savedAt: string,
-  savedCount: number,
-): SessionPage[] {
-  return pages.map((p) => (p.pageId === pageId ? { ...p, savedAt, savedCount } : p));
+/** Tái dựng `AnalysisResult` cho màn duyệt từ ("Chọn từ") từ phiên đọc đã lưu
+ *  (task 3.15). usage/latency/promptVersion không còn ý nghĩa lúc đọc lại — để
+ *  0, màn duyệt từ không dùng chúng. */
+export function analysisFromSession(row: ReadingSessionRow): AnalysisResult {
+  return {
+    segments: row.segments,
+    vocabulary: row.vocabulary,
+    summaryVi: row.summaryVi,
+    usage: { promptTokens: 0, candidatesTokens: 0 },
+    latencyMs: 0,
+    promptVersion: 0,
+  };
 }
 
 export interface GlossEntry {
   /** key ổn định cho React + trạng thái gloss đang mở; prefix để không đụng
-   *  giữa các trang trong buffer. */
+   *  giữa các trang của màn đọc. */
   key: string;
   term: string;
   pos: string;

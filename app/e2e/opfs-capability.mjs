@@ -18,9 +18,14 @@ const PROFILE = "/tmp/reado-e2e-profile";
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
+  // --no-sandbox --disable-gpu (2026-09-09): Chrome trong DSH seatbelt chết process
+  // con với "GPU process isn't usable / sandbox initialization failed" — môi trường,
+  // không phải bug app (xem journal 3.5). Headless + profile /tmp dùng một lần.
   args: [
     "--no-first-run",
     "--disable-crash-reporter",
+    "--no-sandbox",
+    "--disable-gpu",
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],

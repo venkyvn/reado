@@ -62,6 +62,45 @@ export const MIGRATIONS: readonly Migration[] = [
       alter table vocab_items add column antonyms text not null default '[]';
     `,
   },
+  {
+    // v4 — Kho phiên đọc bền theo collection (task 3.15, Q-10-reopen 2026-09-09).
+    // A-08 của PRD bị bác bỏ bằng thực tế dùng thử: user MUỐN đọc lại trang đã
+    // đọc → lưu lại text bài đọc (segments + summary). Ảnh trang VẪN cấm
+    // (phần ảnh của NFR-04 giữ nguyên; chỉ nới phần text — ghi MVP_PLAN mục 1/4).
+    //
+    //   - 1 dòng = 1 trang đã phân tích thành công (một lần gọi AI).
+    //   - `id` = id của dòng analyses tương ứng (hai bảng ghi cùng lúc) —
+    //     provenance trực tiếp, không cần cột FK riêng.
+    //   - `segments` TEXT JSON [{sourceEn, translationVi}] — đủ để vẽ lại màn
+    //     đọc; KHÔNG lưu ảnh, KHÔNG lưu page_text thô.
+    //   - `vocabulary` TEXT JSON AnalyzedItem[] — bắt buộc phải giữ: gloss tô
+    //     từ ở màn đọc VÀ nút "Chọn từ" của trang CHƯA lưu đều cần vocabulary
+    //     (không có nó thì trang chưa lưu không thể duyệt/lưu lần sau). Bản
+    //     này có thể stale sau khi user sửa từ ở màn duyệt — chấp nhận: gloss
+    //     chỉ là trợ giúp đọc, nguồn sự thật là vocab_items.
+    //   - `vocab_count` để thẻ tóm tắt không phải parse JSON mỗi lần list.
+    //   - saved_at null = trang CHƯA được "Chọn từ → Lưu" — luật "lưu 1 lần"
+    //     (bug 6723302) giờ persist theo DB thay vì chết theo phiên.
+    //   - Trim 10 mới nhất/collection nằm ở repo (mỗi lần insert, cùng một
+    //     transaction) — không dùng trigger, thấy được bằng test.
+    version: 4,
+    name: "reading sessions per collection",
+    sql: `
+      create table reading_sessions (
+        id             text primary key,          -- = analyses.id của lần gọi
+        collection_id  text not null references collections(id) on delete cascade,
+        segments       text not null,             -- JSON [{sourceEn, translationVi}]
+        vocabulary     text not null default '[]',-- JSON AnalyzedItem[]
+        summary_vi     text not null default '',
+        vocab_count    integer not null default 0,
+        created_at     text not null,             -- UTC ISO-8601
+        saved_at       text,                      -- null = chưa "Chọn từ → Lưu"
+        saved_count    integer not null default 0
+      );
+      create index idx_rsessions_coll_time on reading_sessions (collection_id, created_at desc);
+      create index idx_rsessions_time on reading_sessions (created_at desc);
+    `,
+  },
 ];
 
 /** Áp các migration chưa chạy (trong một transaction), trả version hiện tại. */

@@ -9,23 +9,30 @@
  * - số trang đã phân tích (bảng analyses) + streak ngày ôn liên tục (giờ
  *   chuyển ngày của FR-11 — criterion cuối).
  *
+ * Task 3.15 (Q-10-reopen): nút "Đọc lại" không còn phụ thuộc buffer in-memory —
+ * luôn hiện khi DB có phiên đọc (phiên là dữ liệu bền theo collection), nhãn
+ * cho biết có bao nhiêu phiên gần nhất đang hiển thị. Khối "Collections" là
+ * cửa vào Collection Detail View (Từ vựng / Phiên đọc).
+ *
  * Màn này mount lại mỗi lần quay về home (router state) nên số tự làm mới sau
  * mỗi phiên ôn/analyse. NFR-08: nút chụp vẫn là chạm thứ nhất.
  */
 import { useEffect, useState } from "react";
+import type { CollectionRow } from "../../domain/types";
 import type { Screen } from "../AppRoot";
 import type { HomeStats } from "../../domain/usecases/homeStats";
 import { getHomeStats } from "../../domain/usecases/homeStats";
+import { READ_SCREEN_SESSIONS, listRecentReadingSessions } from "../../domain/usecases/readingSessions";
 import { useAppEnv } from "../context";
 
-export function HomeScreen({ navigate, onResumeReading }: {
+export function HomeScreen({ navigate }: {
   navigate: (s: Screen) => void;
-  /** FR-05 c.4: phiên đọc còn trang trong buffer → nút quay lại đọc. */
-  onResumeReading?: { pageCount: number; onClick: () => void } | null;
 }) {
   const { services } = useAppEnv();
   const [stats, setStats] = useState<HomeStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [collections, setCollections] = useState<CollectionRow[]>([]);
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -36,6 +43,12 @@ export function HomeScreen({ navigate, onResumeReading }: {
       .catch((e) => {
         if (alive) setError(e instanceof Error ? e.message : String(e));
       });
+    void services.repos.collections.list().then((list) => {
+      if (alive) setCollections(list);
+    });
+    void listRecentReadingSessions(services, READ_SCREEN_SESSIONS).then((rows) => {
+      if (alive) setSessionCount(rows.length);
+    });
     return () => {
       alive = false;
     };
@@ -49,11 +62,9 @@ export function HomeScreen({ navigate, onResumeReading }: {
       <button type="button" className="primary big" onClick={() => navigate({ name: "capture" })}>
         📷 Chụp trang sách
       </button>
-      {onResumeReading && (
-        <button type="button" className="secondary big" onClick={onResumeReading.onClick}>
-          📖 Đọc lại phiên vừa chụp ({onResumeReading.pageCount} trang trong buffer)
-        </button>
-      )}
+      <button type="button" className="secondary big" onClick={() => navigate({ name: "readSession" })}>
+        📖 Đọc lại trang đã chụp{(sessionCount ?? 0) > 0 ? ` (${sessionCount} phiên gần nhất)` : ""}
+      </button>
       <button type="button" className="primary big alt" onClick={() => navigate({ name: "review" })}>
         🃏 Ôn tập hôm nay{stats ? ` (${stats.dueToday})` : ""}
       </button>
@@ -91,6 +102,27 @@ export function HomeScreen({ navigate, onResumeReading }: {
           </>
         )}
         {error && <p className="errorbox">Không đọc được tiến độ — {error}</p>}
+      </section>
+
+      <section aria-label="Collections" style={{ marginTop: 12 }}>
+        <p className="fine" style={{ marginBottom: 4 }}>Collections — bấm để xem từ vựng & phiên đọc của sách đang đọc:</p>
+        {collections.length === 0 ? (
+          <p className="muted">Chưa có collection nào.</p>
+        ) : (
+          <div className="btn-row" style={{ flexWrap: "wrap", gap: 8 }}>
+            {collections.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="secondary"
+                onClick={() => navigate({ name: "collectionDetail", collectionId: c.id })}
+              >
+                {c.isDefault ? "📥 " : "📖 "}
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <p style={{ marginTop: 24 }}>

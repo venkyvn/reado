@@ -13,18 +13,26 @@
  *
  * Chạy: npm run e2e:swipe   (cần dev server ở localhost:5173)
  */
+import { rmSync } from "node:fs";
 import puppeteer from "puppeteer-core";
 
 const BASE = process.argv[2] ?? "http://localhost:5173/";
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PROFILE = "/tmp/reado-e2e-swipe-profile";
+// Profile cũ = DB cũ → seed lần 2 thêm thẻ trùng (như cram-flow). Xoá ngay khi start.
+rmSync(PROFILE, { recursive: true, force: true });
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
+  // --no-sandbox --disable-gpu (2026-09-09): Chrome trong DSH seatbelt chết process
+  // con với "GPU process isn't usable / sandbox initialization failed" — môi trường,
+  // không phải bug app (xem journal 3.5). Headless + profile /tmp dùng một lần.
   args: [
     "--no-first-run",
     "--disable-crash-reporter",
+    "--no-sandbox",
+    "--disable-gpu",
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],
@@ -63,6 +71,16 @@ async function dragCard(page, dx) {
 try {
   const page = await browser.newPage();
   await page.setViewport({ width: 430, height: 900 });
+  // Chặn favicon.ico (Chrome tự dò → 404/ERR_FAILED noise hỏng check console);
+  // respond 200 rỗng thay vì abort vì abort cũng sinh lỗi console.
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    if (req.url().endsWith("/favicon.ico")) {
+      void req.respond({ status: 200, contentType: "image/x-icon", body: "" });
+      return;
+    }
+    void req.continue();
+  });
   const consoleErrors = [];
   page.on("console", (m) => {
     if (m.type() === "error") consoleErrors.push(m.text().slice(0, 200));

@@ -13,6 +13,7 @@
  * Chạy: npm run e2e:read   (cần dev server đang chạy ở localhost:5173)
  * Arg:  node e2e/read-flow.mjs [url] [ảnh]
  */
+import { rmSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import puppeteer from "puppeteer-core";
@@ -21,6 +22,9 @@ const URL = process.argv[2] ?? "http://localhost:5173/";
 const SAMPLE = resolve(process.argv[3] ?? "../ref/sample/page-42.png");
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PROFILE = "/tmp/reado-e2e-read-profile";
+// Profile cũ = DB cũ → số trang phiên đọc lệch (phiên giờ BỀN theo DB). Mỗi
+// lượt chạy phải là DB mới — xoá profile ngay khi start.
+rmSync(PROFILE, { recursive: true, force: true });
 const FAKE_PORT = 59999;
 const FAKE_BASE = `http://127.0.0.1:${FAKE_PORT}`;
 
@@ -179,6 +183,9 @@ try {
   );
   check("mở màn Đọc trang ngay sau phân tích (không nhảy thẳng sang duyệt từ)", true);
 
+  // Task 3.15: màn đọc load phiên từ DB (async) — chờ trang render trước khi đo.
+  await page.waitForFunction(() => document.querySelectorAll(".read-page").length >= 1, { timeout: 10000 });
+
   const snap = await page.evaluate(() => ({
     segs: document.querySelectorAll(".seg").length,
     trShown: [...document.querySelectorAll(".seg-tr")].filter(
@@ -227,21 +234,29 @@ try {
     { timeout: 30000 },
   );
   const pageNo = await page.$eval(".read-page-no", (el) => el.textContent);
-  check("buffer giữ 2 trang sau lần chụp thứ hai (cuộn ngược xem được)", pageNo.includes("Trang 1"), pageNo);
+  check("màn đọc giữ 2 trang sau lần chụp thứ hai (cũ → mới)", pageNo.includes("Trang 1"), pageNo);
 
   // 7. Home tạm → nút quay lại phiên đọc (buffer còn sống)
   await clickByText("Về trang chủ");
   const resumeOk = await page
     .waitForFunction(
-      () => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Đọc lại phiên vừa chụp")),
+      () => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Đọc lại trang đã chụp")),
       { timeout: 5000 },
     )
     .then(() => true)
     .catch(() => false);
-  check("Home có nút quay lại phiên đọc khi buffer còn trang", resumeOk);
-  await clickByText("Đọc lại phiên vừa chụp");
+  check("Home có nút Đọc lại trang đã chụp (phiên đọc bền theo DB)", resumeOk);
+  await clickByText("Đọc lại trang đã chụp");
   await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Đọc trang", { timeout: 5000 });
   check("bấm nút → quay lại đúng màn đọc với buffer nguyên vẹn", true);
+
+  // 7b. Task 3.15 (Q-10-reopen): phiên đọc SỐNG QUA F5 — điều mà buffer cũ
+  //      không bao giờ làm được (đây là điểm chính owner muốn khi đảo Q-10).
+  await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
+  await page.waitForSelector(".home", { timeout: 15000 });
+  await clickByText("Đọc lại trang đã chụp");
+  await page.waitForFunction(() => document.querySelectorAll(".read-page").length === 2, { timeout: 10000 });
+  check("phiên đọc SỐNG QUA F5 — 2 trang vẫn nguyên sau khi mở lại app", true);
 
   // 8. FR-09 chống lưu trùng (bug 2026-09-09): lưu trang 1 → chỉ ĐƯỢC LƯU MỘT
   //    LẦN — đọc lại phiên thì nút "Chọn từ" của trang đó bị làm mờ + khoá,
@@ -252,8 +267,10 @@ try {
   await page.waitForFunction(() => document.querySelector("h1")?.textContent.includes("Đã lưu"), { timeout: 15000 });
   check("lưu 2 thẻ của trang 1 thành công lần đầu", true);
   await clickByText("Về trang chủ");
-  await clickByText("Đọc lại phiên vừa chụp");
+  await clickByText("Đọc lại trang đã chụp");
   await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Đọc trang", { timeout: 5000 });
+  // Màn đọc load pages từ DB (async) — chờ đủ 2 trang render trước khi đo.
+  await page.waitForFunction(() => document.querySelectorAll(".read-page-head").length === 2, { timeout: 10000 });
   const dedup = await page.evaluate(() => {
     const heads = [...document.querySelectorAll(".read-page-head")];
     const first = heads[0]?.querySelector("button.read-revise");
@@ -275,6 +292,44 @@ try {
     !dedup.secondDisabled && dedup.secondText.includes("Chọn từ"),
     `disabled=${dedup.secondDisabled}, text="${dedup.secondText.trim()}"`,
   );
+
+  // 9. Task 3.15 — Collection Detail View (2 tab): Home → bấm collection →
+  //    tab "Phiên đọc" (thẻ tóm tắt, cờ đã lưu persist) → tab "Từ vựng" (2 từ
+  //    đã lưu) → "Mở màn đọc" quay lại ReadScreen với đúng phiên (sessionId).
+  await clickByText("Về trang chủ");
+  await page.waitForSelector(".home", { timeout: 5000 });
+  // Khối Collections render bất đồng bộ (list từ DB) — chờ nút xuất hiện.
+  await page.waitForFunction(
+    () => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Kho tạm")),
+    { timeout: 10000 },
+  );
+  await clickByText("Kho tạm"); // nút collection trong khối Collections của Home
+  await page.waitForFunction(() => document.querySelector("h1")?.textContent.includes("Kho tạm"), { timeout: 5000 });
+  await page.waitForFunction(() => document.querySelectorAll(".session-card").length === 2, { timeout: 10000 });
+  const cards = await page.evaluate(() => {
+    const els = [...document.querySelectorAll(".session-card")];
+    return els.map((c) => c.textContent ?? "");
+  });
+  check(
+    "Collection Detail: tab Phiên đọc hiện 2 thẻ — thẻ cũ hơn ghi 'Đã lưu (2 từ)' persist theo DB",
+    cards.length === 2 &&
+      cards.some((t) => t.includes("chưa lưu từ")) &&
+      cards.some((t) => t.includes("Đã lưu (2 từ)")) &&
+      cards.some((t) => t.includes("Đám đông phản ứng trái chiều")),
+    cards.map((t) => t.slice(0, 60)).join(" | "),
+  );
+  await clickByText("📚 Từ vựng"); // tab — Home không mount nên không lẫn nút khác
+  await page.waitForFunction(() => document.querySelectorAll(".vocab-card").length === 2, { timeout: 10000 });
+  check("Collection Detail: tab Từ vựng liệt kê đúng 2 từ của collection", true);
+  await clickByText("📖 Phiên đọc");
+  await page.waitForFunction(() => document.querySelectorAll(".session-card").length === 2, { timeout: 10000 });
+  await clickByText("Mở màn đọc");
+  await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Đọc trang", { timeout: 5000 });
+  await page.waitForFunction(() => document.querySelectorAll(".read-page").length >= 2, { timeout: 10000 });
+  const focusExists = await page.evaluate(
+    () => document.querySelectorAll("section.read-page[id^='session-']").length >= 2,
+  );
+  check("Mở màn đọc từ thẻ phiên → ReadScreen mở lại phiên (2 trang nguyên)", focusExists);
 
   check("0 lỗi console", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
 

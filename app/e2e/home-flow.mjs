@@ -19,9 +19,14 @@ const PROFILE = "/tmp/reado-e2e-home-profile";
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
+  // --no-sandbox --disable-gpu (2026-09-09): Chrome trong DSH seatbelt chết process
+  // con với "GPU process isn't usable / sandbox initialization failed" — môi trường,
+  // không phải bug app (xem journal 3.5). Headless + profile /tmp dùng một lần.
   args: [
     "--no-first-run",
     "--disable-crash-reporter",
+    "--no-sandbox",
+    "--disable-gpu",
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],
@@ -40,7 +45,13 @@ try {
   await page.waitForSelector(".home", { timeout: 15000 });
 
   // 1) Khối stats render đủ 3 hàng (đến hạn / trang đã phân tích / streak).
-  await page.waitForSelector(".stats", { timeout: 10000 });
+  //    Chờ .stat-row chứ không chờ .stats: Home giờ còn load collections +
+  //    sessions bất đồng bộ (task 3.15), khối rỗng "đang đọc" có thể render
+  //    trước khi các hàng số về.
+  await page.waitForFunction(
+    () => document.querySelectorAll(".stat-row").length >= 3,
+    { timeout: 10000 },
+  );
   const labels = await page.evaluate(() =>
     [...document.querySelectorAll(".stat-row .stat-label")].map((el) => el.textContent ?? ""),
   );

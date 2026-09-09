@@ -16,7 +16,9 @@ import { useAppEnv } from "./context";
 
 export function AnalyzePanel({ image, onDone, onCancel }: {
   image: PageImage;
-  onDone: (result: AnalysisResult) => void;
+  /** `analysisId` = id dòng analyses + reading_sessions ghi cùng lúc (task 3.15)
+   *  — caller dùng neo phiên đọc. */
+  onDone: (result: AnalysisResult, analysisId: string) => void;
   onCancel: () => void;
 }) {
   const { services } = useAppEnv();
@@ -51,12 +53,17 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
         // kiện. Lỗi ghi không chặn đường chính (kết quả AI quan trọng hơn con
         // đếm) nhưng không nuốt im lặng — console.error vẫn lưu dấu vết.
         try {
-          await recordAnalyzedPage(services, result);
+          const analysisId = await recordAnalyzedPage(services, result);
+          setBusy(false);
+          onDone(result, analysisId);
         } catch (e) {
-          console.error("Không ghi được sự kiện phân tích vào analyses:", e);
+          // Không ghi được analyses/reading_sessions: kết quả AI vẫn cho user
+          // xem (màn duyệt từ vẫn lưu được từ), nhưng phiên đọc không persist —
+          // không nuốt im lặng, console.error lưu dấu vết.
+          console.error("Không ghi được sự kiện phân tích/phiên đọc:", e);
+          setBusy(false);
+          onDone(result, "");
         }
-        setBusy(false);
-        onDone(result);
       } catch (e) {
         if (runId !== runIdRef.current) return;
         setBusy(false);

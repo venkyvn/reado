@@ -66,9 +66,10 @@ function initialState(analysis: AnalysisResult): EditableItem[] {
 export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navigate }: {
   analysis: AnalysisResult;
   collectionId: string;
-  /** pageId của TRANG GỐC trong buffer phiên đọc — AppRoot dùng nó để đánh
-   *  dấu trang "đã lưu" ngay sau khi save thành công, chặn lưu trùng lần hai
-   *  (bug 2026-09-09: đọc lại phiên → Chọn từ → lưu lại → duplicate). */
+  /** pageId = id phiên đọc gốc trong `reading_sessions` (task 3.15) — AppRoot
+   *  dùng nó để đánh dấu trang "đã lưu" ngay sau khi save thành công, chặn
+   *  lưu trùng lần hai (bug 2026-09-09: đọc lại phiên → Chọn từ → lưu lại →
+   *  duplicate). Cờ persist trong DB nên sống cả sau F5. */
   pageId: string;
   /** Gọi ĐÚNG MỘT LẦN ngay sau khi `saveVocabulary` thành công (trước khi
    *  sang phase "saved") — không gọi khi fail hay khi không gì được chọn. */

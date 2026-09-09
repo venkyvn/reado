@@ -6,6 +6,7 @@ import type { AppDb } from "../db";
 import { createAnalysesRepo } from "./analyses";
 import { createCardsRepo } from "./cards";
 import { createCollectionsRepo } from "./collections";
+import { createReadingSessionsRepo } from "./readingSessions";
 import { createReviewLogsRepo } from "./reviewLogs";
 import { createSettingsRepo } from "./settings";
 import { createVocabItemsRepo } from "./vocabItems";
@@ -18,5 +19,6 @@ export function createRepos(appDb: AppDb): ReadoRepos {
     logs: createReviewLogsRepo(appDb),
     settings: createSettingsRepo(appDb),
     analyses: createAnalysesRepo(appDb),
+    readingSessions: createReadingSessionsRepo(appDb),
   };
 }

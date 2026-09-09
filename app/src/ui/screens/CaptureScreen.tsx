@@ -25,10 +25,11 @@ interface DragState {
 
 export function CaptureScreen({ navigate, onAnalyzed }: {
   navigate: (s: Screen) => void;
-  /** FR-05: kết quả phân tích đi qua AppRoot — gắn vào buffer phiên đọc rồi
-   *  MỞ MÀN ĐỌC (PRD mục 6: Analyze → Đọc song ngữ → Summary → Chọn từ),
-   *  không nhảy thẳng sang duyệt từ nữa. */
-  onAnalyzed: (analysis: AnalysisResult, collectionId: string) => void;
+  /** FR-05: kết quả phân tích đi qua AppRoot — task 3.15 (Q-10-reopen):
+   *  AppRoot PERSIST phiên đọc vào reading_sessions rồi mở màn đọc (PRD mục 6:
+   *  Analyze → Đọc song ngữ → Summary → Chọn từ), không nhảy thẳng sang duyệt từ.
+   *  `analysisId` = id dòng analyses + reading_sessions ("" nếu ghi DB hỏng). */
+  onAnalyzed: (analysis: AnalysisResult, collectionId: string, analysisId: string) => void;
 }) {
   const { services } = useAppEnv();
 
@@ -69,9 +70,9 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
   const payloadRef = useRef<{ image: PageImage; collectionId: string } | null>(null);
 
   const handleAnalysisDone = useCallback(
-    (r: AnalysisResult) => {
+    (r: AnalysisResult, analysisId: string) => {
       const current = payloadRef.current;
-      if (current) onAnalyzed(r, current.collectionId);
+      if (current) onAnalyzed(r, current.collectionId, analysisId);
     },
     [onAnalyzed],
   );

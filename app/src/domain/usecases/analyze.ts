@@ -40,14 +40,19 @@ export async function analyzePage(
  * này SAU guard nên đếm đúng 1 sự kiện cho 1 trang người dùng thấy được — kể cả
  * ở dev. Bên cạnh con đếm, dòng này lưu số đo NFR-02 (latency/token/provider/
  * model/prompt_version) làm dữ liệu cho M-03. KHÔNG lưu key, KHÔNG lưu ảnh.
+ *
+ * Trả về `id` của dòng analyses — task 3.15 (Q-10-reopen) dùng CHÍNH id này
+ * cho dòng reading_sessions ghi kèm (provenance 1:1 giữa sự kiện phân tích và
+ * phiên đọc), nên UI gọi persistReadingSession ngay sau hàm này.
  */
 export async function recordAnalyzedPage(
   svc: AppServices,
   result: AnalysisResult,
-): Promise<void> {
+): Promise<string> {
   const settings = await svc.repos.settings.get();
+  const id = newId();
   await svc.repos.analyses.insert({
-    id: newId(),
+    id,
     analyzedAt: toUtcIso(svc.now()),
     cefr: settings.cefrLevel,
     provider: settings.aiProvider,
@@ -57,4 +62,5 @@ export async function recordAnalyzedPage(
     tokensIn: result.usage.promptTokens,
     tokensOut: result.usage.candidatesTokens,
   });
+  return id;
 }
