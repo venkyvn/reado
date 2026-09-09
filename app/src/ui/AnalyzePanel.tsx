@@ -8,8 +8,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisResult } from "../domain/types";
 import type { PageImage } from "../domain/ai";
-import { AnalysisError } from "../domain/errors";
+import { AnalysisError, SettingsError } from "../domain/errors";
+import { DEFAULT_AI_BASE_URL, DEFAULT_AI_MODEL } from "../domain/settings";
 import { analyzePage, recordAnalyzedPage } from "../domain/usecases/analyze";
+import { updateSettings } from "../domain/usecases/settings";
 import { useAppEnv } from "./context";
 
 export function AnalyzePanel({ image, onDone, onCancel }: {
@@ -21,9 +23,12 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<AnalysisError | null>(null);
   const [showKeyForm, setShowKeyForm] = useState(false);
+  const [keyFormError, setKeyFormError] = useState<string | null>(null);
   const [key, setKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("https://generativelanguage.googleapis.com");
-  const [model, setModel] = useState("gemini-3.6-flash");
+  // Mặc định lấy từ domain/settings.ts (task 3.6) — màn Cài đặt dùng CÙNG hằng số,
+  // để hai chỗ không trôi khỏi nhau.
+  const [baseUrl, setBaseUrl] = useState(DEFAULT_AI_BASE_URL);
+  const [model, setModel] = useState(DEFAULT_AI_MODEL);
   const runIdRef = useRef(0);
 
   // Nhồi sẵn baseUrl/model hiện có để form BYOK không bắt user gõ lại.
@@ -83,11 +88,20 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
 
   async function saveKeyAndRetry() {
     if (!key.trim()) return;
-    await services.repos.settings.updatePartial({
-      aiApiKey: key.trim(),
-      aiBaseUrl: baseUrl.trim() || "https://generativelanguage.googleapis.com",
-      aiModel: model.trim() || "gemini-3.6-flash",
-    });
+    setKeyFormError(null);
+    try {
+      // Đi qua use-case (task 3.6) chứ không gọi repo: cổng kiểm tra settings nằm
+      // ở domain — form này cũng phải chịu cùng luật (base URL/model rác bị chặn).
+      await updateSettings(services, {
+        aiApiKey: key.trim(),
+        aiBaseUrl: baseUrl,
+        aiModel: model,
+      });
+    } catch (e) {
+      // Ghép câu từ code — không render e.message (conventions: message là cho log).
+      setKeyFormError(e instanceof SettingsError ? keyFormMessageFor(e.code) : String(e));
+      return;
+    }
     setShowKeyForm(false);
     void attempt();
   }
@@ -142,6 +156,7 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
             Model (gợi ý mặc định cho app)
             <input type="text" value={model} onChange={(e) => setModel(e.target.value)} />
           </label>
+          {keyFormError && <div className="errorbox">{keyFormError}</div>}
           <button
             type="button"
             className="primary"
@@ -160,6 +175,19 @@ export function AnalyzePanel({ image, onDone, onCancel }: {
       )}
     </div>
   );
+}
+
+function keyFormMessageFor(code: SettingsError["code"]): string {
+  switch (code) {
+    case "bad_base_url":
+      return "Base URL không hợp lệ — cần địa chỉ http(s) đầy đủ. Xoá trống để dùng mặc định Gemini.";
+    case "bad_model":
+      return "Tên model không hợp lệ. Xoá trống để dùng model mặc định.";
+    case "empty_key":
+      return "API key rỗng — nhập key để tiếp tục.";
+    default:
+      return "Cấu hình chưa hợp lệ — kiểm tra lại API key, base URL và model.";
+  }
 }
 
 function messageFor(code: AnalysisError["code"]): string {

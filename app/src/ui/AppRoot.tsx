@@ -20,6 +20,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { ReadScreen } from "./screens/ReadScreen";
 import type { SessionPage } from "./screens/ReadScreen";
 import { appendSessionPage, markPageSaved } from "./readSegments";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
 import { VocabLibraryScreen } from "./screens/VocabLibraryScreen";
@@ -34,6 +35,7 @@ export type Screen =
   | { name: "cram" }
   | { name: "storageCheck" }
   | { name: "export" }
+  | { name: "settings" }
   | { name: "vocabLibrary" };
 
 function initialScreen(): Screen {
@@ -121,6 +123,7 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         {screen.name === "cram" && <CramScreen navigate={navigate} />}
         {screen.name === "storageCheck" && <StorageCheckScreen navigate={navigate} />}
         {screen.name === "export" && <ExportScreen navigate={navigate} />}
+        {screen.name === "settings" && <SettingsScreen navigate={navigate} />}
         {screen.name === "vocabLibrary" && <VocabLibraryScreen navigate={navigate} />}
       </main>
     </AppEnvContext.Provider>

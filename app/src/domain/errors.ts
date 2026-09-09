@@ -29,6 +29,34 @@ export class AnalysisError extends Error {
   }
 }
 
+/**
+ * FR-15: lỗi khi lưu Cài đặt. `code` để UI hiện thông điệp tiếng Việt đúng chỗ;
+ * `message` (có tên field) là cho log/owner đọc — không phải copy UI.
+ */
+export type SettingsErrorCode =
+  | "readonly_field" // field có thật nhưng R1 khoá (request_retention, fsrs_params…)
+  | "unknown_field" // không phải field settings
+  | "bad_cefr"
+  | "bad_daily_limit"
+  | "bad_base_url"
+  | "bad_model"
+  | "empty_key"
+  | "empty_patch";
+
+export class SettingsError extends Error {
+  readonly code: SettingsErrorCode;
+  /** Tên field (camelCase) liên quan — UI tự ghép câu từ code + field này,
+   *  KHÔNG render `message` (conventions mục 1/3: message là cho log). */
+  readonly field: string | null;
+
+  constructor(code: SettingsErrorCode, message: string, field: string | null = null) {
+    super(message);
+    this.name = "SettingsError";
+    this.code = code;
+    this.field = field;
+  }
+}
+
 export class StorageError extends Error {
   constructor(message: string) {
     super(message);

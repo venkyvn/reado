@@ -98,6 +98,10 @@ export function HomeScreen({ navigate, onResumeReading }: {
           ⬇︎ Xuất dữ liệu (Anki / JSON)
         </a>
         {" · "}
+        <a className="dim" href="#settings" onClick={() => navigate({ name: "settings" })}>
+          ⚙️ Cài đặt
+        </a>
+        {" · "}
         <a className="dim" href="#storage" onClick={() => navigate({ name: "storageCheck" })}>
           Kiểm tra lưu trữ (SPIKE)
         </a>
