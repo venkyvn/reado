@@ -13,7 +13,9 @@ import type {
   CollectionRow,
   LibraryItemRow,
   ReviewLogRow,
+  RichVocabFields,
   Settings,
+  TagCount,
   VocabItemRow,
 } from "./types";
 
@@ -53,6 +55,16 @@ export interface VocabItemsRepository {
    * 3 cấm gộp chúng thành một dòng.
    */
   listLibrary(filter: LibraryFilter): Promise<LibraryItemRow[]>;
+  /**
+   * Task 3.12: sửa 3 field rich vocab của MỘT từ (user sửa ở màn duyệt/kho).
+   * Cột DB là TEXT JSON — serialize '[]' khi rỗng, không bao giờ ghi JSON hỏng.
+   */
+  updateRichFields(vocabItemId: string, fields: RichVocabFields): Promise<void>;
+  /**
+   * Task 3.13: mọi tag đang có trong kho + số card mang tag đó (màn chọn tag
+   * của cram). Nhãn rỗng trong JSON bị guard json_valid bỏ qua.
+   */
+  listAllTags(): Promise<TagCount[]>;
 }
 
 /** Bộ lọc FR-08 — mỗi trường null nghĩa là "không lọc theo tiêu chí này". */
@@ -85,6 +97,12 @@ export interface CardsRepository {
   loadWithContext(cardIds: string[]): Promise<CardWithContext[]>;
   /** FR-16 export: card của mọi item trong scope; `null` = tất cả collection. */
   listByScope(collectionId: string | null): Promise<CardRow[]>;
+  /**
+   * Task 3.13 cram theo tag: mọi card (không lọc due_at, không giới hạn
+   * daily_new_limit) có item mang ÍT NHẤT một tag trong danh sách — qua
+   * `json_each(v.tags)`. Thứ tự theo term cho phiên ôn ổn định. tags rỗng → [].
+   */
+  listByTags(tags: string[]): Promise<CardRow[]>;
 }
 
 export interface ReviewLogsRepository {
@@ -101,6 +119,16 @@ export interface ReviewLogsRepository {
    * không chứa hai cột đó.
    */
   rollbackGrade(logId: string, cardId: string, fields: SrsFields): Promise<void>;
+  /**
+   * Task 3.13 cram (D-3 owner 2026-09-08): chấm cram KHÔNG đụng FSRS state —
+   * chỉ insert log `mode='cram'`. Không có update cards ở đây, KHÁC appendGrade.
+   */
+  appendCramLog(log: ReviewLogRow): Promise<void>;
+  /**
+   * Undo cram: card không đổi nên undo chỉ là xoá log vừa chèn (cùng pattern
+   * transaction với đường srs).
+   */
+  removeLog(logId: string): Promise<void>;
   /** Đếm thẻ mới ĐÃ GIỚI THIỆU trong ngày học [fromUtc, toUtc) — từ log, không
    *  từ counter (FR-11 criterion: counter và log lệch nhau là lỗi vô hình). */
   countIntroducedNew(fromUtc: string, toUtc: string): Promise<number>;

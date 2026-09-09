@@ -16,9 +16,11 @@
 import { useEffect, useState } from "react";
 import type { Screen } from "../AppRoot";
 import { listLibrary } from "../../domain/usecases/library";
+import { updateVocabRichFields } from "../../domain/usecases/richVocab";
 import { CARD_STATES, CEFR_VALUES } from "../../domain/types";
-import type { CardState, CollectionRow, LibraryItemRow } from "../../domain/types";
+import type { CardState, CollectionRow, LibraryItemRow, RichVocabFields } from "../../domain/types";
 import { useAppEnv } from "../context";
+import { RichFieldsEditor } from "../RichFieldsEditor";
 
 const STATE_LABEL: Record<CardState, string> = {
   new: "Mới",
@@ -35,6 +37,62 @@ interface Filters {
 
 const NONE: Filters = { collectionId: "all", cefr: "all", state: "all" };
 
+const sameStrings = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * Khối sửa 3 field rich vocab của MỘT dòng trong kho (task 3.12).
+ * Draft giữ local; chỉ gọi usecase khi bấm Lưu — giữ đúng ranh giới
+ * "UI không chạm repo trực tiếp". Sau lưu, báo cha reload để danh sách
+ * (và tag gợi ý ở nơi khác) phản ánh ngay.
+ */
+function LibraryRichEditor({
+  item,
+  tagSuggestions,
+  onSaved,
+}: {
+  item: LibraryItemRow;
+  tagSuggestions: string[];
+  onSaved: () => void;
+}) {
+  const { services } = useAppEnv();
+  const [fields, setFields] = useState<RichVocabFields>(() => ({
+    tags: item.tags,
+    synonyms: item.synonyms,
+    antonyms: item.antonyms,
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dirty =
+    !sameStrings(fields.tags, item.tags) ||
+    !sameStrings(fields.synonyms, item.synonyms) ||
+    !sameStrings(fields.antonyms, item.antonyms);
+
+  async function save() {
+    if (!dirty || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateVocabRichFields(services, { vocabItemId: item.id, fields });
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rich-editor">
+      <RichFieldsEditor fields={fields} tagSuggestions={tagSuggestions} onChange={setFields} />
+      {error && <div className="banner banner-error">{error}</div>}
+      <button type="button" className="primary" disabled={!dirty || saving} onClick={() => void save()}>
+        {saving ? "Đang lưu…" : "💾 Lưu chủ đề & từ liên quan"}
+      </button>
+    </div>
+  );
+}
+
 export function VocabLibraryScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const { services } = useAppEnv();
   const [collections, setCollections] = useState<CollectionRow[]>([]);
@@ -45,6 +103,44 @@ export function VocabLibraryScreen({ navigate }: { navigate: (s: Screen) => void
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // RV-2: gợi ý tag từ nhãn đã có trong kho — tải một lần, dùng cho mọi editor.
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    void services.repos.vocabItems
+      .listAllTags()
+      .then((tcs) => {
+        if (alive) setTagSuggestions(tcs.map((tc) => tc.tag));
+      })
+      .catch(() => {
+        // gợi ý chỉ là tiện ích — nhập tự do vẫn hoạt động
+      });
+    return () => {
+      alive = false;
+    };
+  }, [services]);
+
+  /** Nạp lại danh sách theo filter hiện tại (dùng sau khi sửa rich fields). */
+  const reload = () => {
+    setLoading(true);
+    void listLibrary(services, {
+      collectionId: filters.collectionId === "all" ? null : filters.collectionId,
+      cefr: filters.cefr === "all" ? null : filters.cefr,
+      state: filters.state === "all" ? null : (filters.state as CardState),
+    })
+      .then((rows) => {
+        setItems(rows);
+        // Tag gợi ý sau khi sửa cũng đổi theo (thêm/bớt tag mới).
+        return services.repos.vocabItems.listAllTags().then((tcs) => setTagSuggestions(tcs.map((tc) => tc.tag)));
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   useEffect(() => {
     let alive = true;
@@ -210,6 +306,9 @@ export function VocabLibraryScreen({ navigate }: { navigate: (s: Screen) => void
                       </tr>
                     </tbody>
                   </table>
+                  {/* Rich vocab (3.12): hiển thị + sửa được tại chỗ — lưu đi qua
+                      usecase, không đụng FSRS. */}
+                  <LibraryRichEditor item={it} tagSuggestions={tagSuggestions} onSaved={reload} />
                 </div>
               )}
             </li>

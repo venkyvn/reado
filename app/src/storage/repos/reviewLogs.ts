@@ -79,10 +79,42 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
         await updateSrsFieldsSql(tx, cardId, fields);
       });
     },
+    async appendCramLog(log) {
+      // Cram (3.13, D-3): log Duy nhất được insert — cards KHÔNG đổi cột nào.
+      // Ảnh chụp vẫn là TRƯỚC khi chấm (điều cấm #1) nên historical log hợp lệ;
+      // scheduled_days = 0 vì không có khoảng hẹn mới.
+      await appDb.exec(
+        `insert into review_logs (id, card_id, mode, rating, state_before, stability_before,
+                                   difficulty_before, learning_steps_before, due_before,
+                                   elapsed_days, scheduled_days, reviewed_at)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          log.id,
+          log.cardId,
+          log.mode,
+          log.rating,
+          log.stateBefore,
+          log.stabilityBefore,
+          log.difficultyBefore,
+          log.learningStepsBefore,
+          log.dueBefore,
+          log.elapsedDays,
+          log.scheduledDays,
+          log.reviewedAt,
+        ],
+      );
+    },
+    async removeLog(logId) {
+      // Undo cram: card không đổi nên không cần restore; chỉ xoá dấu vết.
+      await appDb.exec("delete from review_logs where id = ?", [logId]);
+    },
     async countIntroducedNew(fromUtc, toUtc) {
+      // CHỈ đếm mode='srs': cram (3.13) giới thiệu thẻ mới nhưng KHÔNG được ăn
+      // hạn mức thẻ mới của FR-11 — hợp đồng doc: "cram không giới hạn bởi
+      // daily_new_limit" nghĩa là không đụng vào suất hôm nay (hai chiều).
       const row = await appDb.get<{ c: number | bigint }>(
         `select count(*) as c from review_logs
-         where state_before = 'new' and reviewed_at >= ? and reviewed_at < ?`,
+         where state_before = 'new' and mode = 'srs' and reviewed_at >= ? and reviewed_at < ?`,
         [fromUtc, toUtc],
       );
       return Number(row?.c ?? 0);

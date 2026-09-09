@@ -13,6 +13,7 @@ import type { AnalysisResult } from "../domain/types";
 import { AppEnvContext } from "./context";
 import type { AppEnv } from "./context";
 import { CaptureScreen } from "./screens/CaptureScreen";
+import { CramScreen } from "./screens/CramScreen";
 import { ExportScreen } from "./screens/ExportScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
@@ -25,6 +26,7 @@ export type Screen =
   | { name: "capture" }
   | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string }
   | { name: "review" }
+  | { name: "cram" }
   | { name: "storageCheck" }
   | { name: "export" }
   | { name: "vocabLibrary" };
@@ -78,6 +80,7 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
           <VocabEditScreen analysis={screen.analysis} collectionId={screen.collectionId} navigate={navigate} />
         )}
         {screen.name === "review" && <ReviewScreen navigate={navigate} />}
+        {screen.name === "cram" && <CramScreen navigate={navigate} />}
         {screen.name === "storageCheck" && <StorageCheckScreen navigate={navigate} />}
         {screen.name === "export" && <ExportScreen navigate={navigate} />}
         {screen.name === "vocabLibrary" && <VocabLibraryScreen navigate={navigate} />}

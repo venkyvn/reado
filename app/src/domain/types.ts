@@ -25,6 +25,14 @@ export interface AnalyzedItem {
   cefr: Cefr;
   example: string;
   verification: Verification;
+  /**
+   * Rich vocab (task 3.12, owner 2026-09-08): AI sinh kèm lúc capture, user
+   * sửa được. 3 field KHÔNG tham gia xác minh example — thuần bổ trợ; thiếu
+   * thì verify.ts điền `[]`. Giới hạn 3/3/4 (RV-1: owner chọn 2026-09-09).
+   */
+  tags: string[];
+  synonyms: string[];
+  antonyms: string[];
 }
 
 export interface Segment {
@@ -67,7 +75,27 @@ export interface VocabItemRow {
   meaningVi: string;
   example: string;
   cefr: Cefr | null;
+  /** Rich vocab v3 (task 3.12) — JSON array of string, luôn là mảng (rỗng = []). */
+  tags: string[];
+  synonyms: string[];
+  antonyms: string[];
   createdAt: string;
+}
+
+/**
+ * Ba field rich vocab dưới dạng mảng — hình dạng dùng chung cho AI output,
+ * hàng DB đã parse, và patch khi user sửa ở màn duyệt/kho (task 3.12).
+ */
+export interface RichVocabFields {
+  tags: string[];
+  synonyms: string[];
+  antonyms: string[];
+}
+
+/** Một tag có trong kho + số card mang tag đó — màn chọn tag của cram (3.13). */
+export interface TagCount {
+  tag: string;
+  cardCount: number;
 }
 
 /**
@@ -130,7 +158,8 @@ export interface Settings {
   fsrsVersion: string | null;
 }
 
-/** Card + dữ liệu hiển thị mặt sau (FR-12): JOIN cards→vocab_items→collections. */
+/** Card + dữ liệu hiển thị mặt sau (FR-12): JOIN cards→vocab_items→collections.
+ *  Task 3.12: mang thêm 3 field rich vocab để mặt sau hiện khối "Mở rộng". */
 export interface CardWithContext extends CardRow {
   term: string;
   pos: Pos;
@@ -138,6 +167,9 @@ export interface CardWithContext extends CardRow {
   ipa: string | null;
   example: string;
   collectionName: string;
+  tags: string[];
+  synonyms: string[];
+  antonyms: string[];
 }
 
 /**

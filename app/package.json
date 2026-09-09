@@ -20,7 +20,8 @@
     "e2e:secure": "node e2e/secure-context.mjs",
     "e2e:library": "node e2e/library-flow.mjs",
     "e2e:home": "node e2e/home-flow.mjs",
-    "e2e:swipe": "node e2e/review-swipe.mjs"
+    "e2e:swipe": "node e2e/review-swipe.mjs",
+    "e2e:cram": "node e2e/cram-flow.mjs"
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "^3.53.4-build1",

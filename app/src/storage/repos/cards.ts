@@ -14,6 +14,7 @@ import type { CardsRepository, ListDueParams, SrsFields } from "../../domain/rep
 import type { CardRow, CardState, CardWithContext } from "../../domain/types";
 import type { AppDb } from "../db";
 import { insertCardRow } from "./cardsSql";
+import { parseJsonArrayOfString } from "./richJson";
 
 interface CardSql {
   id: string;
@@ -116,11 +117,15 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
         ipa: string | null;
         example: string;
         collection_name: string;
+        tags: string;
+        synonyms: string;
+        antonyms: string;
       }>(
         `select c.id, c.vocab_item_id, c.direction, c.state, c.stability, c.difficulty,
                 c.reps, c.lapses, c.learning_steps, c.scheduled_days, c.last_review_at,
                 c.due_at, c.suspended_at,
                 v.term, v.pos, v.meaning_vi, v.ipa, v.example,
+                v.tags, v.synonyms, v.antonyms,
                 col.name as collection_name
          from cards c
          join vocab_items v on v.id = c.vocab_item_id
@@ -139,6 +144,9 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
           ipa: r.ipa,
           example: r.example,
           collectionName: r.collection_name,
+          tags: parseJsonArrayOfString(r.tags),
+          synonyms: parseJsonArrayOfString(r.synonyms),
+          antonyms: parseJsonArrayOfString(r.antonyms),
         });
       }
       const out: CardWithContext[] = [];
@@ -157,6 +165,25 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
           where (? is null or v.collection_id = ?)
           order by c.due_at asc`,
         [collectionId, collectionId],
+      );
+      return rows.map(mapCard);
+    },
+    async listByTags(tags) {
+      // Cram theo tag (3.13): json_each nở MỖI tag thành một dòng nên cùng
+      // card có 2 tag khớp sẽ lặp 2 lần — `distinct` gộp lại. KHÔNG lọc due_at
+      // (cram = ôn tức thì, ngoài hàng đợi thường), KHÔNG giới hạn hạn mức;
+      // suspended vẫn bị loại (leech FR-19 sau này không rơi vào cram).
+      if (tags.length === 0) return [];
+      const ph = tags.map(() => "?").join(", ");
+      const rows = await appDb.all<CardSql>(
+        `select distinct ${cardCols("c")} from cards c
+           join vocab_items v on v.id = c.vocab_item_id
+           join json_each(v.tags) t
+          where json_valid(v.tags)
+            and t.value in (${ph})
+            and c.suspended_at is null
+          order by v.term_normalized asc, v.id asc`,
+        tags,
       );
       return rows.map(mapCard);
     },

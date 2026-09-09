@@ -6,7 +6,7 @@
  */
 import type { Cefr } from "../domain/types";
 
-export const PROMPT_VERSION = 1;
+export const PROMPT_VERSION = 2; // v2 (2026-09-09): thêm tags/synonyms/antonyms — task 3.12
 
 export function buildPrompt(cefrLevel: Cefr): string {
   return `Bạn là một dịch giả chuyên nghiệp có kiến thức sư phạm về giảng dạy tiếng Anh.
@@ -36,6 +36,14 @@ bài báo mạng, hoặc tài liệu chuyên ngành. Trình độ người đọ
    - example: câu chứa term, TRÍCH NGUYÊN VĂN từ trang. Đây là ràng buộc bắt buộc:
      không được tự đặt câu, không được sửa câu, không được ghép câu. Câu này phải
      xuất hiện y nguyên trong một phần tử source_en ở trên.
+
+     BA field bổ trợ sau đây là KHÔNG BẮT BUỘC — thiếu field nào cũng được chấp nhận:
+   - tags: tối đa 4 chủ đề ngắn của từ (1–2 từ mỗi tag, viết thường), ví dụ
+     "business", "technology", "idiom". Chỉ gắn tag khi thực sự rõ chủ đề; các
+     tag nên tái sử dụng nhãn ngắn gọn, không bịa tag mơ hồ.
+   - synonyms: tối đa 3 từ/cụm đồng nghĩa THẬT với nghĩa đang dùng, đúng từ loại.
+   - antonyms: tối đa 3 từ/cụm trái nghĩa THẬT, đúng từ loại.
+     Không có từ phù hợp thì bỏ trống mảng ([]) hoặc bỏ field — đừng điền cho có.
 
 3. summary_vi — tóm tắt ý chính của trang bằng tiếng Việt.
 

@@ -37,6 +37,10 @@ export async function saveVocabulary(svc: AppServices, input: SaveInput): Promis
       meaningVi: item.meaningVi,
       example: item.example,
       cefr: item.cefr,
+      // Rich vocab (3.12): thường là AI sinh, user đã có thể sửa ở màn duyệt.
+      tags: item.tags,
+      synonyms: item.synonyms,
+      antonyms: item.antonyms,
       createdAt: nowIso,
     });
     cardRows.push({

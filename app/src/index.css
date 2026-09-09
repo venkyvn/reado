@@ -449,6 +449,100 @@ label input {
   gap: 8px;
 }
 
+/* Rich vocab (task 3.12): chips tag + editor 3 field. */
+.chip-tag {
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 3px 10px;
+  margin: 2px 4px 2px 0;
+  white-space: normal;
+}
+
+.chip-remove {
+  margin-left: 4px;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.65;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.rich-editor {
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.rich-group {
+  margin-bottom: 8px;
+}
+
+.rich-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.rich-chips {
+  margin: 2px 0;
+}
+
+.rich-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.rich-input-row input {
+  flex: 1;
+  margin: 4px 0;
+}
+
+.rich-add {
+  flex: none;
+  width: auto;
+  min-width: 76px;
+  margin: 0;
+  padding: 10px 14px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+/* Cram (task 3.13): hàng chọn tag. */
+.cram-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 44px;
+  margin: 0;
+  color: var(--ink);
+}
+
+.cram-tag-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.cram-tag-row .fine {
+  margin-left: auto;
+  flex: none;
+}
+
 /* Màn ôn tập (FR-11/FR-12). */
 .review-meta {
   font-size: 13px;
@@ -552,6 +646,21 @@ label input {
   font-size: 13px;
   color: var(--muted);
   margin: 0;
+}
+
+/* Khối "Mở rộng" mặt sau thẻ (3.12, RV-4: bật mặc định) — bổ trợ, chữ nhỏ hơn
+   để không lấn 4 field bắt buộc của FR-12. */
+.review-extras {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 13px;
+  width: 100%;
+}
+
+.review-extra-line {
+  color: var(--ink);
+  margin: 4px 0;
 }
 
 .review-label {
@@ -723,6 +832,11 @@ label input {
   .chip-unverified {
     background: #450a0a;
     color: #fecaca;
+  }
+
+  .chip-tag {
+    background: #312e81;
+    color: #c7d2fe;
   }
 
   .vocab-card.vocab-alert {

@@ -12,6 +12,7 @@
 import type { AiProvider } from "../domain/ai";
 import { createScheduler } from "../domain/scheduler";
 import type { AppServices } from "../domain/services";
+import type { AppDb } from "../storage/db";
 import { createLocalAppDb } from "../storage/db";
 import { openMemoryKernel } from "../storage/kernel";
 import { initSyncDb } from "../storage/syncDb";
@@ -28,7 +29,14 @@ export function makeFakeAi(impl: AiProvider["analyzePage"]): AiProvider {
   return { analyzePage: impl };
 }
 
-export async function createMemServices(opts: MemServicesOptions = {}): Promise<AppServices> {
+export interface MemServicesBundle {
+  services: AppServices;
+  /** AppDb THẬT sau facade — test cần ghi lệch dữ liệu (vd: due_at quá khứ,
+   *  JSON hỏng) mà đường sản phẩm không cho. */
+  appDb: AppDb;
+}
+
+export async function createMemServicesBundle(opts: MemServicesOptions = {}): Promise<MemServicesBundle> {
   const kernel = await openMemoryKernel();
   const appDb = createLocalAppDb(initSyncDb(kernel).db);
   const repos = createRepos(appDb);
@@ -39,7 +47,7 @@ export async function createMemServices(opts: MemServicesOptions = {}): Promise<
     // Tắt fuzz trong test: interval phải tất định để so được due_at chính xác.
     enableFuzz: false,
   });
-  return {
+  const services: AppServices = {
     repos,
     scheduler,
     ai: opts.ai ?? makeFakeAi(async () => {
@@ -48,6 +56,11 @@ export async function createMemServices(opts: MemServicesOptions = {}): Promise<
     now: opts.now ?? (() => new Date()),
     timeZone: () => opts.timeZone ?? "Asia/Ho_Chi_Minh",
   };
+  return { services, appDb };
+}
+
+export async function createMemServices(opts: MemServicesOptions = {}): Promise<AppServices> {
+  return (await createMemServicesBundle(opts)).services;
 }
 
 /** Sample item đã xác minh cho test save/queue — verification không quan trọng ở tầng này. */
@@ -60,6 +73,9 @@ export function sampleItem(overrides: Partial<import("../domain/types").Analyzed
     cefr: "B2",
     example: "The staggering scale of the problem.",
     verification: "verified",
+    tags: [],
+    synonyms: [],
+    antonyms: [],
     ...overrides,
   };
 }

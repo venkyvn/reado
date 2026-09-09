@@ -19,6 +19,7 @@ import type { Screen } from "../AppRoot";
 import { saveVocabulary } from "../../domain/usecases/save";
 import type { SaveResult } from "../../domain/usecases/save";
 import { useAppEnv } from "../context";
+import { RichFieldsEditor } from "../RichFieldsEditor";
 
 interface EditableItem {
   /** key ổn định theo vị trí GỐC trong analysis.vocabulary (trước khi sort). */
@@ -42,12 +43,23 @@ const CHIP_LABEL: Record<AnalyzedItem["verification"], string> = {
 
 function initialState(analysis: AnalysisResult): EditableItem[] {
   return analysis.vocabulary
-    .map((item, i) => ({
-      key: `i${i}`,
-      item,
-      selected: item.verification !== "unverified",
-      expanded: false,
-    }))
+    .map((item, i) => {
+      // Guard nhẹ: AnalysisResult đi đường hiện tại LUÔN có 3 field (verify.ts
+      // fill [] khi AI thiếu), nhưng giữ default ở đây phòng payload khác xuất
+      // hiện (vd: restore). Người dùng không bao giờ khác được code path đủ.
+      const base: AnalyzedItem = {
+        ...item,
+        tags: item.tags ?? [],
+        synonyms: item.synonyms ?? [],
+        antonyms: item.antonyms ?? [],
+      };
+      return {
+        key: `i${i}`,
+        item: base,
+        selected: base.verification !== "unverified",
+        expanded: false,
+      };
+    })
     .sort((a, b) => RANK[a.item.verification] - RANK[b.item.verification]);
 }
 
@@ -59,6 +71,7 @@ export function VocabEditScreen({ analysis, collectionId, navigate }: {
   const { services } = useAppEnv();
   const [items, setItems] = useState<EditableItem[]>(() => initialState(analysis));
   const [collectionName, setCollectionName] = useState<string | null>(null);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [phase, setPhase] = useState<"editing" | "saving" | "saved">("editing");
   const [saveResult, setSaveResult] = useState<SaveResult | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -73,6 +86,16 @@ export function VocabEditScreen({ analysis, collectionId, navigate }: {
       })
       .catch(() => {
         if (!cancelled) setCollectionName(null);
+      });
+    // RV-2: gợi ý tag từ nhãn ĐÃ CÓ trong kho (chống drift tên gọi). Từ trong
+    // analysis hiện tại chưa lưu thì chưa có trong list này — vẫn gõ tay được.
+    void services.repos.vocabItems
+      .listAllTags()
+      .then((tcs) => {
+        if (!cancelled) setTagSuggestions(tcs.map((tc) => tc.tag));
+      })
+      .catch(() => {
+        // gợi ý lỗi chỉ mất conveninence — editor vẫn nhập tự do được
       });
     return () => {
       cancelled = true;
@@ -220,6 +243,11 @@ export function VocabEditScreen({ analysis, collectionId, navigate }: {
                 <Field label="câu gốc trên trang (example)">
                   <textarea rows={3} value={it.item.example} onChange={(e) => patchItem(it.key, { example: e.target.value })} />
                 </Field>
+                <RichFieldsEditor
+                  fields={{ tags: it.item.tags, synonyms: it.item.synonyms, antonyms: it.item.antonyms }}
+                  tagSuggestions={tagSuggestions}
+                  onChange={(f) => patchItem(it.key, f)}
+                />
               </div>
             )}
           </li>

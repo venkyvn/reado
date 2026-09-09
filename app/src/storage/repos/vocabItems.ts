@@ -10,8 +10,10 @@
  */
 import type { VocabItemsRepository } from "../../domain/repositories";
 import type { LibraryFilter } from "../../domain/repositories";
+import type { RichVocabFields, TagCount } from "../../domain/types";
 import type { LibraryItemRow, Pos, VocabItemRow } from "../../domain/types";
 import { insertCardRow } from "./cardsSql";
+import { parseJsonArrayOfString, serializeStringArray } from "./richJson";
 import type { AppDb } from "../db";
 
 interface VocabSql {
@@ -24,6 +26,9 @@ interface VocabSql {
   meaning_vi: string;
   example: string;
   cefr: string | null;
+  tags: string;
+  synonyms: string;
+  antonyms: string;
   created_at: string;
 }
 
@@ -38,6 +43,9 @@ function map(row: VocabSql): VocabItemRow {
     meaningVi: row.meaning_vi,
     example: row.example,
     cefr: row.cefr as VocabItemRow["cefr"],
+    tags: parseJsonArrayOfString(row.tags),
+    synonyms: parseJsonArrayOfString(row.synonyms),
+    antonyms: parseJsonArrayOfString(row.antonyms),
     createdAt: row.created_at,
   };
 }
@@ -70,9 +78,23 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
       await appDb.transaction(async (tx) => {
         for (const v of vocabRows) {
           await tx.exec(
-            `insert into vocab_items (id, collection_id, term, term_normalized, pos, ipa, meaning_vi, example, cefr, created_at)
-             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [v.id, v.collectionId, v.term, v.termNormalized, v.pos, v.ipa, v.meaningVi, v.example, v.cefr, v.createdAt],
+            `insert into vocab_items (id, collection_id, term, term_normalized, pos, ipa, meaning_vi, example, cefr, tags, synonyms, antonyms, created_at)
+             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              v.id,
+              v.collectionId,
+              v.term,
+              v.termNormalized,
+              v.pos,
+              v.ipa,
+              v.meaningVi,
+              v.example,
+              v.cefr,
+              serializeStringArray(v.tags),
+              serializeStringArray(v.synonyms),
+              serializeStringArray(v.antonyms),
+              v.createdAt,
+            ],
           );
         }
         for (const c of cardRows) await insertCardRow(tx, c);
@@ -115,6 +137,48 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
         ],
       );
       return rows.map(mapLibrary);
+    },
+    async updateRichFields(vocabItemId, fields: RichVocabFields) {
+      // Trim + dedupe nhẹ trước khi ghi để nhiều đường sửa không sinh JSON bẩn
+      // (JSON cột này được đọc bằng json_each ở cram — giá trị trùng thì đếm sai).
+      // Dedupe KHÔNG phân biệt hoa thường, giữ chính tả của entry đầu —
+      // cùng luật với normalizeRichField ở domain/verify.ts.
+      const clean = (items: string[]) => {
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const raw of items) {
+          const s = raw.trim();
+          const key = s.toLowerCase();
+          if (s === "" || seen.has(key)) continue;
+          seen.add(key);
+          out.push(s);
+        }
+        return out;
+      };
+      await appDb.exec(
+        `update vocab_items set tags = ?, synonyms = ?, antonyms = ? where id = ?`,
+        [
+          serializeStringArray(clean(fields.tags)),
+          serializeStringArray(clean(fields.synonyms)),
+          serializeStringArray(clean(fields.antonyms)),
+          vocabItemId,
+        ],
+      );
+    },
+    async listAllTags() {
+      // Mỗi thẻ tag trong JSON thành MỘT dòng qua json_each; json_valid chặn
+      // đọc nhầm JSON hỏng (guard hai lớp với parseJsonArrayOfString).
+      const rows = await appDb.all<{ tag: string; card_count: number | bigint }>(
+        `select t.value as tag, count(*) as card_count
+           from vocab_items v
+           join cards c on c.vocab_item_id = v.id,
+                json_each(v.tags) t
+          where json_valid(v.tags)
+          group by t.value collate nocase
+          order by t.value collate nocase asc`,
+      );
+      const counts: TagCount[] = rows.map((r) => ({ tag: r.tag, cardCount: Number(r.card_count) }));
+      return counts;
     },
   };
 }

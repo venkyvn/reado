@@ -33,6 +33,12 @@ export function geminiSchema(): Record<string, unknown> {
             meaning_vi: { type: "STRING" },
             cefr: { type: "STRING", enum: ["A2", "B1", "B2", "C1"] },
             example: { type: "STRING" },
+            // Rich vocab (3.12, owner 2026-09-08): OPTIONAL — không đưa vào required
+            // nên provider/schema-bản-cũ vẫn ra output hợp lệ. maxItems theo RV-1
+            // (owner chốt 3/3/4 — docs/rich-vocab-cram-ddl.md mục 3).
+            tags: { type: "ARRAY", items: { type: "STRING" }, maxItems: 4 },
+            synonyms: { type: "ARRAY", items: { type: "STRING" }, maxItems: 3 },
+            antonyms: { type: "ARRAY", items: { type: "STRING" }, maxItems: 3 },
           },
         },
       },

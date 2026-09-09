@@ -48,6 +48,20 @@ export const MIGRATIONS: readonly Migration[] = [
       create index idx_analyses_time on analyses (analyzed_at);
     `,
   },
+  {
+    // v3 — Rich Vocabulary (task 3.12, docs/rich-vocab-cram-ddl.md mục 2):
+    // 3 cột TEXT JSON trên vocab_items (tags/synonyms/antonyms), AI sinh kèm
+    // capture + user sửa được. Rỗng = '[]'. Chọn TEXT JSON thay bảng junction
+    // vì payload sync nhẹ + quy mô cá nhân — đã cân nhắc trong doc mục 2.
+    // Additive-only: không đụng một dòng DDL nào của v1.
+    version: 3,
+    name: "rich vocab tags/synonyms/antonyms",
+    sql: `
+      alter table vocab_items add column tags     text not null default '[]';
+      alter table vocab_items add column synonyms text not null default '[]';
+      alter table vocab_items add column antonyms text not null default '[]';
+    `,
+  },
 ];
 
 /** Áp các migration chưa chạy (trong một transaction), trả version hiện tại. */

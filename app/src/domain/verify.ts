@@ -15,7 +15,8 @@ import { AnalysisError } from "./errors";
 import { POS_VALUES, CEFR_VALUES } from "./types";
 import type { AnalyzedItem, AnalysisResult, Cefr, Pos, Segment, Verification } from "./types";
 
-/** Payload thô AI trả về — tên field giữ nguyên hợp đồng prompt-spec mục 4. */
+/** Payload thô AI trả về — tên field giữ nguyên hợp đồng prompt-spec mục 4.
+ *  Ba field rich vocab (3.12) là OPTIONAL: output cũ vẫn hợp lệ. */
 export interface AiPayload {
   segments: { source_en: string; translation_vi: string }[];
   vocabulary: {
@@ -25,8 +26,40 @@ export interface AiPayload {
     meaning_vi: string;
     cefr: string;
     example: string;
+    tags?: unknown;
+    synonyms?: unknown;
+    antonyms?: unknown;
   }[];
   summary_vi: string;
+}
+
+/** Số field rich vocab được phép trên mỗi từ (RV-1 owner chốt 2026-09-09:
+ *  3 synonyms / 3 antonyms / 4 tags). */
+export const RICH_LIMITS = { tags: 4, synonyms: 3, antonyms: 3 } as const;
+
+/**
+ * Chuẩn hoá MỘT field rich vocab từ payload AI (có thể thiếu/sai type).
+ *
+ * Chốt thiết kế 3.12: field là OPTIONAL và bổ trợ — chúng KHÔNG được làm hỏng cả
+ * trang phân tích vì một field phụ. Vì vậy:
+ * - sai type / thiếu → `[]` (không ném lỗi schema);
+ * - đúng type thì trim + bỏ rỗng + dedupe, cắt về giới hạn RV-1 khi AI vượt
+ *   (chặn "chảy văn" nhưng không từ chối cả payload hợp lệ);
+ * - provider trả `null` (JSON-schema optional thường coi null là vắng mặt) → `[]`.
+ */
+export function normalizeRichField(value: unknown, limit: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of value) {
+    if (typeof raw !== "string") continue;
+    const s = raw.trim();
+    if (s === "" || seen.has(s.toLowerCase())) continue;
+    seen.add(s.toLowerCase());
+    out.push(s);
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 export function isPlainObject(x: unknown): x is Record<string, unknown> {
@@ -86,7 +119,7 @@ export function validateAiPayload(data: unknown): string[] {
         errs.push(`${p}: không phải object`);
         return;
       }
-      checkKeys(v, ["term", "pos", "ipa", "meaning_vi", "cefr", "example"], p);
+      checkKeys(v, ["term", "pos", "ipa", "meaning_vi", "cefr", "example", "tags", "synonyms", "antonyms"], p);
       for (const req of ["term", "pos", "ipa", "meaning_vi", "cefr", "example"]) {
         if (!(req in v)) errs.push(`${p}: thiếu "${req}"`);
       }
@@ -151,6 +184,10 @@ export function toAnalysisResult(
     cefr: v.cefr as Cefr,
     example: v.example,
     verification: verificationOf(normPage, v.term, v.example),
+    // Rich vocab (3.12): optional + bổ trợ — thiếu/sai type → [] chứ không lỗi.
+    tags: normalizeRichField(v.tags, RICH_LIMITS.tags),
+    synonyms: normalizeRichField(v.synonyms, RICH_LIMITS.synonyms),
+    antonyms: normalizeRichField(v.antonyms, RICH_LIMITS.antonyms),
   }));
   const segments: Segment[] = payload.segments.map((s) => ({
     sourceEn: s.source_en,

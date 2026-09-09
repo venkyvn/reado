@@ -25,14 +25,22 @@ try {
       meaningVi: "đáng kinh ngạc",
       example: "The staggering scale of the problem.",
       cefr: "B2",
+      // Tags cố ý đa dạng: e2e:swipe dùng bình thường; e2e:cram chọn "business"
+      // (1 thẻ) hoặc "shared" (2 thẻ) để kiểm màn chọn tag.
+      tags: ["business", "shared"],
+      synonyms: ["astonishing"],
+      antonyms: [],
     },
     {
       term: "eloquence",
-      pos: "n",
+      pos: "noun",
       ipa: "/ˈeləkwəns/",
       meaningVi: "tài hùng biện",
       example: "She spoke with eloquence.",
       cefr: "C1",
+      tags: ["speech", "shared"],
+      synonyms: [],
+      antonyms: [],
     },
   ];
 
@@ -46,6 +54,9 @@ try {
     meaningVi: it.meaningVi,
     example: it.example,
     cefr: it.cefr,
+    tags: it.tags,
+    synonyms: it.synonyms,
+    antonyms: it.antonyms,
     createdAt: nowIso,
   }));
   const cardRows = vocabRows.map((v) => ({

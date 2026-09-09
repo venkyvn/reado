@@ -1,23 +1,25 @@
 /**
- * ui/screens/ReviewScreen.tsx — FR-11 (hàng đợi hai nhánh, biết còn bao nhiêu
- * card hôm nay, hết thì nói rõ "đã xong" KHÔNG lấp chỗ bằng card chưa tới hạn)
- * + FR-12 (mặt trước CHỈ term + pos; mặt sau meaning_vi + ipa + câu gốc + tên
- * collection; 4 mức chấm; undo MỘT bước khôi phục đúng trạng thái trước chấm).
+ * ui/screens/CramScreen.tsx — task 3.13: Targeted review — ôn theo chủ đề (tag).
  *
- * Chuẩn vuốt (chủ chốt 2026-09-09): quẹt TRÁI = Easy (4) · quẹt PHẢI = Good (3)
- * · chạm = lật. Vuốt đi thẳng qua gradeCard — FSRS nhận đúng điểm, log vẫn là
- * ảnh chụp TRƯỚC khi chấm, nút Undo nổi kéo thẻ về snapshot y như nút bấm.
- * Toàn bộ luật chấm/vuốt nằm trong ui/swipe.ts (hàm thuần, có test máy).
+ * Vào từ màn Ôn tập ("🏷️ Ôn theo chủ đề"). Ba giai đoạn:
+ *  1. CHỌN TAG: mọi tag trong kho kèm số card (repo listAllTags); chọn 1..n.
+ *  2. PHIÊN CRAM: thẻ của các tag đã chọn, KHÔNG lọc due_at, KHÔNG giới hạn
+ *     hạn mức thẻ mới. Tương tác giữ NGUYÊN chuẩn vuốt của màn ôn thường
+ *     (chốt 2026-09-09): vuốt TRÁI = Easy(4) · vuốt PHẢI = Good(3) · chạm =
+ *     lật; mặt sau giữ 4 nút FSRS; undo NỔI một bước.
+ *  3. XONG: nói rõ buổi cram KHÔNG đổi lịch ôn dài hạn (D-3).
  *
- * Undo lưu snapshot ĐẦY ĐỦ (CardWithContext trước lúc chấm) trong memory phiên
- * ôn rồi gọi undoGrade — đúng thiết kế solution-design mục 8.2 (log theo
- * research schema không chứa reps/lapses).
+ * Khác biệt CỐT LÕI so với ReviewScreen: chấm gọi `gradeCram` → chỉ insert
+ * review_logs mode='cram' (ảnh chụp TRƯỚC), cards KHÔNG đổi một cột nào; undo
+ * chỉ xoá log (không cần restore card — nó chưa từng đổi).
+ *
+ * Phần gesture copy từ ReviewScreen (task 3.14) — cấu trúc pointer events
+ * giữ nguyên để hành vi nhất quán; nếu sửa chuẩn vuốt thì sửa CẢ hai màn.
  */
 import { useEffect, useRef, useState } from "react";
-import type { CardWithContext } from "../../domain/types";
+import type { CardWithContext, TagCount } from "../../domain/types";
 import type { Screen } from "../AppRoot";
-import type { DueQueueResult, UndoInput } from "../../domain/usecases/review";
-import { buildDueQueue, gradeCard, undoGrade } from "../../domain/usecases/review";
+import { buildCramSession, gradeCram, listCramTags, undoCram } from "../../domain/usecases/cram";
 import { useAppEnv } from "../context";
 import {
   SWIPE_COMMIT_PX,
@@ -36,7 +38,7 @@ const RATING_OPTIONS: { rating: Rating; label: string; cls: string }[] = [
   { rating: "Easy", label: "Dễ", cls: "grade-easy" },
 ];
 
-// Màu kéo theo ĐÚNG màu nút chấm trong index.css: Good = xanh lá, Easy = xanh dương.
+// Trùng màu ReviewScreen: Good = xanh lá, Easy = xanh dương.
 const EASY_BG = "#dbeafe";
 const EASY_INK = "#1e40af";
 const GOOD_BG = "#dcfce7";
@@ -50,51 +52,81 @@ interface DragState {
   el: HTMLDivElement;
 }
 
-export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
+type Phase = "tags" | "session" | "done";
+
+export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const { services } = useAppEnv();
-  const [queue, setQueue] = useState<DueQueueResult | null>(null);
+  const [phase, setPhase] = useState<Phase>("tags");
+  const [tagCounts, setTagCounts] = useState<TagCount[] | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [cards, setCards] = useState<CardWithContext[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [undo, setUndo] = useState<UndoInput | null>(null);
+  const [undoLogId, setUndoLogId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Trạng thái kéo chỉ sống trong ref — pointermove 60Hz không đụng React render.
   const dragRef = useRef<DragState | null>(null);
   const tintRef = useRef<HTMLDivElement | null>(null);
   const badgeRef = useRef<HTMLDivElement | null>(null);
-  const commitRef = useRef(false); // đang bay ra + chờ grade — chặn input chồng lấn
-  const suppressClickRef = useRef(false); // vuốt xong chặn sự kiện click lật nhầm
+  const commitRef = useRef(false);
+  const suppressClickRef = useRef(false);
   const flyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    buildDueQueue(services, new Date())
-      .then((q) => {
-        if (!cancelled) setQueue(q);
+    let alive = true;
+    listCramTags(services)
+      .then((tcs) => {
+        if (alive) setTagCounts(tcs);
       })
-      .catch((err: unknown) => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : String(err));
+      .catch((e: unknown) => {
+        if (alive) setLoadError(e instanceof Error ? e.message : String(e));
       });
     return () => {
-      cancelled = true;
+      alive = false;
       if (flyTimerRef.current !== null) window.clearTimeout(flyTimerRef.current);
     };
   }, [services]);
 
-  const current: CardWithContext | null = queue?.cards[index] ?? null;
-  const remaining = queue ? queue.total - index : 0;
+  function toggleTag(tag: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  }
+
+  async function startSession() {
+    if (selected.size === 0 || busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      const sessionCards = await buildCramSession(services, [...selected]);
+      setCards(sessionCards);
+      setIndex(0);
+      setFlipped(false);
+      setUndoLogId(null);
+      if (sessionCards.length === 0) setPhase("done");
+      else setPhase("session");
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const current: CardWithContext | null = phase === "session" ? (cards[index] ?? null) : null;
 
   async function grade(rating: Rating) {
     if (!current || busy) return;
     setBusy(true);
     setActionError(null);
     try {
-      // current là ảnh chụp TRƯỚC khi chấm — giữ nguyên object này cho undo.
-      const snapshot = current;
-      const { log } = await gradeCard(services, { card: current, rating, now: new Date() });
-      setUndo({ logId: log.id, restoreCard: snapshot });
+      const { log } = await gradeCram(services, { card: current, rating, now: new Date() });
+      setUndoLogId(log.id);
       setFlipped(false);
       setIndex((i) => i + 1);
     } catch (err) {
@@ -105,14 +137,15 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
   }
 
   async function undoOnce() {
-    if (!undo || busy) return;
+    if (!undoLogId || busy) return;
     setBusy(true);
     setActionError(null);
     try {
-      await undoGrade(services, { logId: undo.logId, restoreCard: undo.restoreCard });
-      setUndo(null);
+      // Cram: card không đổi nên undo chỉ xoá log; card chấm nhầm quay lại chơi.
+      await undoCram(services, undoLogId);
+      setUndoLogId(null);
       setFlipped(false);
-      setIndex((i) => Math.max(0, i - 1)); // card vừa chấm nhầm quay lại
+      setIndex((i) => Math.max(0, i - 1));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -120,7 +153,7 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
     }
   }
 
-  // --- Chuẩn vuốt mặt trước: trái = Easy, phải = Good, chạm = lật. ---
+  // --- Chuẩn vuốt giống ReviewScreen (3.14): trái = Easy, phải = Good, chạm = lật. ---
 
   function paintDirection(dx: number) {
     const easy = dx < 0;
@@ -138,14 +171,12 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
     if (badgeRef.current) badgeRef.current.style.opacity = "0";
   }
 
-  /** Nhả tay dưới ngưỡng → thẻ bật về chỗ cũ, không chấm (an toàn cho lỡ tay). */
   function springBack(el: HTMLDivElement) {
     el.style.transition = "transform 180ms ease";
     el.style.transform = "none";
     resetOverlays();
   }
 
-  /** Qua ngưỡng → thẻ bay ra rồi mới gọi grade qua đúng pipeline sẵn có. */
   function commitSwipe(el: HTMLDivElement, verdict: SwipeVerdict) {
     suppressClickRef.current = true;
     commitRef.current = true;
@@ -160,71 +191,95 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
     }, 190);
   }
 
-  if (loadError) {
-    return (
-      <div className="pad">
-        <h1>Ôn tập</h1>
-        <div className="banner banner-error">{loadError}</div>
-        <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>
-          ← Về trang chủ
-        </button>
-      </div>
-    );
-  }
+  // --- Render: chọn tag ---
 
-  if (!queue) {
+  if (phase === "tags") {
+    const totalCards = tagCounts ? tagCounts.reduce((acc, t) => acc + t.cardCount, 0) : 0;
     return (
       <div className="pad">
-        <h1>Ôn tập</h1>
-        <div className="analyzing">
-          <div className="spinner" aria-hidden="true" />
-          <p className="muted">Đang dựng hàng đợi…</p>
-        </div>
-      </div>
-    );
-  }
+        <h1>Ôn theo chủ đề</h1>
+        <p className="muted">
+          Chọn chủ đề muốn ôn ngay — không phụ thuộc lịch ôn hằng ngày, chấm xong
+          KHÔNG thay đổi lịch (chỉ ghi lại thành tích, thẻ vẫn tới đúng ngày của nó).
+        </p>
 
-  if (!current) {
-    // Hết phiên — FR-11: nói rõ đã xong, KHÔNG tự lấp card chưa tới hạn.
-    return (
-      <div className="pad">
-        <h1>{queue.total === 0 ? "Hôm nay đã xong 🎉" : "Xong lượt hôm nay 💪"}</h1>
-        {queue.total === 0 ? (
-          <p className="muted">Chưa có card nào đến hạn — những thẻ chưa tới hạn sẽ tự trở lại đúng ngày của nó.</p>
-        ) : (
-          <p className="muted">Đã đi qua cả {queue.total} thẻ của ngày {queue.dayLabel}.</p>
-        )}
-        {queue.deferredNew > 0 && (
+        {loadError && <div className="banner banner-error">{loadError}</div>}
+        {actionError && <div className="banner banner-error">{actionError}</div>}
+
+        {tagCounts === null ? (
+          <p className="muted">Đang đọc các chủ đề trong kho…</p>
+        ) : totalCards === 0 ? (
           <p className="muted">
-            {queue.deferredNew} thẻ MỚI chưa vào lượt này (hạn mức {queue.plan.dailyNewLimit} thẻ
-            mới/ngày) — sẽ tới hạn khi có suất.
+            Trong kho chưa có tag nào — hãy chụp trang mới (AI sẽ gắn chủ đề) hoặc
+            gắn tag cho từ trong Kho từ vựng trước.
           </p>
+        ) : (
+          <ul className="vocab-list">
+            {tagCounts.map((tc) => (
+              <li key={tc.tag} className="vocab-card">
+                <label className="cram-tag-row">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(tc.tag)}
+                    onChange={() => toggleTag(tc.tag)}
+                    aria-label={`chọn chủ đề ${tc.tag}`}
+                  />
+                  <span className="vocab-term">{tc.tag}</span>
+                  <span className="fine">{tc.cardCount} thẻ</span>
+                </label>
+              </li>
+            ))}
+          </ul>
         )}
-        <button type="button" className="primary" onClick={() => navigate({ name: "capture" })}>
-          📷 Chụp trang nữa
+
+        <button
+          type="button"
+          className="primary"
+          disabled={selected.size === 0 || busy || totalCards === 0}
+          onClick={() => void startSession()}
+        >
+          {busy ? "Đang dựng phiên…" : `Bắt đầu ôn (${selected.size} chủ đề)`}
         </button>
-        <button type="button" className="secondary" onClick={() => navigate({ name: "cram" })}>
-          🏷️ Ôn theo chủ đề
-        </button>
-        <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>
-          Về trang chủ
+        <button type="button" className="secondary" onClick={() => navigate({ name: "review" })}>
+          ← Về ôn tập hằng ngày
         </button>
       </div>
     );
   }
+
+  // --- Render: xong phiên ---
+
+  if (phase === "done" || !current) {
+    return (
+      <div className="pad">
+        <h1>Xong buổi ôn theo chủ đề 💪</h1>
+        <p className="muted">
+          Đã xem hết {cards.length} thẻ. Buổi này KHÔNG đổi lịch ôn dài hạn của thẻ
+          nào — thẻ vẫn tới đúng hẹn trong ôn tập hằng ngày.
+        </p>
+        <button type="button" className="primary" onClick={() => setPhase("tags")}>
+          🏷️ Chọn chủ đề khác
+        </button>
+        <button type="button" className="secondary" onClick={() => navigate({ name: "review" })}>
+          ← Về ôn tập hằng ngày
+        </button>
+      </div>
+    );
+  }
+
+  // --- Render: phiên cram (giống màn ôn thường, khác usecase chấm) ---
+
+  const remaining = cards.length - index;
 
   return (
     <div className="pad">
       <p className="review-meta">
-        {queue.dayLabel} · còn {remaining}/{queue.total} thẻ
-        {queue.deferredNew > 0 ? ` · ${queue.deferredNew} thẻ mới hoãn` : ""}
+        Ôn theo chủ đề · còn {remaining}/{cards.length} thẻ · không đổi lịch ôn
       </p>
 
       {actionError && <div className="banner banner-error">{actionError}</div>}
 
-      {/* Nút Undo NỔI (chủ chốt 2026-09-09): nằm trên màn hình, không chiếm dòng
-          layout — kéo thẻ vừa chấm (kể cả chấm bằng vuốt) về snapshot 100%. */}
-      {undo && (
+      {undoLogId && (
         <button
           type="button"
           className="undo-pill"
@@ -279,7 +334,7 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
           if (!d || d.pointerId !== e.pointerId) return;
           const dx = e.clientX - d.x;
           const dy = e.clientY - d.y;
-          if (!shouldLockDrag(dx, dy, d.locked)) return; // ngón lăn dọc → để trang cuộn
+          if (!shouldLockDrag(dx, dy, d.locked)) return;
           if (!d.locked) {
             d.locked = true;
             paintDirection(dx);
@@ -294,11 +349,11 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
           const d = dragRef.current;
           if (!d || d.pointerId !== e.pointerId) return;
           dragRef.current = null;
-          if (!d.locked) return; // chưa thành cú kéo — để click xử lý tap/lật
+          if (!d.locked) return;
           const dx = e.clientX - d.x;
           const verdict = swipeVerdict(dx);
           if (!verdict) {
-            if (!isTap(dx)) suppressClickRef.current = true; // kéo chơi → không lật nhầm
+            if (!isTap(dx)) suppressClickRef.current = true;
             springBack(d.el);
             return;
           }
@@ -308,13 +363,11 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
           const d = dragRef.current;
           if (!d) return;
           dragRef.current = null;
-          if (d.locked) springBack(d.el); // trình duyệt giành gesture (cuộn) → trả thẻ về
+          if (d.locked) springBack(d.el);
         }}
       >
         {!flipped ? (
           <>
-            {/* Lớp phủ hướng kéo — chỉ hiện khi đang kéo, không phải nội dung thẻ
-                (FR-12: mặt trước vẫn CHỈ term + pos). */}
             <div
               ref={tintRef}
               aria-hidden="true"
@@ -364,9 +417,6 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
             <p className="review-collection">
               <span className="review-label">gặp trong</span> {current.collectionName}
             </p>
-            {/* Khối "Mở rộng" (3.12, RV-4: BẬT mặc định) — bổ trợ, KHÔNG sinh
-                thẻ, KHÔNG bắt học. Chỉ hiện khi item có dữ liệu (mặt trước vẫn
-                nguyên vẹn FR-12: chỉ term + pos). */}
             {(current.tags.length > 0 || current.synonyms.length > 0 || current.antonyms.length > 0) && (
               <div className="review-extras">
                 {current.tags.length > 0 && (
@@ -410,14 +460,9 @@ export function ReviewScreen({ navigate }: { navigate: (s: Screen) => void }) {
         </div>
       )}
 
-      <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>
-        ← Về trang chủ
+      <button type="button" className="secondary" onClick={() => setPhase("tags")}>
+        ← Đổi chủ đề
       </button>
-      <p style={{ textAlign: "center" }}>
-        <a className="dim" href="#cram" onClick={() => navigate({ name: "cram" })}>
-          🏷️ Ôn theo chủ đề (không đổi lịch ôn)
-        </a>
-      </p>
     </div>
   );
 }
