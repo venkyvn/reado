@@ -14,6 +14,7 @@
     "dev:https": "READO_HTTPS=1 vite --host --port 5174 --strictPort",
     "preview:https": "READO_HTTPS=1 vite preview --host --port 4174 --strictPort",
     "e2e": "node e2e/capture-flow.mjs",
+    "e2e:encode": "node e2e/capture-encode.mjs",
     "e2e:storage": "node e2e/storage-persist.mjs",
     "e2e:opfs": "node e2e/opfs-capability.mjs",
     "e2e:export": "node e2e/export-flow.mjs",

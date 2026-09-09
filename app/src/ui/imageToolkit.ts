@@ -1,11 +1,21 @@
 /**
  * ui/imageToolkit.ts — thao tác ảnh trước khi gửi AI (FR-01: crop/xoay được).
  *
- * Nguyên tắc chất lượng (M-03, OCR sống nhờ pixel thật):
- * - KHÔNG crop KHÔNG xoay → gửi NGUYÊN bytes gốc, không re-encode lần nào.
- * - Có xoay/crop → re-encode JPEG 0.95 (đủ cho OCR, nhỏ gọn cho base64).
+ * Quy tắc chất lượng (quyết định owner 2026-09-09, sau A/B `scripts/verify/ab-compress.mjs`):
+ * - LUÔN chuẩn hoá ảnh gửi AI: crop/xoay (nếu có) → thu về cạnh dài ≤ 1600px
+ *   (KHÔNG bao giờ upscale) → JPEG q0.80.
+ * - Vì sao đảo quyết định cũ "không chỉnh → gửi bytes gốc": Gemini tính token ảnh
+ *   theo PIXEL (≈ W×H/258) — ảnh photo 3024×4032 ăn ~27k token mỗi lần Analyze,
+ *   resize 1600 còn ~7.4k; A/B đo được JPEG q0.80 làm lệch đúng 0–1 từ/trang
+ *   (CER 0–0.19%) nên tầng đọc không mất gì. Kèm theo: mime không còn tin
+ *   `File.type` (HEIC khai jpeg giả trước đây) — ảnh hiển thị được là encode được.
  * - EXIF orientation được browser tự flatten khi drawImage (modern iOS/Mac OK).
  */
+
+/** Cạnh dài tối đa của ảnh gửi AI — chốt 2026-09-09 (A/B + ước lượng cap-height chữ). */
+export const AI_IMAGE_MAX_DIMENSION = 1600;
+/** Chất lượng JPEG gửi AI — chốt 2026-09-09 (A/B: 0.80 không làm hỏng OCR, 0.75 chưa đo). */
+export const AI_IMAGE_JPEG_QUALITY = 0.8;
 
 export type Rotation = 0 | 90 | 180 | 270;
 
@@ -78,41 +88,71 @@ export function cropCanvas(src: HTMLCanvasElement, rect: CropRect): HTMLCanvasEl
   return out;
 }
 
-export function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+export function canvasToJpegBlob(canvas: HTMLCanvasElement, quality = AI_IMAGE_JPEG_QUALITY): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("toBlob trả null"))),
       "image/jpeg",
-      0.95,
+      quality,
     );
   });
+}
+
+/**
+ * Kích thước đích khi thu về cạnh dài ≤ maxDimension — hàm THUẦN để unit test.
+ * Ảnh đã nhỏ hơn giữ nguyên (không upscale); làm tròn và chặn về ≥ 1px.
+ */
+export function scaledSize(
+  w: number,
+  h: number,
+  maxDimension: number,
+): { w: number; h: number; scaled: boolean } {
+  const longest = Math.max(w, h);
+  if (longest <= maxDimension) return { w, h, scaled: false };
+  const scale = maxDimension / longest;
+  return {
+    w: Math.max(1, Math.round(w * scale)),
+    h: Math.max(1, Math.round(h * scale)),
+    scaled: true,
+  };
+}
+
+/**
+ * Thu canvas về cạnh dài ≤ maxDimension — KHÔNG bao giờ upscale (ảnh nhỏ giữ nguyên).
+ * `imageSmoothingQuality: "high"`: canvas mặc định "medium" làm nhoè viền chữ khi thu.
+ */
+export function downscaleCanvas(src: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {
+  const size = scaledSize(src.width, src.height, maxDimension);
+  if (!size.scaled) return src;
+  const out = document.createElement("canvas");
+  out.width = size.w;
+  out.height = size.h;
+  const ctx = requireCtx(out);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(src, 0, 0, size.w, size.h);
+  return out;
 }
 
 export interface PreparedImage {
   base64: string;
   mime: string;
-  /** true = đã qua re-encode (có xoay/crop) — chỉ để debug, không đổi hành vi. */
+  /** Luôn true từ 2026-09-09 (mọi ảnh đều qua encode JPEG) — giữ để debug/telemetry. */
   reencoded: boolean;
 }
 
 /**
  * Chốt ảnh cuối gửi AI:
- * - canvas = ảnh ĐANG hiển thị (đã áp xoay nếu có)
+ * - canvas = ảnh ĐANG hiển thị (đã áp xoay nếu có — caller lo xoay qua rotateCanvas)
  * - rect   = khung crop người dùng kéo (pixel canvas), null = nguyên tấm
- * - cùng null/null → bytes gốc
+ * Luôn crop (nếu có) → downscale 1600 → JPEG q0.80 (xem header quyết định 2026-09-09).
  */
 export async function prepareForAnalysis(
   canvas: HTMLCanvasElement,
   rect: CropRect | null,
-  originalFile: File,
-  rotation: Rotation,
 ): Promise<PreparedImage> {
-  const needsReencode = rect !== null || rotation !== 0;
-  if (!needsReencode) {
-    const buf = new Uint8Array(await originalFile.arrayBuffer());
-    return { base64: bytesToBase64(buf), mime: originalFile.type || "image/jpeg", reencoded: false };
-  }
   const source = rect ? cropCanvas(canvas, rect) : canvas;
-  const blob = await canvasToJpegBlob(source);
+  const scaled = downscaleCanvas(source, AI_IMAGE_MAX_DIMENSION);
+  const blob = await canvasToJpegBlob(scaled);
   return { base64: await blobToBase64(blob), mime: "image/jpeg", reencoded: true };
 }

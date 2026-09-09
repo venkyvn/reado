@@ -20,9 +20,14 @@ const PROFILE = "/tmp/reado-e2e-profile";
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
+  // --no-sandbox --disable-gpu (2026-09-09): Chrome trong DSH seatbelt chết process
+  // con với "GPU process isn't usable / sandbox initialization failed" — môi trường,
+  // không phải bug app (xem journal 3.5). Headless + profile /tmp dùng một lần.
   args: [
     "--no-first-run",
     "--disable-crash-reporter",
+    "--no-sandbox",
+    "--disable-gpu",
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],
@@ -45,6 +50,12 @@ try {
     if (!ok) throw new Error(`không tìm thấy nút chứa "${text}"`);
   };
 
+  // Chờ Home render xong (boot DB Worker + OPFS mất vài trăm ms — networkidle0
+  // không đảm bảo React đã render; race lộ ra khi Chrome khởi động chậm).
+  await page.waitForFunction(
+    () => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Chụp trang sách")),
+    { timeout: 15000 },
+  );
   await clickByText("Chụp trang sách");
   await page.waitForSelector("#capture-gallery", { timeout: 5000 });
   const input = await page.$("#capture-gallery");

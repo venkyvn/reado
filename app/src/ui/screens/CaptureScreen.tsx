@@ -3,8 +3,8 @@
  * gửi AI, chọn collection hoặc tạo mới NGAY TRONG flow (không rời màn), không
  * chọn → rơi vào collection mặc định. NFR-08: từ Home tới chụp = 1 chạm.
  *
- * Chất lượng ảnh (M-03): không crop/không xoay → gửi bytes gốc; có chỉnh →
- * re-encode JPEG 0.95 (xem imageToolkit.ts).
+ * Chất lượng ảnh (quyết định 2026-09-09, xem imageToolkit.ts): LUÔN chuẩn hoá —
+ * crop/xoay (nếu có) → cạnh dài ≤ 1600px (không upscale) → JPEG q0.80.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent } from "react";
@@ -50,8 +50,10 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
   // BUG ĐÃ GẶP THẬT (owner test 2026-09-08: upload ảnh xong KHÔNG thấy hình):
   // React set attribute width/height lên <canvas> khi mount/đổi giá trị, và theo
   // spec HTML việc đó XOÁ bitmap — canvas còn đúng kích thước nhưng trong suốt.
-  // Ảnh vẫn gửi được vì prepareForAnalysis đọc bytes gốc của File, nên flow chạy
-  // mà preview thì trắng. Sửa: giữ canvas NGUỒN trong state, vẽ lại vào canvas
+  // Ảnh vẫn gửi được vì lúc đó prepareForAnalysis đọc bytes gốc của File, nên flow
+  // chạy mà preview thì trắng (từ 2026-09-09 ảnh luôn encode từ canvas — xem header
+  // imageToolkit — nên preview hỏng sẽ ĐÙN luôn flow thay vì lặng lẽ gửi đen). Sửa:
+  // giữ canvas NGUỒN trong state, vẽ lại vào canvas
   // do React quản lý (viewRef) SAU mỗi lần DOM cập nhật.
   const viewRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -158,7 +160,7 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
     setBusySubmit(true);
     setFormError(null);
     try {
-      const prepared = await prepareForAnalysis(canvas, crop, file, rotation);
+      const prepared = await prepareForAnalysis(canvas, crop);
       const next = { image: { base64: prepared.base64, mime: prepared.mime }, collectionId };
       payloadRef.current = next;
       setPayload(next);
