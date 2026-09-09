@@ -13,6 +13,9 @@
  *   (Q-10 chốt). Phiên sống ở state AppRoot (chết khi F5/đóng tab — đúng
  *   "xoá hết phiên"); các trang xếp cũ → mới, cuộn ngược xem được.
  * - FR-06: summary_vi thu gọn MẶC ĐỊNH (design principle 6 — không phá tự đọc).
+ * - FR-09 chống lưu trùng (bug owner báo 2026-09-09): trang ĐÃ lưu vào kho thì
+ *   nút "Chọn từ" bị LÀM MỜ + KHOÁ — "Lưu" chỉ xảy ra một lần mỗi trang trong
+ *   phiên (AppRoot đánh dấu `savedAt`/`savedCount` ngay khi save xong).
  *
  * Nằm NGOÀI phạm vi bản này (ghi nhận ở MVP_PLAN mục 4): cảnh báo trang sắp
  * trôi khỏi buffer khi chưa chọn từ nào (FR-05 c.5 — task ghi rõ để R2 được).
@@ -127,13 +130,26 @@ function PageBlock({ pageIndex, page, collectionName, showTranslations, openGlos
         <span className="read-page-no">
           Trang {pageIndex + 1} {collectionName ? `· ${collectionName}` : ""}
         </span>
-        <button
-          type="button"
-          className="read-revise"
-          onClick={() => navigate({ name: "vocabEdit", analysis, collectionId: page.collectionId })}
-        >
-          📝 Chọn từ ({analysis.vocabulary.length}) →
-        </button>
+        {page.savedCount != null ? (
+          <button
+            type="button"
+            className="read-revise saved"
+            disabled
+            title="Trang này đã lưu vào kho từ — mở 📚 Kho từ vựng để xem"
+          >
+            ✅ Đã lưu ({page.savedCount} từ)
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="read-revise"
+            onClick={() =>
+              navigate({ name: "vocabEdit", analysis, collectionId: page.collectionId, pageId: page.pageId })
+            }
+          >
+            📝 Chọn từ ({analysis.vocabulary.length}) →
+          </button>
+        )}
       </header>
 
       {analysis.summaryVi.trim() !== "" && (

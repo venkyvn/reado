@@ -232,6 +232,39 @@ try {
   await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Đọc trang", { timeout: 5000 });
   check("bấm nút → quay lại đúng màn đọc với buffer nguyên vẹn", true);
 
+  // 8. FR-09 chống lưu trùng (bug 2026-09-09): lưu trang 1 → chỉ ĐƯỢC LƯU MỘT
+  //    LẦN — đọc lại phiên thì nút "Chọn từ" của trang đó bị làm mờ + khoá,
+  //    trong khi trang 2 chưa lưu vẫn dùng được.
+  await clickByText("Chọn từ (2)");
+  await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Duyệt từ trước khi lưu", { timeout: 10000 });
+  await clickByText("Lưu 2 thẻ");
+  await page.waitForFunction(() => document.querySelector("h1")?.textContent.includes("Đã lưu"), { timeout: 15000 });
+  check("lưu 2 thẻ của trang 1 thành công lần đầu", true);
+  await clickByText("Về trang chủ");
+  await clickByText("Đọc lại phiên vừa chụp");
+  await page.waitForFunction(() => document.querySelector("h1")?.textContent === "Đọc trang", { timeout: 5000 });
+  const dedup = await page.evaluate(() => {
+    const heads = [...document.querySelectorAll(".read-page-head")];
+    const first = heads[0]?.querySelector("button.read-revise");
+    const second = heads[1]?.querySelector("button.read-revise");
+    return {
+      firstDisabled: !!first && first.disabled,
+      firstText: first?.textContent ?? "",
+      secondDisabled: !!second && second.disabled,
+      secondText: second?.textContent ?? "",
+    };
+  });
+  check(
+    "trang ĐÃ lưu: nút Chọn từ bị KHOÁ + ghi 'Đã lưu' (không thể lưu trùng)",
+    dedup.firstDisabled && dedup.firstText.includes("Đã lưu"),
+    `disabled=${dedup.firstDisabled}, text="${dedup.firstText.trim()}"`,
+  );
+  check(
+    "trang CHƯA lưu vẫn vào Chọn từ bình thường",
+    !dedup.secondDisabled && dedup.secondText.includes("Chọn từ"),
+    `disabled=${dedup.secondDisabled}, text="${dedup.secondText.trim()}"`,
+  );
+
   check("0 lỗi console", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
 
   const failed = results.filter((r) => !r.ok);

@@ -10,6 +10,7 @@
 import { useCallback, useState } from "react";
 import type { BootstrapResult } from "../app/bootstrap";
 import type { AnalysisResult } from "../domain/types";
+import { newId, toUtcIso } from "../domain/utils";
 import { AppEnvContext } from "./context";
 import type { AppEnv } from "./context";
 import { CaptureScreen } from "./screens/CaptureScreen";
@@ -18,7 +19,7 @@ import { ExportScreen } from "./screens/ExportScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { ReadScreen } from "./screens/ReadScreen";
 import type { SessionPage } from "./screens/ReadScreen";
-import { appendSessionPage } from "./readSegments";
+import { appendSessionPage, markPageSaved } from "./readSegments";
 import { StorageCheckScreen } from "./screens/StorageCheckScreen";
 import { VocabEditScreen } from "./screens/VocabEditScreen";
 import { VocabLibraryScreen } from "./screens/VocabLibraryScreen";
@@ -27,7 +28,7 @@ import { ReviewScreen } from "./screens/ReviewScreen";
 export type Screen =
   | { name: "home" }
   | { name: "capture" }
-  | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string }
+  | { name: "vocabEdit"; analysis: AnalysisResult; collectionId: string; pageId: string }
   | { name: "readSession" }
   | { name: "review" }
   | { name: "cram" }
@@ -54,9 +55,16 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
   // xuống DB (NFR-04: không lưu ảnh, không lưu văn bản trang).
   const [sessionPages, setSessionPages] = useState<SessionPage[]>([]);
   const handleAnalyzed = useCallback((analysis: AnalysisResult, collectionId: string) => {
-    setSessionPages((prev) => appendSessionPage(prev, { analysis, collectionId }));
+    setSessionPages((prev) => appendSessionPage(prev, { pageId: newId(), analysis, collectionId }));
     setScreen({ name: "readSession" });
     window.scrollTo(0, 0);
+  }, []);
+
+  // FR-09 + chống lưu trùng (bug owner báo 2026-09-09): ngay khi màn duyệt từ
+  // save xong, đánh dấu trang gốc trong buffer là "đã lưu" → màn đọc làm mờ +
+  // khoá nút "Chọn từ" của trang đó, không thể lưu lại lần hai trong phiên.
+  const handlePageSaved = useCallback((pageId: string, savedCount: number) => {
+    setSessionPages((prev) => markPageSaved(prev, pageId, toUtcIso(new Date()), savedCount));
   }, []);
 
   const env: AppEnv = {
@@ -101,7 +109,13 @@ export function AppRoot({ boot }: { boot: BootstrapResult }) {
         {screen.name === "capture" && <CaptureScreen navigate={navigate} onAnalyzed={handleAnalyzed} />}
         {screen.name === "readSession" && <ReadScreen pages={sessionPages} navigate={navigate} />}
         {screen.name === "vocabEdit" && (
-          <VocabEditScreen analysis={screen.analysis} collectionId={screen.collectionId} navigate={navigate} />
+          <VocabEditScreen
+            analysis={screen.analysis}
+            collectionId={screen.collectionId}
+            pageId={screen.pageId}
+            onSaved={handlePageSaved}
+            navigate={navigate}
+          />
         )}
         {screen.name === "review" && <ReviewScreen navigate={navigate} />}
         {screen.name === "cram" && <CramScreen navigate={navigate} />}

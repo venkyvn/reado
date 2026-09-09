@@ -18,8 +18,16 @@ import { normalizePageText } from "../domain/verify";
 
 /** Một trang trong buffer phiên đọc (FR-05 c.4). */
 export interface SessionPage {
+  /** id ổn định TRONG PHIÊN — neo để đánh dấu trang "đã lưu" (chống lưu trùng). */
+  pageId: string;
   analysis: AnalysisResult;
   collectionId: string;
+  /** Trang này ĐÃ được lưu vào kho (FR-03/FR-09) lúc `savedAt`, gồm `savedCount`
+   *  từ. Màn đọc KHÔNG cho vào "Chọn từ" lần hai với trang đã lưu — bug owner
+   *  báo 2026-09-09 (đọc lại phiên → lưu lại → trùng từ). Chỉ sống trong phiên
+   *  như cả buffer: F5/đóng tab = hết phiên = bị xoá (Q-10). */
+  savedAt?: string;
+  savedCount?: number;
 }
 
 /** Q-10 chốt 2026-09-08: buffer giữ 10 trang GẦN NHẤT, phần cũ trôi đi. */
@@ -28,6 +36,20 @@ export const READ_SESSION_MAX = 10;
 /** Nối trang mới phân tích vào cuối buffer, cắt về READ_SESSION_MAX. */
 export function appendSessionPage(pages: SessionPage[], page: SessionPage): SessionPage[] {
   return [...pages, page].slice(-READ_SESSION_MAX);
+}
+
+/**
+ * Đánh dấu trang `pageId` đã lưu vào kho (FR-09) — thuần, không đột biến.
+ * pageId không có trong buffer (vd: trang đã trôi khỏi 10 trang gần nhất) thì
+ * trả về bản sao y nguyên — không lỗi, không đánh nhầm trang khác.
+ */
+export function markPageSaved(
+  pages: SessionPage[],
+  pageId: string,
+  savedAt: string,
+  savedCount: number,
+): SessionPage[] {
+  return pages.map((p) => (p.pageId === pageId ? { ...p, savedAt, savedCount } : p));
 }
 
 export interface GlossEntry {

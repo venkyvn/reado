@@ -63,9 +63,16 @@ function initialState(analysis: AnalysisResult): EditableItem[] {
     .sort((a, b) => RANK[a.item.verification] - RANK[b.item.verification]);
 }
 
-export function VocabEditScreen({ analysis, collectionId, navigate }: {
+export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navigate }: {
   analysis: AnalysisResult;
   collectionId: string;
+  /** pageId của TRANG GỐC trong buffer phiên đọc — AppRoot dùng nó để đánh
+   *  dấu trang "đã lưu" ngay sau khi save thành công, chặn lưu trùng lần hai
+   *  (bug 2026-09-09: đọc lại phiên → Chọn từ → lưu lại → duplicate). */
+  pageId: string;
+  /** Gọi ĐÚNG MỘT LẦN ngay sau khi `saveVocabulary` thành công (trước khi
+   *  sang phase "saved") — không gọi khi fail hay khi không gì được chọn. */
+  onSaved: (pageId: string, savedCount: number) => void;
   navigate: (s: Screen) => void;
 }) {
   const { services } = useAppEnv();
@@ -140,6 +147,9 @@ export function VocabEditScreen({ analysis, collectionId, navigate }: {
     try {
       const chosen = items.filter((i) => i.selected).map((i) => i.item);
       const result = await saveVocabulary(services, { collectionId, items: chosen, now: new Date() });
+      // Báo AppRoot đánh dấu trang gốc ĐÃ LƯU ngay tại đây — trước khi sang
+      // phase "saved" — để màn đọc khoá nút "Chọn từ" của trang đó trong phiên.
+      onSaved(pageId, result.saved);
       setSaveResult(result);
       setPhase("saved");
     } catch (err) {

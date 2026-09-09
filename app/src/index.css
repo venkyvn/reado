@@ -954,6 +954,12 @@ button.read-revise {
   cursor: pointer;
 }
 
+/* Trang ĐÃ lưu (FR-09 chống lưu trùng): nút Chọn từ làm mờ + khoá, không còn
+   là lời mời hành động — opacity thêm nằm ở luật button:disabled chung. */
+button.read-revise.saved:disabled {
+  color: var(--muted);
+}
+
 .read-summary {
   margin: 8px 0 4px;
 }
