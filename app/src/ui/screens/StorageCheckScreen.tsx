@@ -14,40 +14,39 @@
  * nó đọc marker của LẦN MỞ TRƯỚC. DB memory thì hàng này không bao giờ xanh,
  * dù mọi phép ghi trong phiên đều thành công.
  */
-import { useEffect, useState } from "react";
-import type { Screen } from "../AppRoot";
-import { useAppEnv } from "../context";
+import { useEffect, useState } from "react"
+import type { Screen } from "../AppRoot"
+import { useAppEnv } from "../context"
 
 interface CheckInfo {
-  collections: number;
-  vocabInDefault: number;
-  dueCards: number;
-  keyConfigured: boolean;
+  collections: number
+  vocabInDefault: number
+  dueCards: number
+  keyConfigured: boolean
 }
 
 // Cổng https của `dev:https` (package.json) — server https DUY NHẤT ở chế độ dev.
 // Không phải giá trị đoán; nếu đổi script thì đổi cả đây.
-const HTTPS_DEV_PORT = 5174;
+const HTTPS_DEV_PORT = 5174
 
 /** ISO → giờ địa phương dễ đọc; chuỗi lạ thì trả nguyên văn thay vì "Invalid Date". */
 function formatLocal(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 
 export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void }) {
-  const { services, storageMode, storageWarnings, previousBootAt } = useAppEnv();
-  const [info, setInfo] = useState<CheckInfo | null>(null);
-  const [writeTest, setWriteTest] = useState<"idle" | "ok" | "fail">("idle");
-  const [fatal, setFatal] = useState<string | null>(null);
+  const { services, storageMode, storageWarnings, previousBootAt } = useAppEnv()
+  const [info, setInfo] = useState<CheckInfo | null>(null)
+  const [writeTest, setWriteTest] = useState<"idle" | "ok" | "fail">("idle")
+  const [fatal, setFatal] = useState<string | null>(null)
 
-  const secureContext = globalThis.isSecureContext === true;
-  const crossOriginIsolated = globalThis.crossOriginIsolated === true;
-  const origin = window.location.origin;
-  const hostname = new URL(origin).hostname;
-  const httpsSuggestion = `https://${hostname}:${HTTPS_DEV_PORT}/`;
-  const swActive =
-    "serviceWorker" in navigator && navigator.serviceWorker.controller !== null;
+  const secureContext = globalThis.isSecureContext === true
+  const crossOriginIsolated = globalThis.crossOriginIsolated === true
+  const origin = window.location.origin
+  const hostname = new URL(origin).hostname
+  const httpsSuggestion = `https://${hostname}:${HTTPS_DEV_PORT}/`
+  const swActive = "serviceWorker" in navigator && navigator.serviceWorker.controller !== null
 
   useEffect(() => {
     void (async () => {
@@ -56,33 +55,33 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
           services.repos.collections.list(),
           services.repos.collections.getDefault(),
           services.repos.settings.get(),
-        ]);
+        ])
         const vocabInDefault = def
           ? (await services.repos.vocabItems.listByCollection(def.id)).length
-          : 0;
-        const nowUtc = new Date().toISOString();
-        const base = { nowUtc, scopeCollectionIds: null, limit: null };
+          : 0
+        const nowUtc = new Date().toISOString()
+        const base = { nowUtc, scopeCollectionIds: null, limit: null }
         const dueCards =
           (await services.repos.cards.listDueReviews(base)).length +
-          (await services.repos.cards.listDueNews(base)).length;
+          (await services.repos.cards.listDueNews(base)).length
 
         // Write/read round-trip thật — ghi LẠI giá trị hiện có (không đổi data).
-        await services.repos.settings.updatePartial({ requestRetention: settings.requestRetention });
-        await services.repos.settings.get();
-        setWriteTest("ok");
+        await services.repos.settings.updatePartial({ requestRetention: settings.requestRetention })
+        await services.repos.settings.get()
+        setWriteTest("ok")
 
         setInfo({
           collections: cols.length,
           vocabInDefault,
           dueCards,
           keyConfigured: Boolean(settings.aiApiKey),
-        });
+        })
       } catch (err) {
-        setWriteTest("fail");
-        setFatal(err instanceof Error ? err.message : String(err));
+        setWriteTest("fail")
+        setFatal(err instanceof Error ? err.message : String(err))
       }
-    })();
-  }, [services]);
+    })()
+  }, [services])
 
   return (
     <div className="pad">
@@ -102,9 +101,15 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
           <Row
             label="crossOriginIsolated"
             ok={crossOriginIsolated}
-            value={crossOriginIsolated ? "Có (SharedArrayBuffer OK)" : "KHÔNG — VFS opfs không dùng được"}
+            value={
+              crossOriginIsolated ? "Có (SharedArrayBuffer OK)" : "KHÔNG — VFS opfs không dùng được"
+            }
           />
-          <Row label="OPFS active" ok={storageMode === "opfs"} value={storageMode === "opfs" ? "Có — lưu thật trên máy" : "KHÔNG — mất khi đóng tab"} />
+          <Row
+            label="OPFS active"
+            ok={storageMode === "opfs"}
+            value={storageMode === "opfs" ? "Có — lưu thật trên máy" : "KHÔNG — mất khi đóng tab"}
+          />
           <Row
             label="Service Worker"
             ok={swActive}
@@ -114,7 +119,11 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
                 : "Chưa có (dev server không phục vụ SW — test offline cần build + preview:https, rồi reload lần nữa)"
             }
           />
-          <Row label="Write/read SQLite" ok={writeTest === "ok"} value={writeTest === "ok" ? "Ghi + đọc lại OK" : writeTest === "fail" ? "LỖI" : "…"} />
+          <Row
+            label="Write/read SQLite"
+            ok={writeTest === "ok"}
+            value={writeTest === "ok" ? "Ghi + đọc lại OK" : writeTest === "fail" ? "LỖI" : "…"}
+          />
           <Row
             label="Sống qua F5"
             ok={Boolean(previousBootAt)}
@@ -124,9 +133,19 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
                 : "Chưa thấy lần mở trước — đây là lần mở đầu, hoặc DB đang là bộ nhớ tạm"
             }
           />
-          <Row label="API key AI" ok={false} value={info ? (info.keyConfigured ? "Đã cấu hình" : "Chưa cấu hình (sẽ nhắc khi chụp)") : "…"} />
+          <Row
+            label="API key AI"
+            ok={false}
+            value={
+              info ? (info.keyConfigured ? "Đã cấu hình" : "Chưa cấu hình (sẽ nhắc khi chụp)") : "…"
+            }
+          />
           <Row label="Collection" ok={false} value={info ? String(info.collections) : "…"} />
-          <Row label="Từ trong Kho tạm" ok={false} value={info ? String(info.vocabInDefault) : "…"} />
+          <Row
+            label="Từ trong Kho tạm"
+            ok={false}
+            value={info ? String(info.vocabInDefault) : "…"}
+          />
           <Row label="Card đến hạn" ok={false} value={info ? String(info.dueCards) : "…"} />
         </tbody>
       </table>
@@ -148,17 +167,16 @@ export function StorageCheckScreen({ navigate }: { navigate: (s: Screen) => void
 
       <p className="fine">
         SPIKE task 2.4-đi-kiện (solution-design 14.2): trên iPhone mở {httpsSuggestion}
-        và xem hàng “OPFS active”. Muốn chắc dữ liệu không mất: F5 thêm MỘT lần nữa —
-        hàng “Sống qua F5” phải hiện giờ của lần mở vừa rồi. Lưu ý: dữ liệu nằm THEO
-        origin — mở bằng http hay https là hai kho khác nhau, không thấy từ cũ là vì
-        đó (không phải mất).
+        và xem hàng “OPFS active”. Muốn chắc dữ liệu không mất: F5 thêm MỘT lần nữa — hàng “Sống qua
+        F5” phải hiện giờ của lần mở vừa rồi. Lưu ý: dữ liệu nằm THEO origin — mở bằng http hay
+        https là hai kho khác nhau, không thấy từ cũ là vì đó (không phải mất).
       </p>
 
       <button type="button" className="secondary" onClick={() => navigate({ name: "home" })}>
         ← Về trang chủ
       </button>
     </div>
-  );
+  )
 }
 
 function Row({ label, value, ok }: { label: string; value: string; ok: boolean }) {
@@ -167,5 +185,5 @@ function Row({ label, value, ok }: { label: string; value: string; ok: boolean }
       <td className="kv-k">{label}</td>
       <td className={`kv-v ${ok ? "kv-ok" : ""}`}>{value}</td>
     </tr>
-  );
+  )
 }

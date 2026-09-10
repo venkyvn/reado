@@ -9,24 +9,24 @@
  * Callback của `transaction` là ASYNC và mọi câu SQL bên trong phải `await`:
  * DB nằm trong Worker (facade RPC), nếu quên await thì COMMIT chạy trước INSERT.
  */
-import type { ReviewLogsRepository } from "../../domain/repositories";
-import type { CardState, ReviewLogRow } from "../../domain/types";
-import type { AppDb } from "../db";
-import { updateSrsFieldsSql } from "./cards";
+import type { ReviewLogsRepository } from "../../domain/repositories"
+import type { CardState, ReviewLogRow } from "../../domain/types"
+import type { AppDb } from "../db"
+import { updateSrsFieldsSql } from "./cards"
 
 interface LogSql {
-  id: string;
-  card_id: string;
-  mode: string;
-  rating: number;
-  state_before: string;
-  stability_before: number;
-  difficulty_before: number;
-  learning_steps_before: number | bigint;
-  due_before: string;
-  elapsed_days: number | bigint;
-  scheduled_days: number | bigint;
-  reviewed_at: string;
+  id: string
+  card_id: string
+  mode: string
+  rating: number
+  state_before: string
+  stability_before: number
+  difficulty_before: number
+  learning_steps_before: number | bigint
+  due_before: string
+  elapsed_days: number | bigint
+  scheduled_days: number | bigint
+  reviewed_at: string
 }
 
 function map(row: LogSql): ReviewLogRow {
@@ -43,7 +43,7 @@ function map(row: LogSql): ReviewLogRow {
     elapsedDays: Number(row.elapsed_days),
     scheduledDays: Number(row.scheduled_days),
     reviewedAt: row.reviewed_at,
-  };
+  }
 }
 
 export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
@@ -69,15 +69,15 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
             log.scheduledDays,
             log.reviewedAt,
           ],
-        );
-        await updateSrsFieldsSql(tx, cardId, fields);
-      });
+        )
+        await updateSrsFieldsSql(tx, cardId, fields)
+      })
     },
     async rollbackGrade(logId, cardId, fields) {
       await appDb.transaction(async (tx) => {
-        await tx.exec("delete from review_logs where id = ?", [logId]);
-        await updateSrsFieldsSql(tx, cardId, fields);
-      });
+        await tx.exec("delete from review_logs where id = ?", [logId])
+        await updateSrsFieldsSql(tx, cardId, fields)
+      })
     },
     async appendCramLog(log) {
       // Cram (3.13, D-3): log Duy nhất được insert — cards KHÔNG đổi cột nào.
@@ -102,11 +102,11 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
           log.scheduledDays,
           log.reviewedAt,
         ],
-      );
+      )
     },
     async removeLog(logId) {
       // Undo cram: card không đổi nên không cần restore; chỉ xoá dấu vết.
-      await appDb.exec("delete from review_logs where id = ?", [logId]);
+      await appDb.exec("delete from review_logs where id = ?", [logId])
     },
     async countIntroducedNew(fromUtc, toUtc) {
       // CHỈ đếm mode='srs': cram (3.13) giới thiệu thẻ mới nhưng KHÔNG được ăn
@@ -116,20 +116,20 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
         `select count(*) as c from review_logs
          where state_before = 'new' and mode = 'srs' and reviewed_at >= ? and reviewed_at < ?`,
         [fromUtc, toUtc],
-      );
-      return Number(row?.c ?? 0);
+      )
+      return Number(row?.c ?? 0)
     },
     async listReviewedAts() {
       // FR-14 streak: chỉ cần timestamp, tăng dần. Việc gom "ngày ôn" (giờ
       // chuyển ngày + múi giờ) thuộc domain — SQL không biết dayBounds.
       const rows = await appDb.all<{ reviewed_at: string }>(
         `select reviewed_at from review_logs order by reviewed_at asc`,
-      );
-      return rows.map((r) => r.reviewed_at);
+      )
+      return rows.map((r) => r.reviewed_at)
     },
     async getById(logId) {
-      const row = await appDb.get<LogSql>("select * from review_logs where id = ?", [logId]);
-      return row ? map(row) : null;
+      const row = await appDb.get<LogSql>("select * from review_logs where id = ?", [logId])
+      return row ? map(row) : null
     },
     async listByScope(collectionId) {
       // Lọc theo collection phải đi qua HAI lần JOIN (log → card → item), vì
@@ -142,8 +142,8 @@ export function createReviewLogsRepo(appDb: AppDb): ReviewLogsRepository {
           where (? is null or v.collection_id = ?)
           order by l.reviewed_at asc`,
         [collectionId, collectionId],
-      );
-      return rows.map(map);
+      )
+      return rows.map(map)
     },
-  };
+  }
 }

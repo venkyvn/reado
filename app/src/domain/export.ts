@@ -28,52 +28,52 @@
  * đứng đầu cột 1 sẽ bị Anki coi là comment. Xác suất với từ vựng sách gần như 0,
  * và tự ý sửa dữ liệu (thêm escape/đổi ký tự) thì tệ hơn là ghi chú lại ở đây.
  */
-import type { CardRow, Cefr, ReviewLogRow, Settings, VocabItemRow } from "./types";
+import type { CardRow, Cefr, ReviewLogRow, Settings, VocabItemRow } from "./types"
 
 /** Một vocabulary item kèm TÊN collection (FR-16 đòi tên, không phải id). */
 export interface ExportItem extends VocabItemRow {
-  collectionName: string;
+  collectionName: string
 }
 
 export interface ExportScope {
   /** null = tất cả collection. */
-  collectionId: string | null;
+  collectionId: string | null
   /** null khi scope là tất cả; tên thật (dữ liệu, không phải UI copy) khi scope một collection. */
-  collectionName: string | null;
+  collectionName: string | null
 }
 
 export interface ExportCounts {
-  vocabItems: number;
-  cards: number;
-  reviewLogs: number;
+  vocabItems: number
+  cards: number
+  reviewLogs: number
 }
 
 /** Settings qua whitelist — xem điều cấm #9 ở header file. */
 export interface ExportableSettings {
-  cefrLevel: Cefr;
-  dailyNewLimit: number;
-  requestRetention: number;
-  maximumInterval: number;
-  enableFuzz: boolean;
-  dayCutoffHour: number;
-  fsrsParams: string | null;
-  fsrsVersion: string | null;
-  aiProvider: string;
-  aiModel: string | null;
+  cefrLevel: Cefr
+  dailyNewLimit: number
+  requestRetention: number
+  maximumInterval: number
+  enableFuzz: boolean
+  dayCutoffHour: number
+  fsrsParams: string | null
+  fsrsVersion: string | null
+  aiProvider: string
+  aiModel: string | null
 }
 
 export interface ExportDataset {
-  scope: ExportScope;
+  scope: ExportScope
   /** UTC ISO (điều cấm #7: không mất timezone — mọi mốc thời gian là `...Z`). */
-  exportedAt: string;
-  items: ExportItem[];
-  cards: CardRow[];
-  logs: ReviewLogRow[];
-  settings: ExportableSettings;
+  exportedAt: string
+  items: ExportItem[]
+  cards: CardRow[]
+  logs: ReviewLogRow[]
+  settings: ExportableSettings
 }
 
-export const EXPORT_FORMAT = "reado-export";
-export const EXPORT_VERSION = 1;
+export const EXPORT_FORMAT = "reado-export"
+export const EXPORT_VERSION = 1
 
 /** Thứ tự cột của file TSV — cũng là thứ tự Anki map vào field của note type. */
 export const ANKI_TSV_COLUMNS = [
@@ -84,7 +84,7 @@ export const ANKI_TSV_COLUMNS = [
   "cefr",
   "example",
   "collection",
-] as const;
+] as const
 
 export function toExportableSettings(s: Settings): ExportableSettings {
   // Thêm field mới vào Settings thì PHẢI quyết định có export nó không — danh
@@ -100,7 +100,7 @@ export function toExportableSettings(s: Settings): ExportableSettings {
     fsrsVersion: s.fsrsVersion,
     aiProvider: s.aiProvider,
     aiModel: s.aiModel,
-  };
+  }
 }
 
 /**
@@ -108,7 +108,7 @@ export function toExportableSettings(s: Settings): ExportableSettings {
  * field/dòng) — thay bằng khoảng trắng. KHÔNG đổi nội dung chữ.
  */
 function tsvField(value: string | null): string {
-  return (value ?? "").replace(/[\t\r\n]+/g, " ").trim();
+  return (value ?? "").replace(/[\t\r\n]+/g, " ").trim()
 }
 
 /** TSV cho Anki: header directive + mỗi item một dòng, tab ngăn cách. */
@@ -118,7 +118,7 @@ export function buildAnkiTsv(items: readonly ExportItem[]): string {
     "#html:false",
     `# columns: ${ANKI_TSV_COLUMNS.join(" | ")}`,
     "# Exported from Reado (FR-16). Anki: File > Import, chọn file này.",
-  ];
+  ]
   const lines = items.map((it) =>
     [
       tsvField(it.term),
@@ -129,12 +129,12 @@ export function buildAnkiTsv(items: readonly ExportItem[]): string {
       tsvField(it.example),
       tsvField(it.collectionName),
     ].join("\t"),
-  );
-  return [...header, ...lines].join("\n") + "\n";
+  )
+  return [...header, ...lines].join("\n") + "\n"
 }
 
 export function countsOf(d: ExportDataset): ExportCounts {
-  return { vocabItems: d.items.length, cards: d.cards.length, reviewLogs: d.logs.length };
+  return { vocabItems: d.items.length, cards: d.cards.length, reviewLogs: d.logs.length }
 }
 
 /**
@@ -158,5 +158,5 @@ export function buildJsonExport(d: ExportDataset): string {
       null,
       2,
     ) + "\n"
-  );
+  )
 }

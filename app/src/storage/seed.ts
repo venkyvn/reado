@@ -12,23 +12,21 @@
  * Chạy trên `SyncDb`: seed diễn ra nơi DB sống (Worker hoặc in-process), cùng lúc
  * với migrate — xem syncDb.ts.
  */
-import type { SyncDb } from "./syncDb";
-import { newId, toUtcIso } from "../domain/utils";
+import type { SyncDb } from "./syncDb"
+import { newId, toUtcIso } from "../domain/utils"
 
 export function ensureDefaultCollection(db: SyncDb): void {
-  const existing = db.get<{ id: string }>(
-    "select id from collections where is_default = 1 limit 1",
-  );
-  if (existing) return;
+  const existing = db.get<{ id: string }>("select id from collections where is_default = 1 limit 1")
+  if (existing) return
   db.exec("insert into collections (id, name, is_default, created_at) values (?, ?, 1, ?)", [
     newId(),
     "Kho tạm",
     toUtcIso(new Date()),
-  ]);
+  ])
 }
 
 export function ensureSettingsRow(db: SyncDb): void {
-  const existing = db.get<{ id: number }>("select id from settings where id = 1");
-  if (existing) return;
-  db.exec("insert into settings (id) values (1)");
+  const existing = db.get<{ id: number }>("select id from settings where id = 1")
+  if (existing) return
+  db.exec("insert into settings (id) values (1)")
 }

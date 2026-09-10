@@ -9,11 +9,11 @@
  *
  * Chạy: npm run e2e:opfs   (cần dev server; không cần app render gì cả)
  */
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer-core"
 
-const BASE = process.argv[2] ?? "http://localhost:5173/";
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const PROFILE = "/tmp/reado-e2e-profile";
+const BASE = process.argv[2] ?? "http://localhost:5173/"
+const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+const PROFILE = "/tmp/reado-e2e-profile"
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -29,57 +29,57 @@ const browser = await puppeteer.launch({
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],
-});
+})
 
 /** Thử SAH ngay trên main thread: tạo file, ghi, đọc lại, đóng, xoá. */
 const probeMainThreadSAH = async () => {
-  const out = { apiPresent: false, worked: false, error: null };
+  const out = { apiPresent: false, worked: false, error: null }
   try {
     out.apiPresent =
-      typeof globalThis.FileSystemFileHandle?.prototype?.createSyncAccessHandle === "function";
-    if (!out.apiPresent) return out;
-    const root = await navigator.storage.getDirectory();
-    const fh = await root.getFileHandle("reado-sah-probe.bin", { create: true });
-    const sah = await fh.createSyncAccessHandle();
-    sah.write(new Uint8Array([1, 2, 3, 4]));
-    sah.flush?.();
-    sah.close();
-    const sah2 = await fh.createSyncAccessHandle();
-    const buf = new Uint8Array(4);
-    sah2.read(buf, { at: 0 });
-    sah2.close();
-    await root.removeEntry("reado-sah-probe.bin");
-    out.worked = buf[0] === 1 && buf[3] === 4;
+      typeof globalThis.FileSystemFileHandle?.prototype?.createSyncAccessHandle === "function"
+    if (!out.apiPresent) return out
+    const root = await navigator.storage.getDirectory()
+    const fh = await root.getFileHandle("reado-sah-probe.bin", { create: true })
+    const sah = await fh.createSyncAccessHandle()
+    sah.write(new Uint8Array([1, 2, 3, 4]))
+    sah.flush?.()
+    sah.close()
+    const sah2 = await fh.createSyncAccessHandle()
+    const buf = new Uint8Array(4)
+    sah2.read(buf, { at: 0 })
+    sah2.close()
+    await root.removeEntry("reado-sah-probe.bin")
+    out.worked = buf[0] === 1 && buf[3] === 4
   } catch (e) {
-    out.error = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    out.error = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
   }
-  return out;
-};
+  return out
+}
 
 const probeOpfsReload = async () => {
-  const root = await navigator.storage.getDirectory();
-  const fh = await root.getFileHandle("reado-opfs-probe.txt", { create: true });
-  const w = await fh.createWritable();
-  await w.write("alive");
-  await w.close();
-  return true;
-};
+  const root = await navigator.storage.getDirectory()
+  const fh = await root.getFileHandle("reado-opfs-probe.txt", { create: true })
+  const w = await fh.createWritable()
+  await w.write("alive")
+  await w.close()
+  return true
+}
 
 const readOpfsReload = async () => {
   try {
-    const root = await navigator.storage.getDirectory();
-    const fh = await root.getFileHandle("reado-opfs-probe.txt");
-    const text = await (await fh.getFile()).text();
-    await root.removeEntry("reado-opfs-probe.txt");
-    return text;
+    const root = await navigator.storage.getDirectory()
+    const fh = await root.getFileHandle("reado-opfs-probe.txt")
+    const text = await (await fh.getFile()).text()
+    await root.removeEntry("reado-opfs-probe.txt")
+    return text
   } catch {
-    return null;
+    return null
   }
-};
+}
 
 try {
-  const page = await browser.newPage();
-  await page.goto(BASE, { waitUntil: "networkidle0", timeout: 30000 });
+  const page = await browser.newPage()
+  await page.goto(BASE, { waitUntil: "networkidle0", timeout: 30000 })
 
   const env = await page.evaluate(() => ({
     crossOriginIsolated: globalThis.crossOriginIsolated === true,
@@ -88,12 +88,12 @@ try {
     isWorkerScope: typeof globalThis.WorkerGlobalScope !== "undefined",
     hasGetDirectory: typeof navigator.storage?.getDirectory === "function",
     userAgent: navigator.userAgent,
-  }));
+  }))
 
-  const sah = await page.evaluate(probeMainThreadSAH);
-  await page.evaluate(probeOpfsReload);
-  await page.reload({ waitUntil: "networkidle0", timeout: 30000 });
-  const survived = (await page.evaluate(readOpfsReload)) === "alive";
+  const sah = await page.evaluate(probeMainThreadSAH)
+  await page.evaluate(probeOpfsReload)
+  await page.reload({ waitUntil: "networkidle0", timeout: 30000 })
+  const survived = (await page.evaluate(readOpfsReload)) === "alive"
 
   const result = {
     env,
@@ -103,9 +103,9 @@ try {
     vfsOpfsUsableHere: env.isWorkerScope && env.hasSharedArrayBuffer && env.hasGetDirectory,
     // VFS "opfs-sahpool": lib KHÔNG check WorkerGlobalScope → dùng được nếu SAH chạy.
     vfsSahpoolUsableHere: sah.worked === true,
-  };
-  console.log(JSON.stringify(result, null, 2));
-  process.exitCode = result.opfsSurvivesReload ? 0 : 1;
+  }
+  console.log(JSON.stringify(result, null, 2))
+  process.exitCode = result.opfsSurvivesReload ? 0 : 1
 } finally {
-  await browser.close();
+  await browser.close()
 }

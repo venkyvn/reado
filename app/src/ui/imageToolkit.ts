@@ -13,89 +13,92 @@
  */
 
 /** Cạnh dài tối đa của ảnh gửi AI — chốt 2026-09-09 (A/B + ước lượng cap-height chữ). */
-export const AI_IMAGE_MAX_DIMENSION = 1600;
+export const AI_IMAGE_MAX_DIMENSION = 1600
 /** Chất lượng JPEG gửi AI — chốt 2026-09-09 (A/B: 0.80 không làm hỏng OCR, 0.75 chưa đo). */
-export const AI_IMAGE_JPEG_QUALITY = 0.8;
+export const AI_IMAGE_JPEG_QUALITY = 0.8
 
-export type Rotation = 0 | 90 | 180 | 270;
+export type Rotation = 0 | 90 | 180 | 270
 
 export interface CropRect {
   /** Pixel trong không gian canvas — số nguyên, đã clamp. */
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const CHUNK = 0x8000;
+  let binary = ""
+  const CHUNK = 0x8000
   for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
   }
-  return btoa(binary);
+  return btoa(binary)
 }
 
 export async function blobToBase64(blob: Blob): Promise<string> {
-  const buf = new Uint8Array(await blob.arrayBuffer());
-  return bytesToBase64(buf);
+  const buf = new Uint8Array(await blob.arrayBuffer())
+  return bytesToBase64(buf)
 }
 
 function requireCtx(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("không lấy được canvas 2d context");
-  return ctx;
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("không lấy được canvas 2d context")
+  return ctx
 }
 
 /** Ảnh gốc → canvas (đã flatten EXIF orientation). */
 export async function fileToCanvas(file: File): Promise<HTMLCanvasElement> {
-  const url = URL.createObjectURL(file);
+  const url = URL.createObjectURL(file)
   try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    requireCtx(canvas).drawImage(img, 0, 0);
-    return canvas;
+    const img = new Image()
+    img.src = url
+    await img.decode()
+    const canvas = document.createElement("canvas")
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    requireCtx(canvas).drawImage(img, 0, 0)
+    return canvas
   } finally {
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url)
   }
 }
 
 /** Xoay canvas 90° × n (kim đồng hồ). n=0 trả chính canvas cũ. */
 export function rotateCanvas(src: HTMLCanvasElement, quarterTurns: number): HTMLCanvasElement {
-  const t = ((quarterTurns % 4) + 4) % 4;
-  if (t === 0) return src;
-  const swap = t % 2 === 1;
-  const out = document.createElement("canvas");
-  out.width = swap ? src.height : src.width;
-  out.height = swap ? src.width : src.height;
-  const ctx = requireCtx(out);
-  ctx.translate(out.width / 2, out.height / 2);
-  ctx.rotate((t * Math.PI) / 2);
-  ctx.drawImage(src, -src.width / 2, -src.height / 2);
-  return out;
+  const t = ((quarterTurns % 4) + 4) % 4
+  if (t === 0) return src
+  const swap = t % 2 === 1
+  const out = document.createElement("canvas")
+  out.width = swap ? src.height : src.width
+  out.height = swap ? src.width : src.height
+  const ctx = requireCtx(out)
+  ctx.translate(out.width / 2, out.height / 2)
+  ctx.rotate((t * Math.PI) / 2)
+  ctx.drawImage(src, -src.width / 2, -src.height / 2)
+  return out
 }
 
 /** Cắt rect (pixel) khỏi canvas thành canvas mới. */
 export function cropCanvas(src: HTMLCanvasElement, rect: CropRect): HTMLCanvasElement {
-  const out = document.createElement("canvas");
-  out.width = rect.w;
-  out.height = rect.h;
-  requireCtx(out).drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
-  return out;
+  const out = document.createElement("canvas")
+  out.width = rect.w
+  out.height = rect.h
+  requireCtx(out).drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h)
+  return out
 }
 
-export function canvasToJpegBlob(canvas: HTMLCanvasElement, quality = AI_IMAGE_JPEG_QUALITY): Promise<Blob> {
+export function canvasToJpegBlob(
+  canvas: HTMLCanvasElement,
+  quality = AI_IMAGE_JPEG_QUALITY,
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("toBlob trả null"))),
       "image/jpeg",
       quality,
-    );
-  });
+    )
+  })
 }
 
 /**
@@ -107,14 +110,14 @@ export function scaledSize(
   h: number,
   maxDimension: number,
 ): { w: number; h: number; scaled: boolean } {
-  const longest = Math.max(w, h);
-  if (longest <= maxDimension) return { w, h, scaled: false };
-  const scale = maxDimension / longest;
+  const longest = Math.max(w, h)
+  if (longest <= maxDimension) return { w, h, scaled: false }
+  const scale = maxDimension / longest
   return {
     w: Math.max(1, Math.round(w * scale)),
     h: Math.max(1, Math.round(h * scale)),
     scaled: true,
-  };
+  }
 }
 
 /**
@@ -122,23 +125,23 @@ export function scaledSize(
  * `imageSmoothingQuality: "high"`: canvas mặc định "medium" làm nhoè viền chữ khi thu.
  */
 export function downscaleCanvas(src: HTMLCanvasElement, maxDimension: number): HTMLCanvasElement {
-  const size = scaledSize(src.width, src.height, maxDimension);
-  if (!size.scaled) return src;
-  const out = document.createElement("canvas");
-  out.width = size.w;
-  out.height = size.h;
-  const ctx = requireCtx(out);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(src, 0, 0, size.w, size.h);
-  return out;
+  const size = scaledSize(src.width, src.height, maxDimension)
+  if (!size.scaled) return src
+  const out = document.createElement("canvas")
+  out.width = size.w
+  out.height = size.h
+  const ctx = requireCtx(out)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = "high"
+  ctx.drawImage(src, 0, 0, size.w, size.h)
+  return out
 }
 
 export interface PreparedImage {
-  base64: string;
-  mime: string;
+  base64: string
+  mime: string
   /** Luôn true từ 2026-09-09 (mọi ảnh đều qua encode JPEG) — giữ để debug/telemetry. */
-  reencoded: boolean;
+  reencoded: boolean
 }
 
 /**
@@ -151,8 +154,8 @@ export async function prepareForAnalysis(
   canvas: HTMLCanvasElement,
   rect: CropRect | null,
 ): Promise<PreparedImage> {
-  const source = rect ? cropCanvas(canvas, rect) : canvas;
-  const scaled = downscaleCanvas(source, AI_IMAGE_MAX_DIMENSION);
-  const blob = await canvasToJpegBlob(scaled);
-  return { base64: await blobToBase64(blob), mime: "image/jpeg", reencoded: true };
+  const source = rect ? cropCanvas(canvas, rect) : canvas
+  const scaled = downscaleCanvas(source, AI_IMAGE_MAX_DIMENSION)
+  const blob = await canvasToJpegBlob(scaled)
+  return { base64: await blobToBase64(blob), mime: "image/jpeg", reencoded: true }
 }

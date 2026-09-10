@@ -17,15 +17,15 @@ export type AnalysisErrorCode =
   | "unreadable" // ảnh mờ / trang không phải tiếng Anh (AI trả rỗng)
 
 export class AnalysisError extends Error {
-  readonly code: AnalysisErrorCode;
+  readonly code: AnalysisErrorCode
   /** HTTP status nếu code = "http". */
-  readonly status: number | null;
+  readonly status: number | null
 
   constructor(code: AnalysisErrorCode, message: string, status: number | null = null) {
-    super(message);
-    this.name = "AnalysisError";
-    this.code = code;
-    this.status = status;
+    super(message)
+    this.name = "AnalysisError"
+    this.code = code
+    this.status = status
   }
 }
 
@@ -41,25 +41,25 @@ export type SettingsErrorCode =
   | "bad_base_url"
   | "bad_model"
   | "empty_key"
-  | "empty_patch";
+  | "empty_patch"
 
 export class SettingsError extends Error {
-  readonly code: SettingsErrorCode;
+  readonly code: SettingsErrorCode
   /** Tên field (camelCase) liên quan — UI tự ghép câu từ code + field này,
    *  KHÔNG render `message` (conventions mục 1/3: message là cho log). */
-  readonly field: string | null;
+  readonly field: string | null
 
   constructor(code: SettingsErrorCode, message: string, field: string | null = null) {
-    super(message);
-    this.name = "SettingsError";
-    this.code = code;
-    this.field = field;
+    super(message)
+    this.name = "SettingsError"
+    this.code = code
+    this.field = field
   }
 }
 
 export class StorageError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = "StorageError";
+    super(message)
+    this.name = "StorageError"
   }
 }

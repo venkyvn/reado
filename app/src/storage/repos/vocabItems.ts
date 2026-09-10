@@ -8,28 +8,28 @@
  * Callback transaction là ASYNC + `await` từng câu: DB nằm trong Worker (RPC),
  * quên await thì COMMIT đóng trước khi INSERT chạy.
  */
-import type { VocabItemsRepository } from "../../domain/repositories";
-import type { LibraryFilter } from "../../domain/repositories";
-import type { RichVocabFields, TagCount } from "../../domain/types";
-import type { LibraryItemRow, Pos, VocabItemRow } from "../../domain/types";
-import { insertCardRow } from "./cardsSql";
-import { parseJsonArrayOfString, serializeStringArray } from "./richJson";
-import type { AppDb } from "../db";
+import type { VocabItemsRepository } from "../../domain/repositories"
+import type { LibraryFilter } from "../../domain/repositories"
+import type { RichVocabFields, TagCount } from "../../domain/types"
+import type { LibraryItemRow, Pos, VocabItemRow } from "../../domain/types"
+import { insertCardRow } from "./cardsSql"
+import { parseJsonArrayOfString, serializeStringArray } from "./richJson"
+import type { AppDb } from "../db"
 
 interface VocabSql {
-  id: string;
-  collection_id: string;
-  term: string;
-  term_normalized: string;
-  pos: string;
-  ipa: string | null;
-  meaning_vi: string;
-  example: string;
-  cefr: string | null;
-  tags: string;
-  synonyms: string;
-  antonyms: string;
-  created_at: string;
+  id: string
+  collection_id: string
+  term: string
+  term_normalized: string
+  pos: string
+  ipa: string | null
+  meaning_vi: string
+  example: string
+  cefr: string | null
+  tags: string
+  synonyms: string
+  antonyms: string
+  created_at: string
 }
 
 function map(row: VocabSql): VocabItemRow {
@@ -47,16 +47,16 @@ function map(row: VocabSql): VocabItemRow {
     synonyms: parseJsonArrayOfString(row.synonyms),
     antonyms: parseJsonArrayOfString(row.antonyms),
     createdAt: row.created_at,
-  };
+  }
 }
 
 interface LibrarySql extends VocabSql {
-  collection_name: string;
-  card_state: LibraryItemRow["cardState"];
+  collection_name: string
+  card_state: LibraryItemRow["cardState"]
 }
 
 function mapLibrary(row: LibrarySql): LibraryItemRow {
-  return { ...map(row), collectionName: row.collection_name, cardState: row.card_state };
+  return { ...map(row), collectionName: row.collection_name, cardState: row.card_state }
 }
 
 /** Ba mức lọc null-tự-do của FR-08: "? is null" là bỏ qua tiêu chí đó. Cột phải
@@ -65,16 +65,16 @@ const FILTER_COLS = {
   collection_id: "v.collection_id",
   cefr: "v.cefr",
   card_state: "c.state",
-} as const;
-type FilterKey = keyof typeof FILTER_COLS;
+} as const
+type FilterKey = keyof typeof FILTER_COLS
 function filterClauses(keys: readonly FilterKey[]): string {
-  return keys.map((k) => `  and (? is null or ${FILTER_COLS[k]} = ?)`).join("\n");
+  return keys.map((k) => `  and (? is null or ${FILTER_COLS[k]} = ?)`).join("\n")
 }
 
 export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
   return {
     async persistCapture(vocabRows, cardRows) {
-      if (vocabRows.length === 0) return;
+      if (vocabRows.length === 0) return
       await appDb.transaction(async (tx) => {
         for (const v of vocabRows) {
           await tx.exec(
@@ -95,17 +95,17 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
               serializeStringArray(v.antonyms),
               v.createdAt,
             ],
-          );
+          )
         }
-        for (const c of cardRows) await insertCardRow(tx, c);
-      });
+        for (const c of cardRows) await insertCardRow(tx, c)
+      })
     },
     async listByCollection(collectionId) {
       const rows = await appDb.all<VocabSql>(
         "select * from vocab_items where collection_id = ? order by created_at asc",
         [collectionId],
-      );
-      return rows.map(map);
+      )
+      return rows.map(map)
     },
     async listByScope(collectionId) {
       // `? is null` = lấy tất cả collection (FR-16 export toàn bộ kho). Bind cùng
@@ -115,8 +115,8 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
           where (? is null or collection_id = ?)
           order by created_at asc, term asc`,
         [collectionId, collectionId],
-      );
-      return rows.map(map);
+      )
+      return rows.map(map)
     },
     async listLibrary(filter: LibraryFilter) {
       // JOIN cards để lấy state (mỗi item có đúng 1 card ở R1) và collections để
@@ -131,12 +131,15 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
           ${filterClauses(["collection_id", "cefr", "card_state"])}
           order by v.term collate nocase asc, v.created_at asc`,
         [
-          filter.collectionId, filter.collectionId,
-          filter.cefr, filter.cefr,
-          filter.state, filter.state,
+          filter.collectionId,
+          filter.collectionId,
+          filter.cefr,
+          filter.cefr,
+          filter.state,
+          filter.state,
         ],
-      );
-      return rows.map(mapLibrary);
+      )
+      return rows.map(mapLibrary)
     },
     async updateRichFields(vocabItemId, fields: RichVocabFields) {
       // Trim + dedupe nhẹ trước khi ghi để nhiều đường sửa không sinh JSON bẩn
@@ -144,26 +147,23 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
       // Dedupe KHÔNG phân biệt hoa thường, giữ chính tả của entry đầu —
       // cùng luật với normalizeRichField ở domain/verify.ts.
       const clean = (items: string[]) => {
-        const seen = new Set<string>();
-        const out: string[] = [];
+        const seen = new Set<string>()
+        const out: string[] = []
         for (const raw of items) {
-          const s = raw.trim();
-          const key = s.toLowerCase();
-          if (s === "" || seen.has(key)) continue;
-          seen.add(key);
-          out.push(s);
+          const s = raw.trim()
+          const key = s.toLowerCase()
+          if (s === "" || seen.has(key)) continue
+          seen.add(key)
+          out.push(s)
         }
-        return out;
-      };
-      await appDb.exec(
-        `update vocab_items set tags = ?, synonyms = ?, antonyms = ? where id = ?`,
-        [
-          serializeStringArray(clean(fields.tags)),
-          serializeStringArray(clean(fields.synonyms)),
-          serializeStringArray(clean(fields.antonyms)),
-          vocabItemId,
-        ],
-      );
+        return out
+      }
+      await appDb.exec(`update vocab_items set tags = ?, synonyms = ?, antonyms = ? where id = ?`, [
+        serializeStringArray(clean(fields.tags)),
+        serializeStringArray(clean(fields.synonyms)),
+        serializeStringArray(clean(fields.antonyms)),
+        vocabItemId,
+      ])
     },
     async listAllTags() {
       // Mỗi thẻ tag trong JSON thành MỘT dòng qua json_each; json_valid chặn
@@ -176,9 +176,9 @@ export function createVocabItemsRepo(appDb: AppDb): VocabItemsRepository {
           where json_valid(v.tags)
           group by t.value collate nocase
           order by t.value collate nocase asc`,
-      );
-      const counts: TagCount[] = rows.map((r) => ({ tag: r.tag, cardCount: Number(r.card_count) }));
-      return counts;
+      )
+      const counts: TagCount[] = rows.map((r) => ({ tag: r.tag, cardCount: Number(r.card_count) }))
+      return counts
     },
-  };
+  }
 }

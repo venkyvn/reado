@@ -4,9 +4,9 @@
  * đạt A-01), thay {CEFR_LEVEL}. Phiên bản đi cùng git để truy "đợt kết quả này
  * do prompt nào sinh ra" khi đo M-03.
  */
-import type { Cefr } from "../domain/types";
+import type { Cefr } from "../domain/types"
 
-export const PROMPT_VERSION = 2; // v2 (2026-09-09): thêm tags/synonyms/antonyms — task 3.12
+export const PROMPT_VERSION = 2 // v2 (2026-09-09): thêm tags/synonyms/antonyms — task 3.12
 
 export function buildPrompt(cefrLevel: Cefr): string {
   return `Bạn là một dịch giả chuyên nghiệp có kiến thức sư phạm về giảng dạy tiếng Anh.
@@ -51,5 +51,5 @@ Nếu một từ trên trang có hai nghĩa khác nhau ở hai chỗ khác nhau,
 HAI phần tử riêng trong vocabulary, mỗi phần tử một nghĩa và một example.
 
 Nếu ảnh không đọc được hoặc không chứa văn bản tiếng Anh, trả về vocabulary và
-segments rỗng thay vì đoán.`;
+segments rỗng thay vì đoán.`
 }

@@ -10,26 +10,26 @@
  * Mọi lời gọi `appDb` đều `await`: DB nằm trong Worker (facade RPC — xem db.ts),
  * quên await là câu SQL chạy lạc khỏi transaction.
  */
-import type { CardsRepository, ListDueParams, SrsFields } from "../../domain/repositories";
-import type { CardRow, CardState, CardWithContext } from "../../domain/types";
-import type { AppDb } from "../db";
-import { insertCardRow } from "./cardsSql";
-import { parseJsonArrayOfString } from "./richJson";
+import type { CardsRepository, ListDueParams, SrsFields } from "../../domain/repositories"
+import type { CardRow, CardState, CardWithContext } from "../../domain/types"
+import type { AppDb } from "../db"
+import { insertCardRow } from "./cardsSql"
+import { parseJsonArrayOfString } from "./richJson"
 
 interface CardSql {
-  id: string;
-  vocab_item_id: string;
-  direction: string;
-  state: string;
-  stability: number;
-  difficulty: number;
-  reps: number | bigint;
-  lapses: number | bigint;
-  learning_steps: number | bigint;
-  scheduled_days: number | bigint;
-  last_review_at: string | null;
-  due_at: string;
-  suspended_at: string | null;
+  id: string
+  vocab_item_id: string
+  direction: string
+  state: string
+  stability: number
+  difficulty: number
+  reps: number | bigint
+  lapses: number | bigint
+  learning_steps: number | bigint
+  scheduled_days: number | bigint
+  last_review_at: string | null
+  due_at: string
+  suspended_at: string | null
 }
 
 function mapCard(row: CardSql): CardRow {
@@ -47,21 +47,21 @@ function mapCard(row: CardSql): CardRow {
     lastReviewAt: row.last_review_at,
     dueAt: row.due_at,
     suspendedAt: row.suspended_at,
-  };
+  }
 }
 
 /** Nở mệnh đề IN cho danh sách id (scope) hoặc trả rỗng nếu list trống. */
 function expandIn(column: string, ids: string[] | null): { clause: string; bind: string[] } {
-  if (ids === null) return { clause: "", bind: [] };
+  if (ids === null) return { clause: "", bind: [] }
   if (ids.length === 0) {
     // Phạm vi rỗng → không có card nào thuộc về (chống `IN ()` lỗi cú pháp).
-    return { clause: ` AND ${column} IS NULL `, bind: [] };
+    return { clause: ` AND ${column} IS NULL `, bind: [] }
   }
-  return { clause: ` AND ${column} IN (${ids.map(() => "?").join(", ")}) `, bind: ids };
+  return { clause: ` AND ${column} IN (${ids.map(() => "?").join(", ")}) `, bind: ids }
 }
 
 const CARD_COLS = `id, vocab_item_id, direction, state, stability, difficulty, reps, lapses,
-  learning_steps, scheduled_days, last_review_at, due_at, suspended_at`;
+  learning_steps, scheduled_days, last_review_at, due_at, suspended_at`
 
 /**
  * Thêm alias vào từng cột của CARD_COLS — bắt buộc khi JOIN, vì `id` và
@@ -71,13 +71,16 @@ const CARD_COLS = `id, vocab_item_id, direction, state, stability, difficulty, r
 function cardCols(alias: string): string {
   return CARD_COLS.split(",")
     .map((c) => `${alias}.${c.trim()}`)
-    .join(", ");
+    .join(", ")
 }
 
-function dueQuery(opts: ListDueParams, stateClause: string): { sql: string; bind: (string | number | null)[] } {
-  const scope = expandIn("c.vocab_item_id", opts.scopeCollectionIds);
-  const bind: (string | number | null)[] = [opts.nowUtc, ...scope.bind];
-  const limitClause = opts.limit !== null ? ` limit ${Math.floor(opts.limit)}` : "";
+function dueQuery(
+  opts: ListDueParams,
+  stateClause: string,
+): { sql: string; bind: (string | number | null)[] } {
+  const scope = expandIn("c.vocab_item_id", opts.scopeCollectionIds)
+  const bind: (string | number | null)[] = [opts.nowUtc, ...scope.bind]
+  const limitClause = opts.limit !== null ? ` limit ${Math.floor(opts.limit)}` : ""
   return {
     sql: `select ${CARD_COLS} from cards c
           where c.state ${stateClause}
@@ -87,40 +90,42 @@ function dueQuery(opts: ListDueParams, stateClause: string): { sql: string; bind
           order by c.due_at asc
           ${limitClause}`,
     bind,
-  };
+  }
 }
 
 export function createCardsRepo(appDb: AppDb): CardsRepository {
   return {
     async insertBatch(rows) {
       await appDb.transaction(async (tx) => {
-        for (const r of rows) await insertCardRow(tx, r);
-      });
+        for (const r of rows) await insertCardRow(tx, r)
+      })
     },
     async listDueReviews(opts) {
-      const q = dueQuery(opts, `in ('review','relearning')`);
-      const rows = await appDb.all<CardSql>(q.sql, q.bind);
-      return rows.map(mapCard);
+      const q = dueQuery(opts, `in ('review','relearning')`)
+      const rows = await appDb.all<CardSql>(q.sql, q.bind)
+      return rows.map(mapCard)
     },
     async listDueNews(opts) {
-      const q = dueQuery(opts, `= 'new'`);
-      const rows = await appDb.all<CardSql>(q.sql, q.bind);
-      return rows.map(mapCard);
+      const q = dueQuery(opts, `= 'new'`)
+      const rows = await appDb.all<CardSql>(q.sql, q.bind)
+      return rows.map(mapCard)
     },
     async loadWithContext(cardIds) {
-      if (cardIds.length === 0) return [];
-      const ph = cardIds.map(() => "?").join(", ");
-      const rows = await appDb.all<CardSql & {
-        term: string;
-        pos: string;
-        meaning_vi: string;
-        ipa: string | null;
-        example: string;
-        collection_name: string;
-        tags: string;
-        synonyms: string;
-        antonyms: string;
-      }>(
+      if (cardIds.length === 0) return []
+      const ph = cardIds.map(() => "?").join(", ")
+      const rows = await appDb.all<
+        CardSql & {
+          term: string
+          pos: string
+          meaning_vi: string
+          ipa: string | null
+          example: string
+          collection_name: string
+          tags: string
+          synonyms: string
+          antonyms: string
+        }
+      >(
         `select c.id, c.vocab_item_id, c.direction, c.state, c.stability, c.difficulty,
                 c.reps, c.lapses, c.learning_steps, c.scheduled_days, c.last_review_at,
                 c.due_at, c.suspended_at,
@@ -132,9 +137,9 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
          join collections col on col.id = v.collection_id
          where c.id in (${ph})`,
         cardIds,
-      );
+      )
       // Giữ đúng thứ tự hàng đợi (SQLite không sắp theo danh sách IN được).
-      const byId = new Map<string, CardWithContext>();
+      const byId = new Map<string, CardWithContext>()
       for (const r of rows) {
         byId.set(r.id, {
           ...mapCard(r),
@@ -147,14 +152,14 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
           tags: parseJsonArrayOfString(r.tags),
           synonyms: parseJsonArrayOfString(r.synonyms),
           antonyms: parseJsonArrayOfString(r.antonyms),
-        });
+        })
       }
-      const out: CardWithContext[] = [];
+      const out: CardWithContext[] = []
       for (const id of cardIds) {
-        const full = byId.get(id);
-        if (full) out.push(full);
+        const full = byId.get(id)
+        if (full) out.push(full)
       }
-      return out;
+      return out
     },
     async listByScope(collectionId) {
       // Export cần card theo collection, mà cards không giữ collection_id → JOIN
@@ -165,16 +170,16 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
           where (? is null or v.collection_id = ?)
           order by c.due_at asc`,
         [collectionId, collectionId],
-      );
-      return rows.map(mapCard);
+      )
+      return rows.map(mapCard)
     },
     async listByTags(tags) {
       // Cram theo tag (3.13): json_each nở MỖI tag thành một dòng nên cùng
       // card có 2 tag khớp sẽ lặp 2 lần — `distinct` gộp lại. KHÔNG lọc due_at
       // (cram = ôn tức thì, ngoài hàng đợi thường), KHÔNG giới hạn hạn mức;
       // suspended vẫn bị loại (leech FR-19 sau này không rơi vào cram).
-      if (tags.length === 0) return [];
-      const ph = tags.map(() => "?").join(", ");
+      if (tags.length === 0) return []
+      const ph = tags.map(() => "?").join(", ")
       const rows = await appDb.all<CardSql>(
         `select distinct ${cardCols("c")} from cards c
            join vocab_items v on v.id = c.vocab_item_id
@@ -184,19 +189,34 @@ export function createCardsRepo(appDb: AppDb): CardsRepository {
             and c.suspended_at is null
           order by v.term_normalized asc, v.id asc`,
         tags,
-      );
-      return rows.map(mapCard);
+      )
+      return rows.map(mapCard)
     },
-  };
+  }
 }
 
 /** Cập nhật TOÀN BỘ field FSRS + lịch — bản SQL duy nhất cho chấm thẻ và undo
  *  (điều cấm #8: due_at luôn đọc từ DB, không tính lại ở UI). */
-export async function updateSrsFieldsSql(appDb: AppDb, cardId: string, f: SrsFields): Promise<void> {
+export async function updateSrsFieldsSql(
+  appDb: AppDb,
+  cardId: string,
+  f: SrsFields,
+): Promise<void> {
   await appDb.exec(
     `update cards set state = ?, stability = ?, difficulty = ?, reps = ?, lapses = ?,
                       learning_steps = ?, scheduled_days = ?, last_review_at = ?, due_at = ?
      where id = ?`,
-    [f.state, f.stability, f.difficulty, f.reps, f.lapses, f.learningSteps, f.scheduledDays, f.lastReviewAt, f.dueAt, cardId],
-  );
+    [
+      f.state,
+      f.stability,
+      f.difficulty,
+      f.reps,
+      f.lapses,
+      f.learningSteps,
+      f.scheduledDays,
+      f.lastReviewAt,
+      f.dueAt,
+      cardId,
+    ],
+  )
 }

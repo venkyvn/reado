@@ -6,26 +6,31 @@
  * config BYOK qua tham số (không tự đọc settings) — provider khác sau này chỉ
  * là file mới cùng interface AiProvider.
  */
-import type { AiCallConfig, AiProvider, PageImage } from "../domain/ai";
-import { AnalysisError } from "../domain/errors";
-import { parseAndValidateAiText, toAnalysisResult } from "../domain/verify";
-import { PROMPT_VERSION, buildPrompt } from "./prompt";
-import { geminiSchema } from "./schema";
+import type { AiCallConfig, AiProvider, PageImage } from "../domain/ai"
+import { AnalysisError } from "../domain/errors"
+import { parseAndValidateAiText, toAnalysisResult } from "../domain/verify"
+import { PROMPT_VERSION, buildPrompt } from "./prompt"
+import { geminiSchema } from "./schema"
 
 interface GeminiUsage {
-  promptTokenCount?: number;
-  candidatesTokenCount?: number;
+  promptTokenCount?: number
+  candidatesTokenCount?: number
 }
 
 interface GeminiPart {
-  text?: string;
+  text?: string
 }
 
-export function createGeminiProvider(fetchImpl: typeof fetch = (...args) => fetch(...args)): AiProvider {
+export function createGeminiProvider(
+  fetchImpl: typeof fetch = (...args) => fetch(...args),
+): AiProvider {
   return {
-    async analyzePage(img: PageImage, cfg: AiCallConfig): Promise<import("../domain/types").AnalysisResult> {
-      const baseUrl = cfg.baseUrl.replace(/\/+$/, "");
-      const url = `${baseUrl}/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+    async analyzePage(
+      img: PageImage,
+      cfg: AiCallConfig,
+    ): Promise<import("../domain/types").AnalysisResult> {
+      const baseUrl = cfg.baseUrl.replace(/\/+$/, "")
+      const url = `${baseUrl}/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`
       const body = {
         contents: [
           {
@@ -40,10 +45,10 @@ export function createGeminiProvider(fetchImpl: typeof fetch = (...args) => fetc
           response_mime_type: "application/json",
           response_schema: geminiSchema(),
         },
-      };
+      }
 
-      const started = Date.now();
-      let res: Response;
+      const started = Date.now()
+      let res: Response
       try {
         res = await fetchImpl(url, {
           method: "POST",
@@ -52,56 +57,61 @@ export function createGeminiProvider(fetchImpl: typeof fetch = (...args) => fetc
             "x-goog-api-key": cfg.apiKey,
           },
           body: JSON.stringify(body),
-        });
+        })
       } catch (e) {
-        throw new AnalysisError("network", `không gọi được Gemini: ${e instanceof Error ? e.message : String(e)}`);
+        throw new AnalysisError(
+          "network",
+          `không gọi được Gemini: ${e instanceof Error ? e.message : String(e)}`,
+        )
       }
-      const latencyMs = Date.now() - started;
+      const latencyMs = Date.now() - started
 
-      let raw = "";
+      let raw = ""
       try {
-        raw = await res.text();
+        raw = await res.text()
       } catch {
         // giữ rỗng — thông điệp dưới vẫn đủ ý
       }
 
       if (!res.ok) {
-        throw new AnalysisError("http", `Gemini trả HTTP ${res.status}: ${raw.slice(0, 300)}`, res.status);
+        throw new AnalysisError(
+          "http",
+          `Gemini trả HTTP ${res.status}: ${raw.slice(0, 300)}`,
+          res.status,
+        )
       }
 
       let envelope: {
-        candidates?: { finishReason?: string; content?: { parts?: GeminiPart[] } }[];
-        usageMetadata?: GeminiUsage;
-      };
+        candidates?: { finishReason?: string; content?: { parts?: GeminiPart[] } }[]
+        usageMetadata?: GeminiUsage
+      }
       try {
-        envelope = JSON.parse(raw) as typeof envelope;
+        envelope = JSON.parse(raw) as typeof envelope
       } catch {
-        throw new AnalysisError("bad_envelope", "response không phải JSON");
+        throw new AnalysisError("bad_envelope", "response không phải JSON")
       }
 
-      const candidate = envelope?.candidates?.[0];
+      const candidate = envelope?.candidates?.[0]
       if (!candidate) {
-        throw new AnalysisError("bad_envelope", "response không có candidates");
+        throw new AnalysisError("bad_envelope", "response không có candidates")
       }
 
-      const text = (candidate.content?.parts ?? [])
-        .map((p) => p.text ?? "")
-        .join("");
-      const finishReason = candidate.finishReason ?? "(thiếu)";
+      const text = (candidate.content?.parts ?? []).map((p) => p.text ?? "").join("")
+      const finishReason = candidate.finishReason ?? "(thiếu)"
       if (finishReason !== "STOP") {
-        throw new AnalysisError("finish_reason", `finishReason=${finishReason}`);
+        throw new AnalysisError("finish_reason", `finishReason=${finishReason}`)
       }
 
       // Parse + validate nghiêm ngặt (bad_json / schema / unreadable) — ném lỗi,
       // chưa từng có đường nào lưu bản ghi hỏng (FR-02 criterion).
-      const payload = parseAndValidateAiText(text);
-      const usage = envelope?.usageMetadata ?? {};
+      const payload = parseAndValidateAiText(text)
+      const usage = envelope?.usageMetadata ?? {}
       return toAnalysisResult(payload, {
         promptTokens: Number(usage.promptTokenCount ?? 0),
         candidatesTokens: Number(usage.candidatesTokenCount ?? 0),
         latencyMs,
         promptVersion: PROMPT_VERSION,
-      });
+      })
     },
-  };
+  }
 }

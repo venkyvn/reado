@@ -12,77 +12,79 @@
  *
  * 3.8 (xoá/đổi tên/chuyển từ) CHƯA nằm ở đây — chỉ phần XEM.
  */
-import { useEffect, useState } from "react";
-import type { CollectionRow, LibraryItemRow, ReadingSessionRow } from "../../domain/types";
-import type { Screen } from "../AppRoot";
-import { listLibrary } from "../../domain/usecases/library";
-import { listCollectionSessions } from "../../domain/usecases/readingSessions";
-import { useAppEnv } from "../context";
+import { useEffect, useState } from "react"
+import type { CollectionRow, LibraryItemRow, ReadingSessionRow } from "../../domain/types"
+import type { Screen } from "../AppRoot"
+import { listLibrary } from "../../domain/usecases/library"
+import { listCollectionSessions } from "../../domain/usecases/readingSessions"
+import { useAppEnv } from "../context"
 
-type Tab = "vocab" | "sessions";
+type Tab = "vocab" | "sessions"
 
 /** "5 phút trước" kiểu thân thiện — đủ dùng, không kéo thư viện. */
 function timeAgo(iso: string, now: Date): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return iso;
-  const diffMs = Math.max(0, now.getTime() - then);
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "vừa xong";
-  if (mins < 60) return `${mins} phút trước`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} giờ trước`;
-  const days = Math.floor(hours / 24);
-  return `${days} ngày trước`;
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return iso
+  const diffMs = Math.max(0, now.getTime() - then)
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return "vừa xong"
+  if (mins < 60) return `${mins} phút trước`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} giờ trước`
+  const days = Math.floor(hours / 24)
+  return `${days} ngày trước`
 }
 
-export function CollectionDetailScreen({ collectionId, navigate }: {
-  collectionId: string;
-  navigate: (s: Screen) => void;
+export function CollectionDetailScreen({
+  collectionId,
+  navigate,
+}: {
+  collectionId: string
+  navigate: (s: Screen) => void
 }) {
-  const { services } = useAppEnv();
-  const [tab, setTab] = useState<Tab>("sessions");
-  const [collection, setCollection] = useState<CollectionRow | null>(null);
-  const [vocab, setVocab] = useState<LibraryItemRow[] | null>(null);
-  const [sessions, setSessions] = useState<ReadingSessionRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { services } = useAppEnv()
+  const [tab, setTab] = useState<Tab>("sessions")
+  const [collection, setCollection] = useState<CollectionRow | null>(null)
+  const [vocab, setVocab] = useState<LibraryItemRow[] | null>(null)
+  const [sessions, setSessions] = useState<ReadingSessionRow[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
     void services.repos.collections.list().then((list) => {
-      if (alive) setCollection(list.find((c) => c.id === collectionId) ?? null);
-    });
+      if (alive) setCollection(list.find((c) => c.id === collectionId) ?? null)
+    })
     void listLibrary(services, { collectionId, cefr: null, state: null })
       .then((rows) => {
-        if (alive) setVocab(rows);
+        if (alive) setVocab(rows)
       })
       .catch((e: unknown) => {
-        if (alive) setError(e instanceof Error ? e.message : String(e));
-      });
+        if (alive) setError(e instanceof Error ? e.message : String(e))
+      })
     void listCollectionSessions(services, collectionId)
       .then((rows) => {
-        if (alive) setSessions(rows);
+        if (alive) setSessions(rows)
       })
       .catch((e: unknown) => {
-        if (alive) setError(e instanceof Error ? e.message : String(e));
-      });
+        if (alive) setError(e instanceof Error ? e.message : String(e))
+      })
     return () => {
-      alive = false;
-    };
-  }, [services, collectionId]);
+      alive = false
+    }
+  }, [services, collectionId])
 
-  const now = new Date();
+  const now = new Date()
 
   return (
     <div className="pad collection-detail">
       <p className="fine">
-        <a
-          href="#home"
-          onClick={() => navigate({ name: "home" })}
-        >
+        <a href="#home" onClick={() => navigate({ name: "home" })}>
           ← Trang chủ
         </a>
       </p>
-      <h1>{collection ? `${collection.isDefault ? "📥" : "📖"} ${collection.name}` : "Collection"}</h1>
+      <h1>
+        {collection ? `${collection.isDefault ? "📥" : "📖"} ${collection.name}` : "Collection"}
+      </h1>
 
       <div className="btn-row" role="tablist" aria-label="Tab collection">
         <button
@@ -126,10 +128,10 @@ export function CollectionDetailScreen({ collectionId, navigate }: {
                     <span className="chip">chưa lưu từ</span>
                   )}
                 </header>
-                {s.summaryVi.trim() !== "" && (
-                  <p className="vocab-meaning">{s.summaryVi}</p>
-                )}
-                <p className="fine">{s.vocabCount} từ được trích xuất · {s.segments.length} đoạn</p>
+                {s.summaryVi.trim() !== "" && <p className="vocab-meaning">{s.summaryVi}</p>}
+                <p className="fine">
+                  {s.vocabCount} từ được trích xuất · {s.segments.length} đoạn
+                </p>
                 <button
                   type="button"
                   className="secondary"
@@ -140,7 +142,10 @@ export function CollectionDetailScreen({ collectionId, navigate }: {
               </article>
             ))
           )}
-          <p className="hint">Tối đa 10 phiên gần nhất mỗi collection — phiên cũ nhất tự trôi khi có trang mới. Ảnh trang không lưu, chỉ text + dịch.</p>
+          <p className="hint">
+            Tối đa 10 phiên gần nhất mỗi collection — phiên cũ nhất tự trôi khi có trang mới. Ảnh
+            trang không lưu, chỉ text + dịch.
+          </p>
         </section>
       )}
 
@@ -164,5 +169,5 @@ export function CollectionDetailScreen({ collectionId, navigate }: {
         </section>
       )}
     </div>
-  );
+  )
 }

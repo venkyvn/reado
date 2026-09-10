@@ -15,13 +15,13 @@
  * Không có usecase xoá riêng: trim chạy trong repo.insert; xoá collection là
  * cascade (task 3.8 sẽ nối vào).
  */
-import type { AnalysisResult, ReadingSessionRow } from "../types";
-import type { AppServices } from "../services";
-import { toUtcIso } from "../utils";
+import type { AnalysisResult, ReadingSessionRow } from "../types"
+import type { AppServices } from "../services"
+import { toUtcIso } from "../utils"
 
 /** Màn đọc hiện tối đa bao nhiêu phiên gần nhất (Q-10-reopen: 10/collection —
  *  cross-collection thì limit này chỉ là mặt cắt hiển thị). */
-export const READ_SCREEN_SESSIONS = 10;
+export const READ_SCREEN_SESSIONS = 10
 
 export async function persistReadingSession(
   svc: AppServices,
@@ -41,29 +41,29 @@ export async function persistReadingSession(
     createdAt: toUtcIso(svc.now()),
     savedAt: null,
     savedCount: 0,
-  };
-  await svc.repos.readingSessions.insert(row);
+  }
+  await svc.repos.readingSessions.insert(row)
 }
 
 export async function listRecentReadingSessions(
   svc: AppServices,
   limit: number = READ_SCREEN_SESSIONS,
 ): Promise<ReadingSessionRow[]> {
-  return svc.repos.readingSessions.listRecent(limit);
+  return svc.repos.readingSessions.listRecent(limit)
 }
 
 export async function listCollectionSessions(
   svc: AppServices,
   collectionId: string,
 ): Promise<ReadingSessionRow[]> {
-  return svc.repos.readingSessions.listByCollection(collectionId);
+  return svc.repos.readingSessions.listByCollection(collectionId)
 }
 
 export async function getReadingSession(
   svc: AppServices,
   id: string,
 ): Promise<ReadingSessionRow | null> {
-  return svc.repos.readingSessions.getById(id);
+  return svc.repos.readingSessions.getById(id)
 }
 
 export async function markReadingSessionSaved(
@@ -71,5 +71,5 @@ export async function markReadingSessionSaved(
   id: string,
   savedCount: number,
 ): Promise<void> {
-  await svc.repos.readingSessions.markSaved(id, toUtcIso(svc.now()), savedCount);
+  await svc.repos.readingSessions.markSaved(id, toUtcIso(svc.now()), savedCount)
 }

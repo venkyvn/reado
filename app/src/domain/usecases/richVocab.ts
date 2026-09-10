@@ -6,17 +6,17 @@
  * khi đã vào kho nằm ở đây — usecase mỏng giữ ranh giới "UI không chạm repo"
  * (solution-design mục 3.1), toàn bộ SQL ở storage/repos/vocabItems.ts.
  */
-import type { AppServices } from "../services";
-import type { RichVocabFields } from "../types";
+import type { AppServices } from "../services"
+import type { RichVocabFields } from "../types"
 
 export interface UpdateRichFieldsInput {
-  vocabItemId: string;
-  fields: RichVocabFields;
+  vocabItemId: string
+  fields: RichVocabFields
 }
 
 export async function updateVocabRichFields(
   svc: AppServices,
   input: UpdateRichFieldsInput,
 ): Promise<void> {
-  await svc.repos.vocabItems.updateRichFields(input.vocabItemId, input.fields);
+  await svc.repos.vocabItems.updateRichFields(input.vocabItemId, input.fields)
 }

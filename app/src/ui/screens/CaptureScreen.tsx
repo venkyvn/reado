@@ -6,47 +6,50 @@
  * Chất lượng ảnh (quyết định 2026-09-09, xem imageToolkit.ts): LUÔN chuẩn hoá —
  * crop/xoay (nếu có) → cạnh dài ≤ 1600px (không upscale) → JPEG q0.80.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChangeEvent, PointerEvent } from "react";
-import type { AnalysisResult, CollectionRow } from "../../domain/types";
-import type { PageImage } from "../../domain/ai";
-import type { Screen } from "../AppRoot";
-import { useAppEnv } from "../context";
-import { AnalyzePanel } from "../AnalyzePanel";
-import { fileToCanvas, prepareForAnalysis, rotateCanvas } from "../imageToolkit";
-import type { CropRect, Rotation } from "../imageToolkit";
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { ChangeEvent, PointerEvent } from "react"
+import type { AnalysisResult, CollectionRow } from "../../domain/types"
+import type { PageImage } from "../../domain/ai"
+import type { Screen } from "../AppRoot"
+import { useAppEnv } from "../context"
+import { AnalyzePanel } from "../AnalyzePanel"
+import { fileToCanvas, prepareForAnalysis, rotateCanvas } from "../imageToolkit"
+import type { CropRect, Rotation } from "../imageToolkit"
 
 interface DragState {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
+  x0: number
+  y0: number
+  x1: number
+  y1: number
 }
 
-export function CaptureScreen({ navigate, onAnalyzed }: {
-  navigate: (s: Screen) => void;
+export function CaptureScreen({
+  navigate,
+  onAnalyzed,
+}: {
+  navigate: (s: Screen) => void
   /** FR-05: kết quả phân tích đi qua AppRoot — task 3.15 (Q-10-reopen):
    *  AppRoot PERSIST phiên đọc vào reading_sessions rồi mở màn đọc (PRD mục 6:
    *  Analyze → Đọc song ngữ → Summary → Chọn từ), không nhảy thẳng sang duyệt từ.
    *  `analysisId` = id dòng analyses + reading_sessions ("" nếu ghi DB hỏng). */
-  onAnalyzed: (analysis: AnalysisResult, collectionId: string, analysisId: string) => void;
+  onAnalyzed: (analysis: AnalysisResult, collectionId: string, analysisId: string) => void
 }) {
-  const { services } = useAppEnv();
+  const { services } = useAppEnv()
 
-  const [collections, setCollections] = useState<CollectionRow[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [collections, setCollections] = useState<CollectionRow[]>([])
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState("")
 
-  const [file, setFile] = useState<File | null>(null);
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-  const [rotation, setRotation] = useState<Rotation>(0);
-  const [crop, setCrop] = useState<CropRect | null>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [busySubmit, setBusySubmit] = useState(false);
+  const [file, setFile] = useState<File | null>(null)
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null)
+  const [rotation, setRotation] = useState<Rotation>(0)
+  const [crop, setCrop] = useState<CropRect | null>(null)
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [busySubmit, setBusySubmit] = useState(false)
 
-  const [payload, setPayload] = useState<{ image: PageImage; collectionId: string } | null>(null);
+  const [payload, setPayload] = useState<{ image: PageImage; collectionId: string } | null>(null)
 
   // BUG ĐÃ GẶP THẬT (owner test 2026-09-08: upload ảnh xong KHÔNG thấy hình):
   // React set attribute width/height lên <canvas> khi mount/đổi giá trị, và theo
@@ -56,93 +59,98 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
   // imageToolkit — nên preview hỏng sẽ ĐÙN luôn flow thay vì lặng lẽ gửi đen). Sửa:
   // giữ canvas NGUỒN trong state, vẽ lại vào canvas
   // do React quản lý (viewRef) SAU mỗi lần DOM cập nhật.
-  const viewRef = useRef<HTMLCanvasElement | null>(null);
+  const viewRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
-    const view = viewRef.current;
-    if (!view || !canvas) return;
-    const ctx = view.getContext("2d");
-    if (ctx) ctx.drawImage(canvas, 0, 0);
-  }, [canvas]);
+    const view = viewRef.current
+    if (!view || !canvas) return
+    const ctx = view.getContext("2d")
+    if (ctx) ctx.drawImage(canvas, 0, 0)
+  }, [canvas])
 
   // payloadRef cho handleAnalysisDone đọc collectionId mà KHÔNG phụ thuộc
   // render — handleAnalysisDone phải giữ identity ổn định (dep của AnalyzePanel).
-  const payloadRef = useRef<{ image: PageImage; collectionId: string } | null>(null);
+  const payloadRef = useRef<{ image: PageImage; collectionId: string } | null>(null)
 
   const handleAnalysisDone = useCallback(
     (r: AnalysisResult, analysisId: string) => {
-      const current = payloadRef.current;
-      if (current) onAnalyzed(r, current.collectionId, analysisId);
+      const current = payloadRef.current
+      if (current) onAnalyzed(r, current.collectionId, analysisId)
     },
     [onAnalyzed],
-  );
+  )
 
   useEffect(() => {
     void services.repos.collections.list().then((list) => {
-      setCollections(list);
-      setSelectedCollectionId((current) => current ?? list.find((c) => c.isDefault)?.id ?? null);
-    });
-  }, [services]);
+      setCollections(list)
+      setSelectedCollectionId((current) => current ?? list.find((c) => c.isDefault)?.id ?? null)
+    })
+  }, [services])
 
-  const targetCollectionId = selectedCollectionId ?? collections.find((c) => c.isDefault)?.id ?? null;
+  const targetCollectionId =
+    selectedCollectionId ?? collections.find((c) => c.isDefault)?.id ?? null
 
   async function onFilePicked(e: ChangeEvent<HTMLInputElement>) {
-    const picked = e.target.files?.[0];
-    e.target.value = "";
-    if (!picked) return;
+    const picked = e.target.files?.[0]
+    e.target.value = ""
+    if (!picked) return
     try {
-      const c = await fileToCanvas(picked);
-      setFile(picked);
-      setCanvas(c);
-      setRotation(0);
-      setCrop(null);
-      setDrag(null);
-      setFormError(null);
+      const c = await fileToCanvas(picked)
+      setFile(picked)
+      setCanvas(c)
+      setRotation(0)
+      setCrop(null)
+      setDrag(null)
+      setFormError(null)
     } catch (err) {
-      setFormError(`Không đọc được ảnh này — ${err instanceof Error ? err.message : String(err)}`);
+      setFormError(`Không đọc được ảnh này — ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   function rotate() {
-    if (!canvas) return;
-    setCanvas(rotateCanvas(canvas, 1));
-    setRotation((r) => (((r + 90) % 360) as Rotation));
-    setCrop(null);
-    setDrag(null);
+    if (!canvas) return
+    setCanvas(rotateCanvas(canvas, 1))
+    setRotation((r) => ((r + 90) % 360) as Rotation)
+    setCrop(null)
+    setDrag(null)
   }
 
   function toPixel(e: PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
-    const c = e.currentTarget;
-    const rect = c.getBoundingClientRect();
-    const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));
+    const c = e.currentTarget
+    const rect = c.getBoundingClientRect()
+    const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v))
     return {
       x: clamp(((e.clientX - rect.left) / rect.width) * c.width, c.width),
       y: clamp(((e.clientY - rect.top) / rect.height) * c.height, c.height),
-    };
+    }
   }
 
   function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const p = toPixel(e);
-    setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const p = toPixel(e)
+    setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y })
   }
 
   function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
-    if (!drag) return;
-    const p = toPixel(e);
-    setDrag({ ...drag, x1: p.x, y1: p.y });
+    if (!drag) return
+    const p = toPixel(e)
+    setDrag({ ...drag, x1: p.x, y1: p.y })
   }
 
   function onPointerUp() {
-    if (!drag || !canvas) return;
-    const x = Math.min(drag.x0, drag.x1);
-    const y = Math.min(drag.y0, drag.y1);
-    const w = Math.abs(drag.x1 - drag.x0);
-    const h = Math.abs(drag.y1 - drag.y0);
-    const tiny = canvas.width * canvas.height * 0.02;
-    setCrop(w * h < tiny ? null : { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) });
-    setDrag(null);
+    if (!drag || !canvas) return
+    const x = Math.min(drag.x0, drag.x1)
+    const y = Math.min(drag.y0, drag.y1)
+    const w = Math.abs(drag.x1 - drag.x0)
+    const h = Math.abs(drag.y1 - drag.y0)
+    const tiny = canvas.width * canvas.height * 0.02
+    setCrop(
+      w * h < tiny
+        ? null
+        : { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) },
+    )
+    setDrag(null)
   }
 
   const liveRect = drag
@@ -152,53 +160,59 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
         w: Math.abs(drag.x1 - drag.x0),
         h: Math.abs(drag.y1 - drag.y0),
       }
-    : crop;
+    : crop
 
   async function submit() {
-    if (!canvas || !file || busySubmit) return;
-    const collectionId = targetCollectionId;
-    if (!collectionId) return;
-    setBusySubmit(true);
-    setFormError(null);
+    if (!canvas || !file || busySubmit) return
+    const collectionId = targetCollectionId
+    if (!collectionId) return
+    setBusySubmit(true)
+    setFormError(null)
     try {
-      const prepared = await prepareForAnalysis(canvas, crop);
-      const next = { image: { base64: prepared.base64, mime: prepared.mime }, collectionId };
-      payloadRef.current = next;
-      setPayload(next);
+      const prepared = await prepareForAnalysis(canvas, crop)
+      const next = { image: { base64: prepared.base64, mime: prepared.mime }, collectionId }
+      payloadRef.current = next
+      setPayload(next)
     } catch (err) {
-      setFormError(`Xử lý ảnh lỗi — ${err instanceof Error ? err.message : String(err)}`);
+      setFormError(`Xử lý ảnh lỗi — ${err instanceof Error ? err.message : String(err)}`)
     } finally {
-      setBusySubmit(false);
+      setBusySubmit(false)
     }
   }
 
   async function createCollection() {
-    const name = newName.trim();
-    if (!name) return;
-    setFormError(null);
+    const name = newName.trim()
+    if (!name) return
+    setFormError(null)
     try {
-      const created = await services.repos.collections.create(name, false, new Date());
-      const list = await services.repos.collections.list();
-      setCollections(list);
-      setSelectedCollectionId(created.id);
-      setCreating(false);
-      setNewName("");
+      const created = await services.repos.collections.create(name, false, new Date())
+      const list = await services.repos.collections.list()
+      setCollections(list)
+      setSelectedCollectionId(created.id)
+      setCreating(false)
+      setNewName("")
     } catch (err) {
-      setFormError(`Tạo collection lỗi — ${err instanceof Error ? err.message : String(err)}`);
+      setFormError(`Tạo collection lỗi — ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   function resetAll() {
-    setFile(null);
-    setCanvas(null);
-    setRotation(0);
-    setCrop(null);
-    setDrag(null);
-    setFormError(null);
+    setFile(null)
+    setCanvas(null)
+    setRotation(0)
+    setCrop(null)
+    setDrag(null)
+    setFormError(null)
   }
 
   if (payload) {
-    return <AnalyzePanel image={payload.image} onDone={handleAnalysisDone} onCancel={() => setPayload(null)} />;
+    return (
+      <AnalyzePanel
+        image={payload.image}
+        onDone={handleAnalysisDone}
+        onCancel={() => setPayload(null)}
+      />
+    )
   }
 
   return (
@@ -270,14 +284,21 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
             <button type="button" className="secondary" onClick={rotate}>
               🔄 Xoay 90°
             </button>
-            <button type="button" className="secondary" onClick={() => setCrop(null)} disabled={!crop}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setCrop(null)}
+              disabled={!crop}
+            >
               ✂ Xoá khung
             </button>
           </div>
           <button type="button" className="secondary" onClick={resetAll}>
             ↔ Đổi ảnh
           </button>
-          {rotation !== 0 && <p className="hint">Đã xoay {rotation}° — ảnh gửi đi là ảnh đang thấy.</p>}
+          {rotation !== 0 && (
+            <p className="hint">Đã xoay {rotation}° — ảnh gửi đi là ảnh đang thấy.</p>
+          )}
 
           <h2>Vào collection</h2>
           <p className="hint">Không chọn gì → tự về “Kho tạm”, vẫn ôn tập bình thường.</p>
@@ -342,5 +363,5 @@ export function CaptureScreen({ navigate, onAnalyzed }: {
         ← Về trang chủ
       </button>
     </div>
-  );
+  )
 }

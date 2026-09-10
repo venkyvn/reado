@@ -17,12 +17,12 @@
  * hàng đợi — nên chúng có hiệu lực ngay ở lần chụp/ôn kế tiếp, không cần reload.
  * Nếu sau này mở `request_retention`, chỗ này PHẢI dựng lại scheduler.
  */
-import { normalizeSettingsPatch } from "../settings";
-import type { AppServices } from "../services";
-import type { Settings } from "../types";
+import { normalizeSettingsPatch } from "../settings"
+import type { AppServices } from "../services"
+import type { Settings } from "../types"
 
 export async function getSettings(svc: AppServices): Promise<Settings> {
-  return svc.repos.settings.get();
+  return svc.repos.settings.get()
 }
 
 /**
@@ -35,6 +35,6 @@ export async function updateSettings(
   svc: AppServices,
   raw: Record<string, unknown>,
 ): Promise<Settings> {
-  const patch = normalizeSettingsPatch(raw);
-  return svc.repos.settings.updatePartial(patch);
+  const patch = normalizeSettingsPatch(raw)
+  return svc.repos.settings.updatePartial(patch)
 }

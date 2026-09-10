@@ -7,8 +7,8 @@
  * Async vì `AppDb` là facade RPC sang Worker (xem db.ts) — gọi trong transaction
  * thì phải `await`, nếu không câu INSERT sẽ chạy SAU khi COMMIT đã đóng.
  */
-import type { CardRow } from "../../domain/types";
-import type { AppDb } from "../db";
+import type { CardRow } from "../../domain/types"
+import type { AppDb } from "../db"
 
 export async function insertCardRow(appDb: AppDb, c: CardRow): Promise<void> {
   await appDb.exec(
@@ -30,5 +30,5 @@ export async function insertCardRow(appDb: AppDb, c: CardRow): Promise<void> {
       c.dueAt,
       c.suspendedAt,
     ],
-  );
+  )
 }

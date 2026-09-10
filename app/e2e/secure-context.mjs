@@ -13,11 +13,11 @@
  *
  * pass = cả ba origin khớp kỳ vọng. Chạy: npm run e2e:secure [lanIp]
  */
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer-core"
 
-const LAN_IP = process.argv[2] ?? "192.168.1.200";
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const PROFILE = "/tmp/reado-sec-context-profile";
+const LAN_IP = process.argv[2] ?? "192.168.1.200"
+const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+const PROFILE = "/tmp/reado-sec-context-profile"
 
 const ORIGINS = [
   {
@@ -35,7 +35,7 @@ const ORIGINS = [
     url: `https://${LAN_IP}:5174/?screen=storage-check`,
     expect: { secure: true, isolated: true, opfs: true },
   },
-];
+]
 
 const browser = await puppeteer.launch({
   executablePath: CHROME,
@@ -52,40 +52,40 @@ const browser = await puppeteer.launch({
     `--user-data-dir=${PROFILE}`,
     `--crash-dumps-dir=${PROFILE}`,
   ],
-});
+})
 
 async function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms))
 }
 
-const results = [];
+const results = []
 try {
-  const page = await browser.newPage();
-  await page.setViewport({ width: 430, height: 900 });
+  const page = await browser.newPage()
+  await page.setViewport({ width: 430, height: 900 })
 
   for (const origin of ORIGINS) {
-    let navError = null;
+    let navError = null
     try {
-      await page.goto(origin.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.goto(origin.url, { waitUntil: "domcontentloaded", timeout: 30000 })
     } catch (e) {
-      navError = e instanceof Error ? e.message.slice(0, 150) : String(e);
+      navError = e instanceof Error ? e.message.slice(0, 150) : String(e)
     }
     // storage-check tự render khi app boot xong; chờ bảng .kv xuất hiện.
     if (!navError) {
       try {
-        await page.waitForSelector(".kv", { timeout: 30000 });
+        await page.waitForSelector(".kv", { timeout: 30000 })
       } catch {
         /* để evaluate bên dưới báo thiếu */
       }
     }
-    await sleep(400); // cho effect đếm số liệu kho chạy xong
+    await sleep(400) // cho effect đếm số liệu kho chạy xong
 
     const m = await page.evaluate(() => {
-      const rows = {};
+      const rows = {}
       for (const tr of document.querySelectorAll(".kv tr")) {
-        const k = tr.querySelector(".kv-k")?.textContent?.trim();
-        const v = tr.querySelector(".kv-v")?.textContent?.trim();
-        if (k) rows[k] = v ?? "";
+        const k = tr.querySelector(".kv-k")?.textContent?.trim()
+        const v = tr.querySelector(".kv-v")?.textContent?.trim()
+        if (k) rows[k] = v ?? ""
       }
       return {
         url: location.href,
@@ -96,15 +96,15 @@ try {
         rows,
         errorBanner: document.querySelector(".banner-error")?.textContent?.slice(0, 120) ?? null,
         warnBanner: Boolean(document.querySelector(".banner-warn")),
-      };
-    });
+      }
+    })
 
     const actual = {
       secure: Boolean(m.isSecureContext),
       isolated: Boolean(m.crossOriginIsolated),
       opfs: String(m.rows["OPFS active"] ?? "").startsWith("Có"),
-    };
-    const pass = JSON.stringify(actual) === JSON.stringify(origin.expect);
+    }
+    const pass = JSON.stringify(actual) === JSON.stringify(origin.expect)
     results.push({
       name: origin.name,
       url: m.url,
@@ -116,47 +116,47 @@ try {
       errorBanner: m.errorBanner,
       warnBanner: m.warnBanner,
       pass,
-    });
+    })
 
     // Chờ DB worker đóng/giải phóng giữa hai origin (tránh nhiễu profile).
-    await sleep(600);
+    await sleep(600)
   }
 
   // Mắt xích cuối trên origin https: RELOAD và assert "Sống qua F5" xanh — đúng
   // phép thử owner làm trên iPhone (F5 xong từ phải còn). Không có bước này thì
   // "OPFS active" mới chỉ là lời hứa, chưa là bằng chứng persist qua reload.
-  const persistUrl = ORIGINS[2].url;
-  await page.goto(persistUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+  const persistUrl = ORIGINS[2].url
+  await page.goto(persistUrl, { waitUntil: "domcontentloaded", timeout: 30000 })
   try {
-    await page.waitForSelector(".kv", { timeout: 30000 });
+    await page.waitForSelector(".kv", { timeout: 30000 })
   } catch {
     /* evaluate bên dưới sẽ thấy thiếu */
   }
-  await sleep(400);
+  await sleep(400)
   const f5 = await page.evaluate(() => {
     for (const tr of document.querySelectorAll(".kv tr")) {
-      const k = tr.querySelector(".kv-k")?.textContent?.trim();
-      if (k === "Sống qua F5") return tr.querySelector(".kv-v")?.textContent?.trim() ?? "";
+      const k = tr.querySelector(".kv-k")?.textContent?.trim()
+      if (k === "Sống qua F5") return tr.querySelector(".kv-v")?.textContent?.trim() ?? ""
     }
-    return "";
-  });
-  const persistOk = f5.startsWith("Có");
+    return ""
+  })
+  const persistOk = f5.startsWith("Có")
   results.push({
     name: "LAN IP (https) — reload lần 2: Sống qua F5",
     url: persistUrl,
     expect: { "Sống qua F5": "Có — ..." },
     actual: { "Sống qua F5": f5 },
     pass: persistOk,
-  });
+  })
 
-  const allPass = results.every((r) => r.pass);
-  console.log(JSON.stringify(results, null, 2));
+  const allPass = results.every((r) => r.pass)
+  console.log(JSON.stringify(results, null, 2))
   console.log(
     allPass
       ? "✅ cả ba origin khớp kỳ vọng — chẩn đoán (http+IP không secure) và phép sửa (https) đều đã đo được"
       : "❌ có origin lệch kỳ vọng — xem bảng ở trên",
-  );
-  process.exitCode = allPass ? 0 : 1;
+  )
+  process.exitCode = allPass ? 0 : 1
 } finally {
-  await browser.close();
+  await browser.close()
 }

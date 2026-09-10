@@ -5,30 +5,27 @@
  * UI nhắc nhập ngay trong flow capture (hành vi đã ghi thẳng trong DDL: "null
  * = chưa nhập; app nhắc khi capture đầu tiên").
  */
-import type { PageImage } from "../ai";
-import { AnalysisError } from "../errors";
-import type { AppServices } from "../services";
-import type { AnalysisResult } from "../types";
-import { newId, toUtcIso } from "../utils";
+import type { PageImage } from "../ai"
+import { AnalysisError } from "../errors"
+import type { AppServices } from "../services"
+import type { AnalysisResult } from "../types"
+import { newId, toUtcIso } from "../utils"
 
-export async function analyzePage(
-  svc: AppServices,
-  img: PageImage,
-): Promise<AnalysisResult> {
-  const settings = await svc.repos.settings.get();
+export async function analyzePage(svc: AppServices, img: PageImage): Promise<AnalysisResult> {
+  const settings = await svc.repos.settings.get()
   if (!settings.aiApiKey) {
-    throw new AnalysisError("missing_key", "chưa có API key BYOK trong settings");
+    throw new AnalysisError("missing_key", "chưa có API key BYOK trong settings")
   }
-  const model = settings.aiModel;
+  const model = settings.aiModel
   if (!model) {
-    throw new AnalysisError("missing_key", "chưa có model AI trong settings");
+    throw new AnalysisError("missing_key", "chưa có model AI trong settings")
   }
   return svc.ai.analyzePage(img, {
     baseUrl: settings.aiBaseUrl,
     apiKey: settings.aiApiKey,
     model,
     cefrLevel: settings.cefrLevel,
-  });
+  })
 }
 
 /**
@@ -49,8 +46,8 @@ export async function recordAnalyzedPage(
   svc: AppServices,
   result: AnalysisResult,
 ): Promise<string> {
-  const settings = await svc.repos.settings.get();
-  const id = newId();
+  const settings = await svc.repos.settings.get()
+  const id = newId()
   await svc.repos.analyses.insert({
     id,
     analyzedAt: toUtcIso(svc.now()),
@@ -61,6 +58,6 @@ export async function recordAnalyzedPage(
     latencyMs: Number.isFinite(result.latencyMs) ? Math.round(result.latencyMs) : null,
     tokensIn: result.usage.promptTokens,
     tokensOut: result.usage.candidatesTokens,
-  });
-  return id;
+  })
+  return id
 }

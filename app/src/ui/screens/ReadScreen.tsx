@@ -22,66 +22,78 @@
  * Nằm NGOÀI phạm vi bản này (ghi nhận ở MVP_PLAN mục 4): cảnh báo trang sắp
  * trôi khỏi buffer khi chưa chọn từ nào (FR-05 c.5 — task ghi rõ để R2 được).
  */
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import type { CollectionRow, ReadingSessionRow } from "../../domain/types";
-import type { Screen } from "../AppRoot";
-import { analysisFromSession, buildGlossIndex, glossIndexMap, splitWithGloss } from "../readSegments";
-import type { GlossEntry, ReadNode } from "../readSegments";
-import { getReadingSession, listRecentReadingSessions, READ_SCREEN_SESSIONS } from "../../domain/usecases/readingSessions";
-import { useAppEnv } from "../context";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import type { ReactNode } from "react"
+import type { CollectionRow, ReadingSessionRow } from "../../domain/types"
+import type { Screen } from "../AppRoot"
+import {
+  analysisFromSession,
+  buildGlossIndex,
+  glossIndexMap,
+  splitWithGloss,
+} from "../readSegments"
+import type { GlossEntry, ReadNode } from "../readSegments"
+import {
+  getReadingSession,
+  listRecentReadingSessions,
+  READ_SCREEN_SESSIONS,
+} from "../../domain/usecases/readingSessions"
+import { useAppEnv } from "../context"
 
-export function ReadScreen({ navigate, sessionId }: {
-  navigate: (s: Screen) => void;
+export function ReadScreen({
+  navigate,
+  sessionId,
+}: {
+  navigate: (s: Screen) => void
   /** sessionId = phiên bấm "Mở màn đọc" ở Collection Detail — bảo đảm phiên đó
    *  hiện ra kể cả khi đã trôi khỏi 10 phiên gần nhất TOÀN CỤC (màn này chỉ
    *  liệt kê 10 cái), và auto-cuộn tới đúng nó. Undefined = mở thường từ
    *  Home/Capture: liệt kê 10 phiên gần nhất mọi collection. */
-  sessionId?: string;
+  sessionId?: string
 }) {
-  const { services } = useAppEnv();
+  const { services } = useAppEnv()
   // Nguồn duy nhất là DB (task 3.15): mới nhất TRƯỚC từ query, hiển thị cũ → mới.
-  const [pages, setPages] = useState<ReadingSessionRow[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [showTranslations, setShowTranslations] = useState(true);
+  const [pages, setPages] = useState<ReadingSessionRow[] | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [showTranslations, setShowTranslations] = useState(true)
   /** key dạng `p{pageIndex}:{matchKey}` — gloss mở 1 cái mỗi lần, không đụng trang khác. */
-  const [openGloss, setOpenGloss] = useState<string | null>(null);
-  const [collectionNames, setCollectionNames] = useState<Map<string, string>>(new Map());
+  const [openGloss, setOpenGloss] = useState<string | null>(null)
+  const [collectionNames, setCollectionNames] = useState<Map<string, string>>(new Map())
   /** Neo cuối dãy để auto-cuộn tới trang MỚI NHẤT khi mở màn đọc thường. */
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
     void (async () => {
-      const rows = await listRecentReadingSessions(services, READ_SCREEN_SESSIONS);
-      if (!alive) return;
-      let list = rows;
+      const rows = await listRecentReadingSessions(services, READ_SCREEN_SESSIONS)
+      if (!alive) return
+      let list = rows
       // Phiên được yêu cầu riêng mà đã trôi khỏi 10 phiên gần nhất toàn cục:
       // kéo thêm nó vào (sau reverse nó nằm đầu dãy cũ → mới, đúng "phiên cũ").
       if (sessionId && !rows.some((r) => r.id === sessionId)) {
-        const focus = await getReadingSession(services, sessionId);
-        if (focus) list = [...rows, focus];
+        const focus = await getReadingSession(services, sessionId)
+        if (focus) list = [...rows, focus]
       }
-      setPages([...list].reverse()); // cũ → mới cho thứ tự đọc
+      setPages([...list].reverse()) // cũ → mới cho thứ tự đọc
     })().catch((e: unknown) => {
-      if (alive) setLoadError(e instanceof Error ? e.message : String(e));
-    });
+      if (alive) setLoadError(e instanceof Error ? e.message : String(e))
+    })
     void services.repos.collections.list().then((list: CollectionRow[]) => {
-      if (alive) setCollectionNames(new Map(list.map((c) => [c.id, c.name])));
-    });
+      if (alive) setCollectionNames(new Map(list.map((c) => [c.id, c.name])))
+    })
     return () => {
-      alive = false;
-    };
-  }, [services, sessionId]);
+      alive = false
+    }
+  }, [services, sessionId])
 
   useEffect(() => {
-    if (pages === null) return;
+    if (pages === null) return
     if (sessionId) {
-      document.getElementById(`session-${sessionId}`)?.scrollIntoView({ block: "start" });
+      document.getElementById(`session-${sessionId}`)?.scrollIntoView({ block: "start" })
     } else {
-      endRef.current?.scrollIntoView({ block: "end" });
+      endRef.current?.scrollIntoView({ block: "end" })
     }
-  }, [pages, sessionId]);
+  }, [pages, sessionId])
 
   return (
     <div className="pad read-screen">
@@ -129,28 +141,38 @@ export function ReadScreen({ navigate, sessionId }: {
       </div>
 
       <p className="hint">
-        {pages === null ? "" : `Đang hiện ${pages.length} phiên đọc gần nhất — mỗi collection giữ tối đa ${READ_SCREEN_SESSIONS} phiên, cũ nhất tự trôi khi có trang mới. Ảnh trang không lưu; chỉ text + dịch.`}
+        {pages === null
+          ? ""
+          : `Đang hiện ${pages.length} phiên đọc gần nhất — mỗi collection giữ tối đa ${READ_SCREEN_SESSIONS} phiên, cũ nhất tự trôi khi có trang mới. Ảnh trang không lưu; chỉ text + dịch.`}
       </p>
       <div ref={endRef} />
     </div>
-  );
+  )
 }
 
-function PageBlock({ pageIndex, page, collectionName, showTranslations, openGloss, onToggleGloss, navigate }: {
-  pageIndex: number;
-  page: ReadingSessionRow;
-  collectionName: string | null;
-  showTranslations: boolean;
-  openGloss: string | null;
-  onToggleGloss: (key: string) => void;
-  navigate: (s: Screen) => void;
+function PageBlock({
+  pageIndex,
+  page,
+  collectionName,
+  showTranslations,
+  openGloss,
+  onToggleGloss,
+  navigate,
+}: {
+  pageIndex: number
+  page: ReadingSessionRow
+  collectionName: string | null
+  showTranslations: boolean
+  openGloss: string | null
+  onToggleGloss: (key: string) => void
+  navigate: (s: Screen) => void
 }) {
-  const entries = useMemo(() => buildGlossIndex(page.vocabulary), [page.vocabulary]);
-  const glossByKey = useMemo(() => glossIndexMap(entries), [entries]);
+  const entries = useMemo(() => buildGlossIndex(page.vocabulary), [page.vocabulary])
+  const glossByKey = useMemo(() => glossIndexMap(entries), [entries])
 
-  const glossKey = (matchKey: string) => `p${pageIndex}:${matchKey}`;
-  const savedAt = page.savedAt;
-  const savedCount = page.savedCount;
+  const glossKey = (matchKey: string) => `p${pageIndex}:${matchKey}`
+  const savedAt = page.savedAt
+  const savedCount = page.savedCount
 
   return (
     <section className="read-page" id={`session-${page.id}`}>
@@ -200,21 +222,34 @@ function PageBlock({ pageIndex, page, collectionName, showTranslations, openGlos
           entries={entries}
           showTranslations={showTranslations}
         >
-          {(node) => <SegNode node={node} gloss={openGloss === glossKey(node.matchKey)} onTap={() => onToggleGloss(glossKey(node.matchKey))} glossOf={glossByKey.get(node.matchKey)} />}
+          {(node) => (
+            <SegNode
+              node={node}
+              gloss={openGloss === glossKey(node.matchKey)}
+              onTap={() => onToggleGloss(glossKey(node.matchKey))}
+              glossOf={glossByKey.get(node.matchKey)}
+            />
+          )}
         </SegmentBlock>
       ))}
     </section>
-  );
+  )
 }
 
-function SegmentBlock({ sourceEn, translationVi, entries, showTranslations, children }: {
-  sourceEn: string;
-  translationVi: string;
-  entries: GlossEntry[];
-  showTranslations: boolean;
-  children: (node: ReadNode & { matchKey: string }) => ReactNode;
+function SegmentBlock({
+  sourceEn,
+  translationVi,
+  entries,
+  showTranslations,
+  children,
+}: {
+  sourceEn: string
+  translationVi: string
+  entries: GlossEntry[]
+  showTranslations: boolean
+  children: (node: ReadNode & { matchKey: string }) => ReactNode
 }) {
-  const nodes = useMemo(() => splitWithGloss(sourceEn, entries), [sourceEn, entries]);
+  const nodes = useMemo(() => splitWithGloss(sourceEn, entries), [sourceEn, entries])
   return (
     <div className="seg">
       <p className="seg-src">
@@ -228,14 +263,19 @@ function SegmentBlock({ sourceEn, translationVi, entries, showTranslations, chil
       </p>
       {showTranslations && translationVi.trim() !== "" && <p className="seg-tr">{translationVi}</p>}
     </div>
-  );
+  )
 }
 
-function SegNode({ node, gloss, onTap, glossOf }: {
-  node: ReadNode & { matchKey: string };
-  gloss: boolean;
-  onTap: () => void;
-  glossOf: GlossEntry | undefined;
+function SegNode({
+  node,
+  gloss,
+  onTap,
+  glossOf,
+}: {
+  node: ReadNode & { matchKey: string }
+  gloss: boolean
+  onTap: () => void
+  glossOf: GlossEntry | undefined
 }) {
   return (
     <span className="seg-vocabwrap">
@@ -248,5 +288,5 @@ function SegNode({ node, gloss, onTap, glossOf }: {
         </span>
       )}
     </span>
-  );
+  )
 }

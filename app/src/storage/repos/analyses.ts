@@ -8,8 +8,8 @@
  *
  * Mọi lời gọi `appDb` đều `await`: DB nằm trong Worker (facade RPC — xem db.ts).
  */
-import type { AnalysesRepository } from "../../domain/repositories";
-import type { AppDb } from "../db";
+import type { AnalysesRepository } from "../../domain/repositories"
+import type { AppDb } from "../db"
 
 export function createAnalysesRepo(appDb: AppDb): AnalysesRepository {
   return {
@@ -29,11 +29,11 @@ export function createAnalysesRepo(appDb: AppDb): AnalysesRepository {
           record.tokensIn,
           record.tokensOut,
         ],
-      );
+      )
     },
     async countAll() {
-      const row = await appDb.get<{ c: number | bigint }>("select count(*) as c from analyses");
-      return Number(row?.c ?? 0);
+      const row = await appDb.get<{ c: number | bigint }>("select count(*) as c from analyses")
+      return Number(row?.c ?? 0)
     },
-  };
+  }
 }

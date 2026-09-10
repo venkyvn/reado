@@ -45,5 +45,5 @@ export function geminiSchema(): Record<string, unknown> {
       summary_vi: { type: "STRING" },
     },
     required: ["segments", "vocabulary", "summary_vi"],
-  };
+  }
 }

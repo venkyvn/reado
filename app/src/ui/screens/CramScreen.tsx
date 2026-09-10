@@ -16,191 +16,185 @@
  * Phần gesture copy từ ReviewScreen (task 3.14) — cấu trúc pointer events
  * giữ nguyên để hành vi nhất quán; nếu sửa chuẩn vuốt thì sửa CẢ hai màn.
  */
-import { useEffect, useRef, useState } from "react";
-import type { CardWithContext, TagCount } from "../../domain/types";
-import type { Screen } from "../AppRoot";
-import { buildCramSession, gradeCram, listCramTags, undoCram } from "../../domain/usecases/cram";
-import { useAppEnv } from "../context";
-import {
-  SWIPE_COMMIT_PX,
-  isTap,
-  shouldLockDrag,
-  swipeVerdict,
-  type SwipeVerdict,
-} from "../swipe";
+import { useEffect, useRef, useState } from "react"
+import type { CardWithContext, TagCount } from "../../domain/types"
+import type { Screen } from "../AppRoot"
+import { buildCramSession, gradeCram, listCramTags, undoCram } from "../../domain/usecases/cram"
+import { useAppEnv } from "../context"
+import { SWIPE_COMMIT_PX, isTap, shouldLockDrag, swipeVerdict, type SwipeVerdict } from "../swipe"
 
-type Rating = "Again" | "Hard" | "Good" | "Easy";
+type Rating = "Again" | "Hard" | "Good" | "Easy"
 
 const RATING_OPTIONS: { rating: Rating; label: string; cls: string }[] = [
   { rating: "Again", label: "Lại", cls: "grade-again" },
   { rating: "Hard", label: "Khó", cls: "grade-hard" },
   { rating: "Good", label: "Tốt", cls: "grade-good" },
   { rating: "Easy", label: "Dễ", cls: "grade-easy" },
-];
+]
 
 // Trùng màu ReviewScreen: Good = xanh lá, Easy = xanh dương.
-const EASY_BG = "#dbeafe";
-const EASY_INK = "#1e40af";
-const GOOD_BG = "#dcfce7";
-const GOOD_INK = "#166534";
+const EASY_BG = "#dbeafe"
+const EASY_INK = "#1e40af"
+const GOOD_BG = "#dcfce7"
+const GOOD_INK = "#166534"
 
 interface DragState {
-  x: number;
-  y: number;
-  pointerId: number;
-  locked: boolean;
-  el: HTMLDivElement;
+  x: number
+  y: number
+  pointerId: number
+  locked: boolean
+  el: HTMLDivElement
 }
 
-type Phase = "tags" | "session" | "done";
+type Phase = "tags" | "session" | "done"
 
 export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
-  const { services } = useAppEnv();
-  const [phase, setPhase] = useState<Phase>("tags");
-  const [tagCounts, setTagCounts] = useState<TagCount[] | null>(null);
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { services } = useAppEnv()
+  const [phase, setPhase] = useState<Phase>("tags")
+  const [tagCounts, setTagCounts] = useState<TagCount[] | null>(null)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [cards, setCards] = useState<CardWithContext[]>([]);
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [undoLogId, setUndoLogId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [cards, setCards] = useState<CardWithContext[]>([])
+  const [index, setIndex] = useState(0)
+  const [flipped, setFlipped] = useState(false)
+  const [undoLogId, setUndoLogId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const dragRef = useRef<DragState | null>(null);
-  const tintRef = useRef<HTMLDivElement | null>(null);
-  const badgeRef = useRef<HTMLDivElement | null>(null);
-  const commitRef = useRef(false);
-  const suppressClickRef = useRef(false);
-  const flyTimerRef = useRef<number | null>(null);
+  const dragRef = useRef<DragState | null>(null)
+  const tintRef = useRef<HTMLDivElement | null>(null)
+  const badgeRef = useRef<HTMLDivElement | null>(null)
+  const commitRef = useRef(false)
+  const suppressClickRef = useRef(false)
+  const flyTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
     listCramTags(services)
       .then((tcs) => {
-        if (alive) setTagCounts(tcs);
+        if (alive) setTagCounts(tcs)
       })
       .catch((e: unknown) => {
-        if (alive) setLoadError(e instanceof Error ? e.message : String(e));
-      });
+        if (alive) setLoadError(e instanceof Error ? e.message : String(e))
+      })
     return () => {
-      alive = false;
-      if (flyTimerRef.current !== null) window.clearTimeout(flyTimerRef.current);
-    };
-  }, [services]);
+      alive = false
+      if (flyTimerRef.current !== null) window.clearTimeout(flyTimerRef.current)
+    }
+  }, [services])
 
   function toggleTag(tag: string) {
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
-      return next;
-    });
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
   }
 
   async function startSession() {
-    if (selected.size === 0 || busy) return;
-    setBusy(true);
-    setActionError(null);
+    if (selected.size === 0 || busy) return
+    setBusy(true)
+    setActionError(null)
     try {
-      const sessionCards = await buildCramSession(services, [...selected]);
-      setCards(sessionCards);
-      setIndex(0);
-      setFlipped(false);
-      setUndoLogId(null);
-      if (sessionCards.length === 0) setPhase("done");
-      else setPhase("session");
+      const sessionCards = await buildCramSession(services, [...selected])
+      setCards(sessionCards)
+      setIndex(0)
+      setFlipped(false)
+      setUndoLogId(null)
+      if (sessionCards.length === 0) setPhase("done")
+      else setPhase("session")
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : String(e));
+      setActionError(e instanceof Error ? e.message : String(e))
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
-  const current: CardWithContext | null = phase === "session" ? (cards[index] ?? null) : null;
+  const current: CardWithContext | null = phase === "session" ? (cards[index] ?? null) : null
 
   async function grade(rating: Rating) {
-    if (!current || busy) return;
-    setBusy(true);
-    setActionError(null);
+    if (!current || busy) return
+    setBusy(true)
+    setActionError(null)
     try {
-      const { log } = await gradeCram(services, { card: current, rating, now: new Date() });
-      setUndoLogId(log.id);
-      setFlipped(false);
-      setIndex((i) => i + 1);
+      const { log } = await gradeCram(services, { card: current, rating, now: new Date() })
+      setUndoLogId(log.id)
+      setFlipped(false)
+      setIndex((i) => i + 1)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
+      setActionError(err instanceof Error ? err.message : String(err))
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
   async function undoOnce() {
-    if (!undoLogId || busy) return;
-    setBusy(true);
-    setActionError(null);
+    if (!undoLogId || busy) return
+    setBusy(true)
+    setActionError(null)
     try {
       // Cram: card không đổi nên undo chỉ xoá log; card chấm nhầm quay lại chơi.
-      await undoCram(services, undoLogId);
-      setUndoLogId(null);
-      setFlipped(false);
-      setIndex((i) => Math.max(0, i - 1));
+      await undoCram(services, undoLogId)
+      setUndoLogId(null)
+      setFlipped(false)
+      setIndex((i) => Math.max(0, i - 1))
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
+      setActionError(err instanceof Error ? err.message : String(err))
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
   // --- Chuẩn vuốt giống ReviewScreen (3.14): trái = Easy, phải = Good, chạm = lật. ---
 
   function paintDirection(dx: number) {
-    const easy = dx < 0;
-    const bg = easy ? EASY_BG : GOOD_BG;
-    if (tintRef.current) tintRef.current.style.background = bg;
+    const easy = dx < 0
+    const bg = easy ? EASY_BG : GOOD_BG
+    if (tintRef.current) tintRef.current.style.background = bg
     if (badgeRef.current) {
-      badgeRef.current.textContent = easy ? "Dễ" : "Tốt";
-      badgeRef.current.style.background = bg;
-      badgeRef.current.style.color = easy ? EASY_INK : GOOD_INK;
+      badgeRef.current.textContent = easy ? "Dễ" : "Tốt"
+      badgeRef.current.style.background = bg
+      badgeRef.current.style.color = easy ? EASY_INK : GOOD_INK
     }
   }
 
   function resetOverlays() {
-    if (tintRef.current) tintRef.current.style.opacity = "0";
-    if (badgeRef.current) badgeRef.current.style.opacity = "0";
+    if (tintRef.current) tintRef.current.style.opacity = "0"
+    if (badgeRef.current) badgeRef.current.style.opacity = "0"
   }
 
   function springBack(el: HTMLDivElement) {
-    el.style.transition = "transform 180ms ease";
-    el.style.transform = "none";
-    resetOverlays();
+    el.style.transition = "transform 180ms ease"
+    el.style.transform = "none"
+    resetOverlays()
   }
 
   function commitSwipe(el: HTMLDivElement, verdict: SwipeVerdict) {
-    suppressClickRef.current = true;
-    commitRef.current = true;
-    const dir = verdict === "easy" ? -1 : 1;
-    el.style.transition = "transform 200ms ease, opacity 200ms ease";
-    el.style.transform = `translateX(${dir * 120}%) rotate(${dir * 15}deg)`;
-    el.style.opacity = "0.4";
-    if (tintRef.current) tintRef.current.style.opacity = "0.9";
+    suppressClickRef.current = true
+    commitRef.current = true
+    const dir = verdict === "easy" ? -1 : 1
+    el.style.transition = "transform 200ms ease, opacity 200ms ease"
+    el.style.transform = `translateX(${dir * 120}%) rotate(${dir * 15}deg)`
+    el.style.opacity = "0.4"
+    if (tintRef.current) tintRef.current.style.opacity = "0.9"
     flyTimerRef.current = window.setTimeout(() => {
-      commitRef.current = false;
-      void grade(verdict === "easy" ? "Easy" : "Good");
-    }, 190);
+      commitRef.current = false
+      void grade(verdict === "easy" ? "Easy" : "Good")
+    }, 190)
   }
 
   // --- Render: chọn tag ---
 
   if (phase === "tags") {
-    const totalCards = tagCounts ? tagCounts.reduce((acc, t) => acc + t.cardCount, 0) : 0;
+    const totalCards = tagCounts ? tagCounts.reduce((acc, t) => acc + t.cardCount, 0) : 0
     return (
       <div className="pad">
         <h1>Ôn theo chủ đề</h1>
         <p className="muted">
-          Chọn chủ đề muốn ôn ngay — không phụ thuộc lịch ôn hằng ngày, chấm xong
-          KHÔNG thay đổi lịch (chỉ ghi lại thành tích, thẻ vẫn tới đúng ngày của nó).
+          Chọn chủ đề muốn ôn ngay — không phụ thuộc lịch ôn hằng ngày, chấm xong KHÔNG thay đổi
+          lịch (chỉ ghi lại thành tích, thẻ vẫn tới đúng ngày của nó).
         </p>
 
         {loadError && <div className="banner banner-error">{loadError}</div>}
@@ -210,8 +204,8 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
           <p className="muted">Đang đọc các chủ đề trong kho…</p>
         ) : totalCards === 0 ? (
           <p className="muted">
-            Trong kho chưa có tag nào — hãy chụp trang mới (AI sẽ gắn chủ đề) hoặc
-            gắn tag cho từ trong Kho từ vựng trước.
+            Trong kho chưa có tag nào — hãy chụp trang mới (AI sẽ gắn chủ đề) hoặc gắn tag cho từ
+            trong Kho từ vựng trước.
           </p>
         ) : (
           <ul className="vocab-list">
@@ -244,7 +238,7 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
           ← Về ôn tập hằng ngày
         </button>
       </div>
-    );
+    )
   }
 
   // --- Render: xong phiên ---
@@ -254,8 +248,8 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
       <div className="pad">
         <h1>Xong buổi ôn theo chủ đề 💪</h1>
         <p className="muted">
-          Đã xem hết {cards.length} thẻ. Buổi này KHÔNG đổi lịch ôn dài hạn của thẻ
-          nào — thẻ vẫn tới đúng hẹn trong ôn tập hằng ngày.
+          Đã xem hết {cards.length} thẻ. Buổi này KHÔNG đổi lịch ôn dài hạn của thẻ nào — thẻ vẫn
+          tới đúng hẹn trong ôn tập hằng ngày.
         </p>
         <button type="button" className="primary" onClick={() => setPhase("tags")}>
           🏷️ Chọn chủ đề khác
@@ -264,12 +258,12 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
           ← Về ôn tập hằng ngày
         </button>
       </div>
-    );
+    )
   }
 
   // --- Render: phiên cram (giống màn ôn thường, khác usecase chấm) ---
 
-  const remaining = cards.length - index;
+  const remaining = cards.length - index
 
   return (
     <div className="pad">
@@ -306,64 +300,72 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
         style={{ position: "relative", overflow: "hidden", touchAction: "pan-y" }}
         role="button"
         tabIndex={0}
-        aria-label={flipped ? "mặt sau thẻ" : "mặt trước thẻ — chạm để lật, vuốt trái: Dễ, vuốt phải: Tốt"}
+        aria-label={
+          flipped ? "mặt sau thẻ" : "mặt trước thẻ — chạm để lật, vuốt trái: Dễ, vuốt phải: Tốt"
+        }
         onClick={() => {
           if (suppressClickRef.current) {
-            suppressClickRef.current = false;
-            return;
+            suppressClickRef.current = false
+            return
           }
-          if (!flipped && !busy) setFlipped(true);
+          if (!flipped && !busy) setFlipped(true)
         }}
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && !flipped) {
-            e.preventDefault();
-            setFlipped(true);
+            e.preventDefault()
+            setFlipped(true)
           }
         }}
         onPointerDown={(e) => {
-          if (flipped || busy || commitRef.current) return;
-          if (e.pointerType === "mouse" && e.button !== 0) return;
-          if (!e.isPrimary) return;
-          const el = e.currentTarget;
-          el.setPointerCapture(e.pointerId);
-          dragRef.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId, locked: false, el };
-          suppressClickRef.current = false;
+          if (flipped || busy || commitRef.current) return
+          if (e.pointerType === "mouse" && e.button !== 0) return
+          if (!e.isPrimary) return
+          const el = e.currentTarget
+          el.setPointerCapture(e.pointerId)
+          dragRef.current = {
+            x: e.clientX,
+            y: e.clientY,
+            pointerId: e.pointerId,
+            locked: false,
+            el,
+          }
+          suppressClickRef.current = false
         }}
         onPointerMove={(e) => {
-          const d = dragRef.current;
-          if (!d || d.pointerId !== e.pointerId) return;
-          const dx = e.clientX - d.x;
-          const dy = e.clientY - d.y;
-          if (!shouldLockDrag(dx, dy, d.locked)) return;
+          const d = dragRef.current
+          if (!d || d.pointerId !== e.pointerId) return
+          const dx = e.clientX - d.x
+          const dy = e.clientY - d.y
+          if (!shouldLockDrag(dx, dy, d.locked)) return
           if (!d.locked) {
-            d.locked = true;
-            paintDirection(dx);
+            d.locked = true
+            paintDirection(dx)
           }
-          const intensity = Math.min(1, Math.abs(dx) / SWIPE_COMMIT_PX);
-          d.el.style.transition = "none";
-          d.el.style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`;
-          if (tintRef.current) tintRef.current.style.opacity = String(0.75 * intensity);
-          if (badgeRef.current) badgeRef.current.style.opacity = String(intensity);
+          const intensity = Math.min(1, Math.abs(dx) / SWIPE_COMMIT_PX)
+          d.el.style.transition = "none"
+          d.el.style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`
+          if (tintRef.current) tintRef.current.style.opacity = String(0.75 * intensity)
+          if (badgeRef.current) badgeRef.current.style.opacity = String(intensity)
         }}
         onPointerUp={(e) => {
-          const d = dragRef.current;
-          if (!d || d.pointerId !== e.pointerId) return;
-          dragRef.current = null;
-          if (!d.locked) return;
-          const dx = e.clientX - d.x;
-          const verdict = swipeVerdict(dx);
+          const d = dragRef.current
+          if (!d || d.pointerId !== e.pointerId) return
+          dragRef.current = null
+          if (!d.locked) return
+          const dx = e.clientX - d.x
+          const verdict = swipeVerdict(dx)
           if (!verdict) {
-            if (!isTap(dx)) suppressClickRef.current = true;
-            springBack(d.el);
-            return;
+            if (!isTap(dx)) suppressClickRef.current = true
+            springBack(d.el)
+            return
           }
-          commitSwipe(d.el, verdict);
+          commitSwipe(d.el, verdict)
         }}
         onPointerCancel={() => {
-          const d = dragRef.current;
-          if (!d) return;
-          dragRef.current = null;
-          if (d.locked) springBack(d.el);
+          const d = dragRef.current
+          if (!d) return
+          dragRef.current = null
+          if (d.locked) springBack(d.el)
         }}
       >
         {!flipped ? (
@@ -417,7 +419,9 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
             <p className="review-collection">
               <span className="review-label">gặp trong</span> {current.collectionName}
             </p>
-            {(current.tags.length > 0 || current.synonyms.length > 0 || current.antonyms.length > 0) && (
+            {(current.tags.length > 0 ||
+              current.synonyms.length > 0 ||
+              current.antonyms.length > 0) && (
               <div className="review-extras">
                 {current.tags.length > 0 && (
                   <div className="chip-row">
@@ -464,5 +468,5 @@ export function CramScreen({ navigate }: { navigate: (s: Screen) => void }) {
         ← Đổi chủ đề
       </button>
     </div>
-  );
+  )
 }

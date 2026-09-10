@@ -14,26 +14,26 @@
 
 export interface DayBounds {
   /** Thời điểm (UTC) bắt đầu ngày học chứa `now`. */
-  dayStart: Date;
+  dayStart: Date
   /** Thời điểm (UTC) kết thúc ngày học — dayStart + 24h. */
-  dayEnd: Date;
+  dayEnd: Date
   /** Nhãn ngày theo lịch địa phương (yyyy-mm-dd), để debug/streak. */
-  dayLabel: string;
+  dayLabel: string
 }
 
 interface LocalParts {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-  second: number;
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
 }
 
-const formatterCache = new Map<string, Intl.DateTimeFormat>();
+const formatterCache = new Map<string, Intl.DateTimeFormat>()
 
 function partsFormatter(timeZone: string): Intl.DateTimeFormat {
-  let f = formatterCache.get(timeZone);
+  let f = formatterCache.get(timeZone)
   if (!f) {
     f = new Intl.DateTimeFormat("en-US", {
       timeZone,
@@ -44,24 +44,24 @@ function partsFormatter(timeZone: string): Intl.DateTimeFormat {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-    });
-    formatterCache.set(timeZone, f);
+    })
+    formatterCache.set(timeZone, f)
   }
-  return f;
+  return f
 }
 
 /** Các thành phần giờ địa phương của một instant UTC ở múi giờ `timeZone`. */
 export function localParts(instant: Date, timeZone: string): LocalParts {
-  const parts = partsFormatter(timeZone).formatToParts(instant);
-  const out: Partial<LocalParts> = {};
+  const parts = partsFormatter(timeZone).formatToParts(instant)
+  const out: Partial<LocalParts> = {}
   for (const { type, value } of parts) {
-    if (type !== "literal") out[type as keyof LocalParts] = Number(value);
+    if (type !== "literal") out[type as keyof LocalParts] = Number(value)
   }
-  return out as LocalParts;
+  return out as LocalParts
 }
 
 function wallAsUtc(p: LocalParts): number {
-  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second)
 }
 
 /**
@@ -70,22 +70,26 @@ function wallAsUtc(p: LocalParts): number {
  * hội tụ ngay vòng 1; chỉ cần thêm vòng khi tức quanh DST transition.
  */
 export function localWallToUtc(
-  y: number, m: number, d: number,
-  h: number, mi: number, s: number,
+  y: number,
+  m: number,
+  d: number,
+  h: number,
+  mi: number,
+  s: number,
   timeZone: string,
 ): Date {
-  const W = Date.UTC(y, m - 1, d, h, mi, s); // wall time đọc như UTC
-  let guess = W;
+  const W = Date.UTC(y, m - 1, d, h, mi, s) // wall time đọc như UTC
+  let guess = W
   for (let i = 0; i < 3; i++) {
-    const offsetMs = wallAsUtc(localParts(new Date(guess), timeZone)) - guess;
-    const corrected = W - offsetMs;
-    if (corrected === guess) break;
-    guess = corrected;
+    const offsetMs = wallAsUtc(localParts(new Date(guess), timeZone)) - guess
+    const corrected = W - offsetMs
+    if (corrected === guess) break
+    guess = corrected
   }
-  return new Date(guess);
+  return new Date(guess)
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * Ngày học chứa `now`: bắt đầu lúc `cutoffHour` giờ địa phương (`timeZone`).
@@ -93,21 +97,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * (người ôn lúc 1h sáng học "tối hôm qua" — review-scheduling mục 6.2).
  */
 export function dayBounds(now: Date, cutoffHour: number, timeZone: string): DayBounds {
-  const p = localParts(now, timeZone);
-  let y = p.year;
-  let m = p.month;
-  let d = p.day;
+  const p = localParts(now, timeZone)
+  let y = p.year
+  let m = p.month
+  let d = p.day
   if (p.hour < cutoffHour) {
-    const prev = new Date(Date.UTC(y, m - 1, d, 12) - DAY_MS);
-    y = prev.getUTCFullYear();
-    m = prev.getUTCMonth() + 1;
-    d = prev.getUTCDate();
+    const prev = new Date(Date.UTC(y, m - 1, d, 12) - DAY_MS)
+    y = prev.getUTCFullYear()
+    m = prev.getUTCMonth() + 1
+    d = prev.getUTCDate()
   }
-  const dayStart = localWallToUtc(y, m, d, cutoffHour, 0, 0, timeZone);
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const dayStart = localWallToUtc(y, m, d, cutoffHour, 0, 0, timeZone)
+  const pad = (n: number) => String(n).padStart(2, "0")
   return {
     dayStart,
     dayEnd: new Date(dayStart.getTime() + DAY_MS),
     dayLabel: `${y}-${pad(m)}-${pad(d)}`,
-  };
+  }
 }

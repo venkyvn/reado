@@ -7,28 +7,43 @@
  * (VocabLibraryScreen) giữ draft rồi gọi usecase updateVocabRichFields. Nhờ
  * vậy một bộ UI phục vụ hai đường dữ liệu khác nhau mà không trùng logic sửa.
  */
-import { useId, useState } from "react";
-import type { RichVocabFields } from "../domain/types";
+import { useId, useState } from "react"
+import type { RichVocabFields } from "../domain/types"
 
 interface RichGroupConfig {
-  key: keyof RichVocabFields;
-  label: string;
-  placeholder: string;
-  withSuggestions: boolean;
+  key: keyof RichVocabFields
+  label: string
+  placeholder: string
+  withSuggestions: boolean
 }
 
 const GROUPS: RichGroupConfig[] = [
-  { key: "tags", label: "Chủ đề (tags)", placeholder: "thêm tag, vd: business", withSuggestions: true },
-  { key: "synonyms", label: "Đồng nghĩa", placeholder: "thêm từ đồng nghĩa", withSuggestions: false },
-  { key: "antonyms", label: "Trái nghĩa", placeholder: "thêm từ trái nghĩa", withSuggestions: false },
-];
+  {
+    key: "tags",
+    label: "Chủ đề (tags)",
+    placeholder: "thêm tag, vd: business",
+    withSuggestions: true,
+  },
+  {
+    key: "synonyms",
+    label: "Đồng nghĩa",
+    placeholder: "thêm từ đồng nghĩa",
+    withSuggestions: false,
+  },
+  {
+    key: "antonyms",
+    label: "Trái nghĩa",
+    placeholder: "thêm từ trái nghĩa",
+    withSuggestions: false,
+  },
+]
 
 /** Chuẩn hoá khi THÊM: trim, bỏ rỗng, chặn trùng (không phân biệt hoa thường). */
 function addItem(items: string[], value: string): string[] {
-  const v = value.trim();
-  if (v === "") return items;
-  if (items.some((x) => x.toLowerCase() === v.toLowerCase())) return items;
-  return [...items, v];
+  const v = value.trim()
+  if (v === "") return items
+  if (items.some((x) => x.toLowerCase() === v.toLowerCase())) return items
+  return [...items, v]
 }
 
 function RichGroup({
@@ -38,22 +53,22 @@ function RichGroup({
   suggestions,
   onChange,
 }: {
-  items: string[];
-  label: string;
-  placeholder: string;
-  suggestions?: string[];
-  onChange: (next: string[]) => void;
+  items: string[]
+  label: string
+  placeholder: string
+  suggestions?: string[]
+  onChange: (next: string[]) => void
 }) {
-  const [draft, setDraft] = useState("");
-  const uid = useId();
+  const [draft, setDraft] = useState("")
+  const uid = useId()
   // Datalist phải unique trên toàn trang — có thể nhiều card cùng mở
   // editor cùng lúc (kho từ), useId đảm bảo không trùng id.
-  const listId = `${uid}-${label.replace(/\W+/g, "-")}`;
+  const listId = `${uid}-${label.replace(/\W+/g, "-")}`
 
   function commit() {
-    const next = addItem(items, draft);
-    setDraft("");
-    if (next !== items) onChange(next);
+    const next = addItem(items, draft)
+    setDraft("")
+    if (next !== items) onChange(next)
   }
 
   return (
@@ -85,8 +100,8 @@ function RichGroup({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              e.preventDefault();
-              commit();
+              e.preventDefault()
+              commit()
             }
           }}
         />
@@ -97,12 +112,17 @@ function RichGroup({
             ))}
           </datalist>
         )}
-        <button type="button" className="secondary rich-add" disabled={draft.trim() === ""} onClick={commit}>
+        <button
+          type="button"
+          className="secondary rich-add"
+          disabled={draft.trim() === ""}
+          onClick={commit}
+        >
           Thêm
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 export function RichFieldsEditor({
@@ -110,9 +130,9 @@ export function RichFieldsEditor({
   tagSuggestions,
   onChange,
 }: {
-  fields: RichVocabFields;
-  tagSuggestions: string[];
-  onChange: (f: RichVocabFields) => void;
+  fields: RichVocabFields
+  tagSuggestions: string[]
+  onChange: (f: RichVocabFields) => void
 }) {
   return (
     <div className="rich-editor">
@@ -127,5 +147,5 @@ export function RichFieldsEditor({
         />
       ))}
     </div>
-  );
+  )
 }

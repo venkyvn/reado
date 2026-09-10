@@ -17,15 +17,15 @@
  * Screen chỉ gọi use-case (getSettings/updateSettings) — không SQL, không tự đọc
  * bảng settings (conventions mục 2).
  */
-import { useCallback, useEffect, useState } from "react";
-import type { Screen } from "../AppRoot";
-import { SettingsError } from "../../domain/errors";
-import { DEFAULT_AI_BASE_URL, DEFAULT_AI_MODEL } from "../../domain/settings";
-import type { Settings } from "../../domain/types";
-import { CEFR_VALUES } from "../../domain/types";
-import type { Cefr } from "../../domain/types";
-import { getSettings, updateSettings } from "../../domain/usecases/settings";
-import { useAppEnv } from "../context";
+import { useCallback, useEffect, useState } from "react"
+import type { Screen } from "../AppRoot"
+import { SettingsError } from "../../domain/errors"
+import { DEFAULT_AI_BASE_URL, DEFAULT_AI_MODEL } from "../../domain/settings"
+import type { Settings } from "../../domain/types"
+import { CEFR_VALUES } from "../../domain/types"
+import type { Cefr } from "../../domain/types"
+import { getSettings, updateSettings } from "../../domain/usecases/settings"
+import { useAppEnv } from "../context"
 
 /** Nhãn CEFR cho người đọc (giá trị lưu vẫn là A2/B1/B2/C1). */
 const CEFR_LABEL: Record<Cefr, string> = {
@@ -33,127 +33,127 @@ const CEFR_LABEL: Record<Cefr, string> = {
   B1: "B1 — trung cấp",
   B2: "B2 — trung cao cấp",
   C1: "C1 — cao cấp",
-};
+}
 
 function messageFor(e: unknown): string {
   // SettingsError: ghép câu từ code + field — KHÔNG render e.message (message
   // là cho log, conventions mục 1/3). Lỗi lạ ngoài SettingsError thì giữ nguyên
   // thông điệp lỗi hệ thống như các màn khác (ExportScreen/HomeScreen cùng kiểu).
   if (e instanceof SettingsError) {
-    return messageForCode(e.code, e.field);
+    return messageForCode(e.code, e.field)
   }
-  return e instanceof Error ? e.message : String(e);
+  return e instanceof Error ? e.message : String(e)
 }
 
 function messageForCode(code: SettingsError["code"], field: string | null): string {
-  const name = field ?? "field";
+  const name = field ?? "field"
   switch (code) {
     case "bad_cefr":
-      return "CEFR phải là A2, B1, B2 hoặc C1.";
+      return "CEFR phải là A2, B1, B2 hoặc C1."
     case "bad_daily_limit":
-      return "Hạn mức thẻ mới phải là số nguyên từ 0 đến 999 (0 = tạm dừng thẻ mới).";
+      return "Hạn mức thẻ mới phải là số nguyên từ 0 đến 999 (0 = tạm dừng thẻ mới)."
     case "bad_base_url":
-      return `Base URL không hợp lệ — cần địa chỉ http(s) đầy đủ (mặc định ${DEFAULT_AI_BASE_URL}).`;
+      return `Base URL không hợp lệ — cần địa chỉ http(s) đầy đủ (mặc định ${DEFAULT_AI_BASE_URL}).`
     case "bad_model":
-      return "Tên model không hợp lệ (quá dài).";
+      return "Tên model không hợp lệ (quá dài)."
     case "empty_key":
-      return 'Ô API key đang trống — gõ key mới, hoặc dùng nút "Xoá key" nếu muốn bỏ key đã lưu.';
+      return 'Ô API key đang trống — gõ key mới, hoặc dùng nút "Xoá key" nếu muốn bỏ key đã lưu.'
     case "empty_patch":
-      return "Chưa có thay đổi nào để lưu.";
+      return "Chưa có thay đổi nào để lưu."
     case "readonly_field":
-      return `Không lưu được — "${name}" là cột bị khoá ở R1 (phần "Thuật toán ôn tập" bên trên chỉ xem được).`;
+      return `Không lưu được — "${name}" là cột bị khoá ở R1 (phần "Thuật toán ôn tập" bên trên chỉ xem được).`
     case "unknown_field":
-      return `Không lưu được — "${name}" không phải field cài đặt hợp lệ.`;
+      return `Không lưu được — "${name}" không phải field cài đặt hợp lệ.`
   }
 }
 
 /** Ô hạn mức: rỗng/gõ chữ → NaN để cổng domain từ chối, KHÔNG âm thầm thành 0. */
 function parseLimit(input: string): number {
-  const trimmed = input.trim();
-  return trimmed === "" ? Number.NaN : Number(trimmed);
+  const trimmed = input.trim()
+  return trimmed === "" ? Number.NaN : Number(trimmed)
 }
 
 export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) {
-  const { services } = useAppEnv();
-  const [loaded, setLoaded] = useState<Settings | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { services } = useAppEnv()
+  const [loaded, setLoaded] = useState<Settings | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [cefr, setCefr] = useState<Cefr>("B1");
-  const [limitInput, setLimitInput] = useState("10");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [model, setModel] = useState("");
-  const [keyInput, setKeyInput] = useState("");
+  const [cefr, setCefr] = useState<Cefr>("B1")
+  const [limitInput, setLimitInput] = useState("10")
+  const [baseUrl, setBaseUrl] = useState("")
+  const [model, setModel] = useState("")
+  const [keyInput, setKeyInput] = useState("")
 
-  const [busy, setBusy] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   /** Đổ settings đã lưu vào form. Ô key LUÔN để rỗng (ghi-only). */
   const apply = useCallback((s: Settings) => {
-    setLoaded(s);
-    setCefr(s.cefrLevel);
-    setLimitInput(String(s.dailyNewLimit));
-    setBaseUrl(s.aiBaseUrl);
-    setModel(s.aiModel ?? "");
-  }, []);
+    setLoaded(s)
+    setCefr(s.cefrLevel)
+    setLimitInput(String(s.dailyNewLimit))
+    setBaseUrl(s.aiBaseUrl)
+    setModel(s.aiModel ?? "")
+  }, [])
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
     getSettings(services)
       .then((s) => {
-        if (alive) apply(s);
+        if (alive) apply(s)
       })
       .catch((e: unknown) => {
-        if (alive) setLoadError(e instanceof Error ? e.message : String(e));
-      });
+        if (alive) setLoadError(e instanceof Error ? e.message : String(e))
+      })
     return () => {
-      alive = false;
-    };
-  }, [services, apply]);
+      alive = false
+    }
+  }, [services, apply])
 
   async function save(): Promise<void> {
-    setBusy(true);
-    setSaveError(null);
-    setNotice(null);
+    setBusy(true)
+    setSaveError(null)
+    setNotice(null)
     try {
       const patch: Record<string, unknown> = {
         cefrLevel: cefr,
         dailyNewLimit: parseLimit(limitInput),
         aiBaseUrl: baseUrl,
         aiModel: model,
-      };
+      }
       // Ô key rỗng = "không đổi key" (khác hẳn xoá key — có nút riêng).
-      if (keyInput.trim() !== "") patch.aiApiKey = keyInput;
+      if (keyInput.trim() !== "") patch.aiApiKey = keyInput
 
-      const saved = await updateSettings(services, patch);
-      apply(saved);
-      setKeyInput("");
+      const saved = await updateSettings(services, patch)
+      apply(saved)
+      setKeyInput("")
       setNotice(
         saved.aiApiKey
           ? "✅ Đã lưu. Cấu hình AI dùng cho lần chụp tiếp theo."
           : "✅ Đã lưu. Lưu ý: chưa có API key nên chưa phân tích được trang nào.",
-      );
+      )
     } catch (e) {
-      setSaveError(messageFor(e));
+      setSaveError(messageFor(e))
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
   async function clearKey(): Promise<void> {
-    if (!window.confirm("Xoá API key đã lưu trên máy này? Lần chụp sau sẽ phải nhập lại.")) return;
-    setBusy(true);
-    setSaveError(null);
-    setNotice(null);
+    if (!window.confirm("Xoá API key đã lưu trên máy này? Lần chụp sau sẽ phải nhập lại.")) return
+    setBusy(true)
+    setSaveError(null)
+    setNotice(null)
     try {
-      const saved = await updateSettings(services, { aiApiKey: null });
-      apply(saved);
-      setKeyInput("");
-      setNotice("Đã xoá API key khỏi máy này.");
+      const saved = await updateSettings(services, { aiApiKey: null })
+      apply(saved)
+      setKeyInput("")
+      setNotice("Đã xoá API key khỏi máy này.")
     } catch (e) {
-      setSaveError(messageFor(e));
+      setSaveError(messageFor(e))
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
@@ -166,7 +166,7 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
           ← Về trang chủ
         </button>
       </div>
-    );
+    )
   }
 
   if (!loaded) {
@@ -175,10 +175,10 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
         <h1>Cài đặt</h1>
         <p className="muted">Đang đọc cài đặt…</p>
       </div>
-    );
+    )
   }
 
-  const hasKey = loaded.aiApiKey !== null && loaded.aiApiKey !== "";
+  const hasKey = loaded.aiApiKey !== null && loaded.aiApiKey !== ""
 
   return (
     <div className="pad settings">
@@ -197,8 +197,8 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
           </select>
         </label>
         <p className="fine">
-          Đổi mức này chỉ ảnh hưởng các trang phân tích SAU đó — trang đã phân tích không
-          bị phân tích lại.
+          Đổi mức này chỉ ảnh hưởng các trang phân tích SAU đó — trang đã phân tích không bị phân
+          tích lại.
         </p>
 
         <label>
@@ -214,16 +214,16 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
           />
         </label>
         <p className="fine">
-          Mặc định 10. Thẻ ôn lại KHÔNG bị giới hạn — hạn mức chỉ áp cho thẻ mới. Đặt 0 để
-          tạm dừng thẻ mới (thẻ mới sẽ nằm ở phần "Còn tồn" trên Trang chủ).
+          Mặc định 10. Thẻ ôn lại KHÔNG bị giới hạn — hạn mức chỉ áp cho thẻ mới. Đặt 0 để tạm dừng
+          thẻ mới (thẻ mới sẽ nằm ở phần "Còn tồn" trên Trang chủ).
         </p>
       </section>
 
       <section className="card">
         <h2>Cấu hình AI (BYOK)</h2>
         <p className="muted">
-          Reado không có server trung gian: key nằm trên chính máy bạn và chỉ gọi thẳng
-          nhà cung cấp. Key không bao giờ được ghi vào file export.
+          Reado không có server trung gian: key nằm trên chính máy bạn và chỉ gọi thẳng nhà cung
+          cấp. Key không bao giờ được ghi vào file export.
         </p>
 
         <p className="fine">
@@ -242,7 +242,12 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
           />
         </label>
         {hasKey && (
-          <button type="button" className="secondary" disabled={busy} onClick={() => void clearKey()}>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => void clearKey()}
+          >
             🗑 Xoá key đã lưu
           </button>
         )}
@@ -305,8 +310,8 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
           </tbody>
         </table>
         <p className="fine">
-          R1 cố ý không mở các núm này: chúng đổi lịch ôn của toàn bộ kho và cần dữ liệu
-          thật trước khi cho chỉnh (FR-15). Xem "vì sao" trong docs/prd.md mục 7.
+          R1 cố ý không mở các núm này: chúng đổi lịch ôn của toàn bộ kho và cần dữ liệu thật trước
+          khi cho chỉnh (FR-15). Xem "vì sao" trong docs/prd.md mục 7.
         </p>
       </section>
 
@@ -322,5 +327,5 @@ export function SettingsScreen({ navigate }: { navigate: (s: Screen) => void }) 
         </button>
       </div>
     </div>
-  );
+  )
 }

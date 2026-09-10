@@ -23,54 +23,58 @@ export type DeliveryOutcome =
   | { method: "share" }
   | { method: "download" }
   | { method: "cancelled" }
-  | { method: "manual"; reason: string };
+  | { method: "manual"; reason: string }
 
 /** Navigator có Web Share API level 2 (chia sẻ file) — không trình duyệt nào cũng có. */
 type ShareCapableNavigator = Navigator & {
-  canShare?: (data: { files?: File[] }) => boolean;
-  share?: (data: { files?: File[] }) => Promise<void>;
-};
+  canShare?: (data: { files?: File[] }) => boolean
+  share?: (data: { files?: File[] }) => Promise<void>
+}
 
 function isUserDismiss(e: unknown): boolean {
   // CHỈ AbortError. NotAllowedError là "không được phép", không phải "người dùng huỷ".
-  return e instanceof Error && e.name === "AbortError";
+  return e instanceof Error && e.name === "AbortError"
 }
 
 function reason(e: unknown): string {
-  return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  return e instanceof Error ? `${e.name}: ${e.message}` : String(e)
 }
 
 async function tryShare(nav: ShareCapableNavigator, filename: string, text: string, mime: string) {
-  if (typeof nav.canShare !== "function" || typeof nav.share !== "function" || typeof File !== "function") {
-    return null;
+  if (
+    typeof nav.canShare !== "function" ||
+    typeof nav.share !== "function" ||
+    typeof File !== "function"
+  ) {
+    return null
   }
   try {
-    const file = new File([text], filename, { type: mime });
-    if (!nav.canShare({ files: [file] })) return null;
-    await nav.share({ files: [file] });
-    return { method: "share" } as const;
+    const file = new File([text], filename, { type: mime })
+    if (!nav.canShare({ files: [file] })) return null
+    await nav.share({ files: [file] })
+    return { method: "share" } as const
   } catch (e) {
-    if (isUserDismiss(e)) return { method: "cancelled" } as const;
-    return null; // lỗi khác → để tầng kế lo
+    if (isUserDismiss(e)) return { method: "cancelled" } as const
+    return null // lỗi khác → để tầng kế lo
   }
 }
 
 function tryDownload(filename: string, text: string, mime: string): DeliveryOutcome | null {
   try {
-    const blob = new Blob([text], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const blob = new Blob([text], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.rel = "noopener"
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
     // Revoke trễ: tải lớn có thể chưa kịp bắt đầu nếu revoke ngay sau click.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    return { method: "download" };
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    return { method: "download" }
   } catch (e) {
-    return { method: "manual", reason: reason(e) };
+    return { method: "manual", reason: reason(e) }
   }
 }
 
@@ -79,22 +83,22 @@ export async function deliverTextFile(
   text: string,
   mime: string,
 ): Promise<DeliveryOutcome> {
-  const nav = globalThis.navigator as ShareCapableNavigator | undefined;
-  const isTouch = typeof nav?.maxTouchPoints === "number" && nav.maxTouchPoints > 0;
+  const nav = globalThis.navigator as ShareCapableNavigator | undefined
+  const isTouch = typeof nav?.maxTouchPoints === "number" && nav.maxTouchPoints > 0
 
   if (nav && isTouch) {
-    const shared = await tryShare(nav, filename, text, mime);
-    if (shared) return shared;
+    const shared = await tryShare(nav, filename, text, mime)
+    if (shared) return shared
   }
 
-  const downloaded = tryDownload(filename, text, mime);
-  if (downloaded && downloaded.method === "download") return downloaded;
+  const downloaded = tryDownload(filename, text, mime)
+  if (downloaded && downloaded.method === "download") return downloaded
 
   // Desktop mà a[download] ném lỗi → thử nốt share trước khi chịu thua.
   if (nav && !isTouch) {
-    const shared = await tryShare(nav, filename, text, mime);
-    if (shared) return shared;
+    const shared = await tryShare(nav, filename, text, mime)
+    if (shared) return shared
   }
 
-  return downloaded ?? { method: "manual", reason: "không có đường giao file nào khả dụng" };
+  return downloaded ?? { method: "manual", reason: "không có đường giao file nào khả dụng" }
 }

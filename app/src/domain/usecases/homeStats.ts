@@ -13,31 +13,31 @@
  * Card leech (suspended_at ≠ null) tự bị các query nhánh loại qua WHERE
  * `suspended_at is null` — criterion 4 của FR-14 không cần thêm điều kiện.
  */
-import { applyNewLimit } from "../queue";
-import type { AppServices } from "../services";
-import { computeStreak, dayLabelOf } from "../streak";
-import { dayBounds } from "../time";
-import { toUtcIso } from "../utils";
+import { applyNewLimit } from "../queue"
+import type { AppServices } from "../services"
+import { computeStreak, dayLabelOf } from "../streak"
+import { dayBounds } from "../time"
+import { toUtcIso } from "../utils"
 
 export interface HomeStats {
   /** Số card thực sự sẽ được ôn hôm nay (đã áp hạn mức thẻ mới). */
-  dueToday: number;
+  dueToday: number
   /** Thẻ mới bị hoãn sang ngày sau vì vượt hạn mức — phần "tồn", nhãn riêng. */
-  backlog: number;
-  introducedToday: number;
-  dailyNewLimit: number;
+  backlog: number
+  introducedToday: number
+  dailyNewLimit: number
   /** Tổng số trang đã phân tích thành công từ trước tới nay. */
-  analyzedPages: number;
+  analyzedPages: number
   /** Số ngày ôn liên tục theo giờ chuyển ngày (FR-11). */
-  streakDays: number;
+  streakDays: number
 }
 
 export async function getHomeStats(svc: AppServices): Promise<HomeStats> {
-  const now = svc.now();
-  const settings = await svc.repos.settings.get();
-  const timeZone = svc.timeZone();
-  const bounds = dayBounds(now, settings.dayCutoffHour, timeZone);
-  const nowIso = toUtcIso(now);
+  const now = svc.now()
+  const settings = await svc.repos.settings.get()
+  const timeZone = svc.timeZone()
+  const bounds = dayBounds(now, settings.dayCutoffHour, timeZone)
+  const nowIso = toUtcIso(now)
 
   const [reviewCards, newCards, introducedToday, analyzedPages, reviewedAts] = await Promise.all([
     svc.repos.cards.listDueReviews({ nowUtc: nowIso, scopeCollectionIds: null, limit: null }),
@@ -45,12 +45,12 @@ export async function getHomeStats(svc: AppServices): Promise<HomeStats> {
     svc.repos.logs.countIntroducedNew(toUtcIso(bounds.dayStart), toUtcIso(bounds.dayEnd)),
     svc.repos.analyses.countAll(),
     svc.repos.logs.listReviewedAts(),
-  ]);
+  ])
 
-  const plan = applyNewLimit(reviewCards, newCards, introducedToday, settings.dailyNewLimit);
+  const plan = applyNewLimit(reviewCards, newCards, introducedToday, settings.dailyNewLimit)
   const studyDays = new Set(
     reviewedAts.map((iso) => dayLabelOf(iso, settings.dayCutoffHour, timeZone)),
-  );
+  )
 
   return {
     dueToday: plan.cards.length,
@@ -59,5 +59,5 @@ export async function getHomeStats(svc: AppServices): Promise<HomeStats> {
     dailyNewLimit: plan.dailyNewLimit,
     analyzedPages,
     streakDays: computeStreak(studyDays, bounds.dayLabel),
-  };
+  }
 }

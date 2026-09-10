@@ -15,17 +15,16 @@
  * `_boot_probe` là bảng HẠ TẦNG (như `_migrations`), không phải schema sản phẩm —
  * xem comment trong migrate.ts.
  */
-import type { AppDb } from "./db";
+import type { AppDb } from "./db"
 
-const KEY = "last_boot_at";
+const KEY = "last_boot_at"
 
 /** ISO timestamp của lần mở app TRƯỚC, hoặc null nếu chưa từng persist được. */
 export async function readBootProbe(appDb: AppDb): Promise<string | null> {
-  const row = await appDb.get<{ value: string }>(
-    "select value from _boot_probe where key = ?",
-    [KEY],
-  );
-  return row?.value ?? null;
+  const row = await appDb.get<{ value: string }>("select value from _boot_probe where key = ?", [
+    KEY,
+  ])
+  return row?.value ?? null
 }
 
 /** Ghi marker cho lần mở kế tiếp đọc (upsert — chạy mọi boot, không phình bảng). */
@@ -34,5 +33,5 @@ export async function writeBootProbe(appDb: AppDb, atUtcIso: string): Promise<vo
     `insert into _boot_probe (key, value) values (?, ?)
      on conflict(key) do update set value = excluded.value`,
     [KEY, atUtcIso],
-  );
+  )
 }

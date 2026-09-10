@@ -11,35 +11,35 @@
  * Nghĩa của `verification` SAU phân tích chỉ còn là chip hiển thị — save không
  * đọc nó; item chỉnh tay không tự đổi nhãn (v0.3 PRD không có criterion đó).
  */
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import type { AnalysisResult, AnalyzedItem, Cefr, CollectionRow, Pos } from "../../domain/types";
-import { CEFR_VALUES, POS_VALUES } from "../../domain/types";
-import type { Screen } from "../AppRoot";
-import { saveVocabulary } from "../../domain/usecases/save";
-import type { SaveResult } from "../../domain/usecases/save";
-import { useAppEnv } from "../context";
-import { RichFieldsEditor } from "../RichFieldsEditor";
+import { useEffect, useState } from "react"
+import type { ReactNode } from "react"
+import type { AnalysisResult, AnalyzedItem, Cefr, CollectionRow, Pos } from "../../domain/types"
+import { CEFR_VALUES, POS_VALUES } from "../../domain/types"
+import type { Screen } from "../AppRoot"
+import { saveVocabulary } from "../../domain/usecases/save"
+import type { SaveResult } from "../../domain/usecases/save"
+import { useAppEnv } from "../context"
+import { RichFieldsEditor } from "../RichFieldsEditor"
 
 interface EditableItem {
   /** key ổn định theo vị trí GỐC trong analysis.vocabulary (trước khi sort). */
-  key: string;
-  item: AnalyzedItem;
-  selected: boolean;
-  expanded: boolean;
+  key: string
+  item: AnalyzedItem
+  selected: boolean
+  expanded: boolean
 }
 
 const RANK: Record<AnalyzedItem["verification"], number> = {
   unverified: 0,
   suspect: 1,
   verified: 2,
-};
+}
 
 const CHIP_LABEL: Record<AnalyzedItem["verification"], string> = {
   verified: "✓ xác minh",
   suspect: "nghi vấn",
   unverified: "chưa xác minh",
-};
+}
 
 function initialState(analysis: AnalysisResult): EditableItem[] {
   return analysis.vocabulary
@@ -52,110 +52,122 @@ function initialState(analysis: AnalysisResult): EditableItem[] {
         tags: item.tags ?? [],
         synonyms: item.synonyms ?? [],
         antonyms: item.antonyms ?? [],
-      };
+      }
       return {
         key: `i${i}`,
         item: base,
         selected: base.verification !== "unverified",
         expanded: false,
-      };
+      }
     })
-    .sort((a, b) => RANK[a.item.verification] - RANK[b.item.verification]);
+    .sort((a, b) => RANK[a.item.verification] - RANK[b.item.verification])
 }
 
-export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navigate }: {
-  analysis: AnalysisResult;
-  collectionId: string;
+export function VocabEditScreen({
+  analysis,
+  collectionId,
+  pageId,
+  onSaved,
+  navigate,
+}: {
+  analysis: AnalysisResult
+  collectionId: string
   /** pageId = id phiên đọc gốc trong `reading_sessions` (task 3.15) — AppRoot
    *  dùng nó để đánh dấu trang "đã lưu" ngay sau khi save thành công, chặn
    *  lưu trùng lần hai (bug 2026-09-09: đọc lại phiên → Chọn từ → lưu lại →
    *  duplicate). Cờ persist trong DB nên sống cả sau F5. */
-  pageId: string;
+  pageId: string
   /** Gọi ĐÚNG MỘT LẦN ngay sau khi `saveVocabulary` thành công (trước khi
    *  sang phase "saved") — không gọi khi fail hay khi không gì được chọn. */
-  onSaved: (pageId: string, savedCount: number) => void;
-  navigate: (s: Screen) => void;
+  onSaved: (pageId: string, savedCount: number) => void
+  navigate: (s: Screen) => void
 }) {
-  const { services } = useAppEnv();
-  const [items, setItems] = useState<EditableItem[]>(() => initialState(analysis));
-  const [collectionName, setCollectionName] = useState<string | null>(null);
-  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
-  const [phase, setPhase] = useState<"editing" | "saving" | "saved">("editing");
-  const [saveResult, setSaveResult] = useState<SaveResult | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const { services } = useAppEnv()
+  const [items, setItems] = useState<EditableItem[]>(() => initialState(analysis))
+  const [collectionName, setCollectionName] = useState<string | null>(null)
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([])
+  const [phase, setPhase] = useState<"editing" | "saving" | "saved">("editing")
+  const [saveResult, setSaveResult] = useState<SaveResult | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Tên collection chỉ để hiển thị tiêu đề — tra một lần.
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     void services.repos.collections
       .list()
       .then((list: CollectionRow[]) => {
-        if (!cancelled) setCollectionName(list.find((c) => c.id === collectionId)?.name ?? null);
+        if (!cancelled) setCollectionName(list.find((c) => c.id === collectionId)?.name ?? null)
       })
       .catch(() => {
-        if (!cancelled) setCollectionName(null);
-      });
+        if (!cancelled) setCollectionName(null)
+      })
     // RV-2: gợi ý tag từ nhãn ĐÃ CÓ trong kho (chống drift tên gọi). Từ trong
     // analysis hiện tại chưa lưu thì chưa có trong list này — vẫn gõ tay được.
     void services.repos.vocabItems
       .listAllTags()
       .then((tcs) => {
-        if (!cancelled) setTagSuggestions(tcs.map((tc) => tc.tag));
+        if (!cancelled) setTagSuggestions(tcs.map((tc) => tc.tag))
       })
       .catch(() => {
         // gợi ý lỗi chỉ mất conveninence — editor vẫn nhập tự do được
-      });
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [services, collectionId]);
+      cancelled = true
+    }
+  }, [services, collectionId])
 
-  const selectedCount = items.filter((i) => i.selected).length;
-  const unverifiedCount = items.filter((i) => i.item.verification === "unverified").length;
+  const selectedCount = items.filter((i) => i.selected).length
+  const unverifiedCount = items.filter((i) => i.item.verification === "unverified").length
 
   function patchItem(key: string, patch: Partial<AnalyzedItem>) {
-    setItems((list) => list.map((it) => (it.key === key ? { ...it, item: { ...it.item, ...patch } } : it)));
+    setItems((list) =>
+      list.map((it) => (it.key === key ? { ...it, item: { ...it.item, ...patch } } : it)),
+    )
   }
 
   function toggleSelect(key: string) {
-    setItems((list) => list.map((it) => (it.key === key ? { ...it, selected: !it.selected } : it)));
+    setItems((list) => list.map((it) => (it.key === key ? { ...it, selected: !it.selected } : it)))
   }
 
   function toggleExpand(key: string) {
-    setItems((list) => list.map((it) => (it.key === key ? { ...it, expanded: !it.expanded } : it)));
+    setItems((list) => list.map((it) => (it.key === key ? { ...it, expanded: !it.expanded } : it)))
   }
 
   function setAllSelected(selected: boolean) {
-    setItems((list) => list.map((it) => ({ ...it, selected })));
+    setItems((list) => list.map((it) => ({ ...it, selected })))
   }
 
   /** FR-03: thoát khi chưa xác nhận → cảnh báo trước khi mất kết quả analysis. */
   function confirmBack() {
     if (phase === "saved") {
-      navigate({ name: "home" });
-      return;
+      navigate({ name: "home" })
+      return
     }
     const ok = window.confirm(
       "Kết quả phân tích CHƯA được lưu — rời đi là mất luôn kết quả này. Chắc chắn rời đi?",
-    );
-    if (ok) navigate({ name: "home" });
+    )
+    if (ok) navigate({ name: "home" })
   }
 
   async function save() {
-    if (phase !== "editing" || selectedCount === 0) return;
-    setPhase("saving");
-    setSaveError(null);
+    if (phase !== "editing" || selectedCount === 0) return
+    setPhase("saving")
+    setSaveError(null)
     try {
-      const chosen = items.filter((i) => i.selected).map((i) => i.item);
-      const result = await saveVocabulary(services, { collectionId, items: chosen, now: new Date() });
+      const chosen = items.filter((i) => i.selected).map((i) => i.item)
+      const result = await saveVocabulary(services, {
+        collectionId,
+        items: chosen,
+        now: new Date(),
+      })
       // Báo AppRoot đánh dấu trang gốc ĐÃ LƯU ngay tại đây — trước khi sang
       // phase "saved" — để màn đọc khoá nút "Chọn từ" của trang đó trong phiên.
-      onSaved(pageId, result.saved);
-      setSaveResult(result);
-      setPhase("saved");
+      onSaved(pageId, result.saved)
+      setSaveResult(result)
+      setPhase("saved")
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err));
-      setPhase("editing");
+      setSaveError(err instanceof Error ? err.message : String(err))
+      setPhase("editing")
     }
   }
 
@@ -164,8 +176,8 @@ export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navig
       <div className="pad">
         <h1>Đã lưu {saveResult.saved} thẻ ✅</h1>
         <p className="muted">
-          Vào {collectionName ? `“${collectionName}”` : "collection"} · thẻ `new` đến hạn NGAY hôm nay —
-          mở ôn tập là gặp liền.
+          Vào {collectionName ? `“${collectionName}”` : "collection"} · thẻ `new` đến hạn NGAY hôm
+          nay — mở ôn tập là gặp liền.
         </p>
         <button type="button" className="primary" onClick={() => navigate({ name: "review" })}>
           🃏 Ôn tập hôm nay
@@ -174,7 +186,7 @@ export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navig
           Về trang chủ
         </button>
       </div>
-    );
+    )
   }
 
   return (
@@ -193,24 +205,42 @@ export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navig
       {saveError && <div className="banner banner-error">{saveError}</div>}
 
       <div className="btn-row">
-        <button type="button" className="secondary" onClick={() => setAllSelected(true)} disabled={selectedCount === items.length}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setAllSelected(true)}
+          disabled={selectedCount === items.length}
+        >
           Chọn tất cả
         </button>
-        <button type="button" className="secondary" onClick={() => setAllSelected(false)} disabled={selectedCount === 0}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setAllSelected(false)}
+          disabled={selectedCount === 0}
+        >
           Bỏ chọn hết
         </button>
       </div>
 
       <ul className="vocab-list">
         {items.map((it) => (
-          <li key={it.key} className={`vocab-card ${!it.selected ? "vocab-off" : ""} ${it.item.verification === "unverified" ? "vocab-alert" : ""}`}>
-            <div className="vocab-head" onClick={() => toggleExpand(it.key)} role="button" tabIndex={0}
+          <li
+            key={it.key}
+            className={`vocab-card ${!it.selected ? "vocab-off" : ""} ${it.item.verification === "unverified" ? "vocab-alert" : ""}`}
+          >
+            <div
+              className="vocab-head"
+              onClick={() => toggleExpand(it.key)}
+              role="button"
+              tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggleExpand(it.key);
+                  e.preventDefault()
+                  toggleExpand(it.key)
                 }
-              }}>
+              }}
+            >
               <input
                 type="checkbox"
                 checked={it.selected}
@@ -220,42 +250,72 @@ export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navig
               />
               <span className="vocab-term">{it.item.term}</span>
               <span className="fine">{it.item.pos}</span>
-              <span className={`chip chip-${it.item.verification}`}>{CHIP_LABEL[it.item.verification]}</span>
+              <span className={`chip chip-${it.item.verification}`}>
+                {CHIP_LABEL[it.item.verification]}
+              </span>
               <span className="vocab-chev">{it.expanded ? "▴" : "▾"}</span>
             </div>
             <p className={"vocab-meaning" + (it.expanded ? " hidden" : "")}>{it.item.meaningVi}</p>
             {it.expanded && (
               <div className="vocab-edit">
                 <Field label="term">
-                  <input value={it.item.term} onChange={(e) => patchItem(it.key, { term: e.target.value })} />
+                  <input
+                    value={it.item.term}
+                    onChange={(e) => patchItem(it.key, { term: e.target.value })}
+                  />
                 </Field>
                 <div className="grid2">
                   <Field label="pos">
-                    <select value={it.item.pos} onChange={(e) => patchItem(it.key, { pos: e.target.value as Pos })}>
+                    <select
+                      value={it.item.pos}
+                      onChange={(e) => patchItem(it.key, { pos: e.target.value as Pos })}
+                    >
                       {POS_VALUES.map((p) => (
-                        <option key={p} value={p}>{p}</option>
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
                       ))}
                     </select>
                   </Field>
                   <Field label="CEFR">
-                    <select value={it.item.cefr} onChange={(e) => patchItem(it.key, { cefr: e.target.value as Cefr })}>
+                    <select
+                      value={it.item.cefr}
+                      onChange={(e) => patchItem(it.key, { cefr: e.target.value as Cefr })}
+                    >
                       {CEFR_VALUES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
                     </select>
                   </Field>
                 </div>
                 <Field label="ipa">
-                  <input value={it.item.ipa} onChange={(e) => patchItem(it.key, { ipa: e.target.value })} />
+                  <input
+                    value={it.item.ipa}
+                    onChange={(e) => patchItem(it.key, { ipa: e.target.value })}
+                  />
                 </Field>
                 <Field label="nghĩa tiếng Việt">
-                  <textarea rows={2} value={it.item.meaningVi} onChange={(e) => patchItem(it.key, { meaningVi: e.target.value })} />
+                  <textarea
+                    rows={2}
+                    value={it.item.meaningVi}
+                    onChange={(e) => patchItem(it.key, { meaningVi: e.target.value })}
+                  />
                 </Field>
                 <Field label="câu gốc trên trang (example)">
-                  <textarea rows={3} value={it.item.example} onChange={(e) => patchItem(it.key, { example: e.target.value })} />
+                  <textarea
+                    rows={3}
+                    value={it.item.example}
+                    onChange={(e) => patchItem(it.key, { example: e.target.value })}
+                  />
                 </Field>
                 <RichFieldsEditor
-                  fields={{ tags: it.item.tags, synonyms: it.item.synonyms, antonyms: it.item.antonyms }}
+                  fields={{
+                    tags: it.item.tags,
+                    synonyms: it.item.synonyms,
+                    antonyms: it.item.antonyms,
+                  }}
                   tagSuggestions={tagSuggestions}
                   onChange={(f) => patchItem(it.key, f)}
                 />
@@ -273,11 +333,16 @@ export function VocabEditScreen({ analysis, collectionId, pageId, onSaved, navig
       >
         {phase === "saving" ? "Đang lưu…" : `💾 Lưu ${selectedCount} thẻ — đến hạn ngay`}
       </button>
-      <button type="button" className="secondary" onClick={confirmBack} disabled={phase === "saving"}>
+      <button
+        type="button"
+        className="secondary"
+        onClick={confirmBack}
+        disabled={phase === "saving"}
+      >
         ← Bỏ kết quả, về trang chủ
       </button>
     </div>
-  );
+  )
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -286,5 +351,5 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {label}
       {children}
     </label>
-  );
+  )
 }

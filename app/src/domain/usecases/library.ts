@@ -6,13 +6,10 @@
  * trúc "UI không chạm repo trực tiếp" và để sau này chèn logic domain vào đây
  * (ví dụ: quy tắc sắp xếp khi có FR-17) mà không phải mổ màn hình.
  */
-import type { LibraryFilter } from "../repositories";
-import type { LibraryItemRow } from "../types";
-import type { AppServices } from "../services";
+import type { LibraryFilter } from "../repositories"
+import type { LibraryItemRow } from "../types"
+import type { AppServices } from "../services"
 
-export function listLibrary(
-  svc: AppServices,
-  filter: LibraryFilter,
-): Promise<LibraryItemRow[]> {
-  return svc.repos.vocabItems.listLibrary(filter);
+export function listLibrary(svc: AppServices, filter: LibraryFilter): Promise<LibraryItemRow[]> {
+  return svc.repos.vocabItems.listLibrary(filter)
 }

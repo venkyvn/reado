@@ -24,8 +24,8 @@ import {
   type Card,
   type FSRSParameters,
   type RecordLogItem,
-} from "ts-fsrs";
-import type { CardState } from "./types";
+} from "ts-fsrs"
+import type { CardState } from "./types"
 
 /** Ánh xạ 4 nút chấm → FSRS rating (1 Again .. 4 Easy). */
 export const Ratings = {
@@ -33,16 +33,16 @@ export const Ratings = {
   Hard: Rating.Hard,
   Good: Rating.Good,
   Easy: Rating.Easy,
-} as const;
-export type RadoRating = (typeof Ratings)[keyof typeof Ratings];
+} as const
+export type RadoRating = (typeof Ratings)[keyof typeof Ratings]
 
 export interface SchedulerConfig {
   /** settings.request_retention — mặc định 0.9 (FR-15). */
-  requestRetention: number;
+  requestRetention: number
   /** settings.maximum_interval — mặc định 36500. */
-  maximumInterval: number;
+  maximumInterval: number
   /** settings.enable_fuzz — mặc định true; tắt trong test cho deterministic. */
-  enableFuzz: boolean;
+  enableFuzz: boolean
 }
 
 /**
@@ -50,32 +50,32 @@ export interface SchedulerConfig {
  * log là pre-rating snapshot; không có nó thì mất undo và mất training data).
  */
 export interface PreGradeSnapshot {
-  stateBefore: number;
-  stabilityBefore: number;
-  difficultyBefore: number;
-  learningStepsBefore: number;
+  stateBefore: number
+  stabilityBefore: number
+  difficultyBefore: number
+  learningStepsBefore: number
   /** due của card TẠI THỜI ĐIỂM chấm — chụp thủ công, không tin `log.due`. */
-  dueBefore: Date;
+  dueBefore: Date
   /** Số ngày thực tế đã trôi qua kể từ lần ôn trước. */
-  elapsedDays: number;
+  elapsedDays: number
   /** Interval hệ thống đã hẹn ở lần trước. */
-  scheduledDays: number;
-  rating: number;
-  gradedAt: Date;
+  scheduledDays: number
+  rating: number
+  gradedAt: Date
 }
 
 export interface GradeOutcome {
   /** Card SAU khi chấm → update bảng cards. */
-  card: Card;
+  card: Card
   /** Ảnh chụp TRƯỚC khi chấm → insert review_logs. */
-  snapshot: PreGradeSnapshot;
+  snapshot: PreGradeSnapshot
 }
 
 export interface Scheduler {
   /** Thẻ mới (state=New, due=now, stability/difficulty=0). */
-  createNewCard(now: Date): Card;
+  createNewCard(now: Date): Card
   /** Chấm một card. Thuần, không đụng DB — transaction thuộc storage layer. */
-  grade(card: Card, rating: RadoRating, now: Date): GradeOutcome;
+  grade(card: Card, rating: RadoRating, now: Date): GradeOutcome
 }
 
 export function createScheduler(cfg: SchedulerConfig): Scheduler {
@@ -84,12 +84,12 @@ export function createScheduler(cfg: SchedulerConfig): Scheduler {
     maximum_interval: cfg.maximumInterval,
     enable_fuzz: cfg.enableFuzz,
     enable_short_term: false, // Q-12 — hằng số cho MVP
-  });
-  const f = fsrs(params);
+  })
+  const f = fsrs(params)
 
   return {
     createNewCard(now: Date): Card {
-      return createEmptyCard(now);
+      return createEmptyCard(now)
     },
     grade(card: Card, rating: RadoRating, now: Date): GradeOutcome {
       const snapshot: PreGradeSnapshot = {
@@ -102,16 +102,16 @@ export function createScheduler(cfg: SchedulerConfig): Scheduler {
         scheduledDays: card.scheduled_days,
         rating,
         gradedAt: now,
-      };
-      const result: RecordLogItem = f.next(card, now, rating);
-      return { card: result.card, snapshot };
+      }
+      const result: RecordLogItem = f.next(card, now, rating)
+      return { card: result.card, snapshot }
     },
-  };
+  }
 }
 
 /** Tiện ích đọc state ở dạng tên (debug/log) — ngậm State từ ts-fsrs. */
 export function stateName(state: number): string {
-  return State[state] ?? `unknown(${state})`;
+  return State[state] ?? `unknown(${state})`
 }
 
 // ---------------------------------------------------------------------------
@@ -123,30 +123,30 @@ const STATE_BY_NAME: Record<CardState, State> = {
   learning: State.Learning,
   review: State.Review,
   relearning: State.Relearning,
-};
+}
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000
 
 export interface StoredSrsFields {
-  state: CardState;
-  stability: number;
-  difficulty: number;
-  reps: number;
-  lapses: number;
-  learningSteps: number;
-  scheduledDays: number;
-  lastReviewAt: string | null;
-  dueAt: string;
+  state: CardState
+  stability: number
+  difficulty: number
+  reps: number
+  lapses: number
+  learningSteps: number
+  scheduledDays: number
+  lastReviewAt: string | null
+  dueAt: string
 }
 
 /** Hàng cards → thẻ ts-fsrs để chấm. `elapsed_days` tính từ last_review (như
  *  Scheduler.init của ts-fsrs tự làm — đặt sẵn để snapshot vào review_logs). */
 export function fsrsCardFromStored(row: StoredSrsFields, now: Date): Card {
-  const lastReviewMs = row.lastReviewAt ? Date.parse(row.lastReviewAt) : undefined;
+  const lastReviewMs = row.lastReviewAt ? Date.parse(row.lastReviewAt) : undefined
   const elapsedDays =
     row.state !== "new" && lastReviewMs !== undefined
       ? Math.max(0, Math.floor((now.getTime() - lastReviewMs) / DAY_MS))
-      : 0;
+      : 0
   return {
     due: new Date(row.dueAt),
     stability: row.stability,
@@ -158,7 +158,7 @@ export function fsrsCardFromStored(row: StoredSrsFields, now: Date): Card {
     state: STATE_BY_NAME[row.state],
     learning_steps: row.learningSteps,
     last_review: lastReviewMs !== undefined ? new Date(lastReviewMs) : undefined,
-  };
+  }
 }
 
 /** Thẻ ts-fsrs sau khi chấm → bộ field ghi vào bảng cards. */
@@ -173,5 +173,5 @@ export function storedFieldsFromCard(card: Card): StoredSrsFields {
     scheduledDays: card.scheduled_days,
     lastReviewAt: card.last_review ? card.last_review.toISOString() : null,
     dueAt: card.due.toISOString(),
-  };
+  }
 }

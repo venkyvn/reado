@@ -9,18 +9,18 @@
  * File này thuần: nhận dữ liệu đã lấy từ storage, trả kế hoạch. SQL nằm ở
  * storage/repos/cards.ts; "hôm nay" đi qua domain/time.ts (dayBounds).
  */
-import type { CardRow } from "./types";
+import type { CardRow } from "./types"
 
 export interface QueuePlan {
   /** Thứ tự cuối cùng hiển thị: nhánh 1 rồi nhánh 2. */
-  cards: CardRow[];
+  cards: CardRow[]
   /** Card mới thực sự được đưa vào hôm nay. */
-  newIncluded: CardRow[];
+  newIncluded: CardRow[]
   /** Card mới bị hoãn sang ngày sau (vượt hạn mức). */
-  newDeferred: CardRow[];
-  introducedToday: number;
-  newRemaining: number;
-  dailyNewLimit: number;
+  newDeferred: CardRow[]
+  introducedToday: number
+  newRemaining: number
+  dailyNewLimit: number
 }
 
 export function applyNewLimit(
@@ -29,9 +29,9 @@ export function applyNewLimit(
   introducedToday: number,
   dailyNewLimit: number,
 ): QueuePlan {
-  const remaining = Math.max(0, dailyNewLimit - introducedToday);
-  const newIncluded = newDueCards.slice(0, remaining);
-  const newDeferred = newDueCards.slice(remaining);
+  const remaining = Math.max(0, dailyNewLimit - introducedToday)
+  const newIncluded = newDueCards.slice(0, remaining)
+  const newDeferred = newDueCards.slice(remaining)
   return {
     cards: [...reviewCards, ...newIncluded],
     newIncluded,
@@ -39,10 +39,10 @@ export function applyNewLimit(
     introducedToday,
     newRemaining: Math.max(0, remaining - newIncluded.length),
     dailyNewLimit,
-  };
+  }
 }
 
 /** Số card người dùng sẽ gặp trong phiên này. */
 export function dueCount(plan: QueuePlan): number {
-  return plan.cards.length;
+  return plan.cards.length
 }

@@ -4,19 +4,19 @@
  * vocab_items + cards trong một transaction), xong chấm dứt worker để app boot
  * sau đó mở connection duy nhất.
  */
-import { openWorkerStorage } from "../src/storage/workerStorage.ts";
-import { createRepos } from "../src/storage/repos/index.ts";
-import { newId, toUtcIso } from "../src/domain/utils.ts";
+import { openWorkerStorage } from "../src/storage/workerStorage.ts"
+import { createRepos } from "../src/storage/repos/index.ts"
+import { newId, toUtcIso } from "../src/domain/utils.ts"
 
-const status = document.querySelector("#status");
+const status = document.querySelector("#status")
 
 try {
-  const storage = await openWorkerStorage();
-  const repos = createRepos(storage.appDb);
-  const def = await repos.collections.getDefault();
-  if (!def) throw new Error("không có collection mặc định (seed collection chưa chạy?)");
+  const storage = await openWorkerStorage()
+  const repos = createRepos(storage.appDb)
+  const def = await repos.collections.getDefault()
+  if (!def) throw new Error("không có collection mặc định (seed collection chưa chạy?)")
 
-  const nowIso = toUtcIso(new Date());
+  const nowIso = toUtcIso(new Date())
   const items = [
     {
       term: "staggering",
@@ -42,7 +42,7 @@ try {
       synonyms: [],
       antonyms: [],
     },
-  ];
+  ]
 
   const vocabRows = items.map((it) => ({
     id: newId(),
@@ -58,7 +58,7 @@ try {
     synonyms: it.synonyms,
     antonyms: it.antonyms,
     createdAt: nowIso,
-  }));
+  }))
   const cardRows = vocabRows.map((v) => ({
     id: newId(),
     vocabItemId: v.id,
@@ -73,11 +73,11 @@ try {
     lastReviewAt: null,
     dueAt: nowIso, // FR-09: thẻ mới đến hạn ngay
     suspendedAt: null,
-  }));
+  }))
 
-  await repos.vocabItems.persistCapture(vocabRows, cardRows);
-  storage.terminate();
-  status.textContent = "SEEDED " + vocabRows.map((v) => v.term).join(", ");
+  await repos.vocabItems.persistCapture(vocabRows, cardRows)
+  storage.terminate()
+  status.textContent = "SEEDED " + vocabRows.map((v) => v.term).join(", ")
 } catch (e) {
-  status.textContent = "FAIL: " + (e instanceof Error ? e.message : String(e));
+  status.textContent = "FAIL: " + (e instanceof Error ? e.message : String(e))
 }

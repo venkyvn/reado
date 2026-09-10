@@ -13,17 +13,17 @@
  * tay người hoặc provider cũ — fallback `[]` là đúng hợp đồng đó.
  */
 export function parseJsonArrayOfString(raw: string | null | undefined): string[] {
-  if (!raw) return [];
+  if (!raw) return []
   try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x): x is string => typeof x === "string");
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((x): x is string => typeof x === "string")
   } catch {
-    return [];
+    return []
   }
 }
 
 /** Mảng string → TEXT JSON ('[]' khi rỗng). */
 export function serializeStringArray(items: string[]): string {
-  return JSON.stringify(items);
+  return JSON.stringify(items)
 }
