@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* Design tokens + component styles — đủ cho walking skeleton (không phải design
  * system R2). Nguyên tắc UI/UX đã soi ref/ui-ux-pro-max.md: touch target ≥ 48px,
  * contrast AA, chip không wrap nội dung, không cần font ngoài. */
@@ -24,7 +26,8 @@ body {
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   line-height: 1.45;
 }
@@ -996,4 +999,63 @@ button.read-revise.saved:disabled {
   .read-summary p {
     color: #cbd5e1;
   }
+}
+
+/* --- Toast (ADR-020) — lỗi nền hiện cho user thấy, không nuốt im lặng. --- */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  width: min(92vw, 420px);
+  pointer-events: none; /* cả cột không chặn chạm; từng toast tự bật lại */
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+}
+
+.toast-error {
+  background: #7f1d1d;
+  color: #fef2f2;
+}
+
+.toast-info {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.toast-msg {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-close {
+  flex: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 0 2px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.toast-close:active {
+  opacity: 1;
 }

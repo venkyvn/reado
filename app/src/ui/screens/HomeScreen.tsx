@@ -17,59 +17,78 @@
  * Màn này mount lại mỗi lần quay về home (router state) nên số tự làm mới sau
  * mỗi phiên ôn/analyse. NFR-08: nút chụp vẫn là chạm thứ nhất.
  */
-import { useEffect, useState } from "react";
-import type { CollectionRow } from "../../domain/types";
-import type { Screen } from "../AppRoot";
-import type { HomeStats } from "../../domain/usecases/homeStats";
-import { getHomeStats } from "../../domain/usecases/homeStats";
-import { READ_SCREEN_SESSIONS, listRecentReadingSessions } from "../../domain/usecases/readingSessions";
-import { useAppEnv } from "../context";
+import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
+import type { CollectionRow } from "../../domain/types"
+import type { Screen } from "../AppRoot"
+import type { HomeStats } from "../../domain/usecases/homeStats"
+import { getHomeStats } from "../../domain/usecases/homeStats"
+import {
+  READ_SCREEN_SESSIONS,
+  listRecentReadingSessions,
+} from "../../domain/usecases/readingSessions"
+import { useAppEnv } from "../context"
 
-export function HomeScreen({ navigate }: {
-  navigate: (s: Screen) => void;
-}) {
-  const { services } = useAppEnv();
-  const [stats, setStats] = useState<HomeStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [collections, setCollections] = useState<CollectionRow[]>([]);
-  const [sessionCount, setSessionCount] = useState<number | null>(null);
+export function HomeScreen({ navigate }: { navigate: (s: Screen) => void }) {
+  const { t } = useTranslation()
+  const { services } = useAppEnv()
+  const [stats, setStats] = useState<HomeStats | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [collections, setCollections] = useState<CollectionRow[]>([])
+  const [sessionCount, setSessionCount] = useState<number | null>(null)
 
   useEffect(() => {
-    let alive = true;
+    let alive = true
     void getHomeStats(services)
       .then((s) => {
-        if (alive) setStats(s);
+        if (alive) setStats(s)
       })
       .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : String(e));
-      });
+        if (alive) setError(e instanceof Error ? e.message : String(e))
+      })
     void services.repos.collections.list().then((list) => {
-      if (alive) setCollections(list);
-    });
+      if (alive) setCollections(list)
+    })
     void listRecentReadingSessions(services, READ_SCREEN_SESSIONS).then((rows) => {
-      if (alive) setSessionCount(rows.length);
-    });
+      if (alive) setSessionCount(rows.length)
+    })
     return () => {
-      alive = false;
-    };
-  }, [services]);
+      alive = false
+    }
+  }, [services])
 
   return (
     <div className="home pad">
       <h1 className="brand">Reado</h1>
-      <p className="muted">Ảnh trang sách → song ngữ + từ vựng ôn tập cách quãng (FSRS).</p>
+      {/* i18n (ADR-018): HomeScreen là màn hình ví dụ đã tách UI copy sang
+          locales/vi.json — màn khác vẫn giữ chữ trong component tới khi cần. */}
+      <p className="muted">{t("home.tagline")}</p>
 
       <button type="button" className="primary big" onClick={() => navigate({ name: "capture" })}>
-        📷 Chụp trang sách
+        {t("home.capture")}
       </button>
-      <button type="button" className="secondary big" onClick={() => navigate({ name: "readSession" })}>
-        📖 Đọc lại trang đã chụp{(sessionCount ?? 0) > 0 ? ` (${sessionCount} phiên gần nhất)` : ""}
+      <button
+        type="button"
+        className="secondary big"
+        onClick={() => navigate({ name: "readSession" })}
+      >
+        {sessionCount !== null && sessionCount > 0
+          ? t("home.readAgainCount", { count: sessionCount })
+          : t("home.readAgain")}
       </button>
-      <button type="button" className="primary big alt" onClick={() => navigate({ name: "review" })}>
-        🃏 Ôn tập hôm nay{stats ? ` (${stats.dueToday})` : ""}
+      <button
+        type="button"
+        className="primary big alt"
+        onClick={() => navigate({ name: "review" })}
+      >
+        {stats ? t("home.reviewCount", { count: stats.dueToday }) : t("home.review")}
       </button>
-      <button type="button" className="secondary big" onClick={() => navigate({ name: "vocabLibrary" })}>
-        📚 Kho từ vựng
+      <button
+        type="button"
+        className="secondary big"
+        onClick={() => navigate({ name: "vocabLibrary" })}
+      >
+        {t("home.library")}
       </button>
 
       <section className="stats" aria-label="Tiến độ hôm nay">
@@ -105,7 +124,9 @@ export function HomeScreen({ navigate }: {
       </section>
 
       <section aria-label="Collections" style={{ marginTop: 12 }}>
-        <p className="fine" style={{ marginBottom: 4 }}>Collections — bấm để xem từ vựng & phiên đọc của sách đang đọc:</p>
+        <p className="fine" style={{ marginBottom: 4 }}>
+          Collections — bấm để xem từ vựng & phiên đọc của sách đang đọc:
+        </p>
         {collections.length === 0 ? (
           <p className="muted">Chưa có collection nào.</p>
         ) : (
@@ -139,5 +160,5 @@ export function HomeScreen({ navigate }: {
         </a>
       </p>
     </div>
-  );
+  )
 }

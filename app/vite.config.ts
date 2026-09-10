@@ -1,7 +1,8 @@
-import fs from 'node:fs'
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import { VitePWA } from 'vite-plugin-pwa'
+import fs from "node:fs"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
+import { VitePWA } from "vite-plugin-pwa"
 
 // https://vite.dev/config/
 // PWA: manifest + service worker precache shell — mở được offline (NFR-03, task 1.3).
@@ -18,15 +19,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 // 2026-09-08, xem MVP_PLAN mục 6). Cert tự sinh bằng `npm run cert`, SAN ghi
 // IP LAN đúng chuẩn x509 (xem scripts/gen-cert.mjs vì sao không dùng plugin).
 const coiHeaders = {
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp",
 }
 
-const useHttps = process.env.READO_HTTPS === '1'
+const useHttps = process.env.READO_HTTPS === "1"
 
 function httpsCerts(): { key: Buffer; cert: Buffer } {
-  const certPath = 'certs/dev-cert.pem'
-  const keyPath = 'certs/dev-key.pem'
+  const certPath = "certs/dev-cert.pem"
+  const keyPath = "certs/dev-key.pem"
   if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
     throw new Error(
       `READO_HTTPS=1 nhưng thiếu ${certPath}/${keyPath} — chạy \`npm run cert\` trước. ` +
@@ -39,33 +40,34 @@ function httpsCerts(): { key: Buffer; cert: Buffer } {
 export default defineConfig({
   optimizeDeps: {
     // sqlite-wasm tự quản wasm loader của nó — prebundle làm gãy locateFile.
-    exclude: ['@sqlite.org/sqlite-wasm'],
+    exclude: ["@sqlite.org/sqlite-wasm"],
   },
   server: { headers: coiHeaders, ...(useHttps ? { https: httpsCerts() } : {}) },
   preview: { headers: coiHeaders, ...(useHttps ? { https: httpsCerts() } : {}) },
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'script',
+      registerType: "autoUpdate",
+      injectRegister: "script",
       manifest: {
-        name: 'Reado',
-        short_name: 'Reado',
+        name: "Reado",
+        short_name: "Reado",
         description:
-          'Học tiếng Anh từ sách thật: ảnh trang sách thành song ngữ + từ vựng ôn tập cách quãng (FSRS).',
-        theme_color: '#0f172a',
-        background_color: '#f8fafc',
-        display: 'standalone',
-        start_url: '.',
-        lang: 'vi',
+          "Học tiếng Anh từ sách thật: ảnh trang sách thành song ngữ + từ vựng ôn tập cách quãng (FSRS).",
+        theme_color: "#0f172a",
+        background_color: "#f8fafc",
+        display: "standalone",
+        start_url: ".",
+        lang: "vi",
         icons: [
           // Tạm: icon chữ R (SVG). Icon thương hiệu thật + apple-touch-icon (PNG)
           // sẽ thay sau — việc nhỏ, chưa cần owner quyết.
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
         ],
       },
       workbox: {
-        navigateFallback: 'index.html',
+        navigateFallback: "index.html",
       },
     }),
   ],
