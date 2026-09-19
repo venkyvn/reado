@@ -224,6 +224,148 @@ final class AnalysisTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - ReviewDraftBuilder (FR-03/FR-09, ROADMAP 2.3)
+
+    private func vocabIn(
+        term: String,
+        pos: String = "noun",
+        ipa: String? = nil,
+        meaning: String = "nghĩa",
+        cefr: String? = nil,
+        example: String = "câu ví dụ",
+        verification: PageAnalysis.VerificationStatus
+    ) -> PageAnalysis.VocabularyItemIn {
+        PageAnalysis.VocabularyItemIn(
+            term: term,
+            pos: pos,
+            ipa: ipa,
+            meaningVI: meaning,
+            cefr: cefr,
+            example: example,
+            verification: verification)
+    }
+
+    func testDraftBuilderPutsUnverifiedAndSuspectFirstAndDeselected() {
+        // SD 10.3: unverified/suspect lên đầu và bỏ chọn sẵn; verified giữ thứ
+        // tự gốc và chọn sẵn (FR-09 "mặc định tất cả" trừ nhóm chưa xác minh).
+        let items = [
+            vocabIn(term: "alpha", verification: .verified),
+            vocabIn(term: "bravo", verification: .unverified),
+            vocabIn(term: "charlie", verification: .suspect),
+            vocabIn(term: "delta", verification: .verified),
+        ]
+        let drafts = ReviewDraftBuilder.drafts(from: items)
+        XCTAssertEqual(drafts.map(\.term), ["bravo", "charlie", "alpha", "delta"])
+        XCTAssertEqual(drafts.map(\.isSelected), [false, false, true, true])
+    }
+
+    func testSelectedReturnsOnlySelectedItemsInDisplayOrder() throws {
+        let drafts = [
+            ReviewDraft(
+                term: "alpha", pos: "noun", ipa: "", meaningVI: "a",
+                cefr: "", example: "ex-a", verification: .verified,
+                isSelected: false),
+            ReviewDraft(
+                term: "beta", pos: "verb", ipa: "", meaningVI: "b",
+                cefr: "", example: "ex-b", verification: .verified,
+                isSelected: true),
+            ReviewDraft(
+                term: "gamma", pos: "adj", ipa: "", meaningVI: "g",
+                cefr: "", example: "ex-g", verification: .unverified,
+                isSelected: true),  // user chủ động chọn lại item chưa xác minh
+        ]
+        let items = try ReviewDraftBuilder.selected(drafts)
+        XCTAssertEqual(items.map(\.term), ["beta", "gamma"])
+    }
+
+    func testSelectedNormalizesFields() throws {
+        // FR-03: trim mọi field; pos rỗng → other (FR-02); cefr upper + rỗng → nil;
+        // ipa rỗng → nil.
+        let draft = ReviewDraft(
+            term: "  Trimmed  ", pos: " ", ipa: "  ", meaningVI: "  nghĩa ",
+            cefr: "  b2 ", example: "  ví dụ ", verification: .verified,
+            isSelected: true)
+        let items = try ReviewDraftBuilder.selected([draft])
+        let item = try XCTUnwrap(items.first)
+        XCTAssertEqual(item.term, "Trimmed")
+        XCTAssertEqual(item.pos, "other")
+        XCTAssertEqual(item.ipa, nil)
+        XCTAssertEqual(item.meaningVI, "nghĩa")
+        XCTAssertEqual(item.cefr, "B2")
+        XCTAssertEqual(item.example, "ví dụ")
+    }
+
+    func testSelectedThrowsForEmptyRequiredFieldsWithDisplayIndex() {
+        // Trường bắt buộc rỗng sau khi user sửa → chặn lưu bản ghi hỏng (FR-02/03).
+        // Index 1-based theo thứ tự hiển thị — item đầu không chọn không đếm.
+        let unselected = ReviewDraft(
+            term: "ok", pos: "noun", ipa: "", meaningVI: "m",
+            cefr: "", example: "e", verification: .verified, isSelected: false)
+        let cases: [(ReviewDraft, ReviewDraftError.Field)] = [
+            (
+                ReviewDraft(
+                    term: "  ", pos: "noun", ipa: "", meaningVI: "m",
+                    cefr: "", example: "e", verification: .verified,
+                    isSelected: true),
+                .term
+            ),
+            (
+                ReviewDraft(
+                    term: "t", pos: "noun", ipa: "", meaningVI: " ",
+                    cefr: "", example: "e", verification: .verified,
+                    isSelected: true),
+                .meaning
+            ),
+            (
+                ReviewDraft(
+                    term: "t", pos: "noun", ipa: "", meaningVI: "m",
+                    cefr: "", example: "\n", verification: .verified,
+                    isSelected: true),
+                .example
+            ),
+        ]
+        for (bad, field) in cases {
+            XCTAssertThrowsError(
+                try ReviewDraftBuilder.selected([unselected, bad])
+            ) { error in
+                guard let draftError = error as? ReviewDraftError else {
+                    return XCTFail("mong đợi ReviewDraftError, nhận \(error)")
+                }
+                XCTAssertEqual(draftError.index, 2)
+                XCTAssertEqual(draftError.field, field)
+            }
+        }
+    }
+
+    func testSaveCapturePersistsOnlySelectedItemsAsNewCardsDueToday() throws {
+        // FR-09: item được chọn khi lưu → SRS queue state=new, due_at hôm nay;
+        // 2.4: không chọn collection → kho tạm (is_default). FR-03: bỏ chọn = không lưu.
+        let db = try Fixtures.seededDB()
+        let drafts = ReviewDraftBuilder.drafts(from: [
+            vocabIn(term: " keep ", verification: .verified),
+            vocabIn(term: "drop", verification: .unverified),  // không preselect
+        ])
+        let items = try ReviewDraftBuilder.selected(drafts)
+        XCTAssertEqual(items.map(\.term), ["keep"])
+
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: items, collectionID: nil, now: Fixtures.fixedNow)
+        XCTAssertEqual(saved, 1)
+
+        let rows = try db.rows(
+            """
+            SELECT v.term, v.collection_id, c.state, c.due_at
+            FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id;
+            """)
+        XCTAssertEqual(rows.count, 1, "bỏ chọn trong màn duyệt thì không được lưu")
+        let inboxID = try db.scalarString(
+            "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+        XCTAssertEqual(rows[0][1].textValue, inboxID, "đích ngầm = kho tạm")
+        XCTAssertEqual(rows[0][2].textValue, "new")
+        XCTAssertEqual(rows[0][3].textValue, "2026-09-18T02:00:00Z")
+    }
 }
 
 // MARK: - URLProtocol stub (offline test wire)

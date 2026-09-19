@@ -1,14 +1,20 @@
 import SwiftUI
 import ReadoKit
 
-/// FR-02 — màn hình kết quả phân tích + retry khi lỗi. Walking skeleton chạy
-/// mock analyzer (proxy 0.7 chưa deploy) để proof flow UI. Segments/summary chỉ
-/// hiển thị (FR-05/06), vocabulary là phần được lưu (FR-02).
+/// FR-03 + FR-09 — Duyệt & sửa trước khi lưu (ROADMAP 2.3).
+/// ADR-008: card rút gọn (term + pos + nghĩa tắt + chip trạng thái + checkbox),
+/// chạm mở inline đủ 6 field sửa ngay dưới, không rời danh sách; unverified/suspect
+/// xếp lên đầu (ReviewDraftBuilder) và không preselect. Lưu = transaction #4.
+/// Segments/summary chỉ hiển thị (FR-05/06); vocabulary là phần được lưu (FR-02).
 struct AnalysisView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
+    @State private var drafts: [ReviewDraft] = []
+    @State private var expandedIDs: Set<String> = []
     @State private var saveAlert: SaveAlert?
+    @State private var showQuitWarning = false
+    @State private var hasConfirmed = false
 
     private enum SaveAlert: Identifiable {
         case success(Int)
@@ -20,6 +26,10 @@ struct AnalysisView: View {
             case .failure: "fail"
             }
         }
+    }
+
+    private var selectedCount: Int {
+        drafts.filter(\.isSelected).count
     }
 
     var body: some View {
@@ -49,14 +59,49 @@ struct AnalysisView: View {
                     systemImage: "photo.on.rectangle.angled")
             }
         }
-        .navigationTitle("Phân tích trang")
+        .navigationTitle("Duyệt & lưu từ vựng")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if model.analysisResult != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lưu") { save() }
-                        .disabled(model.analysisResult?.vocabulary.isEmpty ?? true)
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        quitTapped()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Đóng phiên duyệt")
                 }
+            }
+            if model.analysisResult != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lưu (\(selectedCount))") { save() }
+                        .disabled(selectedCount == 0)
+                }
+            }
+        }
+        // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
+        // Swipe sheet bị chặn tới khi đã lưu/bỏ; nút Đóng hỏi rõ ràng.
+        .interactiveDismissDisabled(model.analysisResult != nil && !hasConfirmed)
+        .alert("Bỏ kết quả phân tích?", isPresented: $showQuitWarning) {
+            Button("Bỏ kết quả", role: .destructive) {
+                model.discardAnalysis()
+                hasConfirmed = true
+                dismiss()
+            }
+            Button("Ở lại", role: .cancel) {}
+        } message: {
+            Text("Những từ đã sửa trong phiên này chưa được lưu và sẽ mất.")
+        }
+        .onAppear { syncDraftsIfNeeded() }
+        .onChange(of: model.analysisResult) { _, _ in syncDraftsIfNeeded() }
+        .task {
+            // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
+            // sheet), phân tích được kích hoạt khi màn hình này xuất hiện.
+            if model.analysisResult == nil,
+               model.analysisError == nil,
+               model.lastCapturedImage != nil,
+               !model.isAnalyzing {
+                await model.analyzeCurrentImage()
             }
         }
         .alert(item: $saveAlert) { alert in
@@ -64,7 +109,7 @@ struct AnalysisView: View {
             case let .success(count):
                 return Alert(
                     title: Text("Đã lưu"),
-                    message: Text("\(count) từ đã vào kho từ vựng."),
+                    message: Text("\(count) từ đã vào kho tạm và đến hạn ôn hôm nay."),
                     dismissButton: .default(Text("OK")) { dismiss() })
             case let .failure(message):
                 return Alert(
@@ -75,14 +120,33 @@ struct AnalysisView: View {
         }
     }
 
+    // MARK: - Flow
+
+    private func syncDraftsIfNeeded() {
+        guard let result = model.analysisResult, drafts.isEmpty else { return }
+        drafts = ReviewDraftBuilder.drafts(from: result.vocabulary)
+    }
+
+    private func quitTapped() {
+        if model.analysisResult != nil, !hasConfirmed {
+            showQuitWarning = true
+        } else {
+            dismiss()
+        }
+    }
+
     private func save() {
         do {
-            let saved = try model.saveAnalysis(collectionID: nil)
+            // J1: đích ngầm = kho tạm; collection picker thuộc 2.4.
+            let saved = try model.saveSelection(drafts, collectionID: nil)
+            hasConfirmed = true
             saveAlert = .success(saved)
         } catch {
             saveAlert = .failure(error.localizedDescription)
         }
     }
+
+    // MARK: - Kết quả
 
     private func resultList(_ result: PageAnalysis) -> some View {
         List {
@@ -102,11 +166,21 @@ struct AnalysisView: View {
                 }
             }
 
-            // FR-02: vocabulary — nhóm duy nhất được lưu.
-            if !result.vocabulary.isEmpty {
-                Section("Từ vựng (\(result.vocabulary.count))") {
-                    ForEach(Array(result.vocabulary.enumerated()), id: \.offset) { _, item in
-                        vocabularyRow(item)
+            // FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
+            if !drafts.isEmpty {
+                Section {
+                    ForEach(Array(drafts.enumerated()), id: \.element.id) { index, _ in
+                        ReviewCardRow(
+                            draft: $drafts[index],
+                            isExpanded: expandedIDs.contains(drafts[index].id),
+                            onToggleExpand: { toggleExpand(drafts[index].id) })
+                    }
+                } header: {
+                    HStack {
+                        Text("Từ vựng")
+                        Spacer()
+                        Text("Đã chọn \(selectedCount)/\(drafts.count)")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -119,33 +193,161 @@ struct AnalysisView: View {
         }
     }
 
-    private func vocabularyRow(_ item: PageAnalysis.VocabularyItemIn) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.term)
-                    .font(.headline)
-                if let ipa = item.ipa, !ipa.isEmpty {
-                    Text(ipa)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Text("\(item.pos) · \(item.meaningVI)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(item.example)
-                    .font(.caption2)
-                    .italic()
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            Spacer()
-            // FR-02: trạng thái xác minh hiện rõ — unverified không bị giấu.
-            verificationBadge(item.verification)
+    private func toggleExpand(_ id: String) {
+        if expandedIDs.contains(id) {
+            expandedIDs.remove(id)
+        } else {
+            expandedIDs.insert(id)
         }
-        .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Card duyệt (ADR-008)
+
+/// Một dòng trong danh sách duyệt: checkbox (FR-09) + thông tin tắt + chip trạng
+/// thái xác minh (FR-02); chạm card mở inline 6 field (FR-03). Thiết kế hàng tách
+/// bấm chọn với bấm mở — checkbox KHÔNG nằm trong vùng mở card.
+private struct ReviewCardRow: View {
+    @Binding var draft: ReviewDraft
+    let isExpanded: Bool
+    let onToggleExpand: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                selectButton
+                Button {
+                    onToggleExpand()
+                } label: {
+                    HStack(alignment: .top, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 6) {
+                                Text(draft.term)
+                                    .font(.headline)
+                                Text(draft.pos)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule().fill(
+                                            Color.secondary.opacity(0.12)))
+                            }
+                            if !draft.meaningVI.isEmpty {
+                                Text(draft.meaningVI)
+                                    .font(.subheadline)
+                                    .lineLimit(2)
+                            }
+                            if !isExpanded {
+                                if !draft.ipa.isEmpty {
+                                    Text(draft.ipa)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !draft.example.isEmpty {
+                                    Text(draft.example)
+                                        .font(.caption2)
+                                        .italic()
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
+                        }
+                        Spacer(minLength: 2)
+                        VerificationBadge(status: draft.verification)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isExpanded {
+                editor
+                    .padding(.leading, 44)
+            }
+        }
+        .padding(.vertical, 4)
     }
 
-    private func verificationBadge(_ status: PageAnalysis.VerificationStatus) -> some View {
+    /// FR-09: chọn item thành review card. Unverified/suspect không preselect —
+    /// bấm chọn nghĩa là user chủ động giữ (FR-02/03).
+    private var selectButton: some View {
+        Button {
+            draft.isSelected.toggle()
+        } label: {
+            Image(systemName: draft.isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(
+                    draft.isSelected ? Color.accentColor : Color.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            draft.isSelected ? "Bỏ chọn \(draft.term)" : "Chọn \(draft.term) để ôn tập")
+    }
+
+    /// FR-03: sửa được mọi field ngay dưới card, không rời danh sách.
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            editorField("Từ") {
+                TextField("Từ mới", text: $draft.term)
+            }
+            editorField("Từ loại") {
+                Picker("Từ loại", selection: $draft.pos) {
+                    ForEach(ReviewDraftBuilder.validPOS, id: \.self) { pos in
+                        Text(pos).tag(pos)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            editorField("Phiên âm (IPA)") {
+                TextField("VD: /ˈwɪndɪŋ/", text: $draft.ipa)
+            }
+            editorField("Nghĩa tiếng Việt") {
+                TextField("Nghĩa", text: $draft.meaningVI, axis: .vertical)
+                    .lineLimit(1...3)
+            }
+            editorField("CEFR") {
+                Picker("CEFR", selection: $draft.cefr) {
+                    Text("Không rõ").tag("")
+                    ForEach(ReviewDraftBuilder.validCEFR, id: \.self) { cefr in
+                        Text(cefr).tag(cefr)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            editorField("Câu ví dụ") {
+                TextField("Câu gốc trên trang", text: $draft.example, axis: .vertical)
+                    .lineLimit(1...4)
+            }
+        }
+    }
+
+    private func editorField<Content: View>(
+        _ label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            content()
+                .font(.subheadline)
+                .padding(8)
+                .background(
+                    Color.secondary.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+/// Chip trạng thái xác minh (FR-02) — unverified đỏ (ADR-008), suspect cam.
+private struct VerificationBadge: View {
+    let status: PageAnalysis.VerificationStatus
+
+    var body: some View {
         Group {
             switch status {
             case .verified:

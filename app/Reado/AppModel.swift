@@ -100,16 +100,21 @@ final class AppModel {
         }
     }
 
-    // MARK: — Save analysis (FR-03 + transaction #4)
+    // MARK: — Chốt phiên duyệt (FR-03/FR-09 + transaction #4)
 
-    /// Lưu toàn bộ vocabulary đã duyệt vào collection (SD mục 6 khối #4).
-    /// collectionID nil → kho tạm (is_default). Trả số item đã ghi; 0 nếu rỗng.
-    func saveAnalysis(collectionID: String?) throws -> Int {
-        guard let database, let result = analysisResult else { return 0 }
-        // Verify đã gắn từ proxy/mock (SD 4.1) — KHÔNG verify lại ở đây.
+    /// Lưu các item đã duyệt & chọn vào collection (SD mục 6 khối #4).
+    /// Chỉ item `isSelected` được ghi (FR-03 bỏ chọn = không lưu); validation
+    /// trường bắt buộc + chuẩn hoá do `ReviewDraftBuilder.selected` (FR-03).
+    /// collectionID nil → kho tạm (is_default, 2.4). Trả số item đã ghi.
+    func saveSelection(
+        _ drafts: [ReviewDraft],
+        collectionID: String?
+    ) throws -> Int {
+        guard let database else { return 0 }
+        let items = try ReviewDraftBuilder.selected(drafts)
         let saved = try VocabRepository.saveCapture(
             on: database,
-            items: result.vocabulary,
+            items: items,
             collectionID: collectionID,
             now: SystemClock().now)
         if saved > 0 {
@@ -118,6 +123,15 @@ final class AppModel {
             analysisResult = nil
         }
         return saved
+    }
+
+    /// FR-03: user chủ động bỏ kết quả khi chưa confirm — dọn state để lần
+    /// chụp sau bắt đầu sạch, không còn analysis cũ trong bộ nhớ.
+    func discardAnalysis() {
+        analysisResult = nil
+        analysisError = nil
+        lastCapturedImage = nil
+        captureError = nil
     }
 
     // MARK: — Overview
