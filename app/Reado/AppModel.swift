@@ -14,6 +14,11 @@ final class AppModel {
     var lastCapturedImage: CapturedImage?
     var captureError: String?
 
+    // FR-02: analysis state
+    private(set) var isAnalyzing = false
+    private(set) var analysisResult: PageAnalysis?
+    private(set) var analysisError: String?
+
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
         let name: String
@@ -58,7 +63,64 @@ final class AppModel {
     func handleCapturedImage(_ image: CapturedImage) {
         lastCapturedImage = image
         captureError = nil
+        analysisResult = nil
+        analysisError = nil
     }
+
+    // MARK: — FR-02 AI Analysis
+
+    /// Gọi analyzer cho ảnh hiện tại (proxy khi deploy, mock khi chưa — SD 2.1).
+    /// FR-02: hiện progress, nhận 3 nhóm dữ liệu; lỗi → báo + cho retry.
+    func analyzeCurrentImage() async {
+        guard let image = lastCapturedImage, let database else {
+            analysisError = "Chưa có ảnh để phân tích"
+            return
+        }
+        isAnalyzing = true
+        analysisError = nil
+        analysisResult = nil
+        defer { isAnalyzing = false }
+
+        do {
+            // FR-02: đọc cefr_level từ settings (seed = 'B2'; FR-15 chưa có UI).
+            let (_, cefrLevel) = try AnalyzerFactory.active(db: database)
+            // 0.7 CHƯA CÓ: proxy chưa deploy → dùng MockAnalyzer (owner chốt 2026-09-19:
+            // "chưa integrate với gemini thì trong quá trình phân tích cứ tạo mock data").
+            // Gỡ khi proxy deploy: `let analyzer = AnalyzerFactory.active(db:).analyzer`.
+            let analyzer: PageAnalyzer = MockAnalyzer()
+            let result = try await analyzer.analyze(
+                image: image.imageData,
+                imageMime: image.mimeType,
+                cefr: cefrLevel,
+                imageHash: image.imageHash)
+            analysisResult = result
+        } catch {
+            analysisError = (error as? LocalizedError)?.errorDescription
+                ?? String(describing: error)
+        }
+    }
+
+    // MARK: — Save analysis (FR-03 + transaction #4)
+
+    /// Lưu toàn bộ vocabulary đã duyệt vào collection (SD mục 6 khối #4).
+    /// collectionID nil → kho tạm (is_default). Trả số item đã ghi; 0 nếu rỗng.
+    func saveAnalysis(collectionID: String?) throws -> Int {
+        guard let database, let result = analysisResult else { return 0 }
+        // Verify đã gắn từ proxy/mock (SD 4.1) — KHÔNG verify lại ở đây.
+        let saved = try VocabRepository.saveCapture(
+            on: database,
+            items: result.vocabulary,
+            collectionID: collectionID,
+            now: SystemClock().now)
+        if saved > 0 {
+            reloadOverview()
+            lastCapturedImage = nil
+            analysisResult = nil
+        }
+        return saved
+    }
+
+    // MARK: — Overview
 
     /// Scaffold: tổng số từ + số card `due_at <= now` (chưa phải hàng đợi
     /// FR-11 chính thức — chỉ để chứng minh wiring DB → UI).

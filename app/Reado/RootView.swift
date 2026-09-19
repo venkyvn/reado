@@ -7,6 +7,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var showCapture = false
+    @State private var showAnalysis = false
 
     var body: some View {
         NavigationStack {
@@ -32,9 +33,20 @@ struct RootView: View {
                     .accessibilityLabel("Chụp trang")
                 }
             }
-            .sheet(isPresented: $showCapture) {
+            .sheet(isPresented: $showCapture, onDismiss: {
+                // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
+                // onDismiss tránh lỗi sheet chồng sheet khi CaptureView tự dismiss.
+                if model.lastCapturedImage != nil {
+                    showAnalysis = true
+                }
+            }) {
                 NavigationStack {
                     CaptureView()
+                }
+            }
+            .sheet(isPresented: $showAnalysis) {
+                NavigationStack {
+                    AnalysisView()
                 }
             }
             .navigationDestination(for: String.self) { collectionID in

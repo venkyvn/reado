@@ -17,21 +17,51 @@ public enum AnalyzerFactory {
     public static let proxyBaseURL = "https://proxy.reado.app"
 
     /// Tạo analyzer cho agent id. R1: proxy builtin luôn có; mock chỉ cho dev/test.
+    /// `session` injectable cho test (default URLSession.shared ở production).
     public static func analyzer(
         for kind: String,
         baseURL: String?,
-        model: String?
+        model: String?,
+        session: URLSession = .shared
     ) -> PageAnalyzer {
         switch kind {
         case "openai_compat":
-            // FR-21 — chưa implement UI; walking skeleton chỉ proof UI với mock.
+            // FR-21 — chưa implement UI; FR-21 adapter (1.5/3.11) dùng OpenAICompatClient.
+            // Walking skeleton chạy proxy mặc định → mock chỉ dùng khi BYOK chưa có.
             return MockAnalyzer()
         case "reado_proxy":
-            // Proxy hosting chưa deploy (0.7) → mock để owner test walking skeleton.
-            return MockAnalyzer()
+            return ReadoProxyClient(session: session, baseURL: baseURL ?? proxyBaseURL)
         default:
             return MockAnalyzer()
         }
+    }
+
+    /// Helper: đọc settings (cefr_level, active_agent) rồi tạo analyzer đúng agent.
+    /// Trả về (analyzer, cefrLevel).
+    public static func active(
+        db: SQLiteDatabase,
+        session: URLSession = .shared
+    ) throws -> (analyzer: PageAnalyzer, cefrLevel: String) {
+        let rows = try db.rows(
+            "SELECT cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
+        let cefrLevel = rows.first?.first?.textValue ?? "B2"
+        let activeAgentID = rows.first?.last?.textValue
+        if let activeAgentID {
+            let agentRows = try db.rows(
+                "SELECT kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
+                [.text(activeAgentID)])
+            if let row = agentRows.first, row.count >= 3 {
+                return (
+                    analyzer(
+                        for: row[0].textValue ?? "reado_proxy",
+                        baseURL: row[1].textValue,
+                        model: row[2].textValue,
+                        session: session),
+                    cefrLevel)
+            }
+        }
+        // Fallback: agent seed luôn tồn tại (reado_proxy) — không bao giờ tới đây.
+        return (ReadoProxyClient(session: session, baseURL: proxyBaseURL), cefrLevel)
     }
 }
 
