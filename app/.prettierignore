@@ -1,7 +1,0 @@
-node_modules
-dist
-certs
-public
-*.md
-*.json
-*.wasm
