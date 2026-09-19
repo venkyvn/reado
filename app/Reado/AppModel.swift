@@ -10,6 +10,10 @@ final class AppModel {
     private(set) var failure: String?
     private(set) var collections: [CollectionOverview] = []
 
+    // FR-01: capture state
+    var lastCapturedImage: CapturedImage?
+    var captureError: String?
+
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
         let name: String
@@ -44,6 +48,16 @@ final class AppModel {
     func reloadOverview() {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
+    }
+
+    // MARK: — FR-01 Capture
+
+    /// Nhận ảnh đã crop + nén xong từ CaptureView, giữ tạm trong bộ nhớ.
+    /// NFR-04: ảnh không persist; buffer memory solution sau (SD mục 8).
+    /// 2.2 sẽ dùng ảnh này gọi PageAnalyzer.
+    func handleCapturedImage(_ image: CapturedImage) {
+        lastCapturedImage = image
+        captureError = nil
     }
 
     /// Scaffold: tổng số từ + số card `due_at <= now` (chưa phải hàng đợi

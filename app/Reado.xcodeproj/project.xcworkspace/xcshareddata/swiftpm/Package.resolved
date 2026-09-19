@@ -1,5 +1,5 @@
 {
-  "originHash" : "24c688fb339e0da65a0e99fa8efbe42cb9067f036220ec215d5803e5e91ecd7d",
+  "originHash" : "88000f657af24cf2573dfb21bc60132738a19629d61894777a80e8d1ad918692",
   "pins" : [
     {
       "identity" : "swift-fsrs",
@@ -7,6 +7,15 @@
       "location" : "https://github.com/open-spaced-repetition/swift-fsrs.git",
       "state" : {
         "revision" : "4fbaf20184d62f82a9f44f343337c61a2c5483e9"
+      }
+    },
+    {
+      "identity" : "tocropviewcontroller",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/TimOliver/TOCropViewController.git",
+      "state" : {
+        "revision" : "9782ecf30b5d16dfc95c89c939180adf457a2e82",
+        "version" : "3.2.0"
       }
     }
   ],

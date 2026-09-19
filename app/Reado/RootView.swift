@@ -6,6 +6,7 @@ import SwiftUI
 /// theo customer-journeys sẽ làm ở walking skeleton.
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @State private var showCapture = false
 
     var body: some View {
         NavigationStack {
@@ -21,6 +22,21 @@ struct RootView: View {
                 }
             }
             .navigationTitle("Reado")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showCapture = true
+                    } label: {
+                        Label("Chụp trang", systemImage: "camera.fill")
+                    }
+                    .accessibilityLabel("Chụp trang")
+                }
+            }
+            .sheet(isPresented: $showCapture) {
+                NavigationStack {
+                    CaptureView()
+                }
+            }
             .navigationDestination(for: String.self) { collectionID in
                 CollectionDetailView(collectionID: collectionID)
             }
