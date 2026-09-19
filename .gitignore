@@ -23,3 +23,11 @@ dist/
 scripts/verify/samples/*
 !scripts/verify/samples/.gitkeep
 scripts/verify/output/
+
+# Owner 2026-09-19 (chiều): git chỉ theo dõi code app/
+/*
+!/app/
+!/.gitignore
+
+# Rác bytecode Python
+**/__pycache__/
