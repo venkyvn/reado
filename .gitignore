@@ -1,17 +1,25 @@
-# Secrets — .env luôn bị chặn, .env.example được track (task 0.2)
+# Secrets — .env luôn bị chặn, .env.example được track (delta 2026-09-19)
 .env
 .env.*
 !.env.example
 
-# Dependencies & build (match ở mọi cấp, kể cả app/)
+# iOS build (agent cache toàn bộ giữ trong workspace — bẫy build mục 11/CLAUDE)
+DerivedData/
+.tmp/
+.xcode-packages/
+.build/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+
+# Dependencies & build
 node_modules/
 dist/
 
 # OS noise
 .DS_Store
 
-# Phase 0: ảnh mẫu của owner là dữ liệu tạm + bản quyền sách — không commit
-# (xem scripts/verify/README.md); output chứa số đo mỗi lần chạy
+# Phase 0: ảnh mẫu owner (bản quyền) + output verify
 scripts/verify/samples/*
 !scripts/verify/samples/.gitkeep
 scripts/verify/output/
