@@ -1,13 +1,15 @@
 import ReadoKit
 import SwiftUI
 
-/// Màn hình gốc — scaffold cho ROADMAP task 1.2: chứng minh vòng nối
-/// SQLite (migration + seed) → SwiftUI. Chưa phải FR nào; chi tiết UI
-/// theo customer-journeys sẽ làm ở walking skeleton.
+/// Màn hình gốc — Home shell tối thiểu theo ROADMAP 2.4–2.5:
+/// - Tổng quan collection (due badge, default badge)
+/// - CTA Ôn tập → ReviewQueueView (FR-11/12)
+/// - CTA Chụp trang → CaptureView → AnalysisView (FR-01/02/03/09)
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var showCapture = false
     @State private var showAnalysis = false
+    @State private var showReview = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +26,16 @@ struct RootView: View {
             }
             .navigationTitle("Reado")
             .toolbar {
+                // FR-11/12: CTA Ôn tập.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showReview = true
+                    } label: {
+                        Label("Ôn tập", systemImage: "brain.head.profile")
+                    }
+                    .accessibilityLabel("Ôn tập")
+                }
+                // FR-01: CTA Chụp trang.
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showCapture = true
@@ -35,19 +47,17 @@ struct RootView: View {
             }
             .sheet(isPresented: $showCapture, onDismiss: {
                 // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
-                // onDismiss tránh lỗi sheet chồng sheet khi CaptureView tự dismiss.
                 if model.lastCapturedImage != nil {
                     showAnalysis = true
                 }
             }) {
-                NavigationStack {
-                    CaptureView()
-                }
+                NavigationStack { CaptureView() }
             }
             .sheet(isPresented: $showAnalysis) {
-                NavigationStack {
-                    AnalysisView()
-                }
+                NavigationStack { AnalysisView() }
+            }
+            .sheet(isPresented: $showReview) {
+                NavigationStack { ReviewQueueView() }
             }
             .navigationDestination(for: String.self) { collectionID in
                 CollectionDetailView(collectionID: collectionID)
@@ -58,36 +68,65 @@ struct RootView: View {
     }
 
     private var collectionList: some View {
-        List(model.collections) { collection in
-            NavigationLink(value: collection.id) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(collection.name)
-                            if collection.isDefault {
-                                Text("Mặc định")
-                                    .font(.caption2)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        Capsule().fill(
-                                            Color.accentColor.opacity(0.15)))
-                            }
+        List {
+            // FR-11/12: Hàng đợi hôm nay — tổng quan nhanh.
+            let totalDue = model.collections.map(\.dueNow).reduce(0, +)
+            if totalDue > 0 {
+                Button {
+                    showReview = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ôn tập hôm nay")
+                                .font(.headline)
+                            Text("\(totalDue) thẻ đến hạn")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                        Text("\(collection.totalItems) từ")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tertiary)
                     }
-                    Spacer()
-                    if collection.dueNow > 0 {
-                        Text("\(collection.dueNow)")
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule().fill(
-                                    Color.orange.opacity(0.18)))
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            ForEach(model.collections) { collection in
+                NavigationLink(value: collection.id) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Text(collection.name)
+                                if collection.isDefault {
+                                    Text("Mặc định")
+                                        .font(.caption2)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule().fill(
+                                                Color.accentColor.opacity(0.15)))
+                                }
+                            }
+                            Text("\(collection.totalItems) từ")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if collection.dueNow > 0 {
+                            Text("\(collection.dueNow)")
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule().fill(
+                                        Color.orange.opacity(0.18)))
+                        }
                     }
                 }
             }

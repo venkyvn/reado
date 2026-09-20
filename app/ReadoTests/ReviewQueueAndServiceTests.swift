@@ -253,4 +253,70 @@ final class ReviewQueueAndServiceTests: XCTestCase {
             try db.scalarInt64("SELECT COUNT(*) FROM review_logs;"), 0,
             "log không được rơi rớt sau rollback")
     }
+
+    // MARK: — FR-11 façade: loadFullQueue (ROADMAP 2.5)
+
+    func testLoadFullQueueCombinesNewQuotaAndDueBranches() throws {
+        // FR-11: thẻ MỚI bị chặn bởi quota (daily_new_limit), thẻ ÔN LẠI thì
+        // không. Cả hai gộp thành hàng đợi, kèm chi tiết vocab + snapshot.
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+
+        // 3 thẻ new (quota 2) + 2 thẻ due (không giới hạn).
+        for i in 1...3 {
+            let vocab = try Fixtures.insertVocab(in: db, collectionID: collectionID, term: "new\(i)")
+            _ = try Fixtures.insertCard(in: db, vocabItemID: vocab, dueIso: "2026-09-18T00:00:0\(i)Z")
+        }
+        for i in 1...2 {
+            let vocab = try Fixtures.insertVocab(in: db, collectionID: collectionID, term: "due\(i)")
+            _ = try Fixtures.insertCard(
+                in: db, vocabItemID: vocab, state: "review",
+                dueIso: "2026-09-17T00:00:0\(i)Z")
+        }
+
+        let (items, snapshots) = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 2, now: Fixtures.fixedNow)
+
+        XCTAssertEqual(items.count, 4, "2 new + 2 due (quota 2)")
+        // due cards có due_at 09-17 đứng TRƯỚC new cards 09-18 (ORDER BY due_at).
+        XCTAssertEqual(items.map(\.term), ["due1", "due2", "new1", "new2"])
+        XCTAssertEqual(snapshots.count, 4, "mỗi card có snapshot TRƯỚC")
+        XCTAssertEqual(items.first?.collectionName, "Kho tạm")
+        // Due card state là "review" TRƯỚC khi chấm; new card state là "new".
+        let dueSnap = try XCTUnwrap(snapshots[items[0].cardID])
+        XCTAssertEqual(dueSnap.state, "review", "due card snapshot là TRƯỚC khi chấm")
+        let newSnap = try XCTUnwrap(snapshots[items[2].cardID])
+        XCTAssertEqual(newSnap.state, "new", "new card snapshot là TRƯỚC khi chấm")
+    }
+
+    func testLoadFullQueueQuotaZeroEmptyAndNoCrossTalk() throws {
+        // Không new (quota 0), chỉ due → vẫn trả due.
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+        _ = try Fixtures.insertCard(
+            in: db, vocabItemID: try Fixtures.insertVocab(in: db, collectionID: collectionID, term: "d-only"),
+            state: "review", dueIso: "2026-09-17T00:00:00Z")
+        let (items, _) = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 0, now: Fixtures.fixedNow)
+        XCTAssertEqual(items.map(\.term), ["d-only"], "quota 0 không chặn nhánh due")
+    }
+
+    // MARK: — 2.4 is_default: saveCapture rơi vào kho tạm (FR-17)
+
+    func testSaveCaptureWithoutCollectionGoesToDefaultInbox() throws {
+        // 2.4: not không chọn collection khi lưu → vocab đi vào kho tạm, không null.
+        let db = try Fixtures.seededDB()
+        let item = PageAnalysis.VocabularyItemIn(
+            term: "default", pos: "noun", ipa: nil,
+            meaningVI: "mặc định", cefr: nil, example: "ex",
+            verification: .verified)
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [item], collectionID: nil, now: Fixtures.fixedNow)
+        XCTAssertEqual(saved, 1)
+        let collectionID: String = try XCTUnwrap(
+            db.scalarString("SELECT collection_id FROM vocab_items WHERE term = 'default';"))
+        let isDefault = try XCTUnwrap(db.scalar(
+            "SELECT is_default FROM collections WHERE id = ?;", [.text(collectionID)]))
+        XCTAssertEqual(isDefault.intValue ?? 0, 1, "đích ngầm = kho tạm is_default")
+    }
 }

@@ -3,25 +3,31 @@ import SwiftUI
 
 /// FR-11/FR-12: hàng đợi hai nhánh + vuốt trái=Again(1)/phải=Good(3), Hard/Easy nút.
 /// Lật card: `term` + `pos` → `meaning_vi` + IPA + câu gốc + tên collection.
+typealias ReviewItem = ReviewQueue.ReviewItem
+
 struct ReviewQueueView: View {
     @Environment(AppModel.self) private var model
-    @State private var state: ReviewState = .idle
+    @Environment(\.dismiss) private var dismiss
 
-    @State private var items: [ReviewItem] = []
+    @State private var items: [ReviewQueue.ReviewItem] = []
     @State private var currentIndex: Int = 0
     @State private var isFlipped: Bool = false
 
     // Undo 1 bước (FR-12): lưu snapshot + logID vừa chấm.
     @State private var lastLogID: String?
     @State private var lastSnapshot: CardSnapshot?
+    @State private var undoSnapshot: CardSnapshot?
     @State private var showUndoToast: Bool = false
+    @State private var isLoading = true
 
     var body: some View {
         ZStack {
-            if items.isEmpty && !model.isLoadingReview {
-                emptyView
+            if isLoading {
+                ProgressView("Đang tải hàng đợi…")
             } else if let error = model.reviewError {
                 errorView(error)
+            } else if items.isEmpty {
+                emptyView
             } else if currentIndex < items.count {
                 cardView
             } else {
@@ -57,6 +63,9 @@ struct ReviewQueueView: View {
                 .font(.title2.bold())
             Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
+            Button("Đóng") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -66,6 +75,9 @@ struct ReviewQueueView: View {
             Label("Lỗi khi tải hàng đợi", systemImage: "exclamationmark.triangle")
         } description: {
             Text(message)
+        } actions: {
+            Button("Thử lại") { Task { await loadQueue() } }
+                .buttonStyle(.borderedProminent)
         }
     }
 
@@ -83,7 +95,7 @@ struct ReviewQueueView: View {
                 // FR-12: undo nút nổi 1 bước.
                 if showUndoToast {
                     Button("Hoàn tác") {
-                        Task { await performUndo() }
+                        performUndo()
                     }
                     .buttonStyle(.bordered)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -109,6 +121,7 @@ struct ReviewQueueView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .padding(.horizontal, 16)
+            .gesture(swipeGesture)
 
             Spacer(minLength: 0)
 
@@ -116,7 +129,7 @@ struct ReviewQueueView: View {
             if isFlipped {
                 gradeButtons
             } else {
-                Text("Nhấn để lật")
+                Text("Chạm để lật · vuốt trái/phải để chấm nhanh")
                     .foregroundStyle(.tertiary)
                     .font(.caption)
             }
@@ -125,7 +138,22 @@ struct ReviewQueueView: View {
         .onTapGesture { withAnimation(.spring(response: 0.35)) { isFlipped.toggle() } }
     }
 
-    private func cardFace(item: ReviewItem, back: Bool, size: CGSize) -> some View {
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 40, coordinateSpace: .local)
+            .onEnded { value in
+                guard isFlipped else { return }
+                let dx = value.translation.width
+                if dx < -60 {
+                    // Vuốt trái = Again(1) — ADR-025.
+                    performGrade(.again)
+                } else if dx > 60 {
+                    // Vuốt phải = Good(3).
+                    performGrade(.good)
+                }
+            }
+    }
+
+    private func cardFace(item: ReviewQueue.ReviewItem, back: Bool, size: CGSize) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
@@ -168,7 +196,7 @@ struct ReviewQueueView: View {
     // MARK: — Grade buttons (ADR-025: TRÁI=Again(1), PHẢI=Good(3); Hard/Easy nút)
 
     private var gradeButtons: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             gradeButton(.again)
             gradeButton(.hard)
             gradeButton(.good)
@@ -180,7 +208,7 @@ struct ReviewQueueView: View {
 
     private func gradeButton(_ rating: ReadoRating) -> some View {
         Button {
-            Task { await performGrade(rating) }
+            performGrade(rating)
         } label: {
             Text(rating.label)
                 .font(.subheadline.weight(.semibold))
@@ -192,73 +220,73 @@ struct ReviewQueueView: View {
         }
     }
 
-    private func performGrade(_ rating: ReadoRating) async {
+    private func performGrade(_ rating: ReadoRating) {
+        guard currentIndex < items.count else { return }
         let item = items[currentIndex]
         guard let snapshot = lastSnapshot else { return }
+        let gradedSnapshot = snapshot
         do {
-            let (outcome, logID) = try await model.grade(
-                cardID: item.cardID, snapshot: snapshot, rating: rating)
+            let logID = try model.grade(
+                cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
+            // Lưu snapshot/log của thẻ vừa chấm để undo (FR-12) — tách khỏi lastSnapshot.
             lastLogID = logID
-            lastSnapshot = snapshot
+            undoSnapshot = gradedSnapshot
             showUndoToast = true
-            // Chuyển sang thẻ tiếp.
-            currentIndex += 1
-            isFlipped = false
+            withAnimation(.spring(response: 0.3)) {
+                currentIndex += 1
+                isFlipped = false
+            }
+            // Nạp snapshot cho thẻ mới hiện (để chấm tiếp).
+            if currentIndex < items.count,
+               let nextSnap = model.reviewSnapshots[items[currentIndex].cardID] {
+                lastSnapshot = nextSnap
+            }
         } catch {
-            model.reviewError = error.localizedDescription
+            // AppModel đã set reviewError.
         }
     }
 
-    private func performUndo() async {
-        guard let logID = lastLogID, let snapshot = lastSnapshot else { return }
-        let item = items[currentIndex - 1]
+    private func performUndo() {
+        guard let logID = lastLogID, let snapshot = undoSnapshot else { return }
+        // Thẻ vừa chấm là items[currentIndex - 1] (đã tăng index sau grade).
+        let prevIndex = currentIndex - 1
+        guard prevIndex >= 0, prevIndex < items.count else { return }
+        let item = items[prevIndex]
         do {
-            try await model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
+            try model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
+            // Quay lại thẻ trước.
+            withAnimation(.spring(response: 0.3)) {
+                currentIndex = prevIndex
+                isFlipped = false
+            }
             showUndoToast = false
             lastLogID = nil
-            lastSnapshot = nil
+            // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
         } catch {
-            model.reviewError = "Không hoàn tác được: \(error.localizedDescription)"
+            // AppModel đã set reviewError.
         }
     }
 
     private func loadQueue() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
-            let (items, initialSnapshots) = try await model.loadReviewQueue()
-            self.items = items
-            if let first = items.first, let snap = initialSnapshots[first.cardID] {
+            try await model.loadReviewQueue()
+            self.items = model.reviewItems
+            if let first = items.first,
+               let snap = model.reviewSnapshots[first.cardID] {
                 lastSnapshot = snap
             }
         } catch {
-            model.reviewError = error.localizedDescription
+            // reviewError đã set trong model.
         }
     }
-
-    private func dismiss() {
-        if #available(iOS 17.0, *) {
-            @Environment(\.dismiss) var dismissAction
-            dismissAction()
-        }
-    }
-}
-
-// MARK: — ReviewItem
-
-struct ReviewItem: Identifiable, Equatable {
-    var id: String { cardID }
-    let cardID: String
-    let term: String
-    let pos: String
-    let meaningVI: String
-    let ipa: String?
-    let example: String
-    let collectionName: String
 }
 
 extension ReadoRating {
     var label: String {
         switch self {
-        case .again: "Mới"
+        case .again: "Quên"
         case .hard: "Khó"
         case .good: "Được"
         case .easy: "Dễ"

@@ -1,6 +1,15 @@
 import Foundation
 import ReadoKit
 
+enum ReviewError: Error, LocalizedError {
+    case modelUnavailable
+    var errorDescription: String? {
+        switch self {
+        case .modelUnavailable: "Không có kết nối dữ liệu"
+        }
+    }
+}
+
 /// Model mở SQLite, migration, seed và chịu trách nhiệm đọc overview.
 /// Scaffold (ROADMAP task 1.2): đồng bộ trên main, dữ liệu nhỏ — màn hình
 /// thật (FR-01..03…) sẽ chuyển qua actor/URLSession khi có proxy.
@@ -18,6 +27,16 @@ final class AppModel {
     private(set) var isAnalyzing = false
     private(set) var analysisResult: PageAnalysis?
     private(set) var analysisError: String?
+
+    // FR-11/FR-12: hàng đợi ôn state
+    private(set) var isLoadingReview = false
+    private(set) var reviewError: String?
+    private(set) var reviewItems: [ReviewQueue.ReviewItem] = []
+    private(set) var reviewSnapshots: [String: CardSnapshot] = [:]
+    private(set) var currentReviewSnapshot: CardSnapshot?
+
+    /// Các review item hiện hàng đợi (hai nhánh) — cách đọc cho ReviewQueueView.
+    var reviewQueue: [ReviewQueue.ReviewItem] { reviewItems }
 
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
@@ -132,6 +151,67 @@ final class AppModel {
         analysisError = nil
         lastCapturedImage = nil
         captureError = nil
+    }
+
+    // MARK: — FR-11/FR-12 Ôn tập (hàng đợi)
+
+    /// Tải toàn bộ hàng đợi hôm nay (hai nhánh: new quota + due không giới
+    /// hạn) kèm snapshot TRƯỚC cho FR-12 undo. Quota mới đọc từ settings
+    /// `daily_new_limit` (seed = 10; FR-15 chưa có UI).
+    func loadReviewQueue() async throws {
+        guard let database else {
+            throw ReviewError.modelUnavailable
+        }
+        isLoadingReview = true
+        reviewError = nil
+        defer { isLoadingReview = false }
+        do {
+            let dailyNewLimit = try Self.readDailyNewLimit(on: database) ?? 10
+            let (items, snapshots) = try ReviewQueue.loadFullQueue(
+                on: database, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
+            reviewItems = items
+            reviewSnapshots = snapshots
+            currentReviewSnapshot = items.first.flatMap { snapshots[$0.cardID] }
+        } catch {
+            reviewError = (error as? LocalizedError)?.errorDescription
+                ?? String(describing: error)
+            throw error
+        }
+    }
+
+    /// Chấm thẻ hiện tại (FR-11): snapshot TRƯỚC + strict rating → outcome;
+    /// UPDATE cards + INSERT review_logs cùng transaction (FR-12 undo cần
+    /// logID). Trả logID để view giữ cho undo nổi 1 bước.
+    func grade(
+        cardID: String,
+        snapshot: CardSnapshot,
+        rating: ReadoRating
+    ) throws -> String {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let settings = try ReadoFSRS.readSettings(on: database)
+        let scheduler = try ReviewScheduler(settings: settings)
+        let outcome = try scheduler.grade(rating, snapshot: snapshot, now: SystemClock().now)
+        let logID = try ReviewService.record(
+            on: database, cardID: cardID, before: snapshot,
+            outcome: outcome, now: SystemClock().now)
+        return logID
+    }
+
+    /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa
+    /// ghi — cùng transaction (không UPDATE log cũ).
+    func undoReview(cardID: String, logID: String, snapshot: CardSnapshot) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try ReviewService.undo(
+            on: database, cardID: cardID, logID: logID, before: snapshot)
+    }
+
+    /// Đọc `daily_new_limit` từ settings (id = 1); nil nếu chưa seed.
+    static func readDailyNewLimit(on db: SQLiteDatabase) throws -> Int? {
+        guard let v = try db.scalarInt64(
+            "SELECT daily_new_limit FROM settings WHERE id = 1;") else {
+            return nil
+        }
+        return Int(v)
     }
 
     // MARK: — Overview
