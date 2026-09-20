@@ -18,6 +18,8 @@
 		5C0200000000000000000004 /* ReviewQueueAndServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */; };
 		5C0200000000000000000005 /* FoundationPrimitivesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000005 /* FoundationPrimitivesTests.swift */; };
 		5C0100000000000000000006 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000010 /* CaptureView.swift */; };
+		5C010000000000000000000A /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000013 /* ExportView.swift */; };
+		5C0200000000000000000007 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000007 /* ExportTests.swift */; };
 		5C0100000000000000000007 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 5A0000000000000000000033 /* TOCropViewController */; };
 		5C0100000000000000000008 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000011 /* AnalysisView.swift */; };
 		5C0100000000000000000009 /* ReviewQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000012 /* ReviewQueueView.swift */; };
@@ -39,7 +41,8 @@
 		5B0100000000000000000010 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CaptureView.swift; path = Capture/CaptureView.swift; sourceTree = "<group>"; };
 		5B0100000000000000000011 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		5B0100000000000000000012 /* ReviewQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReviewQueueView.swift; path = Screens/ReviewQueueView.swift; sourceTree = "<group>"; };
-		5B0200000000000000000006 /* AnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisTests.swift; sourceTree = "<group>"; };
+		5B0100000000000000000013 /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
+		5B0200000000000000000007 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +94,7 @@
 				5B0100000000000000000010 /* CaptureView.swift */,
 				5B0100000000000000000011 /* AnalysisView.swift */,
 				5B0100000000000000000012 /* ReviewQueueView.swift */,
+				5B0100000000000000000013 /* ExportView.swift */,
 			);
 			path = Reado;
 			sourceTree = "<group>";
@@ -104,6 +108,7 @@
 				5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */,
 				5B0200000000000000000005 /* FoundationPrimitivesTests.swift */,
 				5B0200000000000000000006 /* AnalysisTests.swift */,
+				5B0200000000000000000007 /* ExportTests.swift */,
 			);
 			path = ReadoTests;
 			sourceTree = "<group>";
@@ -211,6 +216,7 @@
 				5C0100000000000000000002 /* AppModel.swift in Sources */,
 				5C0100000000000000000003 /* RootView.swift in Sources */,
 				5C0100000000000000000006 /* CaptureView.swift in Sources */,
+				5C010000000000000000000A /* ExportView.swift in Sources */,
 				5C0100000000000000000008 /* AnalysisView.swift in Sources */,
 				5C0100000000000000000009 /* ReviewQueueView.swift in Sources */,
 			);
@@ -226,6 +232,7 @@
 				5C0200000000000000000004 /* ReviewQueueAndServiceTests.swift in Sources */,
 				5C0200000000000000000005 /* FoundationPrimitivesTests.swift in Sources */,
 				5C0200000000000000000006 /* AnalysisTests.swift in Sources */,
+				5C0200000000000000000007 /* ExportTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

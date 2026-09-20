@@ -5,11 +5,13 @@ import SwiftUI
 /// - Tổng quan collection (due badge, default badge)
 /// - CTA Ôn tập → ReviewQueueView (FR-11/12)
 /// - CTA Chụp trang → CaptureView → AnalysisView (FR-01/02/03/09)
+/// - CTA Dữ liệu → ExportView (FR-16, task 3.1)
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var showCapture = false
     @State private var showAnalysis = false
     @State private var showReview = false
+    @State private var showExport = false
 
     var body: some View {
         NavigationStack {
@@ -58,6 +60,9 @@ struct RootView: View {
             }
             .sheet(isPresented: $showReview) {
                 NavigationStack { ReviewQueueView() }
+            }
+            .sheet(isPresented: $showExport) {
+                NavigationStack { ExportView() }
             }
             .navigationDestination(for: String.self) { collectionID in
                 CollectionDetailView(collectionID: collectionID)
