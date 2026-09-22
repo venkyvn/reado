@@ -225,6 +225,60 @@ final class AnalysisTests: XCTestCase {
         }
     }
 
+    // MARK: - Map error envelope FR-04 (SD 4.1 — ảnh mờ / không phải tiếng Anh)
+
+    func testProxyClientMapsImageUnreadable() async throws {
+        StubURLProtocol.handler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 422,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"])!
+            let data = Data("""
+                {"error": {"code": "IMAGE_UNREADABLE", "message": "too blurry"}}
+                """.utf8)
+            return (response, data)
+        }
+        let client = ReadoProxyClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://proxy.reado.app")
+        do {
+            _ = try await client.analyze(
+                image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi IMAGE_UNREADABLE")
+        } catch {
+            guard case AnalysisError.imageUnreadable = error else {
+                return XCTFail("mong đợi imageUnreadable, nhận \(error)")
+            }
+        }
+    }
+
+    func testProxyClientMapsNonEnglishText() async throws {
+        StubURLProtocol.handler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 422,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"])!
+            let data = Data("""
+                {"error": {"code": "NON_ENGLISH_TEXT", "message": "not english"}}
+                """.utf8)
+            return (response, data)
+        }
+        let client = ReadoProxyClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://proxy.reado.app")
+        do {
+            _ = try await client.analyze(
+                image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi NON_ENGLISH_TEXT")
+        } catch {
+            guard case AnalysisError.notEnglishText = error else {
+                return XCTFail("mong đợi notEnglishText, nhận \(error)")
+            }
+        }
+    }
+
     // MARK: - ReviewDraftBuilder (FR-03/FR-09, ROADMAP 2.3)
 
     private func vocabIn(

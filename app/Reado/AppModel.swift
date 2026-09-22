@@ -26,7 +26,13 @@ final class AppModel {
     // FR-02: analysis state
     private(set) var isAnalyzing = false
     private(set) var analysisResult: PageAnalysis?
-    private(set) var analysisError: String?
+    /// FR-04: giữ nguyên loại lỗi để UI chọn CTA đúng (chụp lại vs thử lại).
+    private(set) var analysisFailure: AnalysisError?
+    /// Chuỗi hiển thị cho lỗi phân tích — chỉ để UI đọc, không lưu.
+    var analysisError: String? { analysisFailure?.errorDescription }
+
+    // FR-04: yêu cầu mở lại CaptureView sau khi dọn state (ảnh mờ / sai ngôn ngữ).
+    var pendingRecapture = false
 
     // FR-11/FR-12: hàng đợi ôn state
     private(set) var isLoadingReview = false
@@ -83,7 +89,7 @@ final class AppModel {
         lastCapturedImage = image
         captureError = nil
         analysisResult = nil
-        analysisError = nil
+        analysisFailure = nil
     }
 
     // MARK: — FR-02 AI Analysis
@@ -92,11 +98,12 @@ final class AppModel {
     /// FR-02: hiện progress, nhận 3 nhóm dữ liệu; lỗi → báo + cho retry.
     func analyzeCurrentImage() async {
         guard let image = lastCapturedImage, let database else {
-            analysisError = "Chưa có ảnh để phân tích"
+            // FR-04: không có ảnh → UI rơi về empty state "Chưa có trang để phân
+            // tích" (đây không phải lỗi phân tích, không cần đặt analysisFailure).
             return
         }
         isAnalyzing = true
-        analysisError = nil
+        analysisFailure = nil
         analysisResult = nil
         defer { isAnalyzing = false }
 
@@ -114,8 +121,11 @@ final class AppModel {
                 imageHash: image.imageHash)
             analysisResult = result
         } catch {
-            analysisError = (error as? LocalizedError)?.errorDescription
-                ?? String(describing: error)
+            // FR-04: phân loại lỗi để UI gợi ý đúng (chụp lại vs thử lại); KHÔNG
+            // set analysisResult → không bịa dữ liệu, không lưu bản ghi hỏng.
+            analysisFailure = (error as? AnalysisError) ?? .providerError(
+                (error as? LocalizedError)?.errorDescription
+                    ?? String(describing: error))
         }
     }
 
@@ -148,9 +158,16 @@ final class AppModel {
     /// chụp sau bắt đầu sạch, không còn analysis cũ trong bộ nhớ.
     func discardAnalysis() {
         analysisResult = nil
-        analysisError = nil
+        analysisFailure = nil
         lastCapturedImage = nil
         captureError = nil
+    }
+
+    /// FR-04: dọn state phân tích + báo RootView mở lại CaptureView (ảnh mờ /
+    /// trang không phải tiếng Anh → cần ảnh khác, retry cùng ảnh vô nghĩa).
+    func prepareRecapture() {
+        discardAnalysis()
+        pendingRecapture = true
     }
 
     // MARK: — FR-11/FR-12 Ôn tập (hàng đợi)

@@ -55,7 +55,14 @@ struct RootView: View {
             }) {
                 NavigationStack { CaptureView() }
             }
-            .sheet(isPresented: $showAnalysis) {
+            .sheet(isPresented: $showAnalysis, onDismiss: {
+                // FR-04: ảnh mờ / không phải tiếng Anh → mở lại CaptureView để
+                // chụp ảnh khác (retry cùng ảnh vô nghĩa).
+                if model.pendingRecapture {
+                    model.pendingRecapture = false
+                    showCapture = true
+                }
+            }) {
                 NavigationStack { AnalysisView() }
             }
             .sheet(isPresented: $showReview) {

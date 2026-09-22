@@ -26,6 +26,8 @@
 		5C0200000000000000000006 /* AnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000006 /* AnalysisTests.swift */; };
 
 		5C0200000100000000000000 /* LeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000100000000000000 /* LeechTests.swift */; };
+
+		5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000200000000000000 /* CaptureFailureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +50,8 @@
 		5B0200000000000000000007 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportTests.swift; sourceTree = "<group>"; };
 
 		5B0200000100000000000000 /* LeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeechTests.swift; sourceTree = "<group>"; };
+
+		5B0200000200000000000000 /* CaptureFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFailureTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,7 +119,8 @@
 				5B0200000000000000000006 /* AnalysisTests.swift */,
 				5B0200000000000000000007 /* ExportTests.swift */,
 			
-				5B0200000100000000000000 /* LeechTests.swift */,);
+				5B0200000100000000000000 /* LeechTests.swift */,
+				5B0200000200000000000000 /* CaptureFailureTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -240,7 +245,8 @@
 				5C0200000000000000000006 /* AnalysisTests.swift in Sources */,
 				5C0200000000000000000007 /* ExportTests.swift in Sources */,
 			
-				5C0200000100000000000000 /* LeechTests.swift in Sources */,);
+				5C0200000100000000000000 /* LeechTests.swift in Sources */,
+				5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

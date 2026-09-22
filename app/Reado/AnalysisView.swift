@@ -34,18 +34,8 @@ struct AnalysisView: View {
 
     var body: some View {
         Group {
-            if let error = model.analysisError {
-                // FR-02: hiển thị lỗi + cho retry — không lưu bản ghi hỏng.
-                ContentUnavailableView {
-                    Label("Không phân tích được trang", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(error)
-                } actions: {
-                    Button("Thử lại") {
-                        Task { await model.analyzeCurrentImage() }
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+            if model.analysisFailure != nil {
+                failureView
             } else if model.isAnalyzing {
                 // FR-02: progress rõ — màn hình không đứng im.
                 ProgressView("Đang phân tích trang sách...")
@@ -118,6 +108,68 @@ struct AnalysisView: View {
                     dismissButton: .default(Text("OK")))
             }
         }
+    }
+
+    // MARK: - Lỗi (FR-04)
+
+    /// FR-04: phân biệt loại lỗi để gợi ý CTA đúng — ảnh mờ / không phải tiếng
+    /// Anh gợi ý **chụp lại** (ảnh khác); lỗi tạm (mạng/schema/provider/rate-limit)
+    /// cho **thử lại** cùng ảnh.
+    @ViewBuilder
+    private var failureView: some View {
+        if let failure = model.analysisFailure {
+            switch failure {
+            case .imageUnreadable:
+                ContentUnavailableView {
+                    Label("Ảnh không đọc được", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(failure.errorDescription ?? "Ảnh quá mờ hoặc không đọc được.")
+                } actions: {
+                    Button("Chụp lại") { recapture() }
+                        .buttonStyle(.borderedProminent)
+                    Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
+                }
+            case .notEnglishText:
+                ContentUnavailableView {
+                    Label("Không phải tiếng Anh", systemImage: "globe")
+                } description: {
+                    Text(failure.errorDescription ?? "Trang không phải tiếng Anh.")
+                } actions: {
+                    Button("Chụp trang khác") { recapture() }
+                        .buttonStyle(.borderedProminent)
+                    Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
+                }
+            default:
+                ContentUnavailableView {
+                    Label("Không phân tích được trang", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(failure.errorDescription ?? "Đã có lỗi xảy ra.")
+                } actions: {
+                    Button("Thử lại") {
+                        Task { await model.analyzeCurrentImage() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
+                }
+            }
+        } else {
+            // Fallback: lỗi không định danh — không nên tới đây.
+            ContentUnavailableView {
+                Label("Không phân tích được trang", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(model.analysisError ?? "Đã có lỗi xảy ra.")
+            } actions: {
+                Button("Thử lại") {
+                    Task { await model.analyzeCurrentImage() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+    }
+
+    private func recapture() {
+        model.prepareRecapture()
+        dismiss()
     }
 
     // MARK: - Flow

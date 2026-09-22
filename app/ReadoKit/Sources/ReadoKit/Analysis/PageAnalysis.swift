@@ -96,7 +96,7 @@ public enum AnalysisError: Error, LocalizedError, Sendable {
         case .imageUnreadable:
             "Ảnh quá mờ hoặc không đọc được — vui lòng chụp lại"
         case .notEnglishText:
-            "Trang không chứa văn bản tiếng Anh — Reado hiện chỉ hỗ trợ tiếng Anh"
+            "Trang không phải tiếng Anh — Reado hiện không hỗ trợ ngôn ngữ này. Lần chụp này không tính phí."
         case let .schemaViolation(detail):
             "Dữ liệu trả về không đúng định dạng: \(detail)"
         case let .providerError(message):
@@ -109,6 +109,16 @@ public enum AnalysisError: Error, LocalizedError, Sendable {
             "Lỗi mạng: \(message)"
         case let .invalidResponse(message):
             "Phản hồi không hợp lệ: \(message)"
+        }
+    }
+
+    /// FR-04: lỗi này có gợi ý **chụp lại** (ảnh khác) thay vì "thử lại" cùng ảnh
+    /// không? Ảnh mờ / không phải tiếng Anh không sửa được bằng retry — phải
+    /// chụp trang khác; lỗi mạng/schema/provider thì retry cùng ảnh là hợp lý.
+    public var suggestsRecapture: Bool {
+        switch self {
+        case .imageUnreadable, .notEnglishText: true
+        default: false
         }
     }
 }
