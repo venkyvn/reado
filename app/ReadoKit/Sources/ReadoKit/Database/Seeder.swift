@@ -12,6 +12,10 @@ public enum Seeder {
     public static let defaultCollectionName = "Kho tạm"
     /// db.md A.2.1: ghi 'fsrs-6' kể cả khi fsrs_params null (default = defaultWv6 lúc gọi FSRS).
     public static let fsrsVersionValue = "fsrs-6"
+    /// FR-19 — ngưỡng leech mặc định R1. 🔶 TẠM = 6, CHƯA CHỐT — thuộc nhóm Q-08.
+    /// PRD FR-19: "ngưỡng cụ thể chưa chốt… nếu 'thẻ sai' đúng thì nên thấp hơn Anki 8".
+    /// Chờ owner chốt số; đổi đây + literal trong LeechTests cùng lúc.
+    public static let defaultLeechLapses = 6
 
     public static func isSeeded(on db: SQLiteDatabase) throws -> Bool {
         let count = try db.scalarInt64(
@@ -58,11 +62,12 @@ public enum Seeder {
                   home_shortcut_2_id, active_agent_id
                 ) VALUES (
                   1, 'B2', 10, 0.9, 36500, 1, 4, ?, 0,
-                  NULL, NULL, NULL, ?, NULL, NULL, ?
+                  NULL, ?, NULL, ?, NULL, NULL, ?
                 );
                 """,
                 [
                     .text(timezone),
+                    .int(Int64(defaultLeechLapses)),
                     .text(fsrsVersionValue),
                     .text(readoProxyAgentID),
                 ])

@@ -194,6 +194,9 @@ final class AppModel {
         let logID = try ReviewService.record(
             on: database, cardID: cardID, before: snapshot,
             outcome: outcome, now: SystemClock().now)
+        // FR-19: kiểm tra leech SAU khi đã ghi log + update cards.
+        // Nếu lapses >= ngưỡng → suspend card (ra khỏi hàng đợi).
+        _ = try LeechService.evaluateAfterGrade(on: database, cardID: cardID)
         return logID
     }
 
