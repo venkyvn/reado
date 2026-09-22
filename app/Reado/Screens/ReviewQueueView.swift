@@ -20,6 +20,10 @@ struct ReviewQueueView: View {
     @State private var showUndoToast: Bool = false
     @State private var isLoading = true
 
+    // FR-18: phạm vi ôn (nil = tất cả) + popover picker.
+    @State private var scope: Set<String>? = nil
+    @State private var showScopePicker = false
+
     var body: some View {
         ZStack {
             if isLoading {
@@ -40,17 +44,49 @@ struct ReviewQueueView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Đóng") { dismiss() }
             }
+            // FR-18: chọn phạm vi ôn (tất cả / một / vài collection).
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showScopePicker = true
+                } label: {
+                    Label("Phạm vi", systemImage: "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel("Phạm vi ôn")
+            }
+        }
+        .sheet(isPresented: $showScopePicker) {
+            ScopePickerSheet(scope: $scope) {
+                Task { await loadQueue() }
+            }
         }
         .task { await loadQueue() }
     }
 
     // MARK: — Empty / Done
 
+    @ViewBuilder
     private var emptyView: some View {
-        ContentUnavailableView {
-            Label("Không có gì cần ôn", systemImage: "checkmark.circle")
-        } description: {
-            Text("Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới (FR-01).")
+        if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
+            // J5: hết due trong phạm vi nhưng ngoài vẫn còn — nợ phải hiện rõ.
+            ContentUnavailableView {
+                Label("Không còn thẻ trong phạm vi này", systemImage: "checkmark.circle")
+            } description: {
+                Text("Còn \(model.dueOutsideScope) thẻ đến hạn nằm ngoài phạm vi đã chọn.")
+            } actions: {
+                Button("Ôn tất cả") {
+                    self.scope = nil
+                    Task { await loadQueue() }
+                }
+                .buttonStyle(.borderedProminent)
+                Button("Đổi phạm vi") { showScopePicker = true }
+                    .buttonStyle(.bordered)
+            }
+        } else {
+            ContentUnavailableView {
+                Label("Không có gì cần ôn", systemImage: "checkmark.circle")
+            } description: {
+                Text("Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới (FR-01).")
+            }
         }
     }
 
@@ -63,11 +99,38 @@ struct ReviewQueueView: View {
                 .font(.title2.bold())
             Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
+            debtBanner
             Button("Đóng") { dismiss() }
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // FR-18: nợ ngoài phạm vi phải nhìn thấy (research/vocabulary.md 4.2) — khi
+    // còn card due ngoài scope, đừng giấu dưới một "Xong rồi" không điều kiện.
+    @ViewBuilder
+    private var debtBanner: some View {
+        if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text("Còn \(model.dueOutsideScope) thẻ đến hạn ngoài phạm vi")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Ôn tất cả") {
+                    self.scope = nil
+                    Task { await loadQueue() }
+                }
+                .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                Color.orange.opacity(0.08),
+                in: RoundedRectangle(cornerRadius: 8))
+        }
     }
 
     private func errorView(_ message: String) -> some View {
@@ -86,6 +149,8 @@ struct ReviewQueueView: View {
     private var cardView: some View {
         let item = items[currentIndex]
         return VStack(spacing: 24) {
+            debtBanner
+
             // Progress.
             HStack {
                 Text("\(currentIndex + 1)/\(items.count)")
@@ -271,14 +336,106 @@ struct ReviewQueueView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await model.loadReviewQueue()
+            try await model.loadReviewQueue(scope: scope)
             self.items = model.reviewItems
+            // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.
+            self.currentIndex = 0
+            self.isFlipped = false
+            self.showUndoToast = false
+            self.lastLogID = nil
             if let first = items.first,
                let snap = model.reviewSnapshots[first.cardID] {
                 lastSnapshot = snap
+            } else {
+                lastSnapshot = nil
             }
         } catch {
             // reviewError đã set trong model.
+        }
+    }
+}
+
+/// FR-18: picker phạm vi ôn — tất cả / một / vài collection (multi-select).
+/// nil = tất cả; Set 1 phần tử = một; Set nhiều = trộn (J5).
+private struct ScopePickerSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @Binding var scope: Set<String>?
+    let onApply: () -> Void
+
+    @State private var isAll: Bool
+    @State private var selected: Set<String>
+
+    init(scope: Binding<Set<String>?>, onApply: @escaping () -> Void) {
+        _scope = scope
+        self.onApply = onApply
+        let current = scope.wrappedValue
+        _isAll = State(initialValue: current == nil)
+        _selected = State(initialValue: current ?? [])
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        isAll = true
+                        selected = []
+                    } label: {
+                        HStack {
+                            Label("Tất cả collection", systemImage: "square.stack.3d.up")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if isAll {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                }
+                Section("Hoặc trộn một / vài collection") {
+                    ForEach(model.collections) { collection in
+                        Button {
+                            if selected.contains(collection.id) {
+                                selected.remove(collection.id)
+                            } else {
+                                selected.insert(collection.id)
+                            }
+                            isAll = false
+                        } label: {
+                            HStack {
+                                Text(collection.name)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if collection.dueNow > 0 {
+                                    Text("\(collection.dueNow) đến hạn")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if selected.contains(collection.id) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Phạm vi ôn")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Huỷ") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Áp dụng") {
+                        // Bỏ chọn hết ≡ tất cả (không sinh Set rỗng).
+                        scope = (isAll || selected.isEmpty) ? nil : selected
+                        dismiss()
+                        onApply()
+                    }
+                }
+            }
         }
     }
 }

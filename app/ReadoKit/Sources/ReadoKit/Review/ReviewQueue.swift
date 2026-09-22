@@ -11,34 +11,45 @@ import Foundation
 public enum ReviewQueue {
 
     /// Nhánh 1 — thẻ mới đến hạn, quota = daily_new_limit trừ số thẻ mới đã
-    /// giới thiệu hôm nay.
+    /// giới thiệu hôm nay. `scope` (FR-18): nil = tất cả, ngược lại chỉ chọn
+    /// card thuộc đúng các collection — hạn mức vẫn áp TOÀN CỤC trước (không nới).
     public static func newCardIDs(
-        on db: SQLiteDatabase, quota: Int64
+        on db: SQLiteDatabase, quota: Int64, scope: Set<String>? = nil
     ) throws -> [String] {
         guard quota > 0 else { return [] }
+        let (clause, binds) = inScopeClause(scope)
+        var params = binds
+        params.append(.int(quota))
         return try db.rows(
             """
-            SELECT id FROM cards
-            WHERE state = 'new' AND suspended_at IS NULL
-            ORDER BY due_at, id
+            SELECT c.id FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state = 'new' AND c.suspended_at IS NULL
+              AND \(clause)
+            ORDER BY c.due_at, c.id
             LIMIT ?;
-            """, [.int(quota)]
+            """, params
         ).compactMap { $0.first?.textValue }
     }
 
     /// Nhánh 2 — thẻ ôn lại đã đến hạn tới cuối "hôm nay".
-    /// KHÔNG có LIMIT theo daily_new_limit.
+    /// KHÔNG có LIMIT theo daily_new_limit. `scope` (FR-18): nil = tất cả.
     public static func dueCardIDs(
-        on db: SQLiteDatabase, dueBeforeIso: String
+        on db: SQLiteDatabase, dueBeforeIso: String, scope: Set<String>? = nil
     ) throws -> [String] {
-        try db.rows(
+        let (clause, binds) = inScopeClause(scope)
+        var params: [SQLValue] = [.text(dueBeforeIso)]
+        params.append(contentsOf: binds)
+        return try db.rows(
             """
-            SELECT id FROM cards
-            WHERE state IN ('review', 'relearning')
-              AND suspended_at IS NULL
-              AND due_at <= ?
-            ORDER BY due_at, id;
-            """, [.text(dueBeforeIso)]
+            SELECT c.id FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state IN ('review', 'relearning')
+              AND c.suspended_at IS NULL
+              AND c.due_at <= ?
+              AND \(clause)
+            ORDER BY c.due_at, c.id;
+            """, params
         ).compactMap { $0.first?.textValue }
     }
 
@@ -61,6 +72,53 @@ public enum ReviewQueue {
             """,
             [.text(dayStartIso), .text(dayStartIso)])
         return value ?? 0
+    }
+
+    /// FR-18: số thẻ ôn lại đã đến hạn nằm NGOÀI phạm vi đang chọn (nợ phải nhìn
+    /// thấy — nếu scope nil / rỗng thì không có gì ngoài phạm vi, trả 0).
+    public static func dueOutsideScopeCount(
+        on db: SQLiteDatabase, dueBeforeIso: String, scope: Set<String>?
+    ) throws -> Int64 {
+        let (clause, binds) = outOfScopeClause(scope)
+        guard !clause.isEmpty else { return 0 }
+        var params: [SQLValue] = [.text(dueBeforeIso)]
+        params.append(contentsOf: binds)
+        let value = try db.scalarInt64(
+            """
+            SELECT COUNT(*) FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state IN ('review', 'relearning')
+              AND c.suspended_at IS NULL
+              AND c.due_at <= ?
+              AND \(clause)
+            """, params)
+        return value ?? 0
+    }
+
+    /// Mệnh đề `v.collection_id IN (...)` cho card THUỘC phạm vi. nil / rỗng =
+    /// tất cả (TRUE).
+    private static func inScopeClause(
+        _ scope: Set<String>?
+    ) -> (sql: String, binds: [SQLValue]) {
+        guard let scope, !scope.isEmpty else { return ("TRUE", []) }
+        let placeholders = scope.map { _ in "?" }.joined(separator: ",")
+        return (
+            "v.collection_id IN (\(placeholders))",
+            scope.map { .text($0) }
+        )
+    }
+
+    /// Mệnh đề `v.collection_id NOT IN (...)` cho card NẰM NGOÀI phạm vi. nil /
+    /// rỗng = không có gì ngoài (trả sql rỗng → caller trả 0).
+    private static func outOfScopeClause(
+        _ scope: Set<String>?
+    ) -> (sql: String, binds: [SQLValue]) {
+        guard let scope, !scope.isEmpty else { return ("", []) }
+        let placeholders = scope.map { _ in "?" }.joined(separator: ",")
+        return (
+            "v.collection_id NOT IN (\(placeholders))",
+            scope.map { .text($0) }
+        )
     }
 
     // MARK: — FR-11 full queue façade (cards → [ReviewItem] + snapshot map)
@@ -102,7 +160,8 @@ public enum ReviewQueue {
     public static func loadFullQueue(
         on db: SQLiteDatabase,
         dailyNewLimit: Int,
-        now: Date
+        now: Date,
+        scope: Set<String>? = nil
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
         let nowIso = ISOTimestamp.string(from: now)
         // Tính dayStartIso theo settings.timezone + cutoff_hour.
@@ -122,9 +181,9 @@ public enum ReviewQueue {
         // Nhánh 1 — new (quota).
         let introduced = try newIntroducedCount(on: db, dayStartIso: dayStartIso)
         let remainingQuota = max(0, Int64(dailyNewLimit) - introduced)
-        let newIDs = try newCardIDs(on: db, quota: remainingQuota)
+        let newIDs = try newCardIDs(on: db, quota: remainingQuota, scope: scope)
         // Nhánh 2 — due (review/relearning, đến cuối ngày cutoff).
-        let dueIDs = try dueCardIDs(on: db, dueBeforeIso: nowIso)
+        let dueIDs = try dueCardIDs(on: db, dueBeforeIso: nowIso, scope: scope)
         let allCardIDs = newIDs + dueIDs
         guard !allCardIDs.isEmpty else { return ([], [:]) }
 

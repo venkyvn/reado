@@ -47,6 +47,11 @@ final class AppModel {
     private(set) var reviewSnapshots: [String: CardSnapshot] = [:]
     private(set) var currentReviewSnapshot: CardSnapshot?
 
+    // FR-18: phạm vi ôn hiện tại (nil = tất cả collection) + nợ due ngoài phạm
+    // vi (phải nhìn thấy — research/vocabulary.md 4.2).
+    private(set) var reviewScope: Set<String>? = nil
+    private(set) var dueOutsideScope = 0
+
     /// Các review item hiện hàng đợi (hai nhánh) — cách đọc cho ReviewQueueView.
     var reviewQueue: [ReviewQueue.ReviewItem] { reviewItems }
 
@@ -183,20 +188,27 @@ final class AppModel {
     /// Tải toàn bộ hàng đợi hôm nay (hai nhánh: new quota + due không giới
     /// hạn) kèm snapshot TRƯỚC cho FR-12 undo. Quota mới đọc từ settings
     /// `daily_new_limit` (seed = 10; FR-15 chưa có UI).
-    func loadReviewQueue() async throws {
+    func loadReviewQueue(scope: Set<String>? = nil) async throws {
         guard let database else {
             throw ReviewError.modelUnavailable
         }
+        reviewScope = scope
         isLoadingReview = true
         reviewError = nil
         defer { isLoadingReview = false }
         do {
             let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
+            let now = SystemClock().now
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
-                on: database, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
+                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope)
             reviewItems = items
             reviewSnapshots = snapshots
             currentReviewSnapshot = items.first.flatMap { snapshots[$0.cardID] }
+            dueOutsideScope = try Int(
+                ReviewQueue.dueOutsideScopeCount(
+                    on: database,
+                    dueBeforeIso: ISOTimestamp.string(from: now),
+                    scope: scope))
         } catch {
             reviewError = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)

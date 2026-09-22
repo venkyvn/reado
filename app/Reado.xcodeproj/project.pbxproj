@@ -38,6 +38,8 @@
 		5C0100000200000000000000 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000200000000000000 /* CollectionDetailView.swift */; };
 
 		5C0200000500000000000000 /* VocabularyListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000500000000000000 /* VocabularyListTests.swift */; };
+
+		5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000600000000000000 /* ScopedReviewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +74,8 @@
 		5B0100000200000000000000 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 
 		5B0200000500000000000000 /* VocabularyListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListTests.swift; sourceTree = "<group>"; };
+
+		5B0200000600000000000000 /* ScopedReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopedReviewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,7 +149,8 @@
 				5B0200000200000000000000 /* CaptureFailureTests.swift */,
 				5B0200000300000000000000 /* DailyProgressTests.swift */,
 				5B0200000400000000000000 /* SettingsTests.swift */,
-				5B0200000500000000000000 /* VocabularyListTests.swift */,);
+				5B0200000500000000000000 /* VocabularyListTests.swift */,
+				5B0200000600000000000000 /* ScopedReviewTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -276,7 +281,8 @@
 				5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */,
 				5C0200000300000000000000 /* DailyProgressTests.swift in Sources */,
 				5C0200000400000000000000 /* SettingsTests.swift in Sources */,
-				5C0200000500000000000000 /* VocabularyListTests.swift in Sources */,);
+				5C0200000500000000000000 /* VocabularyListTests.swift in Sources */,
+				5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
