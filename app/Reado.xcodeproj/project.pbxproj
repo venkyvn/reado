@@ -54,6 +54,10 @@
 		5C0100000500000000000000 /* HomeShortcutToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000500000000000000 /* HomeShortcutToggle.swift */; };
 		5C0100000600000000000000 /* ReadingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000600000000000000 /* ReadingSessionView.swift */; };
 		5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000A00000000000000 /* ReadingSessionTests.swift */; };
+
+		5C0100000700000000000000 /* StreakCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000700000000000000 /* StreakCalendarView.swift */; };
+
+		5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000B00000000000000 /* StreakCalendarTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -104,6 +108,10 @@
 		5B0100000500000000000000 /* HomeShortcutToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeShortcutToggle.swift; sourceTree = "<group>"; };
 		5B0100000600000000000000 /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
 		5B0200000A00000000000000 /* ReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionTests.swift; sourceTree = "<group>"; };
+
+		5B0100000700000000000000 /* StreakCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarView.swift; sourceTree = "<group>"; };
+
+		5B0200000B00000000000000 /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -162,7 +170,8 @@
 				5B0100000300000000000000 /* ImportView.swift */,
 				5B0100000400000000000000 /* NotificationScheduler.swift */,
 				5B0100000500000000000000 /* HomeShortcutToggle.swift */,
-				5B0100000600000000000000 /* ReadingSessionView.swift */,);
+				5B0100000600000000000000 /* ReadingSessionView.swift */,
+				5B0100000700000000000000 /* StreakCalendarView.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -186,7 +195,8 @@
 				5B0200000700000000000000 /* CSVImportTests.swift */,
 				5B0200000800000000000000 /* ReminderTests.swift */,
 				5B0200000900000000000000 /* HomeShortcutTests.swift */,
-				5B0200000A00000000000000 /* ReadingSessionTests.swift */,);
+				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
+				5B0200000B00000000000000 /* StreakCalendarTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -302,7 +312,8 @@
 				5C0100000300000000000000 /* ImportView.swift in Sources */,
 				5C0100000400000000000000 /* NotificationScheduler.swift in Sources */,
 				5C0100000500000000000000 /* HomeShortcutToggle.swift in Sources */,
-				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,);
+				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
+				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -326,7 +337,8 @@
 				5C0200000700000000000000 /* CSVImportTests.swift in Sources */,
 				5C0200000800000000000000 /* ReminderTests.swift in Sources */,
 				5C0200000900000000000000 /* HomeShortcutTests.swift in Sources */,
-				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,);
+				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
+				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

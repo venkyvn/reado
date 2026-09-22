@@ -154,13 +154,18 @@ struct RootView: View {
                     .foregroundStyle(.secondary)
                     .listRowSeparator(.hidden)
             }
-            HStack(spacing: 12) {
-                Label("\(progress.streak) ngày ôn liên tục", systemImage: "flame.fill")
-                    .foregroundStyle(.orange)
-                Spacer()
-                Text("\(progress.pagesAnalyzed) trang đã phân tích")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // J-R1-P: ô Streak bấm được → Lịch streak (heatmap 18 tuần).
+            NavigationLink {
+                StreakCalendarView()
+            } label: {
+                HStack(spacing: 12) {
+                    Label("\(progress.streak) ngày ôn liên tục", systemImage: "flame.fill")
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Text("\(progress.pagesAnalyzed) trang đã phân tích")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .listRowSeparator(.hidden)
         }

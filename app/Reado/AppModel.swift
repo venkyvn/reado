@@ -20,6 +20,8 @@ final class AppModel {
     private(set) var collections: [CollectionOverview] = []
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
+    // J-R1-P: lịch streak (lens FR-14) — streak hiện tại + dài nhất + heatmap 18×7.
+    private(set) var streakHeatmap: StreakHeatmap?
     // FR-17: shortcut Home — id collection đang ghim (thứ tự slot 1 → 2, ≤ 2).
     private(set) var homeShortcutIDs: [String] = []
 
@@ -273,6 +275,17 @@ final class AppModel {
         let dailyNewLimit = currentSettings(db).dailyNewLimit
         return try DailyProgressService.load(
             on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
+    }
+
+    /// J-R1-P: nạp lịch streak (heatmap 18 tuần + streak hiện tại/dài nhất).
+    /// Chỉ gọi khi mở màn Lịch streak — query chạm toàn bộ review_logs.
+    func loadStreakHeatmap() {
+        guard let database else {
+            streakHeatmap = nil
+            return
+        }
+        streakHeatmap = try? StreakCalendarService.load(
+            on: database, now: SystemClock().now)
     }
 
     // MARK: — FR-15 Settings

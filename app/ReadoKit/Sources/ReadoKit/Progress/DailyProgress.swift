@@ -79,45 +79,17 @@ public enum DailyProgressService {
 
     /// Streak = số ngày ôn liên tục tính từ hôm nay (nếu hôm nay chưa ôn thì tính
     /// từ hôm qua) theo giờ chuyển ngày. Một ngày "có ôn" = có ≥1 `review_log`.
+    /// Logic chia sẻ với `StreakCalendarService` (J-R1-P) để hai con số trên cùng
+    /// màn hình không tính kiểu khác nhau.
     private static func streak(
         on db: SQLiteDatabase,
         now: Date,
         timezone: TimeZone,
         cutoffHour: Int
     ) throws -> Int {
-        let dayStarts: Set<String> = Set(
-            try db.rows("SELECT DISTINCT reviewed_at FROM review_logs;")
-                .compactMap { row -> String? in
-                    guard let iso = row.first?.textValue,
-                          let date = ISOTimestamp.date(from: iso) else {
-                        return nil
-                    }
-                    return DayBoundary.window(
-                        now: date, timezone: timezone, dayCutoffHour: cutoffHour).start
-                })
-
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timezone
-
-        func previousWindowStart(_ iso: String) -> String {
-            guard let date = ISOTimestamp.date(from: iso) else { return iso }
-            let prev = calendar.date(byAdding: .day, value: -1, to: date) ?? date
-            return DayBoundary.window(
-                now: prev, timezone: timezone, dayCutoffHour: cutoffHour).start
-        }
-
-        var cursor = DayBoundary.window(
-            now: now, timezone: timezone, dayCutoffHour: cutoffHour).start
-        if !dayStarts.contains(cursor) {
-            // Hôm nay chưa ôn → streak chưa đứt nếu hôm qua có ôn.
-            cursor = previousWindowStart(cursor)
-        }
-
-        var streak = 0
-        while dayStarts.contains(cursor) {
-            streak += 1
-            cursor = previousWindowStart(cursor)
-        }
-        return streak
+        let dayStarts = try StreakCalendarService.reviewedDayStarts(
+            on: db, timezone: timezone, cutoffHour: cutoffHour)
+        return StreakCalendarService.currentStreak(
+            from: dayStarts, now: now, timezone: timezone, cutoffHour: cutoffHour)
     }
 }
