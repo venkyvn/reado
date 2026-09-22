@@ -18,6 +18,7 @@ struct CollectionDetailView: View {
     @State private var renameText = ""
     @State private var showDeleteConfirm = false
     @State private var moveSheetIntention: MoveIntention?
+    @State private var showExport = false
 
     private var overview: AppModel.CollectionOverview? {
         model.collections.first { $0.id == collectionID }
@@ -95,6 +96,9 @@ struct CollectionDetailView: View {
                 excludedID: collectionID,
                 onCommit: { commitMove(to: $0, intention: intention) })
         }
+        .sheet(isPresented: $showExport) {
+            NavigationStack { ExportView(initialCollectionIDs: [collectionID]) }
+        }
     }
 
     private var deleteAlertTitle: String {
@@ -130,6 +134,10 @@ struct CollectionDetailView: View {
                 Button("Đổi tên") {
                     renameText = overview?.name ?? ""
                     showRename = true
+                }
+                // J-R1-D/J2 #9: xuất đúng collection đang đứng (chọn sẵn phạm vi).
+                Button("Xuất bộ này") {
+                    showExport = true
                 }
                 if !isInbox {
                     Button("Xoá", role: .destructive) {

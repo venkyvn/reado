@@ -56,8 +56,9 @@ struct RootView: View {
                     }
                     .accessibilityLabel("Chụp trang")
                 }
-                // FR-17: tạo collection có tên (gom từ theo sách/ngữ cảnh).
-                ToolbarItem(placement: .bottomBar) {
+                // FR-17 tạo collection + J-R1-D cửa Dữ liệu (CTA thứ cấp, không
+                // cạnh bánh răng Cài đặt — NFR-08 giữ chụp trang ≤ 3 thao tác).
+                ToolbarItemGroup(placement: .bottomBar) {
                     Button {
                         newCollectionName = ""
                         showNewCollection = true
@@ -65,6 +66,13 @@ struct RootView: View {
                         Label("Tạo collection", systemImage: "plus")
                     }
                     .accessibilityLabel("Tạo collection")
+
+                    Button {
+                        showExport = true
+                    } label: {
+                        Label("Dữ liệu", systemImage: "doc.on.doc")
+                    }
+                    .accessibilityLabel("Dữ liệu")
                 }
             }
             .alert("Tạo collection", isPresented: $showNewCollection) {

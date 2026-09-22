@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 
 struct ExportView: View {
     @Environment(AppModel.self) private var model
-    @State private var selectedCollectionIDs: Set<String> = []
+    @State private var selectedCollectionIDs: Set<String>
     @State private var isExporting = false
     @State private var exportError: String?
     @State private var exportedCSV: Data?
@@ -15,6 +15,11 @@ struct ExportView: View {
     @State private var showShareCSV = false
     @State private var showShareJSON = false
     @State private var showImport = false
+
+    /// Collection chọn sẵn khi mở từ "Xuất bộ này" (J-R1-D/J2 #9); rỗng = tất cả.
+    init(initialCollectionIDs: Set<String> = []) {
+        _selectedCollectionIDs = State(initialValue: initialCollectionIDs)
+    }
 
     var body: some View {
         List {
