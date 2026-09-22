@@ -36,6 +36,10 @@ struct CollectionDetailView: View {
                             value: lastAddedAt.formatted(
                                 date: .abbreviated, time: .shortened))
                     }
+                    // FR-17: kho tạm không hiện control "Hiện trên Home" (J2).
+                    if !isInbox {
+                        HomeShortcutToggle(collectionID: collectionID)
+                    }
                 }
             }
 

@@ -20,6 +20,8 @@ final class AppModel {
     private(set) var collections: [CollectionOverview] = []
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
+    // FR-17: shortcut Home — id collection đang ghim (thứ tự slot 1 → 2, ≤ 2).
+    private(set) var homeShortcutIDs: [String] = []
 
     // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
     // một detail mở một lúc nên một biến là đủ).
@@ -91,6 +93,7 @@ final class AppModel {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
         dailyProgress = (try? Self.loadDailyProgress(db: database))
+        homeShortcutIDs = (try? HomeShortcutService.ids(on: database)) ?? []
     }
 
     // MARK: — FR-01 Capture
@@ -384,6 +387,59 @@ final class AppModel {
             toCollectionID: toCollectionID)
         reloadOverview()
         return moved
+    }
+
+    // MARK: — FR-17 Home shortcut
+
+    /// Các collection đang ghim trên Home, đã resolve theo thứ tự slot và bỏ
+    /// shortcut trỏ vào collection đã xoá (PRD FR-17: "shortcut lỗi bị bỏ").
+    var homeShortcuts: [CollectionOverview] {
+        homeShortcutIDs.compactMap { id in
+            collections.first { $0.id == id }
+        }
+    }
+
+    /// Ghim thêm collection lên Home (slot trống tiếp theo). Đã đủ 2 slot →
+    /// `set` ném `.tooMany` (UI mở chooser chọn slot thay TRƯỚC khi gọi —
+    /// `HomeShortcutToggle` kiểm `count < maxShortcuts`).
+    @discardableResult
+    func addHomeShortcut(_ id: String) throws -> [String] {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let current = try HomeShortcutService.ids(on: database)
+        guard !current.contains(id) else { return current }
+        let updated = try HomeShortcutService.set(on: database, ids: current + [id])
+        reloadOverview()
+        return updated
+    }
+
+    /// Bỏ một shortcut, giữ nguyên thứ tự các slot còn lại (compact).
+    @discardableResult
+    func removeHomeShortcut(_ id: String) throws -> [String] {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let current = try HomeShortcutService.ids(on: database)
+        guard current.contains(id) else { return current }
+        let updated = try HomeShortcutService.set(
+            on: database, ids: current.filter { $0 != id })
+        reloadOverview()
+        return updated
+    }
+
+    /// Chooser "đã đủ 2": thay một shortcut đang có bằng collection mới. Shortcut
+    /// cần thay đã mất (collection xoá) → coi như ghim mới.
+    @discardableResult
+    func replaceHomeShortcut(existingID: String, with newID: String) throws
+        -> [String]
+    {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let current = try HomeShortcutService.ids(on: database)
+        guard let index = current.firstIndex(of: existingID) else {
+            return try addHomeShortcut(newID)
+        }
+        var updated = current
+        updated[index] = newID
+        let result = try HomeShortcutService.set(on: database, ids: updated)
+        reloadOverview()
+        return result
     }
 
     // MARK: — FR-20 CSV Import

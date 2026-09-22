@@ -24,6 +24,7 @@ struct SettingsView: View {
         List {
             learningSection
             reminderSection
+            homeShortcutSection
             fsrsSection
             if let message = saveError {
                 Section {
@@ -111,6 +112,33 @@ struct SettingsView: View {
             Text(reminderEnabled
                  ? "Nhận thông báo mỗi ngày lúc \(ReminderService.describe(minutes: reminderMinutes))."
                  : "Bật để nhận lời nhắc ôn từ vựng hằng ngày.")
+        }
+    }
+
+    // MARK: — Đang đọc trên Home (FR-17)
+
+    /// Named collection (bỏ kho tạm — không phải bài đọc chủ động) để bật/tắt
+    /// ghim; cùng rule tối đa 2 + chooser thay thế của J2 (dùng chung
+    /// `HomeShortcutToggle`).
+    private var namedCollections: [AppModel.CollectionOverview] {
+        model.collections.filter { !$0.isDefault }
+    }
+
+    private var homeShortcutSection: some View {
+        Section {
+            if namedCollections.isEmpty {
+                Text("Chưa có collection — tạo ở tab Đọc rồi ghim lên Home.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(namedCollections) { collection in
+                    HomeShortcutToggle(
+                        collectionID: collection.id, label: collection.name)
+                }
+            }
+        } header: {
+            Text("Đang đọc trên Home")
+        } footer: {
+            Text("Tối đa 2 collection mở nhanh trên Home (mở thẳng Collection Hub).")
         }
     }
 

@@ -158,8 +158,46 @@ struct RootView: View {
         }
     }
 
+    // FR-17: tối đa 2 collection "đang đọc" ghim trên Home — mở thẳng Collection
+    // Hub. Thứ tự = thứ tự slot; shortcut trỏ vào collection đã xoá đã bị bỏ
+    // (đã `compactMap` trong `model.homeShortcuts`).
+    @ViewBuilder
+    private var homeShortcutRows: some View {
+        if !model.homeShortcuts.isEmpty {
+            Section("Đang đọc trên Home") {
+                ForEach(model.homeShortcuts) { collection in
+                    NavigationLink(value: collection.id) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "pin.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.accentColor)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(collection.name)
+                                Text("\(collection.totalItems) từ")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if collection.dueNow > 0 {
+                                Text("\(collection.dueNow)")
+                                    .font(.subheadline.weight(.semibold))
+                                    .monospacedDigit()
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule().fill(
+                                            Color.orange.opacity(0.18)))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var collectionList: some View {
         List {
+            homeShortcutRows
             dailyProgressRows
 
             ForEach(model.collections) { collection in
