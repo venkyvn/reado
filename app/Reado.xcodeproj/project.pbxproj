@@ -40,6 +40,7 @@
 		5B0200000000000000000003 /* ReviewSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSchedulerTests.swift; sourceTree = "<group>"; };
 		5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewQueueAndServiceTests.swift; sourceTree = "<group>"; };
 		5B0200000000000000000005 /* FoundationPrimitivesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationPrimitivesTests.swift; sourceTree = "<group>"; };
+		5B0200000000000000000006 /* AnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisTests.swift; sourceTree = "<group>"; };
 		5B0100000000000000000010 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CaptureView.swift; path = Capture/CaptureView.swift; sourceTree = "<group>"; };
 		5B0100000000000000000011 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		5B0100000000000000000012 /* ReviewQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReviewQueueView.swift; path = Screens/ReviewQueueView.swift; sourceTree = "<group>"; };
