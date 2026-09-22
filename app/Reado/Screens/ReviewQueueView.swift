@@ -24,6 +24,11 @@ struct ReviewQueueView: View {
     @State private var scope: Set<String>? = nil
     @State private var showScopePicker = false
 
+    /// Mở sẵn phạm vi (J2 "Ôn bộ này") — nil = tất cả collection.
+    init(initialScope: Set<String>? = nil) {
+        _scope = State(initialValue: initialScope)
+    }
+
     var body: some View {
         ZStack {
             if isLoading {

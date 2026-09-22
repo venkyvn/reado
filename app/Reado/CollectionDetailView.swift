@@ -20,6 +20,11 @@ struct CollectionDetailView: View {
     @State private var moveSheetIntention: MoveIntention?
     @State private var showExport = false
 
+    // J2 hub: chụp thêm vào bộ này + ôn bộ này (scoped) + phiên đọc song ngữ.
+    @State private var showCapture = false
+    @State private var showAnalysis = false
+    @State private var showReview = false
+
     private var overview: AppModel.CollectionOverview? {
         model.collections.first { $0.id == collectionID }
     }
@@ -42,7 +47,25 @@ struct CollectionDetailView: View {
                         HomeShortcutToggle(collectionID: collectionID)
                     }
                 }
+
+                // J2 hub: hành động nhanh — ôn phạm vi bộ này + chụp thêm vào bộ này.
+                Section {
+                    Button {
+                        showReview = true
+                    } label: {
+                        Label("Ôn bộ này", systemImage: "brain.head.profile")
+                    }
+                    if !isInbox {
+                        Button {
+                            startCapture()
+                        } label: {
+                            Label("Chụp trang vào bộ này", systemImage: "camera.fill")
+                        }
+                    }
+                }
             }
+
+            sessionsSection
 
             if model.vocabulary.isEmpty {
                 ContentUnavailableView(
@@ -99,10 +122,70 @@ struct CollectionDetailView: View {
         .sheet(isPresented: $showExport) {
             NavigationStack { ExportView(initialCollectionIDs: [collectionID]) }
         }
+        .sheet(isPresented: $showCapture, onDismiss: {
+            // J2: chụp xong → mở phân tích với đích là bộ này.
+            if model.lastCapturedImage != nil {
+                model.analysisTargetCollectionID = collectionID
+                showAnalysis = true
+            }
+        }) {
+            NavigationStack { CaptureView() }
+        }
+        .sheet(isPresented: $showAnalysis, onDismiss: {
+            // FR-04: ảnh mờ / sai ngôn ngữ → mở lại chụp (giữ đích bộ này).
+            if model.pendingRecapture {
+                model.pendingRecapture = false
+                showCapture = true
+            }
+            reloadAfterSession()
+        }) {
+            NavigationStack { AnalysisView() }
+        }
+        .sheet(isPresented: $showReview, onDismiss: {
+            reloadAfterSession()
+        }) {
+            NavigationStack { ReviewQueueView(initialScope: [collectionID]) }
+        }
     }
 
     private var deleteAlertTitle: String {
         wordCount > 0 ? "Xoá collection" : "Xoá collection này?"
+    }
+
+    // J2 hub: danh sách phiên đọc song ngữ (tối đa 10, mới nhất trước). Kho tạm
+    // không lưu phiên (Q-10/ADR-029) nên không hiện section này.
+    @ViewBuilder
+    private var sessionsSection: some View {
+        if !isInbox {
+            Section {
+                if model.sessions.isEmpty {
+                    Text("Chưa có phiên đọc. Chụp trang vào bộ này để lưu bản song ngữ (giữ tối đa 10 phiên).")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(model.sessions) { session in
+                        NavigationLink {
+                            ReadingSessionView(session: session)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(
+                                    session.createdAt.formatted(
+                                        date: .abbreviated, time: .shortened))
+                                    .font(.subheadline.weight(.semibold))
+                                if let summary = session.summary, !summary.isEmpty {
+                                    Text(summary)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Phiên đọc (\(model.sessions.count)/10)")
+            }
+        }
     }
 
     private func moveTitle(for intention: MoveIntention) -> String {
@@ -204,6 +287,19 @@ struct CollectionDetailView: View {
         model.loadVocabulary(
             collectionID: collectionID,
             order: isInbox ? .byDateAdded : .byTerm)
+        model.loadSessions(collectionID: collectionID)
+    }
+
+    /// J2: mở capture với đích là bộ này — AnalysisView sẽ chọn sẵn collection.
+    private func startCapture() {
+        model.analysisTargetCollectionID = collectionID
+        showCapture = true
+    }
+
+    /// Sau một sheet (phân tích / ôn) đóng lại — refresh từ, phiên, overview.
+    private func reloadAfterSession() {
+        reloadList()
+        model.reloadOverview()
     }
 
     private func commitMove(to targetID: String, intention: MoveIntention) {

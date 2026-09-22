@@ -127,10 +127,14 @@ public enum VocabRepository {
 
     /// Lưu một trang capture — transaction #4 (SD mục 6).
     /// collectionID nil → kho tạm (is_default, 2.4). Một item lỗi → rollback.
+    /// `segments`/`summaryVI` (FR-05/06) chỉ ghi thành phiên đọc khi đích là
+    /// collection có tên — kho tạm KHÔNG lưu phiên (Q-10/ADR-029).
     public static func saveCapture(
         on db: SQLiteDatabase,
         items: [PageAnalysis.VocabularyItemIn],
         collectionID: String?,
+        segments: [PageAnalysis.Segment] = [],
+        summaryVI: String = "",
         now: Date
     ) throws -> Int {
         guard !items.isEmpty else { return 0 }
@@ -155,6 +159,11 @@ public enum VocabRepository {
             targetID = inboxID
         }
         let nowIso = ISOTimestamp.string(from: now)
+        // Q-10/ADR-029: phiên đọc chỉ tồn tại với collection có tên (kho tạm thì
+        // không). Đọc cờ một lần để khỏi kiểm lại trong vòng lặp.
+        let isNamed: Bool = (try db.scalarInt64(
+            "SELECT is_default FROM collections WHERE id = ? LIMIT 1;",
+            [.text(targetID)]) ?? 1) == 0
         var count = 0
         try db.inTransaction {
             for item in items {
@@ -193,6 +202,16 @@ public enum VocabRepository {
                         .text(nowIso),
                     ])
                 count += 1
+            }
+            // SD §6 khối #5 — ghi phiên đọc CÙNG transaction (inTransaction không
+            // nest được). Chỉ khi đích là collection có tên + có nội dung.
+            if isNamed && (!segments.isEmpty || !summaryVI.isEmpty) {
+                try ReadingSessionRepository.insertInsideTransaction(
+                    on: db,
+                    collectionID: targetID,
+                    createdAt: now,
+                    segments: segments,
+                    summary: summaryVI.isEmpty ? nil : summaryVI)
             }
         }
         return count

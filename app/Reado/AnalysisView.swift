@@ -15,6 +15,8 @@ struct AnalysisView: View {
     @State private var saveAlert: SaveAlert?
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
+    // J2: đích lưu (nil = kho tạm). Mở từ Collection Hub → đích collection đó.
+    @State private var selectedCollectionID: String? = nil
 
     private enum SaveAlert: Identifiable {
         case success(Int)
@@ -82,7 +84,13 @@ struct AnalysisView: View {
         } message: {
             Text("Những từ đã sửa trong phiên này chưa được lưu và sẽ mất.")
         }
-        .onAppear { syncDraftsIfNeeded() }
+        .onAppear {
+            syncDraftsIfNeeded()
+            // J2: đích collection chọn sẵn từ Collection Hub (nil = kho tạm).
+            if let target = model.analysisTargetCollectionID {
+                selectedCollectionID = target
+            }
+        }
         .onChange(of: model.analysisResult) { _, _ in syncDraftsIfNeeded() }
         .task {
             // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
@@ -99,7 +107,7 @@ struct AnalysisView: View {
             case let .success(count):
                 return Alert(
                     title: Text("Đã lưu"),
-                    message: Text("\(count) từ đã vào kho tạm và đến hạn ôn hôm nay."),
+                    message: Text("\(count) từ đã vào \(destinationLabel) và đến hạn ôn hôm nay."),
                     dismissButton: .default(Text("OK")) { dismiss() })
             case let .failure(message):
                 return Alert(
@@ -189,8 +197,14 @@ struct AnalysisView: View {
 
     private func save() {
         do {
-            // J1: đích ngầm = kho tạm; collection picker thuộc 2.4.
-            let saved = try model.saveSelection(drafts, collectionID: nil)
+            // FR-05/06: segments + summary đi theo phiên đọc khi lưu vào collection
+            // có tên; kho tạm không lưu phiên (kho chứa từ chưa phân loại).
+            let result = model.analysisResult
+            let saved = try model.saveSelection(
+                drafts,
+                collectionID: selectedCollectionID,
+                segments: result?.segments ?? [],
+                summaryVI: result?.summaryVI ?? "")
             hasConfirmed = true
             saveAlert = .success(saved)
         } catch {
@@ -198,10 +212,29 @@ struct AnalysisView: View {
         }
     }
 
+    /// Nhãn đích lưu cho thông báo thành công (kho tạm hoặc tên collection).
+    private var destinationLabel: String {
+        if let id = selectedCollectionID,
+           let collection = model.collections.first(where: { $0.id == id }) {
+            return "«\(collection.name)»"
+        }
+        return "kho tạm"
+    }
+
     // MARK: - Kết quả
 
     private func resultList(_ result: PageAnalysis) -> some View {
         List {
+            // J2: chọn đích lưu — kho tạm (đích ngầm) hoặc collection có tên.
+            Section {
+                Picker("Lưu vào", selection: $selectedCollectionID) {
+                    Text("Kho tạm").tag(nil as String?)
+                    ForEach(model.collections.filter { !$0.isDefault }) { c in
+                        Text(c.name).tag(Optional(c.id))
+                    }
+                }
+            }
+
             // FR-05 (ADR-007): song ngữ xen kẽ theo đoạn — chỉ hiển thị, không lưu.
             if !result.segments.isEmpty {
                 Section("Song ngữ Anh – Việt") {

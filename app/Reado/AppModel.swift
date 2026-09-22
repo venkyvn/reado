@@ -27,6 +27,9 @@ final class AppModel {
     // một detail mở một lúc nên một biến là đủ).
     private(set) var vocabulary: [VocabRepository.VocabularyListEntry] = []
 
+    // FR-05/06: các phiên đọc song ngữ của collection đang xem (J2 hub).
+    private(set) var sessions: [ReadingSession] = []
+
     // FR-01: capture state
     var lastCapturedImage: CapturedImage?
     var captureError: String?
@@ -41,6 +44,10 @@ final class AppModel {
 
     // FR-04: yêu cầu mở lại CaptureView sau khi dọn state (ảnh mờ / sai ngôn ngữ).
     var pendingRecapture = false
+
+    // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
+    // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
+    var analysisTargetCollectionID: String?
 
     // FR-11/FR-12: hàng đợi ôn state
     private(set) var isLoadingReview = false
@@ -147,13 +154,16 @@ final class AppModel {
 
     // MARK: — Chốt phiên duyệt (FR-03/FR-09 + transaction #4)
 
-    /// Lưu các item đã duyệt & chọn vào collection (SD mục 6 khối #4).
+    /// Lưu các item đã duyệt & chọn vào collection (SD mục 6 khối #4 + #5).
     /// Chỉ item `isSelected` được ghi (FR-03 bỏ chọn = không lưu); validation
     /// trường bắt buộc + chuẩn hoá do `ReviewDraftBuilder.selected` (FR-03).
-    /// collectionID nil → kho tạm (is_default, 2.4). Trả số item đã ghi.
+    /// collectionID nil → kho tạm (is_default, 2.4). `segments`/`summaryVI` ghi
+    /// thành phiên đọc (FR-05/06) khi đích là collection có tên. Trả số item đã ghi.
     func saveSelection(
         _ drafts: [ReviewDraft],
-        collectionID: String?
+        collectionID: String?,
+        segments: [PageAnalysis.Segment] = [],
+        summaryVI: String = ""
     ) throws -> Int {
         guard let database else { return 0 }
         let items = try ReviewDraftBuilder.selected(drafts)
@@ -161,11 +171,14 @@ final class AppModel {
             on: database,
             items: items,
             collectionID: collectionID,
+            segments: segments,
+            summaryVI: summaryVI,
             now: SystemClock().now)
         if saved > 0 {
             reloadOverview()
             lastCapturedImage = nil
             analysisResult = nil
+            analysisTargetCollectionID = nil
         }
         return saved
     }
@@ -177,6 +190,7 @@ final class AppModel {
         analysisFailure = nil
         lastCapturedImage = nil
         captureError = nil
+        analysisTargetCollectionID = nil
     }
 
     /// FR-04: dọn state phân tích + báo RootView mở lại CaptureView (ảnh mờ /
@@ -338,6 +352,16 @@ final class AppModel {
         }
         vocabulary = (try? VocabRepository.listVocabulary(
             on: database, collectionID: collectionID, order: order)) ?? []
+    }
+
+    /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).
+    func loadSessions(collectionID: String) {
+        guard let database else {
+            sessions = []
+            return
+        }
+        sessions = (try? ReadingSessionRepository.listSessions(
+            on: database, collectionID: collectionID)) ?? []
     }
 
     // MARK: — FR-17 Collection Management
