@@ -57,12 +57,12 @@ struct StreakCalendarView: View {
                 title: "Chuỗi hiện tại",
                 value: "\(heatmap?.currentStreak ?? 0) ngày",
                 icon: "flame.fill",
-                tint: .orange)
+                tint: Theme.due)
             stat(
                 title: "Dài nhất",
                 value: "\(heatmap?.longestStreak ?? 0) ngày",
-                icon: "trophy.fill",
-                tint: .yellow)
+                icon: "crown.fill",
+                tint: Theme.warn)
         }
     }
 

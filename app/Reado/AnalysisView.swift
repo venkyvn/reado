@@ -316,7 +316,7 @@ private struct ReviewCardRow: View {
                                     .padding(.vertical, 2)
                                     .background(
                                         Capsule().fill(
-                                            Color.secondary.opacity(0.12)))
+                                            Theme.surfaceStrong))
                             }
                             if !draft.meaningVI.isEmpty {
                                 Text(draft.meaningVI)
@@ -422,7 +422,7 @@ private struct ReviewCardRow: View {
                 .font(.subheadline)
                 .padding(8)
                 .background(
-                    Color.secondary.opacity(0.08),
+                    Theme.surface,
                     in: RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -437,13 +437,13 @@ private struct VerificationBadge: View {
             switch status {
             case .verified:
                 Label("Đã kiểm", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Theme.ok)
             case .suspect:
                 Label("Cần xem", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.warn)
             case .unverified:
                 Label("Chưa xác minh", systemImage: "questionmark.circle")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Theme.danger)
             }
         }
         .font(.caption2)

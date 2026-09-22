@@ -77,11 +77,9 @@ struct CaptureView: View {
                 Label("Chụp ảnh", systemImage: "camera.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 6)
             }
+            .buttonStyle(.borderedProminent)
 
             Button {
                 showPhotoLibrary = true
@@ -89,11 +87,9 @@ struct CaptureView: View {
                 Label("Chọn từ thư viện", systemImage: "photo.on.rectangle")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.secondary.opacity(0.1))
-                    .foregroundColor(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 6)
             }
+            .buttonStyle(.bordered)
         }
         .padding()
     }

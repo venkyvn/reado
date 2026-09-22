@@ -68,7 +68,7 @@ struct ExportView: View {
                     Spacer()
                     if selectedCollectionIDs.count == model.collections.count {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Theme.accent)
                     }
                 }
             }
@@ -138,7 +138,7 @@ struct ExportView: View {
     private func errorSection(_ message: String) -> some View {
         Section {
             Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(Theme.danger)
         }
     }
 

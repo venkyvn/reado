@@ -97,9 +97,9 @@ struct ReviewQueueView: View {
 
     private var doneView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle")
+            Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
-                .foregroundStyle(.green)
+                .foregroundStyle(Theme.ok)
             Text("Xong rồi!")
                 .font(.title2.bold())
             Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
@@ -119,7 +119,7 @@ struct ReviewQueueView: View {
         if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.due)
                 Text("Còn \(model.dueOutsideScope) thẻ đến hạn ngoài phạm vi")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -133,7 +133,7 @@ struct ReviewQueueView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(
-                Color.orange.opacity(0.08),
+                Theme.due.opacity(0.08),
                 in: RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -238,7 +238,7 @@ struct ReviewQueueView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(Color(.systemGray5)))
+                        .background(Capsule().fill(Theme.surface))
                 }
             } else {
                 // FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection.
@@ -285,7 +285,7 @@ struct ReviewQueueView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(rating.buttonBackground)
-                .foregroundStyle(.white)
+                .foregroundStyle(rating.buttonForeground)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -454,12 +454,23 @@ extension ReadoRating {
         case .easy: "Dễ"
         }
     }
+    /// Confidence ramp đơn sắc — bỏ đèn giao thông (vision "Journey Over Summary"):
+    /// chỉ Easy nổi bật (accent filled); Again đỏ nhạt (nghĩa "sai", không phải
+    /// tone game); Hard/Good trung tính.
     var buttonBackground: Color {
         switch self {
-        case .again: .red
-        case .hard: .orange
-        case .good: .blue
-        case .easy: .green
+        case .again: Theme.danger.opacity(0.12)
+        case .hard: Theme.surfaceStrong
+        case .good: Theme.accent.opacity(0.18)
+        case .easy: Theme.accent
+        }
+    }
+    var buttonForeground: Color {
+        switch self {
+        case .again: Theme.danger
+        case .hard: .primary
+        case .good: Theme.accent
+        case .easy: .white
         }
     }
 }

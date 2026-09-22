@@ -31,48 +31,32 @@ struct RootView: View {
             }
             .navigationTitle("Reado")
             .toolbar {
-                // FR-11/12: CTA Ôn tập.
+                // FR-15: CTA Cài đặt học tập (leading).
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showReview = true
-                    } label: {
-                        Label("Ôn tập", systemImage: "brain.head.profile")
-                    }
-                    .accessibilityLabel("Ôn tập")
-                }
-                // FR-01: CTA Chụp trang + FR-15: Cài đặt học tập.
-                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
                     } label: {
                         Label("Cài đặt", systemImage: "gearshape")
                     }
                     .accessibilityLabel("Cài đặt")
-
-                    Button {
-                        showCapture = true
-                    } label: {
-                        Label("Chụp trang", systemImage: "camera.fill")
-                    }
-                    .accessibilityLabel("Chụp trang")
                 }
-                // FR-17 tạo collection + J-R1-D cửa Dữ liệu (CTA thứ cấp, không
-                // cạnh bánh răng Cài đặt — NFR-08 giữ chụp trang ≤ 3 thao tác).
-                ToolbarItemGroup(placement: .bottomBar) {
+                // FR-17 tạo collection + J-R1-D cửa Dữ liệu — CTA thứ cấp gom về
+                // một hàng trailing, nhường đáy cho CTA chính "Chụp trang".
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showExport = true
+                    } label: {
+                        Label("Dữ liệu", systemImage: "archivebox")
+                    }
+                    .accessibilityLabel("Dữ liệu")
+
                     Button {
                         newCollectionName = ""
                         showNewCollection = true
                     } label: {
-                        Label("Tạo collection", systemImage: "plus")
+                        Label("Tạo collection", systemImage: "folder.badge.plus")
                     }
                     .accessibilityLabel("Tạo collection")
-
-                    Button {
-                        showExport = true
-                    } label: {
-                        Label("Dữ liệu", systemImage: "doc.on.doc")
-                    }
-                    .accessibilityLabel("Dữ liệu")
                 }
             }
             .alert("Tạo collection", isPresented: $showNewCollection) {
@@ -149,7 +133,7 @@ struct RootView: View {
                 // FR-14: hết hạn mức hôm nay — tồn đọng hiện RIÊNG, không CTA giả.
                 Label(
                     "Đã hết hạn mức hôm nay · \(progress.backlog) thẻ mới đang chờ",
-                    systemImage: "checkmark.circle")
+                    systemImage: "hourglass")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .listRowSeparator(.hidden)
@@ -160,7 +144,7 @@ struct RootView: View {
             } label: {
                 HStack(spacing: 12) {
                     Label("\(progress.streak) ngày ôn liên tục", systemImage: "flame.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.due)
                     Spacer()
                     Text("\(progress.pagesAnalyzed) trang đã phân tích")
                         .font(.caption)
@@ -181,7 +165,7 @@ struct RootView: View {
                 ForEach(model.homeShortcuts) { collection in
                     NavigationLink(value: collection.id) {
                         HStack(spacing: 12) {
-                            Image(systemName: "pin.fill")
+                            Image(systemName: "pin")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.accentColor)
                             VStack(alignment: .leading, spacing: 2) {
@@ -199,7 +183,7 @@ struct RootView: View {
                                     .padding(.vertical, 4)
                                     .background(
                                         Capsule().fill(
-                                            Color.orange.opacity(0.18)))
+                                            Theme.due.opacity(0.18)))
                             }
                         }
                     }
@@ -226,7 +210,7 @@ struct RootView: View {
                                         .padding(.vertical, 2)
                                         .background(
                                             Capsule().fill(
-                                                Color.accentColor.opacity(0.15)))
+                                                Theme.surfaceStrong))
                                 }
                             }
                             Text("\(collection.totalItems) từ")
@@ -250,7 +234,7 @@ struct RootView: View {
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule().fill(
-                                        Color.orange.opacity(0.18)))
+                                        Theme.due.opacity(0.18)))
                         }
                     }
                 }
@@ -263,6 +247,25 @@ struct RootView: View {
                     systemImage: "books.vertical")
             }
         }
+        // FR-01: CTA chính "Chụp trang" nổi bật dưới đáy (J1 ≤3 thao tác), thay
+        // cho icon camera nhỏ trên toolbar.
+        .safeAreaInset(edge: .bottom) { captureCTA }
+    }
+
+    /// FR-01: CTA chính "Chụp trang" — nút nổi toàn bề ngang dưới đáy (màu accent).
+    private var captureCTA: some View {
+        Button {
+            showCapture = true
+        } label: {
+            Label("Chụp trang", systemImage: "camera.fill")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+        }
+        .buttonStyle(.borderedProminent)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
     }
 
     /// FR-17: tạo collection có tên từ alert trên Home. Tên rỗng/trùng → giữ

@@ -59,7 +59,7 @@ struct CollectionDetailView: View {
                         Button {
                             startCapture()
                         } label: {
-                            Label("Chụp trang vào bộ này", systemImage: "camera.fill")
+                            Label("Chụp trang vào bộ này", systemImage: "camera")
                         }
                     }
                 }
@@ -255,7 +255,7 @@ struct CollectionDetailView: View {
                             .font(.caption2.weight(.semibold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.blue.opacity(0.12)))
+                            .background(Capsule().fill(Theme.level.opacity(0.12)))
                     }
                 }
                 if let ipa = entry.ipa, !ipa.isEmpty {

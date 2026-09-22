@@ -29,7 +29,7 @@ struct SettingsView: View {
             if let message = saveError {
                 Section {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Theme.danger)
                 }
             }
         }
@@ -77,7 +77,7 @@ struct SettingsView: View {
             // Giờ chuyển ngày (FR-11/14) — streak & hạn mức quy theo giờ này.
             Stepper(value: $dayCutoffHour, in: 0...23) {
                 HStack {
-                    Text("Giờ chuyển ngày")
+                    Label("Giờ chuyển ngày", systemImage: "bed.double")
                     Spacer()
                     Text(Self.hourLabel(dayCutoffHour))
                         .monospacedDigit()
@@ -85,7 +85,7 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Text("Học tập")
+            Label("Học tập", systemImage: "book.closed")
         } footer: {
             if saved {
                 Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
@@ -107,7 +107,7 @@ struct SettingsView: View {
                 .pickerStyle(.wheel)
             }
         } header: {
-            Text("Nhắc ôn tập")
+            Label("Nhắc ôn tập", systemImage: "bell")
         } footer: {
             Text(reminderEnabled
                  ? "Nhận thông báo mỗi ngày lúc \(ReminderService.describe(minutes: reminderMinutes))."
@@ -136,7 +136,7 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Text("Đang đọc trên Home")
+            Label("Đang đọc trên Home", systemImage: "pin")
         } footer: {
             Text("Tối đa 2 collection mở nhanh trên Home (mở thẳng Collection Hub).")
         }
@@ -158,9 +158,10 @@ struct SettingsView: View {
                     value: fsrs.fsrsVersion ?? "mặc định (fsrs-6)")
             }
         } header: {
-            Text("Thuật toán ôn tập")
+            Label("Thuật toán ôn tập", systemImage: "function")
         } footer: {
-            Text("R1 dùng tham số mặc định — các núm này chưa mở để tránh lệch lịch.")
+            Label("R1 dùng tham số mặc định — các núm này chưa mở để tránh lệch lịch.",
+                  systemImage: "lock")
         }
     }
 
