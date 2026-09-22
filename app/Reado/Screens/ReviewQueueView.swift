@@ -11,7 +11,10 @@ struct ReviewQueueView: View {
 
     @State private var items: [ReviewQueue.ReviewItem] = []
     @State private var currentIndex: Int = 0
-    @State private var isFlipped: Bool = false
+    @State private var flipDegrees: Double = 0
+
+    /// Mặt đang hiện — true khi lật đủ 90° để lộ mặt sau (nghĩa + nút chấm).
+    private var isFlipped: Bool { flipDegrees >= 90 }
 
     // Undo 1 bước (FR-12): lưu snapshot + logID vừa chấm.
     @State private var lastLogID: String?
@@ -178,14 +181,15 @@ struct ReviewQueueView: View {
             // Card body.
             GeometryReader { geo in
                 ZStack {
+                    // Lật 3D thuần: đổi mặt đúng mốc 90° (không crossfade mờ hai mặt).
                     cardFace(item: item, back: false, size: geo.size)
-                        .rotation3DEffect(.degrees(isFlipped ? 180 : 0),
+                        .rotation3DEffect(.degrees(flipDegrees),
                                           axis: (x: 0, y: 1, z: 0))
-                        .opacity(isFlipped ? 0 : 1)
+                        .opacity(flipDegrees < 90 ? 1 : 0)
                     cardFace(item: item, back: true, size: geo.size)
-                        .rotation3DEffect(.degrees(isFlipped ? 0 : -180),
+                        .rotation3DEffect(.degrees(flipDegrees - 180),
                                           axis: (x: 0, y: 1, z: 0))
-                        .opacity(isFlipped ? 1 : 0)
+                        .opacity(flipDegrees >= 90 ? 1 : 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -205,7 +209,11 @@ struct ReviewQueueView: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { withAnimation(.spring(response: 0.35)) { isFlipped.toggle() } }
+        .onTapGesture {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                flipDegrees = flipDegrees == 0 ? 180 : 0
+            }
+        }
     }
 
     private var swipeGesture: some Gesture {
@@ -304,7 +312,7 @@ struct ReviewQueueView: View {
             showUndoToast = true
             withAnimation(.spring(response: 0.3)) {
                 currentIndex += 1
-                isFlipped = false
+                flipDegrees = 0
             }
             // Nạp snapshot cho thẻ mới hiện (để chấm tiếp).
             if currentIndex < items.count,
@@ -327,7 +335,7 @@ struct ReviewQueueView: View {
             // Quay lại thẻ trước.
             withAnimation(.spring(response: 0.3)) {
                 currentIndex = prevIndex
-                isFlipped = false
+                flipDegrees = 0
             }
             showUndoToast = false
             lastLogID = nil
@@ -345,7 +353,7 @@ struct ReviewQueueView: View {
             self.items = model.reviewItems
             // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.
             self.currentIndex = 0
-            self.isFlipped = false
+            self.flipDegrees = 0
             self.showUndoToast = false
             self.lastLogID = nil
             if let first = items.first,
@@ -461,15 +469,15 @@ extension ReadoRating {
         switch self {
         case .again: Theme.danger.opacity(0.12)
         case .hard: Theme.surfaceStrong
-        case .good: Theme.accent.opacity(0.18)
-        case .easy: Theme.accent
+        case .good: Color.accentColor.opacity(0.18)
+        case .easy: Color.accentColor
         }
     }
     var buttonForeground: Color {
         switch self {
         case .again: Theme.danger
         case .hard: .primary
-        case .good: Theme.accent
+        case .good: Color.accentColor
         case .easy: .white
         }
     }

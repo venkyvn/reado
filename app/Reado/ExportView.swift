@@ -68,7 +68,7 @@ struct ExportView: View {
                     Spacer()
                     if selectedCollectionIDs.count == model.collections.count {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Theme.accent)
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
             }
@@ -87,7 +87,7 @@ struct ExportView: View {
                         Spacer()
                         if selectedCollectionIDs.contains(c.id) {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.accentColor)
                         }
                     }
                 }

@@ -8,6 +8,9 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
+    /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
+    @AppStorage("appTheme") private var appTheme = AppTheme.system.rawValue
+
     @State private var cefrLevel: CEFRLevel = .b2
     @State private var dailyNewLimit = 10
     @State private var dayCutoffHour = 4
@@ -25,6 +28,7 @@ struct SettingsView: View {
             learningSection
             reminderSection
             homeShortcutSection
+            themeSection
             fsrsSection
             if let message = saveError {
                 Section {
@@ -139,6 +143,23 @@ struct SettingsView: View {
             Label("Đang đọc trên Home", systemImage: "pin")
         } footer: {
             Text("Tối đa 2 collection mở nhanh trên Home (mở thẳng Collection Hub).")
+        }
+    }
+
+    // MARK: — Chủ đề (màu nhấn)
+
+    private var themeSection: some View {
+        Section {
+            Picker("Chủ đề", selection: $appTheme) {
+                ForEach(AppTheme.allCases) { theme in
+                    Label(theme.title, systemImage: theme.icon)
+                        .tag(theme.rawValue)
+                }
+            }
+        } header: {
+            Label("Chủ đề", systemImage: "paintpalette")
+        } footer: {
+            Text("Màu nhấn toàn app — áp ngay, không cần bấm Lưu.")
         }
     }
 

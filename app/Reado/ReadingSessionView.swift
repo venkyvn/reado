@@ -50,9 +50,7 @@ struct ReadingSessionView: View {
             }
         }
         .padding()
-        .background(
-            Color.secondary.opacity(0.08),
-            in: RoundedRectangle(cornerRadius: 12))
+        .card()
     }
 
     // MARK: — Song ngữ (ADR-007)

@@ -78,7 +78,7 @@ struct StreakCalendarView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .card()
     }
 
     // MARK: — Heatmap (7 hàng × 18 cột)
@@ -168,7 +168,7 @@ struct StreakCalendarView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .card()
         }
     }
 
