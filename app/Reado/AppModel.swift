@@ -18,6 +18,8 @@ final class AppModel {
     private(set) var database: SQLiteDatabase?
     private(set) var failure: String?
     private(set) var collections: [CollectionOverview] = []
+    // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
+    private(set) var dailyProgress: DailyProgress?
 
     // FR-01: capture state
     var lastCapturedImage: CapturedImage?
@@ -78,6 +80,7 @@ final class AppModel {
     func reloadOverview() {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
+        dailyProgress = (try? Self.loadDailyProgress(db: database))
     }
 
     // MARK: — FR-01 Capture
@@ -232,6 +235,14 @@ final class AppModel {
             return nil
         }
         return Int(v)
+    }
+
+    /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
+    /// `dailyNewLimit` đã đọc từ settings.
+    static func loadDailyProgress(db: SQLiteDatabase) throws -> DailyProgress {
+        let dailyNewLimit = (try readDailyNewLimit(on: db)) ?? 10
+        return try DailyProgressService.load(
+            on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
     }
 
     // MARK: — Overview

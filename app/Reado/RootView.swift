@@ -65,7 +65,7 @@ struct RootView: View {
             }) {
                 NavigationStack { AnalysisView() }
             }
-            .sheet(isPresented: $showReview) {
+            .sheet(isPresented: $showReview, onDismiss: { model.reloadOverview() }) {
                 NavigationStack { ReviewQueueView() }
             }
             .sheet(isPresented: $showExport) {
@@ -79,11 +79,12 @@ struct RootView: View {
         }
     }
 
-    private var collectionList: some View {
-        List {
-            // FR-11/12: Hàng đợi hôm nay — tổng quan nhanh.
-            let totalDue = model.collections.map(\.dueNow).reduce(0, +)
-            if totalDue > 0 {
+    // FR-14: tổng quan Daily Progress — "sẽ ôn hôm nay" theo hạn mức (FR-11),
+    // tồn đọng RIÊNG, streak theo giờ chuyển ngày. Không tổng due_at thô.
+    @ViewBuilder
+    private var dailyProgressRows: some View {
+        if let progress = model.dailyProgress {
+            if progress.dueToday > 0 {
                 Button {
                     showReview = true
                 } label: {
@@ -96,7 +97,7 @@ struct RootView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Ôn tập hôm nay")
                                 .font(.headline)
-                            Text("\(totalDue) thẻ đến hạn")
+                            Text("\(progress.dueToday) thẻ sẽ ôn")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -106,7 +107,30 @@ struct RootView: View {
                     }
                 }
                 .listRowSeparator(.hidden)
+            } else if progress.backlog > 0 {
+                // FR-14: hết hạn mức hôm nay — tồn đọng hiện RIÊNG, không CTA giả.
+                Label(
+                    "Đã hết hạn mức hôm nay · \(progress.backlog) thẻ mới đang chờ",
+                    systemImage: "checkmark.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowSeparator(.hidden)
             }
+            HStack(spacing: 12) {
+                Label("\(progress.streak) ngày ôn liên tục", systemImage: "flame.fill")
+                    .foregroundStyle(.orange)
+                Spacer()
+                Text("\(progress.pagesAnalyzed) trang đã phân tích")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    private var collectionList: some View {
+        List {
+            dailyProgressRows
 
             ForEach(model.collections) { collection in
                 NavigationLink(value: collection.id) {
