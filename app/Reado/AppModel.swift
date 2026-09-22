@@ -21,6 +21,10 @@ final class AppModel {
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
 
+    // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
+    // một detail mở một lúc nên một biến là đủ).
+    private(set) var vocabulary: [VocabRepository.VocabularyListEntry] = []
+
     // FR-01: capture state
     var lastCapturedImage: CapturedImage?
     var captureError: String?
@@ -52,6 +56,7 @@ final class AppModel {
         let isDefault: Bool
         let totalItems: Int
         let dueNow: Int
+        let lastAddedAt: Date?
     }
 
     init() {
@@ -268,37 +273,87 @@ final class AppModel {
 
     // MARK: — Overview
 
-    /// Scaffold: tổng số từ + số card `due_at <= now` (chưa phải hàng đợi
-    /// FR-11 chính thức — chỉ để chứng minh wiring DB → UI).
+    /// Scaffold → 3.5: tổng quan collection giờ đọc từ ReadoKit
+    /// (`allCollectionSummaries`) — tên, số từ, đến hạn, lần thêm gần nhất.
     static func loadOverview(db: SQLiteDatabase) throws
         -> [CollectionOverview]
     {
-        let nowIso = ISOTimestamp.string(from: SystemClock().now)
-        let rows = try db.rows(
-            """
-            SELECT c.id, c.name, c.is_default,
-                   (SELECT COUNT(*) FROM vocab_items v
-                     WHERE v.collection_id = c.id),
-                   (SELECT COUNT(*) FROM cards ca
-                     JOIN vocab_items v ON v.id = ca.vocab_item_id
-                     WHERE v.collection_id = c.id
-                       AND ca.suspended_at IS NULL
-                       AND ca.due_at <= ?)
-            FROM collections c
-            ORDER BY c.is_default DESC, c.name COLLATE NOCASE;
-            """,
-            [.text(nowIso)])
-        return try rows.map { row in
-            guard row.count >= 5 else {
-                throw DatabaseError.failed(
-                    "overview thiếu cột", statement: "overview")
-            }
-            return CollectionOverview(
-                id: row[0].textValue ?? "",
-                name: row[1].textValue ?? "",
-                isDefault: (row[2].intValue ?? 0) != 0,
-                totalItems: Int(row[3].intValue ?? 0),
-                dueNow: Int(row[4].intValue ?? 0))
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: SystemClock().now)
+        return summaries.map { summary in
+            CollectionOverview(
+                id: summary.id,
+                name: summary.name,
+                isDefault: summary.isDefault,
+                totalItems: summary.wordCount,
+                dueNow: summary.dueNow,
+                lastAddedAt: summary.lastAddedAt)
         }
+    }
+
+    // MARK: — FR-08 Vocabulary List
+
+    /// Nạp danh sách từ của một collection cho detail view. `order = .byTerm`
+    /// cho named collection, `.byDateAdded` cho kho tạm (J6 — chọn lô theo thời
+    /// điểm thêm).
+    func loadVocabulary(
+        collectionID: String,
+        order: VocabRepository.VocabularyOrder
+    ) {
+        guard let database else {
+            vocabulary = []
+            return
+        }
+        vocabulary = (try? VocabRepository.listVocabulary(
+            on: database, collectionID: collectionID, order: order)) ?? []
+    }
+
+    // MARK: — FR-17 Collection Management
+
+    /// Tạo collection mới (named, không phải kho tạm). Trả id; nil khi tên rỗng
+    /// hoặc trùng tên collection khác.
+    @discardableResult
+    func createCollection(name: String) throws -> String? {
+        guard let database else { return nil }
+        let id = try VocabRepository.createCollection(on: database, name: name)
+        if id != nil { reloadOverview() }
+        return id
+    }
+
+    /// Đổi tên collection (kho tạm vẫn đổi được). Trả false khi tên rỗng/trùng.
+    @discardableResult
+    func renameCollection(id: String, name: String) throws -> Bool {
+        guard let database else { return false }
+        let ok = try VocabRepository.renameCollection(on: database, id: id, name: name)
+        if ok { reloadOverview() }
+        return ok
+    }
+
+    /// Xoá collection; còn từ → `moveTo` chỉ đích chuyển (FR-17). Trả số từ đã
+    /// chuyển (0 khi rỗng).
+    @discardableResult
+    func deleteCollection(id: String, moveTo: String?) throws -> Int {
+        guard let database else { return 0 }
+        let moved = try VocabRepository.deleteCollection(
+            on: database, id: id, moveWordsTo: moveTo)
+        reloadOverview()
+        return moved
+    }
+
+    /// Chuyển một lô từ sang collection khác (giữ nguyên FSRS — FR-17).
+    @discardableResult
+    func moveItems(
+        fromCollectionID: String,
+        itemIDs: [String],
+        toCollectionID: String
+    ) throws -> Int {
+        guard let database else { return 0 }
+        let moved = try VocabRepository.moveVocabularyItems(
+            on: database,
+            fromCollectionID: fromCollectionID,
+            itemIDs: itemIDs,
+            toCollectionID: toCollectionID)
+        reloadOverview()
+        return moved
     }
 }

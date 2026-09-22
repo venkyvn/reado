@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var showReview = false
     @State private var showExport = false
     @State private var showSettings = false
+    @State private var showNewCollection = false
+    @State private var newCollectionName = ""
 
     var body: some View {
         NavigationStack {
@@ -54,6 +56,23 @@ struct RootView: View {
                     }
                     .accessibilityLabel("Chụp trang")
                 }
+                // FR-17: tạo collection có tên (gom từ theo sách/ngữ cảnh).
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        newCollectionName = ""
+                        showNewCollection = true
+                    } label: {
+                        Label("Tạo collection", systemImage: "plus")
+                    }
+                    .accessibilityLabel("Tạo collection")
+                }
+            }
+            .alert("Tạo collection", isPresented: $showNewCollection) {
+                TextField("Tên collection", text: $newCollectionName)
+                Button("Tạo") { createNewCollection() }
+                Button("Huỷ", role: .cancel) {}
+            } message: {
+                Text("Từ chưa phân loại vào kho tạm; collection có tên để gom theo sách hoặc ngữ cảnh.")
             }
             .sheet(isPresented: $showCapture, onDismiss: {
                 // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
@@ -162,6 +181,14 @@ struct RootView: View {
                             Text("\(collection.totalItems) từ")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if let lastAddedAt = collection.lastAddedAt {
+                                Text(
+                                    "Thêm gần nhất "
+                                        + lastAddedAt.formatted(
+                                            date: .abbreviated, time: .shortened))
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         Spacer()
                         if collection.dueNow > 0 {
@@ -186,21 +213,11 @@ struct RootView: View {
             }
         }
     }
-}
 
-struct CollectionDetailView: View {
-    let collectionID: String
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        let overview = model.collections.first { $0.id == collectionID }
-        List {
-            if let overview {
-                LabeledContent("Tổng số từ", value: "\(overview.totalItems)")
-                LabeledContent("Đến hạn (scaffold)", value: "\(overview.dueNow)")
-            }
-        }
-        .navigationTitle(overview?.name ?? "Collection")
-        .onAppear { model.reloadOverview() }
+    /// FR-17: tạo collection có tên từ alert trên Home. Tên rỗng/trùng → giữ
+    /// nguyên, không tạo (Repository trả nil).
+    private func createNewCollection() {
+        _ = try? model.createCollection(name: newCollectionName)
+        newCollectionName = ""
     }
 }
