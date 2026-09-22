@@ -6,17 +6,17 @@ final class MigrationAndSeedTests: XCTestCase {
 
     // MARK: Migration
 
-    func testMigrationSetsUserVersion1() throws {
+    func testMigrationSetsCurrentVersion() throws {
         let db = try SQLiteDatabase(inMemory: ())
         try Migration.run(on: db)
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 1)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
     }
 
     func testMigrationIsIdempotent() throws {
         let db = try SQLiteDatabase(inMemory: ())
         try Migration.run(on: db)
         XCTAssertNoThrow(try Migration.run(on: db))
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 1)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
     }
 
     func testAllSevenTablesExist() throws {

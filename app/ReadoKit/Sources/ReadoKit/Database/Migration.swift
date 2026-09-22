@@ -4,12 +4,19 @@ import Foundation
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
 /// Bảy bảng + index; seed nằm ở Seeder chứ không phải migration.
 public enum Migration {
-    public static let currentVersion: Int64 = 1
+    public static let currentVersion: Int64 = 2
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
         case unsupportedUserVersion(Int64)
     }
+
+    /// 3.12 — nhắc ôn tập: 2 cột mới trên `settings` (default TẮT + 20:00).
+    /// SQLite ALTER TABLE thêm tối đa 1 cột/lệnh → tách 2 lệnh.
+    static let v2Statements: [String] = [
+        "ALTER TABLE settings ADD COLUMN reminder_enabled INTEGER NOT NULL DEFAULT 0;",
+        "ALTER TABLE settings ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 1200;",
+    ]
 
     static let v1Statements: [String] = [
         // -- PRAGMA foreign_keys = ON; // bật cho MỌI connection ở SQLiteDatabase.init
@@ -143,6 +150,13 @@ public enum Migration {
                         try db.exec(statement)
                     }
                     try db.exec("PRAGMA user_version = 1;")
+                }
+            case 1:
+                try db.inTransaction {
+                    for statement in v2Statements {
+                        try db.exec(statement)
+                    }
+                    try db.exec("PRAGMA user_version = 2;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

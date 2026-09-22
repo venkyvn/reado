@@ -9,6 +9,9 @@ struct ReadoApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
+                // 3.12: khôi phục lịch nhắc từ settings lúc khởi động. Tắt →
+                // dọn pending (không hỏi quyền); bật → đặt lại trigger hằng ngày.
+                .task { await model.syncReminderSchedule(requestPermission: true) }
         }
     }
 }

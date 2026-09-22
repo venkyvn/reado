@@ -266,21 +266,38 @@ final class AppModel {
         return try? SettingsService.load(on: database)
     }
 
-    /// Lưu 3 núm học tập + reload overview để số đếm Home nhận hạn mức / giờ
-    /// chuyển ngày mới NGAY. CEFR có hiệu lực từ lần `capture` kế tiếp (FR-15:
-    /// trang đã phân tích không chạy lại — không có đường re-analyze).
+    /// Lưu 5 núm (3 học tập + 2 nhắc ôn) + reload overview để số đếm Home nhận
+    /// hạn mức / giờ chuyển ngày mới NGAY. CEFR có hiệu lực từ lần `capture` kế
+    /// tiếp (FR-15: trang đã phân tích không chạy lại — không có đường re-analyze).
     func saveLearningSettings(
         cefrLevel: CEFRLevel,
         dailyNewLimit: Int,
-        dayCutoffHour: Int
+        dayCutoffHour: Int,
+        reminderEnabled: Bool,
+        reminderMinutes: Int
     ) throws {
         guard let database else { throw ReviewError.modelUnavailable }
         try SettingsService.update(
             on: database,
             cefrLevel: cefrLevel,
             dailyNewLimit: dailyNewLimit,
-            dayCutoffHour: dayCutoffHour)
+            dayCutoffHour: dayCutoffHour,
+            reminderEnabled: reminderEnabled,
+            reminderMinutes: reminderMinutes)
         reloadOverview()
+        // 3.12: đồng bộ lịch nhắc ngay sau khi lưu (bật → xin quyền + đặt lịch).
+        Task { await self.syncReminderSchedule(requestPermission: true) }
+    }
+
+    /// 3.12: đồng bộ lịch nhắc local notification với settings hiện tại.
+    /// Gọi lúc khởi động (ReadoApp `.task`) + sau khi lưu Settings.
+    func syncReminderSchedule(requestPermission: Bool = false) async {
+        guard let database else { return }
+        let settings = (try? SettingsService.load(on: database)) ?? .defaults
+        await NotificationScheduler.apply(
+            enabled: settings.reminderEnabled,
+            minutes: settings.reminderMinutes,
+            requestPermission: requestPermission)
     }
 
     // MARK: — Overview

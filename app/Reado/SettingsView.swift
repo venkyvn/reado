@@ -1,15 +1,19 @@
 import ReadoKit
 import SwiftUI
 
-/// FR-15 — J-R1-S: núm học tập (CEFR, hạn mức thẻ mới, giờ chuyển ngày).
-/// `request_retention` + núm FSRS còn lại chỉ-đọc (R1 không mở user — tránh
-/// tự bắn chân). Quản lý shortcut (FR-17) và chọn agent (FR-21) là task sau.
+/// FR-15 — J-R1-S: núm học tập (CEFR, hạn mức thẻ mới, giờ chuyển ngày) +
+/// 3.12 nhắc ôn tập (toggle + giờ). `request_retention` + núm FSRS còn lại
+/// chỉ-đọc (R1 không mở user — tránh tự bắn chân). Quản lý shortcut (FR-17)
+/// và chọn agent (FR-21) là task sau.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     @State private var cefrLevel: CEFRLevel = .b2
     @State private var dailyNewLimit = 10
     @State private var dayCutoffHour = 4
+    // 3.12 — nhắc ôn tập (local notification), default TẮT + 20:00.
+    @State private var reminderEnabled = false
+    @State private var reminderMinutes = 20 * 60
     @State private var didLoad = false
     @State private var saveError: String?
     @State private var saved = false
@@ -19,6 +23,7 @@ struct SettingsView: View {
     var body: some View {
         List {
             learningSection
+            reminderSection
             fsrsSection
             if let message = saveError {
                 Section {
@@ -39,7 +44,12 @@ struct SettingsView: View {
         .onChange(of: cefrLevel) { saved = false }
         .onChange(of: dailyNewLimit) { saved = false }
         .onChange(of: dayCutoffHour) { saved = false }
+        .onChange(of: reminderEnabled) { saved = false }
+        .onChange(of: reminderMinutes) { saved = false }
     }
+
+    /// Giờ nhắc chọn được — bước 15' từ 00:00 tới 23:45 (khớp `reminderMinutes`).
+    private static let reminderOptions = Array(stride(from: 0, to: 24 * 60, by: 15))
 
     // MARK: — Học tập (editable)
 
@@ -82,6 +92,28 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: — Nhắc ôn tập (3.12)
+
+    private var reminderSection: some View {
+        Section {
+            Toggle("Bật nhắc ôn tập", isOn: $reminderEnabled)
+            if reminderEnabled {
+                Picker("Giờ nhắc", selection: $reminderMinutes) {
+                    ForEach(Self.reminderOptions, id: \.self) { minutes in
+                        Text(ReminderService.describe(minutes: minutes)).tag(minutes)
+                    }
+                }
+                .pickerStyle(.wheel)
+            }
+        } header: {
+            Text("Nhắc ôn tập")
+        } footer: {
+            Text(reminderEnabled
+                 ? "Nhận thông báo mỗi ngày lúc \(ReminderService.describe(minutes: reminderMinutes))."
+                 : "Bật để nhận lời nhắc ôn từ vựng hằng ngày.")
+        }
+    }
+
     // MARK: — Thuật toán ôn tập (chỉ-đọc)
 
     private var fsrsSection: some View {
@@ -112,6 +144,8 @@ struct SettingsView: View {
             cefrLevel = settings.cefrLevel
             dailyNewLimit = settings.dailyNewLimit
             dayCutoffHour = settings.dayCutoffHour
+            reminderEnabled = settings.reminderEnabled
+            reminderMinutes = settings.reminderMinutes
             didLoad = true
         }
         fsrs = try? ReadoFSRS.readSettings(on: database)
@@ -123,7 +157,9 @@ struct SettingsView: View {
             try model.saveLearningSettings(
                 cefrLevel: cefrLevel,
                 dailyNewLimit: dailyNewLimit,
-                dayCutoffHour: dayCutoffHour)
+                dayCutoffHour: dayCutoffHour,
+                reminderEnabled: reminderEnabled,
+                reminderMinutes: reminderMinutes)
             saved = true
         } catch {
             saveError =
