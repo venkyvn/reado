@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var showAnalysis = false
     @State private var showReview = false
     @State private var showExport = false
+    @State private var showSettings = false
 
     var body: some View {
         NavigationStack {
@@ -37,8 +38,15 @@ struct RootView: View {
                     }
                     .accessibilityLabel("Ôn tập")
                 }
-                // FR-01: CTA Chụp trang.
-                ToolbarItem(placement: .topBarTrailing) {
+                // FR-01: CTA Chụp trang + FR-15: Cài đặt học tập.
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Label("Cài đặt", systemImage: "gearshape")
+                    }
+                    .accessibilityLabel("Cài đặt")
+
                     Button {
                         showCapture = true
                     } label: {
@@ -70,6 +78,9 @@ struct RootView: View {
             }
             .sheet(isPresented: $showExport) {
                 NavigationStack { ExportView() }
+            }
+            .sheet(isPresented: $showSettings, onDismiss: { model.reloadOverview() }) {
+                NavigationStack { SettingsView() }
             }
             .navigationDestination(for: String.self) { collectionID in
                 CollectionDetailView(collectionID: collectionID)

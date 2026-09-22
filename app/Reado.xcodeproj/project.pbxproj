@@ -30,6 +30,10 @@
 		5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000200000000000000 /* CaptureFailureTests.swift */; };
 
 		5C0200000300000000000000 /* DailyProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000300000000000000 /* DailyProgressTests.swift */; };
+
+		5C0100000100000000000000 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000100000000000000 /* SettingsView.swift */; };
+
+		5C0200000400000000000000 /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000400000000000000 /* SettingsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +60,10 @@
 		5B0200000200000000000000 /* CaptureFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFailureTests.swift; sourceTree = "<group>"; };
 
 		5B0200000300000000000000 /* DailyProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyProgressTests.swift; sourceTree = "<group>"; };
+
+		5B0100000100000000000000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+
+		5B0200000400000000000000 /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,7 +116,8 @@
 				5B0100000000000000000011 /* AnalysisView.swift */,
 				5B0100000000000000000012 /* ReviewQueueView.swift */,
 				5B0100000000000000000013 /* ExportView.swift */,
-			);
+			
+				5B0100000100000000000000 /* SettingsView.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -125,7 +134,8 @@
 			
 				5B0200000100000000000000 /* LeechTests.swift */,
 				5B0200000200000000000000 /* CaptureFailureTests.swift */,
-				5B0200000300000000000000 /* DailyProgressTests.swift */,);
+				5B0200000300000000000000 /* DailyProgressTests.swift */,
+				5B0200000400000000000000 /* SettingsTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -235,7 +245,8 @@
 				5C010000000000000000000A /* ExportView.swift in Sources */,
 				5C0100000000000000000008 /* AnalysisView.swift in Sources */,
 				5C0100000000000000000009 /* ReviewQueueView.swift in Sources */,
-			);
+			
+				5C0100000100000000000000 /* SettingsView.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -252,7 +263,8 @@
 			
 				5C0200000100000000000000 /* LeechTests.swift in Sources */,
 				5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */,
-				5C0200000300000000000000 /* DailyProgressTests.swift in Sources */,);
+				5C0200000300000000000000 /* DailyProgressTests.swift in Sources */,
+				5C0200000400000000000000 /* SettingsTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

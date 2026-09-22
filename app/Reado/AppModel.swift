@@ -186,7 +186,7 @@ final class AppModel {
         reviewError = nil
         defer { isLoadingReview = false }
         do {
-            let dailyNewLimit = try Self.readDailyNewLimit(on: database) ?? 10
+            let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
                 on: database, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
             reviewItems = items
@@ -228,21 +228,42 @@ final class AppModel {
             on: database, cardID: cardID, logID: logID, before: snapshot)
     }
 
-    /// Đọc `daily_new_limit` từ settings (id = 1); nil nếu chưa seed.
-    static func readDailyNewLimit(on db: SQLiteDatabase) throws -> Int? {
-        guard let v = try db.scalarInt64(
-            "SELECT daily_new_limit FROM settings WHERE id = 1;") else {
-            return nil
-        }
-        return Int(v)
+    /// FR-15: đọc 3 núm học tập — fallback về seed default khi chưa seed.
+    static func currentSettings(_ db: SQLiteDatabase) -> LearningSettings {
+        (try? SettingsService.load(on: db)) ?? .defaults
     }
 
     /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
     /// `dailyNewLimit` đã đọc từ settings.
     static func loadDailyProgress(db: SQLiteDatabase) throws -> DailyProgress {
-        let dailyNewLimit = (try readDailyNewLimit(on: db)) ?? 10
+        let dailyNewLimit = currentSettings(db).dailyNewLimit
         return try DailyProgressService.load(
             on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
+    }
+
+    // MARK: — FR-15 Settings
+
+    /// Đọc núm học tập cho SettingsView hiển thị; nil khi chưa mở được DB.
+    func loadLearningSettings() -> LearningSettings? {
+        guard let database else { return nil }
+        return try? SettingsService.load(on: database)
+    }
+
+    /// Lưu 3 núm học tập + reload overview để số đếm Home nhận hạn mức / giờ
+    /// chuyển ngày mới NGAY. CEFR có hiệu lực từ lần `capture` kế tiếp (FR-15:
+    /// trang đã phân tích không chạy lại — không có đường re-analyze).
+    func saveLearningSettings(
+        cefrLevel: CEFRLevel,
+        dailyNewLimit: Int,
+        dayCutoffHour: Int
+    ) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try SettingsService.update(
+            on: database,
+            cefrLevel: cefrLevel,
+            dailyNewLimit: dailyNewLimit,
+            dayCutoffHour: dayCutoffHour)
+        reloadOverview()
     }
 
     // MARK: — Overview
