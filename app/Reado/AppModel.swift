@@ -368,4 +368,28 @@ final class AppModel {
         reloadOverview()
         return moved
     }
+
+    // MARK: — FR-20 CSV Import
+
+    /// Parse nội dung CSV/TSV (dùng chung delimiter-detect với FR-16).
+    func parseImport(_ text: String) throws -> [CSVImport.CSVRow] {
+        try CSVImport.parse(text)
+    }
+
+    /// Đánh dấu dòng trùng term so với `term_normalized` hiện có — không tự loại.
+    func markDuplicateTerms(_ rows: [CSVImport.CSVRow]) -> [CSVImport.CSVRow] {
+        guard let database else { return rows }
+        let existing = (try? CSVImport.existingTermNormalizedSet(on: database)) ?? []
+        return CSVImport.markDuplicateTerms(rows, existing: existing)
+    }
+
+    /// Gộp các dòng được chọn vào kho (1 transaction, atomic). Reload overview.
+    @discardableResult
+    func importRows(_ rows: [CSVImport.CSVRow]) throws -> CSVImport.ImportSummary {
+        guard let database else { throw CSVImport.ImportError.emptyFile }
+        let summary = try CSVImport.importRows(
+            on: database, rows: rows, now: SystemClock().now)
+        reloadOverview()
+        return summary
+    }
 }

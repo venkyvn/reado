@@ -40,6 +40,10 @@
 		5C0200000500000000000000 /* VocabularyListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000500000000000000 /* VocabularyListTests.swift */; };
 
 		5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000600000000000000 /* ScopedReviewTests.swift */; };
+
+		5C0100000300000000000000 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000300000000000000 /* ImportView.swift */; };
+
+		5C0200000700000000000000 /* CSVImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000700000000000000 /* CSVImportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +80,10 @@
 		5B0200000500000000000000 /* VocabularyListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListTests.swift; sourceTree = "<group>"; };
 
 		5B0200000600000000000000 /* ScopedReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopedReviewTests.swift; sourceTree = "<group>"; };
+
+		5B0100000300000000000000 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
+
+		5B0200000700000000000000 /* CSVImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVImportTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,7 +138,8 @@
 				5B0100000000000000000013 /* ExportView.swift */,
 			
 				5B0100000100000000000000 /* SettingsView.swift */,
-				5B0100000200000000000000 /* CollectionDetailView.swift */,);
+				5B0100000200000000000000 /* CollectionDetailView.swift */,
+				5B0100000300000000000000 /* ImportView.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -150,7 +159,8 @@
 				5B0200000300000000000000 /* DailyProgressTests.swift */,
 				5B0200000400000000000000 /* SettingsTests.swift */,
 				5B0200000500000000000000 /* VocabularyListTests.swift */,
-				5B0200000600000000000000 /* ScopedReviewTests.swift */,);
+				5B0200000600000000000000 /* ScopedReviewTests.swift */,
+				5B0200000700000000000000 /* CSVImportTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -262,7 +272,8 @@
 				5C0100000000000000000009 /* ReviewQueueView.swift in Sources */,
 			
 				5C0100000100000000000000 /* SettingsView.swift in Sources */,
-				5C0100000200000000000000 /* CollectionDetailView.swift in Sources */,);
+				5C0100000200000000000000 /* CollectionDetailView.swift in Sources */,
+				5C0100000300000000000000 /* ImportView.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -282,7 +293,8 @@
 				5C0200000300000000000000 /* DailyProgressTests.swift in Sources */,
 				5C0200000400000000000000 /* SettingsTests.swift in Sources */,
 				5C0200000500000000000000 /* VocabularyListTests.swift in Sources */,
-				5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */,);
+				5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */,
+				5C0200000700000000000000 /* CSVImportTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

@@ -2,9 +2,8 @@ import ReadoKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - FR-16 Data Export — J-R1-D Dữ liệu CSV
-// Màn xuất: chọn collection + nút CSV + nút JSON.
-// Không có nút FR-20 Import ở R1 (chờ task 3.10).
+// MARK: - FR-16 Data Export + FR-20 CSV Import — J-R1-D Dữ liệu
+// Màn xuất: chọn collection + nút CSV + nút JSON. Màn nhập: ImportView (FR-20, task 3.10).
 
 struct ExportView: View {
     @Environment(AppModel.self) private var model
@@ -15,11 +14,13 @@ struct ExportView: View {
     @State private var exportedJSON: Data?
     @State private var showShareCSV = false
     @State private var showShareJSON = false
+    @State private var showImport = false
 
     var body: some View {
         List {
             scopeSection
             actionsSection
+            importSection
             if let err = exportError {
                 errorSection(err)
             }
@@ -35,6 +36,9 @@ struct ExportView: View {
             if let data = exportedJSON {
                 ShareSheet(activityItems: [data])
             }
+        }
+        .sheet(isPresented: $showImport) {
+            ImportView()
         }
         .onAppear { model.reloadOverview() }
     }
@@ -113,6 +117,16 @@ struct ExportView: View {
                       systemImage: "doc.badge.gearshape")
             }
             .disabled(isExporting)
+        }
+    }
+
+    private var importSection: some View {
+        Section("Nhập") {
+            Button {
+                showImport = true
+            } label: {
+                Label("Nhập CSV từ vựng (FR-20)", systemImage: "square.and.arrow.down")
+            }
         }
     }
 
