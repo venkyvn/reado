@@ -43,7 +43,7 @@ struct CollectionDetailView: View {
                     }
                     // FR-17: kho tạm không hiện control "Hiện trên Home" (J2).
                     if !isInbox {
-                        HomeShortcutToggle(collectionID: collectionID)
+                        HomePinToggle(collectionID: collectionID)
                     }
                 }
 

@@ -49,9 +49,9 @@
 
 		5C0200000800000000000000 /* ReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000800000000000000 /* ReminderTests.swift */; };
 
-		5C0200000900000000000000 /* HomeShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000900000000000000 /* HomeShortcutTests.swift */; };
+		5C0200000900000000000000 /* HomePinTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000900000000000000 /* HomePinTests.swift */; };
 
-		5C0100000500000000000000 /* HomeShortcutToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000500000000000000 /* HomeShortcutToggle.swift */; };
+		5C0100000500000000000000 /* HomePinToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000500000000000000 /* HomePinToggle.swift */; };
 		5C0100000600000000000000 /* ReadingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000600000000000000 /* ReadingSessionView.swift */; };
 		5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000A00000000000000 /* ReadingSessionTests.swift */; };
 
@@ -103,9 +103,9 @@
 
 		5B0200000800000000000000 /* ReminderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderTests.swift; sourceTree = "<group>"; };
 
-		5B0200000900000000000000 /* HomeShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeShortcutTests.swift; sourceTree = "<group>"; };
+		5B0200000900000000000000 /* HomePinTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePinTests.swift; sourceTree = "<group>"; };
 
-		5B0100000500000000000000 /* HomeShortcutToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeShortcutToggle.swift; sourceTree = "<group>"; };
+		5B0100000500000000000000 /* HomePinToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePinToggle.swift; sourceTree = "<group>"; };
 		5B0100000600000000000000 /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
 		5B0200000A00000000000000 /* ReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionTests.swift; sourceTree = "<group>"; };
 
@@ -169,7 +169,7 @@
 				5B0100000200000000000000 /* CollectionDetailView.swift */,
 				5B0100000300000000000000 /* ImportView.swift */,
 				5B0100000400000000000000 /* NotificationScheduler.swift */,
-				5B0100000500000000000000 /* HomeShortcutToggle.swift */,
+				5B0100000500000000000000 /* HomePinToggle.swift */,
 				5B0100000600000000000000 /* ReadingSessionView.swift */,
 				5B0100000700000000000000 /* StreakCalendarView.swift */,);
 			path = Reado;
@@ -194,7 +194,7 @@
 				5B0200000600000000000000 /* ScopedReviewTests.swift */,
 				5B0200000700000000000000 /* CSVImportTests.swift */,
 				5B0200000800000000000000 /* ReminderTests.swift */,
-				5B0200000900000000000000 /* HomeShortcutTests.swift */,
+				5B0200000900000000000000 /* HomePinTests.swift */,
 				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
 				5B0200000B00000000000000 /* StreakCalendarTests.swift */,);
 			path = ReadoTests;
@@ -311,7 +311,7 @@
 				5C0100000200000000000000 /* CollectionDetailView.swift in Sources */,
 				5C0100000300000000000000 /* ImportView.swift in Sources */,
 				5C0100000400000000000000 /* NotificationScheduler.swift in Sources */,
-				5C0100000500000000000000 /* HomeShortcutToggle.swift in Sources */,
+				5C0100000500000000000000 /* HomePinToggle.swift in Sources */,
 				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
 				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -336,7 +336,7 @@
 				5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */,
 				5C0200000700000000000000 /* CSVImportTests.swift in Sources */,
 				5C0200000800000000000000 /* ReminderTests.swift in Sources */,
-				5C0200000900000000000000 /* HomeShortcutTests.swift in Sources */,
+				5C0200000900000000000000 /* HomePinTests.swift in Sources */,
 				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
 				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;

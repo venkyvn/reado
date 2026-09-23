@@ -219,9 +219,9 @@ private struct HomeTabView: View {
     // Pin Home — "Đang đọc" tối đa 5 (port UI lab), mở thẳng Collection Hub.
     @ViewBuilder
     private var homePinRows: some View {
-        if !model.homeShortcuts.isEmpty {
-            Section("Đang đọc · \(model.homeShortcuts.count)/5") {
-                ForEach(model.homeShortcuts) { collection in
+        if !model.homePins.isEmpty {
+            Section("Đang đọc · \(model.homePins.count)/5") {
+                ForEach(model.homePins) { collection in
                     NavigationLink(value: collection.id) {
                         HStack(spacing: 12) {
                             Image(systemName: "pin")
@@ -342,7 +342,7 @@ private struct KhoTabView: View {
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Theme.surfaceStrong))
                     }
-                    if model.homeShortcutIDs.contains(collection.id) {
+                    if model.homePinIDs.contains(collection.id) {
                         Image(systemName: "pin.fill")
                             .font(.caption)
                             .foregroundStyle(Color.accentColor)
@@ -392,7 +392,7 @@ private struct KhoTabView: View {
     @ViewBuilder
     private func pinSwipe(_ collection: AppModel.CollectionOverview) -> some View {
         if !collection.isDefault {
-            let isPinned = model.homeShortcutIDs.contains(collection.id)
+            let isPinned = model.homePinIDs.contains(collection.id)
             Button {
                 model.togglePin(collection.id)
             } label: {
@@ -400,7 +400,7 @@ private struct KhoTabView: View {
             }
             .tint(isPinned ? .gray : .accentColor)
             .disabled(
-                !isPinned && model.homeShortcutIDs.count >= HomePinService.maxPins)
+                !isPinned && model.homePinIDs.count >= HomePinService.maxPins)
         }
     }
 }

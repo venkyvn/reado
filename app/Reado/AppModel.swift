@@ -24,7 +24,7 @@ final class AppModel {
     private(set) var streakHeatmap: StreakHeatmap?
     /// Pin Home — id collection "đang đọc" (thứ tự user thêm, ≤ 5). Port UI lab
     /// (2026-09-23) nâng từ 2 shortcut (FR-17 cũ) → 5 pin (`HomePinService`).
-    private(set) var homeShortcutIDs: [String] = []
+    private(set) var homePinIDs: [String] = []
     /// Ôn nhanh (port UI lab) — scope ôn mặc định của tab Ôn: 1–3 bộ ưu tiên
     /// hoặc "tất cả" (`reviewAll`).
     private(set) var reviewScopeDefault: ReviewScope = .empty
@@ -119,7 +119,7 @@ final class AppModel {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
         dailyProgress = (try? Self.loadDailyProgress(db: database))
-        homeShortcutIDs = (try? HomePinService.ids(on: database)) ?? []
+        homePinIDs = (try? HomePinService.ids(on: database)) ?? []
         reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
         dataRevision &+= 1
     }
@@ -465,21 +465,21 @@ final class AppModel {
         return moved
     }
 
-    // MARK: — FR-17 Home shortcut
+    // MARK: — FR-17 Home pin
 
     /// Các collection đang ghim trên Home, đã resolve theo thứ tự ghim và bỏ
     /// pin trỏ vào collection đã xoá (PRD FR-17: "shortcut lỗi bị bỏ").
-    var homeShortcuts: [CollectionOverview] {
-        homeShortcutIDs.compactMap { id in
+    var homePins: [CollectionOverview] {
+        homePinIDs.compactMap { id in
             collections.first { $0.id == id }
         }
     }
 
     /// Ghim thêm collection lên Home. Đã đủ 5 pin → `set` ném `.tooMany` (UI mở
-    /// chooser chọn pin hiện có để thay TRƯỚC khi gọi — `HomeShortcutToggle`
+    /// chooser chọn pin hiện có để thay TRƯỚC khi gọi — `HomePinToggle`
     /// kiểm `count < maxPins`).
     @discardableResult
-    func addHomeShortcut(_ id: String) throws -> [String] {
+    func addHomePin(_ id: String) throws -> [String] {
         guard let database else { throw ReviewError.modelUnavailable }
         let current = try HomePinService.ids(on: database)
         guard !current.contains(id) else { return current }
@@ -490,7 +490,7 @@ final class AppModel {
 
     /// Bỏ một pin, giữ nguyên thứ tự các pin còn lại (compact).
     @discardableResult
-    func removeHomeShortcut(_ id: String) throws -> [String] {
+    func removeHomePin(_ id: String) throws -> [String] {
         guard let database else { throw ReviewError.modelUnavailable }
         let current = try HomePinService.ids(on: database)
         guard current.contains(id) else { return current }
@@ -503,13 +503,13 @@ final class AppModel {
     /// Chooser "đã đủ 5": thay một pin đang có bằng collection mới. Pin cần thay
     /// đã mất (collection xoá) → coi như ghim mới.
     @discardableResult
-    func replaceHomeShortcut(existingID: String, with newID: String) throws
+    func replaceHomePin(existingID: String, with newID: String) throws
         -> [String]
     {
         guard let database else { throw ReviewError.modelUnavailable }
         let current = try HomePinService.ids(on: database)
         guard let index = current.firstIndex(of: existingID) else {
-            return try addHomeShortcut(newID)
+            return try addHomePin(newID)
         }
         var updated = current
         updated[index] = newID

@@ -1,10 +1,10 @@
 import ReadoKit
 import XCTest
 
-/// Home pin — port UI lab (2026-09-23): FR-17 nâng từ 2 shortcut (`HomeShortcutService`)
+/// Home pin — port UI lab (2026-09-23): FR-17 nâng từ 2 shortcut (cũ)
 /// lên TỐI ĐA 5 collection "đang đọc", lưu JSON `settings.home_pin_ids` qua
 /// `HomePinService`. Kho tạm không ghim được; không trùng; đọc/ghi giữ thứ tự.
-final class HomeShortcutTests: XCTestCase {
+final class HomePinTests: XCTestCase {
 
     private func inboxID(_ db: SQLiteDatabase) throws -> String {
         try XCTUnwrap(

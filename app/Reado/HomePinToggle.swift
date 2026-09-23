@@ -6,7 +6,7 @@ import SwiftUI
 /// - còn slot trống → ghim mới;
 /// - đã đủ 5 → mở chooser chọn pin hiện có để thay (không tự thay ngầm).
 /// Toggle OFF → bỏ pin, giữ thứ tự các pin còn lại.
-struct HomeShortcutToggle: View {
+struct HomePinToggle: View {
     /// Collection cần bật/tắt ghim. `label = nil` → "Hiện trên Home" (hợp cho
     /// chi tiết collection); Settings truyền tên collection làm nhãn.
     let collectionID: String
@@ -15,11 +15,11 @@ struct HomeShortcutToggle: View {
     @Environment(AppModel.self) private var model
     @State private var showChooser = false
 
-    private var isOn: Bool { model.homeShortcutIDs.contains(collectionID) }
+    private var isOn: Bool { model.homePinIDs.contains(collectionID) }
 
     /// Các pin hiện có (resolve tên) — ứng viên bị thay trong chooser.
     private var currentShortcuts: [AppModel.CollectionOverview] {
-        model.homeShortcutIDs.compactMap { id in
+        model.homePinIDs.compactMap { id in
             model.collections.first { $0.id == id }
         }
     }
@@ -41,7 +41,7 @@ struct HomeShortcutToggle: View {
             ) {
                 ForEach(currentShortcuts) { existing in
                     Button(existing.name) {
-                        _ = try? model.replaceHomeShortcut(
+                        _ = try? model.replaceHomePin(
                             existingID: existing.id, with: collectionID)
                     }
                 }
@@ -52,14 +52,14 @@ struct HomeShortcutToggle: View {
     }
 
     private func turnOn() {
-        if model.homeShortcutIDs.count >= HomePinService.maxPins {
+        if model.homePinIDs.count >= HomePinService.maxPins {
             showChooser = true
         } else {
-            _ = try? model.addHomeShortcut(collectionID)
+            _ = try? model.addHomePin(collectionID)
         }
     }
 
     private func turnOff() {
-        _ = try? model.removeHomeShortcut(collectionID)
+        _ = try? model.removeHomePin(collectionID)
     }
 }
