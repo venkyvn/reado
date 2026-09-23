@@ -1,15 +1,17 @@
 import ReadoKit
 import XCTest
 
-/// FR-15 — Learning Settings: load/update 3 núm user chỉnh được (CEFR, hạn mức
-/// thẻ mới, giờ chuyển ngày); `request_retention` + núm FSRS ngoài phạm vi
-/// update (R1 không mở user, PRD mục 10).
+/// FR-15 — Learning Settings: load/update các núm user chỉnh được (CEFR ĐA level,
+/// hạn mức thẻ mới, giờ chuyển ngày); `request_retention` + núm FSRS ngoài phạm
+/// vi update (R1 không mở user, PRD mục 10).
+/// port UI lab (2026-09-23): CEFR từ đơn → đa (`cefrLevels`, tối thiểu 1).
 final class SettingsTests: XCTestCase {
 
     func testLoadReturnsSeedDefaults() throws {
         let db = try Fixtures.seededDB()
         let settings = try SettingsService.load(on: db)
         XCTAssertEqual(settings, LearningSettings.defaults)
+        XCTAssertEqual(settings.cefrLevels, [.b2])
         XCTAssertEqual(settings.cefrLevel, .b2)
         XCTAssertEqual(settings.dailyNewLimit, 10)
         XCTAssertEqual(settings.dayCutoffHour, 4)
@@ -23,31 +25,54 @@ final class SettingsTests: XCTestCase {
         }
     }
 
-    func testUpdatePersistsAllThreeFields() throws {
+    func testUpdatePersistsAllFields() throws {
         let db = try Fixtures.seededDB()
         let updated = try SettingsService.update(
-            on: db, cefrLevel: .c1, dailyNewLimit: 25, dayCutoffHour: 6)
+            on: db, cefrLevels: [.b1, .c1], dailyNewLimit: 25, dayCutoffHour: 6)
         XCTAssertEqual(
             updated,
-            LearningSettings(cefrLevel: .c1, dailyNewLimit: 25, dayCutoffHour: 6))
+            LearningSettings(
+                cefrLevels: [.b1, .c1], dailyNewLimit: 25, dayCutoffHour: 6))
         XCTAssertEqual(try SettingsService.load(on: db), updated)
     }
 
+    /// port UI lab §8: nhiều level giữ được thứ tự user chọn, `cefrLevel` (= level
+    /// đầu) vẫn còn cho code cũ / prompt.
+    func testUpdatePersistsMultipleCefrLevels() throws {
+        let db = try Fixtures.seededDB()
+        let updated = try SettingsService.update(
+            on: db, cefrLevels: [.a2, .b2, .c1], dailyNewLimit: 10, dayCutoffHour: 4)
+        XCTAssertEqual(updated.cefrLevels, [.a2, .b2, .c1])
+        XCTAssertEqual(updated.cefrLevel, .a2)
+        XCTAssertEqual(try SettingsService.load(on: db).cefrLevels, [.a2, .b2, .c1])
+    }
+
+    /// port UI lab §8: CEFR phải chọn ít nhất một level.
+    func testUpdateRejectsEmptyCefrLevels() throws {
+        let db = try Fixtures.seededDB()
+        XCTAssertThrowsError(
+            try SettingsService.update(
+                on: db, cefrLevels: [], dailyNewLimit: 10, dayCutoffHour: 4)
+        ) { error in
+            XCTAssertEqual(error as? SettingsError, .emptyCefrLevels)
+        }
+    }
+
     /// FR-15 crit 2: đổi level → capture KẾ TIẾP dùng level mới (AnalyzerFactory
-    /// đọc settings live mỗi lần phân tích), trang đã phân tích không chạy lại.
+    /// đọc settings live mỗi lần phân tích); nhiều level được ghép ", ".
     func testUpdatedCefrFeedsNextAnalysis() throws {
         let db = try Fixtures.seededDB()
         try SettingsService.update(
-            on: db, cefrLevel: .a2, dailyNewLimit: 10, dayCutoffHour: 4)
+            on: db, cefrLevels: [.a2, .b1], dailyNewLimit: 10, dayCutoffHour: 4)
         let (_, cefr) = try AnalyzerFactory.active(db: db)
-        XCTAssertEqual(cefr, "A2")
+        XCTAssertEqual(cefr, "A2, B1")
     }
 
     func testUpdateRejectsNegativeDailyNewLimit() throws {
         let db = try Fixtures.seededDB()
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: -1, dayCutoffHour: 4)
+                on: db, cefrLevels: [.b2], dailyNewLimit: -1, dayCutoffHour: 4)
         ) { error in
             XCTAssertEqual(error as? SettingsError, .invalidDailyNewLimit(-1))
         }
@@ -57,7 +82,7 @@ final class SettingsTests: XCTestCase {
         let db = try Fixtures.seededDB()
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: 1000, dayCutoffHour: 4)
+                on: db, cefrLevels: [.b2], dailyNewLimit: 1000, dayCutoffHour: 4)
         ) { error in
             XCTAssertEqual(error as? SettingsError, .invalidDailyNewLimit(1000))
         }
@@ -67,13 +92,13 @@ final class SettingsTests: XCTestCase {
         let db = try Fixtures.seededDB()
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: 24)
+                on: db, cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: 24)
         ) { error in
             XCTAssertEqual(error as? SettingsError, .invalidDayCutoffHour(24))
         }
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: -1)
+                on: db, cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: -1)
         )
     }
 
@@ -82,7 +107,7 @@ final class SettingsTests: XCTestCase {
     func testUpdateDoesNotTouchReadOnlyFSRSFields() throws {
         let db = try Fixtures.seededDB()
         try SettingsService.update(
-            on: db, cefrLevel: .c1, dailyNewLimit: 7, dayCutoffHour: 4)
+            on: db, cefrLevels: [.c1], dailyNewLimit: 7, dayCutoffHour: 4)
         let row = try XCTUnwrap(
             db.rows(
                 """
@@ -111,7 +136,7 @@ final class SettingsTests: XCTestCase {
             dueIso: "2026-09-17T00:00:00Z")
 
         let settings = try SettingsService.update(
-            on: db, cefrLevel: .b2, dailyNewLimit: 0, dayCutoffHour: 4)
+            on: db, cefrLevels: [.b2], dailyNewLimit: 0, dayCutoffHour: 4)
         let (items, _) = try ReviewQueue.loadFullQueue(
             on: db, dailyNewLimit: settings.dailyNewLimit, now: Fixtures.fixedNow)
 

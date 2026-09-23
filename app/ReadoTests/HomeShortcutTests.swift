@@ -1,9 +1,9 @@
 import ReadoKit
 import XCTest
 
-/// FR-17 — Home shortcut: đọc/ghi hai slot `settings.home_shortcut_*`, theo
-/// thứ tự slot, tối đa 2, không kho tạm, không trùng; collection bị xoá → slot
-/// tự NULL hoá (ON DELETE SET NULL), shortcut lỗi không dẫn màn hình chết.
+/// Home pin — port UI lab (2026-09-23): FR-17 nâng từ 2 shortcut (`HomeShortcutService`)
+/// lên TỐI ĐA 5 collection "đang đọc", lưu JSON `settings.home_pin_ids` qua
+/// `HomePinService`. Kho tạm không ghim được; không trùng; đọc/ghi giữ thứ tự.
 final class HomeShortcutTests: XCTestCase {
 
     private func inboxID(_ db: SQLiteDatabase) throws -> String {
@@ -12,53 +12,65 @@ final class HomeShortcutTests: XCTestCase {
                 "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;"))
     }
 
-    func testSeedHasNoShortcuts() throws {
+    func testSeedHasNoPins() throws {
         let db = try Fixtures.seededDB()
-        XCTAssertEqual(try HomeShortcutService.ids(on: db), [])
+        XCTAssertEqual(try HomePinService.ids(on: db), [])
     }
 
-    func testSetTwoKeepsSlotOrder() throws {
+    func testSetSingleKeepsSlot() throws {
         let db = try Fixtures.seededDB()
         let a = try Fixtures.insertCollection(in: db, name: "A")
-        let b = try Fixtures.insertCollection(in: db, name: "B")
-        let written = try HomeShortcutService.set(on: db, ids: [a, b])
-        XCTAssertEqual(written, [a, b])
-        XCTAssertEqual(try HomeShortcutService.ids(on: db), [a, b])
-        // Đọc thô đúng hai cột theo thứ tự slot 1 → 2.
-        let row = try XCTUnwrap(
-            db.rows(
-                "SELECT home_shortcut_1_id, home_shortcut_2_id FROM settings WHERE id = 1;"
-            ).first)
-        XCTAssertEqual(row[0].textValue, a)
-        XCTAssertEqual(row[1].textValue, b)
+        XCTAssertEqual(try HomePinService.set(on: db, ids: [a]), [a])
+        XCTAssertEqual(try HomePinService.ids(on: db), [a])
     }
 
-    func testSetSingleSlot() throws {
+    /// port UI lab: ghim được đủ 5 collection, giữ nguyên thứ tự user thêm.
+    func testSetFiveKeepsOrder() throws {
         let db = try Fixtures.seededDB()
-        let a = try Fixtures.insertCollection(in: db, name: "A")
-        XCTAssertEqual(try HomeShortcutService.set(on: db, ids: [a]), [a])
-        XCTAssertEqual(try HomeShortcutService.ids(on: db), [a])
+        let ids = try [
+            Fixtures.insertCollection(in: db, name: "A"),
+            Fixtures.insertCollection(in: db, name: "B"),
+            Fixtures.insertCollection(in: db, name: "C"),
+            Fixtures.insertCollection(in: db, name: "D"),
+            Fixtures.insertCollection(in: db, name: "E"),
+        ]
+        let written = try HomePinService.set(on: db, ids: ids)
+        XCTAssertEqual(written, ids)
+        XCTAssertEqual(try HomePinService.ids(on: db), ids)
+        // Đọc thô là JSON array theo đúng thứ tự đó.
+        let json = try XCTUnwrap(
+            db.scalarString("SELECT home_pin_ids FROM settings WHERE id = 1;"))
+        XCTAssertEqual(
+            try XCTUnwrap(
+                (try? JSONDecoder().decode([String].self, from: Data(json.utf8)))),
+            ids)
     }
 
     func testSetRejectsDuplicateIDs() throws {
         let db = try Fixtures.seededDB()
         let a = try Fixtures.insertCollection(in: db, name: "A")
         XCTAssertThrowsError(
-            try HomeShortcutService.set(on: db, ids: [a, a])
+            try HomePinService.set(on: db, ids: [a, a])
         ) { error in
-            XCTAssertEqual(error as? HomeShortcutError, .duplicate)
+            XCTAssertEqual(error as? HomePinError, .duplicate)
         }
     }
 
-    func testSetRejectsMoreThanTwo() throws {
+    /// port UI lab: ghim thứ 6 → lỗi (tối đa 5).
+    func testSetRejectsMoreThanFive() throws {
         let db = try Fixtures.seededDB()
-        let a = try Fixtures.insertCollection(in: db, name: "A")
-        let b = try Fixtures.insertCollection(in: db, name: "B")
-        let c = try Fixtures.insertCollection(in: db, name: "C")
+        let ids = try [
+            Fixtures.insertCollection(in: db, name: "A"),
+            Fixtures.insertCollection(in: db, name: "B"),
+            Fixtures.insertCollection(in: db, name: "C"),
+            Fixtures.insertCollection(in: db, name: "D"),
+            Fixtures.insertCollection(in: db, name: "E"),
+            Fixtures.insertCollection(in: db, name: "F"),
+        ]
         XCTAssertThrowsError(
-            try HomeShortcutService.set(on: db, ids: [a, b, c])
+            try HomePinService.set(on: db, ids: ids)
         ) { error in
-            XCTAssertEqual(error as? HomeShortcutError, .tooMany)
+            XCTAssertEqual(error as? HomePinError, .tooMany)
         }
     }
 
@@ -67,18 +79,18 @@ final class HomeShortcutTests: XCTestCase {
         let db = try Fixtures.seededDB()
         let inbox = try inboxID(db)
         XCTAssertThrowsError(
-            try HomeShortcutService.set(on: db, ids: [inbox])
+            try HomePinService.set(on: db, ids: [inbox])
         ) { error in
-            XCTAssertEqual(error as? HomeShortcutError, .isInbox)
+            XCTAssertEqual(error as? HomePinError, .isInbox)
         }
     }
 
     func testSetRejectsMissingCollection() throws {
         let db = try Fixtures.seededDB()
         XCTAssertThrowsError(
-            try HomeShortcutService.set(on: db, ids: ["missing-id"])
+            try HomePinService.set(on: db, ids: ["missing-id"])
         ) { error in
-            XCTAssertEqual(error as? HomeShortcutError, .notFound)
+            XCTAssertEqual(error as? HomePinError, .notFound)
         }
     }
 
@@ -86,28 +98,40 @@ final class HomeShortcutTests: XCTestCase {
         let db = try Fixtures.seededDB()
         let a = try Fixtures.insertCollection(in: db, name: "A")
         XCTAssertEqual(
-            try HomeShortcutService.set(on: db, ids: ["", a]), [a])
+            try HomePinService.set(on: db, ids: ["", a]), [a])
     }
 
-    /// Xoá collection đang ghim → FK `ON DELETE SET NULL` bỏ slot, `ids` compact
-    /// không trả slot NULL (PRD crit "shortcut lỗi bị bỏ").
-    func testDeletePinnedCollectionClearsSlot() throws {
+    /// Xoá collection đang ghim → pin tự mất khỏi danh sách (đọc lại không còn).
+    func testDeletePinnedCollectionDropsPin() throws {
         let db = try Fixtures.seededDB()
         let a = try Fixtures.insertCollection(in: db, name: "A")
         let b = try Fixtures.insertCollection(in: db, name: "B")
-        try HomeShortcutService.set(on: db, ids: [a, b])
+        try HomePinService.set(on: db, ids: [a, b])
+        // Ghi lại số collection đang ghim; sau xoá A phải tự trừ đi.
         try VocabRepository.deleteCollection(on: db, id: a)
-        XCTAssertEqual(try HomeShortcutService.ids(on: db), [b])
+        let remaining = try HomePinService.ids(on: db)
+        XCTAssertEqual(remaining, [b])
+        // Pin còn lại được ghi lại qua `set` (JSON không chứa id đã xoá).
+        XCTAssertEqual(try HomePinService.set(on: db, ids: remaining), [b])
     }
 
-    /// Bỏ shortcut ở slot đầu → slot sau dồn lên, thứ tự vẫn compact.
+    /// Bỏ pin ở đầu → các pin sau dồn lên, thứ tự vẫn compact.
     func testRemoveFirstKeepsOrderCompact() throws {
         let db = try Fixtures.seededDB()
         let a = try Fixtures.insertCollection(in: db, name: "A")
         let b = try Fixtures.insertCollection(in: db, name: "B")
-        try HomeShortcutService.set(on: db, ids: [a, b])
-        let updated = try HomeShortcutService.set(on: db, ids: [b])
+        try HomePinService.set(on: db, ids: [a, b])
+        let updated = try HomePinService.set(on: db, ids: [b])
         XCTAssertEqual(updated, [b])
-        XCTAssertEqual(try HomeShortcutService.ids(on: db), [b])
+        XCTAssertEqual(try HomePinService.ids(on: db), [b])
+    }
+
+    /// port UI lab: bỏ ghim HẾT → JSON "[]", đọc lại rỗng (không resurrect slot cũ).
+    func testClearAllPinsYieldsEmpty() throws {
+        let db = try Fixtures.seededDB()
+        let a = try Fixtures.insertCollection(in: db, name: "A")
+        try HomePinService.set(on: db, ids: [a])
+        XCTAssertEqual(try HomePinService.set(on: db, ids: []), [])
+        XCTAssertEqual(try HomePinService.ids(on: db), [])
     }
 }

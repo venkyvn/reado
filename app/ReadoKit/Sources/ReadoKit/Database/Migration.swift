@@ -4,7 +4,7 @@ import Foundation
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
 /// Bảy bảng + index; seed nằm ở Seeder chứ không phải migration.
 public enum Migration {
-    public static let currentVersion: Int64 = 2
+    public static let currentVersion: Int64 = 3
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
@@ -17,6 +17,43 @@ public enum Migration {
         "ALTER TABLE settings ADD COLUMN reminder_enabled INTEGER NOT NULL DEFAULT 0;",
         "ALTER TABLE settings ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 1200;",
     ]
+
+    /// 3.15 — port UI lab (2026-09-23): CEFR đa level, pin Home 5, scope ôn nhanh.
+    /// Mỗi ALTER thêm tối đa 1 cột; cột cũ `cefr_level` giữ nguyên (deprecate).
+    /// `home_shortcut_1/2` được copy sang `home_pin_ids` JSON rồi NULL hoá (xem
+    /// `migrateLegacyHomePins`) — không lazy đọc để tránh resurrect pin cũ khi user
+    /// sau này bỏ ghim hết.
+    static let v3Statements: [String] = [
+        "ALTER TABLE settings ADD COLUMN cefr_levels TEXT NOT NULL DEFAULT '[\"B2\"]';",
+        "ALTER TABLE settings ADD COLUMN home_pin_ids TEXT NOT NULL DEFAULT '[]';",
+        "ALTER TABLE settings ADD COLUMN review_priority_ids TEXT NOT NULL DEFAULT '[]';",
+        "ALTER TABLE settings ADD COLUMN review_all INTEGER NOT NULL DEFAULT 0;",
+    ]
+
+    /// v2 → v3: chuyển 2 slot ghim cũ (`home_shortcut_1/2`) sang JSON `home_pin_ids`,
+    /// rồi xoá 2 cột cũ (NULL) để `HomePinService.ids` không bao giờ đọc lại slot
+    /// đã bỏ ghim — JSON giữ thứ tự slot 1 → 2.
+    static func migrateLegacyHomePins(_ db: SQLiteDatabase) throws {
+        guard
+            let row = try db.rows(
+                """
+                SELECT home_shortcut_1_id, home_shortcut_2_id
+                FROM settings WHERE id = 1;
+                """
+            ).first,
+            row.count == 2
+        else { return }
+        let legacy = [row[0].textValue, row[1].textValue]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+        guard !legacy.isEmpty else { return }
+        let json: String =
+            (try? String(
+                data: JSONEncoder().encode(legacy), encoding: .utf8)) ?? "[]"
+        try db.run(
+            "UPDATE settings SET home_pin_ids = ?, home_shortcut_1_id = NULL, home_shortcut_2_id = NULL WHERE id = 1;",
+            [.text(json)])
+    }
 
     static let v1Statements: [String] = [
         // -- PRAGMA foreign_keys = ON; // bật cho MỌI connection ở SQLiteDatabase.init
@@ -157,6 +194,14 @@ public enum Migration {
                         try db.exec(statement)
                     }
                     try db.exec("PRAGMA user_version = 2;")
+                }
+            case 2:
+                try db.inTransaction {
+                    for statement in v3Statements {
+                        try db.exec(statement)
+                    }
+                    try migrateLegacyHomePins(db)
+                    try db.exec("PRAGMA user_version = 3;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

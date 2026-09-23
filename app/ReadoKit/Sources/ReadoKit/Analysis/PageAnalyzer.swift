@@ -36,15 +36,16 @@ public enum AnalyzerFactory {
         }
     }
 
-    /// Helper: đọc settings (cefr_level, active_agent) rồi tạo analyzer đúng agent.
-    /// Trả về (analyzer, cefrLevel).
+    /// Helper: đọc settings (cefr_levels, active_agent) rồi tạo analyzer đúng agent.
+    /// Trả về (analyzer, cefrLevel) với cefrLevel = các level chọn ghép ", " cho
+    /// prompt FR-02 (cài cũ chỉ có `cefr_level` đơn → fallback).
     public static func active(
         db: SQLiteDatabase,
         session: URLSession = .shared
     ) throws -> (analyzer: PageAnalyzer, cefrLevel: String) {
         let rows = try db.rows(
-            "SELECT cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
-        let cefrLevel = rows.first?.first?.textValue ?? "B2"
+            "SELECT cefr_levels, cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
+        let cefrLevel = Self.cefrLevelString(from: rows.first)
         let activeAgentID = rows.first?.last?.textValue
         if let activeAgentID {
             let agentRows = try db.rows(
@@ -62,6 +63,21 @@ public enum AnalyzerFactory {
         }
         // Fallback: agent seed luôn tồn tại (reado_proxy) — không bao giờ tới đây.
         return (ReadoProxyClient(session: session, baseURL: proxyBaseURL), cefrLevel)
+    }
+
+    /// Ghép các CEFR level đã chọn thành chuỗi cho prompt; cột JSON rỗng/cài cũ
+    /// → đọc `cefr_level` đơn; cả hai rỗng → "B2".
+    private static func cefrLevelString(from row: [SQLValue]?) -> String {
+        guard let row else { return "B2" }
+        if let json = row[0].textValue,
+           let data = json.data(using: .utf8),
+           let levels = try? JSONDecoder().decode([CEFRLevel].self, from: data),
+           !levels.isEmpty
+        {
+            return levels.map(\.rawValue).joined(separator: ", ")
+        }
+        if let single = row[1].textValue, !single.isEmpty { return single }
+        return "B2"
     }
 }
 

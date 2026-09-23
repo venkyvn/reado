@@ -84,8 +84,12 @@ public enum ReviewDraftBuilder {
     ///   verified giữ nguyên thứ tự gốc (thứ tự xuất hiện trên trang).
     /// - FR-09 mặc định chọn tất cả, nhưng FR-02 + SD 10.3: unverified/suspect
     ///   **bỏ chọn sẵn** — user chủ động chọn lại nếu giữ.
+    /// - port UI lab (2026-09-23): preselect còn lọc theo CEFR — chỉ `verified`
+    ///   **và** `cefr ∈ selectedLevels` mới được chọn sẵn. `selectedLevels = nil`
+    ///   → giữ hành vi cũ (chọn mọi verified) cho test tương thích.
     public static func drafts(
-        from items: [PageAnalysis.VocabularyItemIn]
+        from items: [PageAnalysis.VocabularyItemIn],
+        selectedLevels: Set<String>? = nil
     ) -> [ReviewDraft] {
         let all = items.map { item in
             ReviewDraft(
@@ -96,10 +100,22 @@ public enum ReviewDraftBuilder {
                 cefr: item.cefr ?? "",
                 example: item.example,
                 verification: item.verification,
-                isSelected: item.verification == .verified)
+                isSelected: preselect(item, selectedLevels: selectedLevels))
         }
         return all.filter { $0.verification != .verified }
             + all.filter { $0.verification == .verified }
+    }
+
+    /// Preselect FR-02: verified (không unverified/suspect) + cefr ∈ levels
+    /// (nếu có bộ lọc). cefr rỗng/không rõ → không preselect dù verified.
+    private static func preselect(
+        _ item: PageAnalysis.VocabularyItemIn,
+        selectedLevels: Set<String>?
+    ) -> Bool {
+        guard item.verification == .verified else { return false }
+        guard let levels = selectedLevels else { return true }
+        guard let cefr = item.cefr, !cefr.isEmpty else { return false }
+        return levels.contains(cefr)
     }
 
     /// Chốt: chỉ item `isSelected` (FR-03 bỏ chọn = không lưu; FR-09 chọn = review card).

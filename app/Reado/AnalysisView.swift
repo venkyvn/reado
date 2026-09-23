@@ -12,11 +12,11 @@ struct AnalysisView: View {
 
     @State private var drafts: [ReviewDraft] = []
     @State private var expandedIDs: Set<String> = []
+    // port UI lab §5.3: bản dịch đoạn ẩn tới khi tap (EN luôn hiện).
+    @State private var revealedSegments: Set<Int> = []
     @State private var saveAlert: SaveAlert?
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
-    // J2: đích lưu (nil = kho tạm). Mở từ Collection Hub → đích collection đó.
-    @State private var selectedCollectionID: String? = nil
 
     private enum SaveAlert: Identifiable {
         case success(Int)
@@ -86,10 +86,6 @@ struct AnalysisView: View {
         }
         .onAppear {
             syncDraftsIfNeeded()
-            // J2: đích collection chọn sẵn từ Collection Hub (nil = kho tạm).
-            if let target = model.analysisTargetCollectionID {
-                selectedCollectionID = target
-            }
         }
         .onChange(of: model.analysisResult) { _, _ in syncDraftsIfNeeded() }
         .task {
@@ -184,7 +180,11 @@ struct AnalysisView: View {
 
     private func syncDraftsIfNeeded() {
         guard let result = model.analysisResult, drafts.isEmpty else { return }
-        drafts = ReviewDraftBuilder.drafts(from: result.vocabulary)
+        // port UI lab §5.5: preselect = verified && cefr ∈ settings.cefrLevels.
+        let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
+        drafts = ReviewDraftBuilder.drafts(
+            from: result.vocabulary,
+            selectedLevels: levels.map(Set.init))
     }
 
     private func quitTapped() {
@@ -199,10 +199,12 @@ struct AnalysisView: View {
         do {
             // FR-05/06: segments + summary đi theo phiên đọc khi lưu vào collection
             // có tên; kho tạm không lưu phiên (kho chứa từ chưa phân loại).
+            // port UI lab: đích đã chọn TỪ LÚC CHỤP (`analysisTargetCollectionID`),
+            // duyệt từ chỉ đọc — không chọn lại ở đây.
             let result = model.analysisResult
             let saved = try model.saveSelection(
                 drafts,
-                collectionID: selectedCollectionID,
+                collectionID: model.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
                 summaryVI: result?.summaryVI ?? "")
             hasConfirmed = true
@@ -214,7 +216,7 @@ struct AnalysisView: View {
 
     /// Nhãn đích lưu cho thông báo thành công (kho tạm hoặc tên collection).
     private var destinationLabel: String {
-        if let id = selectedCollectionID,
+        if let id = model.analysisTargetCollectionID,
            let collection = model.collections.first(where: { $0.id == id }) {
             return "«\(collection.name)»"
         }
@@ -225,28 +227,27 @@ struct AnalysisView: View {
 
     private func resultList(_ result: PageAnalysis) -> some View {
         List {
-            // J2: chọn đích lưu — kho tạm (đích ngầm) hoặc collection có tên.
+            // port UI lab §5.2: đích lưu chỉ ĐỌC ở màn duyệt — chọn từ lúc chụp.
             Section {
-                Picker("Lưu vào", selection: $selectedCollectionID) {
-                    Text("Kho tạm").tag(nil as String?)
-                    ForEach(model.collections.filter { !$0.isDefault }) { c in
-                        Text(c.name).tag(Optional(c.id))
-                    }
+                Label {
+                    Text("Lưu vào \(destinationLabel)")
+                } icon: {
+                    Image(systemName: "tray.and.arrow.down")
+                        .foregroundStyle(Color.accentColor)
                 }
+                .font(.subheadline)
+            } footer: {
+                Text("Đổi bộ ở màn chụp.")
             }
 
-            // FR-05 (ADR-007): song ngữ xen kẽ theo đoạn — chỉ hiển thị, không lưu.
+            // FR-05 (ADR-007): song ngữ — EN luôn hiện, VI mở khi tap (port §5.3).
             if !result.segments.isEmpty {
-                Section("Song ngữ Anh – Việt") {
-                    ForEach(Array(result.segments.enumerated()), id: \.offset) { _, seg in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(seg.sourceEN)
-                                .font(.callout)
-                            Text(seg.translationVI)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 2)
+                Section("Đoạn gốc") {
+                    ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
+                        SegmentBlock(
+                            segment: seg,
+                            isRevealed: revealedSegments.contains(index),
+                            onTap: { toggleSegment(index) })
                     }
                 }
             }
@@ -283,6 +284,14 @@ struct AnalysisView: View {
             expandedIDs.remove(id)
         } else {
             expandedIDs.insert(id)
+        }
+    }
+
+    private func toggleSegment(_ index: Int) {
+        if revealedSegments.contains(index) {
+            revealedSegments.remove(index)
+        } else {
+            revealedSegments.insert(index)
         }
     }
 }
@@ -425,6 +434,37 @@ private struct ReviewCardRow: View {
                     Theme.surface,
                     in: RoundedRectangle(cornerRadius: 8))
         }
+    }
+}
+
+/// Đoạn gốc song ngữ (port UI lab §5.3) — EN luôn; VI mờ tới khi tap mở.
+private struct SegmentBlock: View {
+    let segment: PageAnalysis.Segment
+    let isRevealed: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(segment.sourceEN)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                if isRevealed {
+                    Text(segment.translationVI)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .transition(.opacity)
+                } else {
+                    Label("Dịch", systemImage: "globe")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor.opacity(0.8))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

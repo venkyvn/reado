@@ -20,9 +20,8 @@ struct CollectionDetailView: View {
     @State private var moveSheetIntention: MoveIntention?
     @State private var showExport = false
 
-    // J2 hub: chụp thêm vào bộ này + ôn bộ này (scoped) + phiên đọc song ngữ.
-    @State private var showCapture = false
-    @State private var showAnalysis = false
+    // J2 hub: ôn bộ này (scoped). Chụp đi qua FloatShutter nổi ở RootView (port
+    // UI lab §6) — không còn sheet capture/analysis riêng trong Hub.
     @State private var showReview = false
 
     private var overview: AppModel.CollectionOverview? {
@@ -48,19 +47,13 @@ struct CollectionDetailView: View {
                     }
                 }
 
-                // J2 hub: hành động nhanh — ôn phạm vi bộ này + chụp thêm vào bộ này.
+                // J2 hub: hành động nhanh — ôn phạm vi bộ này. Chụp dùng
+                // FloatShutter nổi (port UI lab §6), không CTA "Chụp thêm phiên".
                 Section {
                     Button {
                         showReview = true
                     } label: {
                         Label("Ôn bộ này", systemImage: "brain.head.profile")
-                    }
-                    if !isInbox {
-                        Button {
-                            startCapture()
-                        } label: {
-                            Label("Chụp trang vào bộ này", systemImage: "camera")
-                        }
                     }
                 }
             }
@@ -84,7 +77,20 @@ struct CollectionDetailView: View {
         }
         .navigationTitle(overview?.name ?? "Collection")
         .toolbar { toolbarContent }
-        .onAppear { reloadList() }
+        .onAppear {
+            reloadList()
+            // port UI lab §6: chụp bằng shutter nổi prefilt vào đúng bộ đang mở.
+            model.shutterTargetCollectionID = collectionID
+        }
+        .onDisappear {
+            if model.shutterTargetCollectionID == collectionID {
+                model.shutterTargetCollectionID = nil
+            }
+        }
+        .onChange(of: model.dataRevision) {
+            // Lưu từ shutter (port §5.7) bump overview → hub đang mở tự refresh.
+            reloadList()
+        }
         .alert("Đổi tên collection", isPresented: $showRename) {
             TextField("Tên mới", text: $renameText)
             Button("Lưu") {
@@ -121,25 +127,6 @@ struct CollectionDetailView: View {
         }
         .sheet(isPresented: $showExport) {
             NavigationStack { ExportView(initialCollectionIDs: [collectionID]) }
-        }
-        .sheet(isPresented: $showCapture, onDismiss: {
-            // J2: chụp xong → mở phân tích với đích là bộ này.
-            if model.lastCapturedImage != nil {
-                model.analysisTargetCollectionID = collectionID
-                showAnalysis = true
-            }
-        }) {
-            NavigationStack { CaptureView() }
-        }
-        .sheet(isPresented: $showAnalysis, onDismiss: {
-            // FR-04: ảnh mờ / sai ngôn ngữ → mở lại chụp (giữ đích bộ này).
-            if model.pendingRecapture {
-                model.pendingRecapture = false
-                showCapture = true
-            }
-            reloadAfterSession()
-        }) {
-            NavigationStack { AnalysisView() }
         }
         .sheet(isPresented: $showReview, onDismiss: {
             reloadAfterSession()
@@ -290,13 +277,7 @@ struct CollectionDetailView: View {
         model.loadSessions(collectionID: collectionID)
     }
 
-    /// J2: mở capture với đích là bộ này — AnalysisView sẽ chọn sẵn collection.
-    private func startCapture() {
-        model.analysisTargetCollectionID = collectionID
-        showCapture = true
-    }
-
-    /// Sau một sheet (phân tích / ôn) đóng lại — refresh từ, phiên, overview.
+    /// Sau một sheet (ôn) đóng lại — refresh từ, phiên, overview.
     private func reloadAfterSession() {
         reloadList()
         model.reloadOverview()

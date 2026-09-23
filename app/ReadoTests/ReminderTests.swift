@@ -53,7 +53,7 @@ final class ReminderTests: XCTestCase {
     func testUpdatePersistsReminderFields() throws {
         let db = try Fixtures.seededDB()
         let updated = try SettingsService.update(
-            on: db, cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: 4,
+            on: db, cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: 4,
             reminderEnabled: true, reminderMinutes: 19 * 60 + 30)
         XCTAssertTrue(updated.reminderEnabled)
         XCTAssertEqual(updated.reminderMinutes, 1170)
@@ -64,25 +64,34 @@ final class ReminderTests: XCTestCase {
         let db = try Fixtures.seededDB()
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: 4,
+                on: db, cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: 4,
                 reminderEnabled: true, reminderMinutes: 1440)
         ) { error in
             XCTAssertEqual(error as? SettingsError, .invalidReminderMinutes(1440))
         }
         XCTAssertThrowsError(
             try SettingsService.update(
-                on: db, cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: 4,
+                on: db, cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: 4,
                 reminderEnabled: true, reminderMinutes: -1)
         )
     }
 
-    // MARK: — Migration v2
+    // MARK: — Migration từ bản cũ (v1 → hiện tại)
 
-    func testMigrationV2AddsReminderColumnsToExistingV1DB() throws {
-        // Mô phỏng DB v1 cũ (chưa có 2 cột nhắc) rồi chạy Migration.run →
-        // `case 1` phải ALTER thêm cột + default (TẮT / 1200).
+    /// Mô phỏng DB v1 cũ (chỉ `id`, chưa có cột nhắc/pin) rồi chạy Migration.run →
+    /// v2 phải ALTER thêm cột nhắc (TẮT / 1200), v3 thêm cột `home_pin_ids`; dữ
+    /// liệu cũ không bị mất. Bảng tối giản phải có 2 cột ghim cũ để
+    /// `migrateLegacyHomePins` đọc được (schema v1 thật có những cột này).
+    func testMigrationFromV1AddsReminderAndPinColumns() throws {
         let db = try SQLiteDatabase(inMemory: ())
-        try db.exec("CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 1));")
+        try db.exec(
+            """
+            CREATE TABLE settings (
+              id INTEGER PRIMARY KEY CHECK (id = 1),
+              home_shortcut_1_id TEXT,
+              home_shortcut_2_id TEXT
+            );
+            """)
         try db.exec("INSERT INTO settings (id) VALUES (1);")
         try db.exec("PRAGMA user_version = 1;")
 
@@ -92,12 +101,15 @@ final class ReminderTests: XCTestCase {
             .compactMap { $0[1].textValue }
         XCTAssertTrue(columns.contains("reminder_enabled"))
         XCTAssertTrue(columns.contains("reminder_minutes"))
+        XCTAssertTrue(columns.contains("home_pin_ids"))
         XCTAssertEqual(
             try db.scalarInt64("SELECT reminder_enabled FROM settings WHERE id = 1;"),
             0)
         XCTAssertEqual(
             try db.scalarInt64("SELECT reminder_minutes FROM settings WHERE id = 1;"),
             1200)
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 2)
+        XCTAssertEqual(
+            try db.scalarInt64("PRAGMA user_version;"),
+            Migration.currentVersion)
     }
 }

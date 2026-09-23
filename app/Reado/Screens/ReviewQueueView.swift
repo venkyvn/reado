@@ -27,9 +27,13 @@ struct ReviewQueueView: View {
     @State private var scope: Set<String>? = nil
     @State private var showScopePicker = false
 
-    /// Mở sẵn phạm vi (J2 "Ôn bộ này") — nil = tất cả collection.
-    init(initialScope: Set<String>? = nil) {
+    /// Mở sẵn phạm vi (J2 "Ôn bộ này") — nil = tất cả collection. `showsCloseButton`
+/// false khi nhúng làm TAB (không nút "Đóng"); sheet "Ôn bộ này" để true.
+    private let showsCloseButton: Bool
+
+    init(initialScope: Set<String>? = nil, showsCloseButton: Bool = true) {
         _scope = State(initialValue: initialScope)
+        self.showsCloseButton = showsCloseButton
     }
 
     var body: some View {
@@ -49,8 +53,10 @@ struct ReviewQueueView: View {
         .navigationTitle("Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Đóng") { dismiss() }
+            if showsCloseButton {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Đóng") { dismiss() }
+                }
             }
             // FR-18: chọn phạm vi ôn (tất cả / một / vài collection).
             ToolbarItem(placement: .topBarTrailing) {
@@ -67,7 +73,14 @@ struct ReviewQueueView: View {
                 Task { await loadQueue() }
             }
         }
-        .task { await loadQueue() }
+        .onAppear {
+            // Tab Ôn đọc scope mặc định đã lưu (Ôn nhanh ở Kho). Sheet "Ôn bộ này"
+            // (showsCloseButton) giữ scope truyền vào thay vì ghi đè.
+            if !showsCloseButton {
+                scope = model.reviewScopeDefault.scopeSet
+            }
+            Task { await loadQueue() }
+        }
     }
 
     // MARK: — Empty / Done
@@ -108,9 +121,11 @@ struct ReviewQueueView: View {
             Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
             debtBanner
-            Button("Đóng") { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .padding(.top, 8)
+            if showsCloseButton {
+                Button("Đóng") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

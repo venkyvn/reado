@@ -176,3 +176,78 @@ final class ScopedReviewTests: XCTestCase {
             1, "chỉ đếm due quá khứ + không suspended")
     }
 }
+
+/// ReviewScopeService — port UI lab (2026-09-23): lưu/tải phạm vi "Ôn nhanh"
+/// (`settings.review_priority_ids` + `review_all`) — tối đa 3 bộ, hoặc tất cả.
+final class ReviewScopeServiceTests: XCTestCase {
+
+    func testLoadDefaultsToAllWhenSeedEmpty() throws {
+        let db = try Fixtures.seededDB()
+        XCTAssertEqual(try ReviewScopeService.load(on: db), .empty)
+    }
+
+    func testUpdatePersistsPriorities() throws {
+        let db = try Fixtures.seededDB()
+        let a = try Fixtures.insertCollection(in: db, name: "A")
+        let b = try Fixtures.insertCollection(in: db, name: "B")
+        let scope = try ReviewScopeService.update(
+            on: db, priorityIDs: [a, b], reviewAll: false)
+        XCTAssertEqual(scope.priorityIDs, [a, b])
+        XCTAssertFalse(scope.reviewAll)
+        XCTAssertEqual(try ReviewScopeService.load(on: db), scope)
+    }
+
+    func testScopeSetMapping() throws {
+        let db = try Fixtures.seededDB()
+        let a = try Fixtures.insertCollection(in: db, name: "A")
+        let b = try Fixtures.insertCollection(in: db, name: "B")
+        XCTAssertEqual(
+            try ReviewScopeService.update(
+                on: db, priorityIDs: [a, b], reviewAll: false).scopeSet,
+            Set([a, b]))
+        // reviewAll → nil (tất cả).
+        XCTAssertNil(
+            try ReviewScopeService.update(
+                on: db, priorityIDs: [a], reviewAll: true).scopeSet)
+        // Chưa ghim bộ nào → nil (tất cả).
+        XCTAssertNil(
+            try ReviewScopeService.update(
+                on: db, priorityIDs: [], reviewAll: false).scopeSet)
+    }
+
+    func testUpdateReviewAllClearsPriorities() throws {
+        let db = try Fixtures.seededDB()
+        let a = try Fixtures.insertCollection(in: db, name: "A")
+        _ = try ReviewScopeService.update(
+            on: db, priorityIDs: [a], reviewAll: false)
+        let all = try ReviewScopeService.update(
+            on: db, priorityIDs: [a], reviewAll: true)
+        XCTAssertEqual(all, .empty)
+        XCTAssertEqual(try ReviewScopeService.load(on: db), .empty)
+    }
+
+    func testUpdateRejectsMoreThanThree() throws {
+        let db = try Fixtures.seededDB()
+        let ids = try [
+            Fixtures.insertCollection(in: db, name: "A"),
+            Fixtures.insertCollection(in: db, name: "B"),
+            Fixtures.insertCollection(in: db, name: "C"),
+            Fixtures.insertCollection(in: db, name: "D"),
+        ]
+        XCTAssertThrowsError(
+            try ReviewScopeService.update(on: db, priorityIDs: ids, reviewAll: false)
+        ) { error in
+            XCTAssertEqual(error as? ReviewScopeError, .tooMany)
+        }
+    }
+
+    func testUpdateRejectsMissingCollection() throws {
+        let db = try Fixtures.seededDB()
+        XCTAssertThrowsError(
+            try ReviewScopeService.update(
+                on: db, priorityIDs: ["missing-id"], reviewAll: false)
+        ) { error in
+            XCTAssertEqual(error as? ReviewScopeError, .notFound)
+        }
+    }
+}

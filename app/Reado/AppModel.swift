@@ -22,8 +22,12 @@ final class AppModel {
     private(set) var dailyProgress: DailyProgress?
     // J-R1-P: lịch streak (lens FR-14) — streak hiện tại + dài nhất + heatmap 18×7.
     private(set) var streakHeatmap: StreakHeatmap?
-    // FR-17: shortcut Home — id collection đang ghim (thứ tự slot 1 → 2, ≤ 2).
+    /// Pin Home — id collection "đang đọc" (thứ tự user thêm, ≤ 5). Port UI lab
+    /// (2026-09-23) nâng từ 2 shortcut (FR-17 cũ) → 5 pin (`HomePinService`).
     private(set) var homeShortcutIDs: [String] = []
+    /// Ôn nhanh (port UI lab) — scope ôn mặc định của tab Ôn: 1–3 bộ ưu tiên
+    /// hoặc "tất cả" (`reviewAll`).
+    private(set) var reviewScopeDefault: ReviewScope = .empty
 
     // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
     // một detail mở một lúc nên một biến là đủ).
@@ -50,6 +54,19 @@ final class AppModel {
     // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
     // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
     var analysisTargetCollectionID: String?
+
+    /// port UI lab §5.7: sau Lưu → RootView push Hub của bộ vừa lưu (kể cả kho
+    /// tạm). Set ở `saveSelection` thành công, dọn ở `handleCapturedImage` (lần
+    /// chụp kế tiếp) + sau khi RootView tiêu thụ.
+    var pendingHubNavigationID: String?
+
+    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để FloatShutter
+    /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
+    var shutterTargetCollectionID: String?
+
+    /// Bump mỗi lần reload overview — để CollectionDetailView đang mở tự refresh
+    /// (từ/phiên) sau khi lưu mà không cần push hub trùng.
+    private(set) var dataRevision = 0
 
     // FR-11/FR-12: hàng đợi ôn state
     private(set) var isLoadingReview = false
@@ -102,7 +119,9 @@ final class AppModel {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
         dailyProgress = (try? Self.loadDailyProgress(db: database))
-        homeShortcutIDs = (try? HomeShortcutService.ids(on: database)) ?? []
+        homeShortcutIDs = (try? HomePinService.ids(on: database)) ?? []
+        reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
+        dataRevision &+= 1
     }
 
     // MARK: — FR-01 Capture
@@ -115,6 +134,7 @@ final class AppModel {
         captureError = nil
         analysisResult = nil
         analysisFailure = nil
+        pendingHubNavigationID = nil
     }
 
     // MARK: — FR-02 AI Analysis
@@ -178,6 +198,9 @@ final class AppModel {
             now: SystemClock().now)
         if saved > 0 {
             reloadOverview()
+            // port UI lab §5.7: Lưu → Hub bộ vừa chọn (kho tạm = hub kho tạm).
+            pendingHubNavigationID =
+                collectionID ?? collections.first(where: { $0.isDefault })?.id
             lastCapturedImage = nil
             analysisResult = nil
             analysisTargetCollectionID = nil
@@ -296,11 +319,11 @@ final class AppModel {
         return try? SettingsService.load(on: database)
     }
 
-    /// Lưu 5 núm (3 học tập + 2 nhắc ôn) + reload overview để số đếm Home nhận
-    /// hạn mức / giờ chuyển ngày mới NGAY. CEFR có hiệu lực từ lần `capture` kế
-    /// tiếp (FR-15: trang đã phân tích không chạy lại — không có đường re-analyze).
+    /// Lưu các núm (CEFR đa level + 3 học tập + 2 nhắc ôn) + reload overview để số
+    /// đếm Home nhận hạn mức / giờ chuyển ngày mới NGAY. CEFR có hiệu lực từ lần
+    /// `capture` kế tiếp (FR-15: trang đã phân tích không chạy lại).
     func saveLearningSettings(
-        cefrLevel: CEFRLevel,
+        cefrLevels: [CEFRLevel],
         dailyNewLimit: Int,
         dayCutoffHour: Int,
         reminderEnabled: Bool,
@@ -309,7 +332,7 @@ final class AppModel {
         guard let database else { throw ReviewError.modelUnavailable }
         try SettingsService.update(
             on: database,
-            cefrLevel: cefrLevel,
+            cefrLevels: cefrLevels,
             dailyNewLimit: dailyNewLimit,
             dayCutoffHour: dayCutoffHour,
             reminderEnabled: reminderEnabled,
@@ -317,6 +340,22 @@ final class AppModel {
         reloadOverview()
         // 3.12: đồng bộ lịch nhắc ngay sau khi lưu (bật → xin quyền + đặt lịch).
         Task { await self.syncReminderSchedule(requestPermission: true) }
+    }
+
+    /// Convenience — code cũ (SettingsView đơn level) gọi một CEFR duy nhất.
+    func saveLearningSettings(
+        cefrLevel: CEFRLevel,
+        dailyNewLimit: Int,
+        dayCutoffHour: Int,
+        reminderEnabled: Bool,
+        reminderMinutes: Int
+    ) throws {
+        try saveLearningSettings(
+            cefrLevels: [cefrLevel],
+            dailyNewLimit: dailyNewLimit,
+            dayCutoffHour: dayCutoffHour,
+            reminderEnabled: reminderEnabled,
+            reminderMinutes: reminderMinutes)
     }
 
     /// 3.12: đồng bộ lịch nhắc local notification với settings hiện tại.
@@ -428,55 +467,93 @@ final class AppModel {
 
     // MARK: — FR-17 Home shortcut
 
-    /// Các collection đang ghim trên Home, đã resolve theo thứ tự slot và bỏ
-    /// shortcut trỏ vào collection đã xoá (PRD FR-17: "shortcut lỗi bị bỏ").
+    /// Các collection đang ghim trên Home, đã resolve theo thứ tự ghim và bỏ
+    /// pin trỏ vào collection đã xoá (PRD FR-17: "shortcut lỗi bị bỏ").
     var homeShortcuts: [CollectionOverview] {
         homeShortcutIDs.compactMap { id in
             collections.first { $0.id == id }
         }
     }
 
-    /// Ghim thêm collection lên Home (slot trống tiếp theo). Đã đủ 2 slot →
-    /// `set` ném `.tooMany` (UI mở chooser chọn slot thay TRƯỚC khi gọi —
-    /// `HomeShortcutToggle` kiểm `count < maxShortcuts`).
+    /// Ghim thêm collection lên Home. Đã đủ 5 pin → `set` ném `.tooMany` (UI mở
+    /// chooser chọn pin hiện có để thay TRƯỚC khi gọi — `HomeShortcutToggle`
+    /// kiểm `count < maxPins`).
     @discardableResult
     func addHomeShortcut(_ id: String) throws -> [String] {
         guard let database else { throw ReviewError.modelUnavailable }
-        let current = try HomeShortcutService.ids(on: database)
+        let current = try HomePinService.ids(on: database)
         guard !current.contains(id) else { return current }
-        let updated = try HomeShortcutService.set(on: database, ids: current + [id])
+        let updated = try HomePinService.set(on: database, ids: current + [id])
         reloadOverview()
         return updated
     }
 
-    /// Bỏ một shortcut, giữ nguyên thứ tự các slot còn lại (compact).
+    /// Bỏ một pin, giữ nguyên thứ tự các pin còn lại (compact).
     @discardableResult
     func removeHomeShortcut(_ id: String) throws -> [String] {
         guard let database else { throw ReviewError.modelUnavailable }
-        let current = try HomeShortcutService.ids(on: database)
+        let current = try HomePinService.ids(on: database)
         guard current.contains(id) else { return current }
-        let updated = try HomeShortcutService.set(
+        let updated = try HomePinService.set(
             on: database, ids: current.filter { $0 != id })
         reloadOverview()
         return updated
     }
 
-    /// Chooser "đã đủ 2": thay một shortcut đang có bằng collection mới. Shortcut
-    /// cần thay đã mất (collection xoá) → coi như ghim mới.
+    /// Chooser "đã đủ 5": thay một pin đang có bằng collection mới. Pin cần thay
+    /// đã mất (collection xoá) → coi như ghim mới.
     @discardableResult
     func replaceHomeShortcut(existingID: String, with newID: String) throws
         -> [String]
     {
         guard let database else { throw ReviewError.modelUnavailable }
-        let current = try HomeShortcutService.ids(on: database)
+        let current = try HomePinService.ids(on: database)
         guard let index = current.firstIndex(of: existingID) else {
             return try addHomeShortcut(newID)
         }
         var updated = current
         updated[index] = newID
-        let result = try HomeShortcutService.set(on: database, ids: updated)
+        let result = try HomePinService.set(on: database, ids: updated)
         reloadOverview()
         return result
+    }
+
+    /// Ghim/bỏ ghim một collection (max 5, kho tạm bị chặn ở tầng service).
+    func togglePin(_ id: String) {
+        guard let database else { return }
+        let current = (try? HomePinService.ids(on: database)) ?? []
+        let next = current.contains(id)
+            ? current.filter { $0 != id }
+            : (current.count < HomePinService.maxPins ? current + [id] : current)
+        _ = try? HomePinService.set(on: database, ids: next)
+        reloadOverview()
+    }
+
+    // MARK: — Ôn nhanh (port UI lab: scope ôn mặc định 1–3 bộ / tất cả)
+
+    /// Bật/tắt một collection trong "Ôn nhanh" (tối đa 3). Bật → `reviewAll` tắt.
+    func toggleReviewPriority(_ id: String) {
+        guard let database else { return }
+        let scope = (try? ReviewScopeService.load(on: database)) ?? .empty
+        var ids = scope.priorityIDs
+        if let i = ids.firstIndex(of: id) {
+            ids.remove(at: i)
+        } else if ids.count < ReviewScopeService.maxPriority {
+            ids.append(id)
+        } else {
+            return  // đủ 3 — UI đã disable.
+        }
+        _ = try? ReviewScopeService.update(
+            on: database, priorityIDs: ids, reviewAll: false)
+        reloadOverview()
+    }
+
+    /// Bật/tắt "Ôn tất cả" cho Ôn nhanh.
+    func setReviewAll(_ on: Bool) {
+        guard let database else { return }
+        _ = try? ReviewScopeService.update(
+            on: database, priorityIDs: [], reviewAll: on)
+        reloadOverview()
     }
 
     // MARK: — FR-20 CSV Import

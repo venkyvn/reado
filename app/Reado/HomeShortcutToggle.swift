@@ -1,12 +1,11 @@
 import ReadoKit
 import SwiftUI
 
-/// FR-17 — Control "Hiện trên Home" dùng chung giữa Collection Hub và Settings
-/// (J-R1-S). Toggle ON:
+/// FR-17 (port UI lab: pin 5) — Control "Hiện trên Home" dùng chung giữa
+/// Collection Hub và Settings (J-R1-S). Toggle ON:
 /// - còn slot trống → ghim mới;
-/// - đã đủ 2 → mở chooser chọn shortcut hiện có để thay (không tự thay ngầm —
-///   PRD FR-17 crit 3). Cancel giữ nguyên.
-/// Toggle OFF → bỏ shortcut, giữ thứ tự slot còn lại.
+/// - đã đủ 5 → mở chooser chọn pin hiện có để thay (không tự thay ngầm).
+/// Toggle OFF → bỏ pin, giữ thứ tự các pin còn lại.
 struct HomeShortcutToggle: View {
     /// Collection cần bật/tắt ghim. `label = nil` → "Hiện trên Home" (hợp cho
     /// chi tiết collection); Settings truyền tên collection làm nhãn.
@@ -18,7 +17,7 @@ struct HomeShortcutToggle: View {
 
     private var isOn: Bool { model.homeShortcutIDs.contains(collectionID) }
 
-    /// Hai shortcut hiện có (resolve tên) — ứng viên bị thay trong chooser.
+    /// Các pin hiện có (resolve tên) — ứng viên bị thay trong chooser.
     private var currentShortcuts: [AppModel.CollectionOverview] {
         model.homeShortcutIDs.compactMap { id in
             model.collections.first { $0.id == id }
@@ -36,7 +35,7 @@ struct HomeShortcutToggle: View {
     var body: some View {
         Toggle(label ?? "Hiện trên Home", isOn: isOnBinding)
             .confirmationDialog(
-                "Chọn shortcut để thay",
+                "Chọn pin để thay",
                 isPresented: $showChooser,
                 titleVisibility: .visible
             ) {
@@ -48,12 +47,12 @@ struct HomeShortcutToggle: View {
                 }
                 Button("Huỷ", role: .cancel) {}
             } message: {
-                Text("Home giữ tối đa 2 collection đang đọc.")
+                Text("Home giữ tối đa 5 collection đang đọc.")
             }
     }
 
     private func turnOn() {
-        if model.homeShortcutIDs.count >= HomeShortcutService.maxShortcuts {
+        if model.homeShortcutIDs.count >= HomePinService.maxPins {
             showChooser = true
         } else {
             _ = try? model.addHomeShortcut(collectionID)

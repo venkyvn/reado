@@ -1,11 +1,12 @@
 import Foundation
 
-/// FR-15 + 3.12 — Learning Settings: các núm user CHỈNH ĐƯỢC ở R1.
-/// Một hàng `settings` id = 1 (NG-05 một người dùng). Năm núm này là toàn bộ
-/// phần user ghi được; `request_retention` và các núm FSRS còn lại để mặc
-/// định, KHÔNG mở cho user (PRD mục 10 + journey J-R1-S).
+/// FR-15 + 3.12 + port UI lab (2026-09-23) — Learning Settings: các núm user
+/// CHỈNH ĐƯỢC ở R1. Một hàng `settings` id = 1 (NG-05 một người dùng). CEFR giờ
+/// là ĐA level (`cefrLevels`, tối thiểu 1) — `cefrLevel` = level đầu (cho prompt
+/// FR-02 / code cũ tương thích). `request_retention` và các núm FSRS còn lại
+/// để mặc định, KHÔNG mở cho user (PRD mục 10 + journey J-R1-S).
 public struct LearningSettings: Equatable, Sendable {
-    public let cefrLevel: CEFRLevel
+    public let cefrLevels: [CEFRLevel]
     public let dailyNewLimit: Int
     public let dayCutoffHour: Int
     /// 3.12 — nhắc ôn tập (local notification). `reminderMinutes` = phút kể từ
@@ -13,14 +14,17 @@ public struct LearningSettings: Equatable, Sendable {
     public let reminderEnabled: Bool
     public let reminderMinutes: Int
 
+    /// CEFR "chính" — level đầu danh sách; nơi code cũ hỏi một level duy nhất.
+    public var cefrLevel: CEFRLevel { cefrLevels.first ?? .b2 }
+
     public init(
-        cefrLevel: CEFRLevel,
+        cefrLevels: [CEFRLevel],
         dailyNewLimit: Int,
         dayCutoffHour: Int,
         reminderEnabled: Bool = false,
         reminderMinutes: Int = 20 * 60
     ) {
-        self.cefrLevel = cefrLevel
+        self.cefrLevels = cefrLevels
         self.dailyNewLimit = dailyNewLimit
         self.dayCutoffHour = dayCutoffHour
         self.reminderEnabled = reminderEnabled
@@ -29,12 +33,12 @@ public struct LearningSettings: Equatable, Sendable {
 
     /// Khớp Seeder (db.md A.2.1): B2 / 10 / 04:00 · nhắc TẮT, 20:00.
     public static let defaults = LearningSettings(
-        cefrLevel: .b2, dailyNewLimit: 10, dayCutoffHour: 4)
+        cefrLevels: [.b2], dailyNewLimit: 10, dayCutoffHour: 4)
 }
 
-/// Trình độ CEFR người dùng khai — target cho FR-02 (prompt-spec mục 3).
-/// Chỉ A2–C1 (PRD FR-15); A1/C2 không nằm phạm vi lọc của R1.
-public enum CEFRLevel: String, CaseIterable, Sendable, Identifiable {
+/// Trình độ CEFR người dùng khai — target cho FR-02 (prompt-spec mục 3) + preselect
+/// khi duyệt từ. Chỉ A2–C1 (PRD FR-15); A1/C2 không nằm phạm vi lọc của R1.
+public enum CEFRLevel: String, CaseIterable, Sendable, Identifiable, Codable {
     case a2 = "A2"
     case b1 = "B1"
     case b2 = "B2"
@@ -49,6 +53,8 @@ public enum SettingsError: Error, LocalizedError, Equatable {
     case invalidDailyNewLimit(Int)
     case invalidDayCutoffHour(Int)
     case invalidReminderMinutes(Int)
+    /// CEFR phải chọn ít nhất một level.
+    case emptyCefrLevels
 
     public var errorDescription: String? {
         switch self {
@@ -60,14 +66,17 @@ public enum SettingsError: Error, LocalizedError, Equatable {
             "day_cutoff_hour ngoài 0…23: \(value)"
         case let .invalidReminderMinutes(value):
             "reminder_minutes ngoài 0…1439: \(value)"
+        case .emptyCefrLevels:
+            "phải chọn ít nhất một trình độ CEFR"
         }
     }
 }
 
-/// Đọc/ghi 5 núm user chỉnh được của `settings` (id = 1). Đây là đường ghi DUY
-/// NHẤT cho cefr_level / daily_new_limit / day_cutoff_hour / reminder_enabled /
+/// Đọc/ghi núm user chỉnh được của `settings` (id = 1). Đây là đường ghi DUY
+/// NHẤT cho cefr_levels / daily_new_limit / day_cutoff_hour / reminder_enabled /
 /// reminder_minutes ở tầng logic; các cột FSRS (`request_retention`,
-/// `fsrs_params`, …) ngoài phạm vi update R1.
+/// `fsrs_params`, …) ngoài phạm vi update R1. `cefr_level` (đơn) được ghi đồng
+/// bộ = level đầu tiên để code cũ / prompt không hỏng.
 public enum SettingsService {
     /// D-lim-0: hạn mức 0 hợp lệ (không giới thiệu thẻ mới), trần 999.
     public static let dailyNewLimitRange = 0...999
@@ -75,48 +84,63 @@ public enum SettingsService {
     /// 3.12 — phút kể từ nửa đêm (00:00…23:59).
     public static let reminderMinutesRange = 0...1439
 
-    /// Đọc 5 núm user chỉnh được. Không có hàng id = 1 → `.notSeeded`.
+    /// Đọc các núm user chỉnh được. Không có hàng id = 1 → `.notSeeded`.
+    /// `cefr_levels` chưa có (cài cũ) → fallback về `cefr_level` đơn.
     public static func load(on db: SQLiteDatabase) throws -> LearningSettings {
         guard
             let row = try db.rows(
                 """
-                SELECT cefr_level, daily_new_limit, day_cutoff_hour,
+                SELECT cefr_levels, cefr_level, daily_new_limit, day_cutoff_hour,
                        reminder_enabled, reminder_minutes
                 FROM settings WHERE id = 1;
                 """
             ).first,
-            row.count == 5
+            row.count == 6
         else {
             throw SettingsError.notSeeded
         }
-        let cefr =
-            row[0].textValue.flatMap(CEFRLevel.init(rawValue:))
-            ?? LearningSettings.defaults.cefrLevel
+        let cefrLevels: [CEFRLevel] = {
+            if let json = row[0].textValue,
+               let data = json.data(using: .utf8),
+               let levels = try? JSONDecoder().decode([CEFRLevel].self, from: data),
+               !levels.isEmpty
+            {
+                return levels
+            }
+            // Cài cũ: cột `cefr_levels` rỗng → dùng `cefr_level` đơn.
+            if let single = row[1].textValue.flatMap(CEFRLevel.init(rawValue:)) {
+                return [single]
+            }
+            return LearningSettings.defaults.cefrLevels
+        }()
         let limit =
-            Int(row[1].intValue ?? Int64(LearningSettings.defaults.dailyNewLimit))
+            Int(row[2].intValue ?? Int64(LearningSettings.defaults.dailyNewLimit))
         let cutoff =
-            Int(row[2].intValue ?? Int64(LearningSettings.defaults.dayCutoffHour))
-        let reminderEnabled =
-            (row[3].intValue ?? 0) != 0
+            Int(row[3].intValue ?? Int64(LearningSettings.defaults.dayCutoffHour))
+        let reminderEnabled = (row[4].intValue ?? 0) != 0
         let reminderMinutes =
-            Int(row[4].intValue ?? Int64(LearningSettings.defaults.reminderMinutes))
+            Int(row[5].intValue ?? Int64(LearningSettings.defaults.reminderMinutes))
         return LearningSettings(
-            cefrLevel: cefr, dailyNewLimit: limit, dayCutoffHour: cutoff,
+            cefrLevels: cefrLevels, dailyNewLimit: limit, dayCutoffHour: cutoff,
             reminderEnabled: reminderEnabled, reminderMinutes: reminderMinutes)
     }
 
-    /// Validate rồi ghi 5 núm — trả về giá trị vừa ghi. CEFR đã typed enum nên
-    /// không thể sai ở tầng này; ba núm số bị chặn ngoài phạm vi. Tham số
-    /// nhắc (reminder*) có default → call-site FR-15 cũ (3 núm) vẫn compile.
+    /// Validate rồi ghi các núm — trả về giá trị vừa ghi. CEFR đã typed enum nên
+    /// chỉ cần chặn rỗng; ba núm số bị chặn ngoài phạm vi. Tham số nhắc
+    /// (reminder*) có default → call-site FR-15 cũ (3 núm) vẫn compile.
     @discardableResult
     public static func update(
         on db: SQLiteDatabase,
-        cefrLevel: CEFRLevel,
+        cefrLevels: [CEFRLevel],
         dailyNewLimit: Int,
         dayCutoffHour: Int,
         reminderEnabled: Bool = false,
         reminderMinutes: Int = LearningSettings.defaults.reminderMinutes
     ) throws -> LearningSettings {
+        // Dedup giữ thứ tự user chọn; rỗng sau dedup → lỗi.
+        var seen = Set<CEFRLevel>()
+        let levels = cefrLevels.filter { seen.insert($0).inserted }
+        guard !levels.isEmpty else { throw SettingsError.emptyCefrLevels }
         guard dailyNewLimitRange.contains(dailyNewLimit) else {
             throw SettingsError.invalidDailyNewLimit(dailyNewLimit)
         }
@@ -126,22 +150,25 @@ public enum SettingsService {
         guard reminderMinutesRange.contains(reminderMinutes) else {
             throw SettingsError.invalidReminderMinutes(reminderMinutes)
         }
+        let jsonData = try JSONEncoder().encode(levels)
+        let levelsJSON = String(data: jsonData, encoding: .utf8) ?? "[]"
         try db.run(
             """
             UPDATE settings
-               SET cefr_level = ?, daily_new_limit = ?, day_cutoff_hour = ?,
-                   reminder_enabled = ?, reminder_minutes = ?
+               SET cefr_levels = ?, cefr_level = ?, daily_new_limit = ?,
+                   day_cutoff_hour = ?, reminder_enabled = ?, reminder_minutes = ?
              WHERE id = 1;
             """,
             [
-                .text(cefrLevel.rawValue),
+                .text(levelsJSON),
+                .text(levels[0].rawValue),
                 .int(Int64(dailyNewLimit)),
                 .int(Int64(dayCutoffHour)),
                 .int(reminderEnabled ? 1 : 0),
                 .int(Int64(reminderMinutes)),
             ])
         return LearningSettings(
-            cefrLevel: cefrLevel,
+            cefrLevels: levels,
             dailyNewLimit: dailyNewLimit,
             dayCutoffHour: dayCutoffHour,
             reminderEnabled: reminderEnabled,

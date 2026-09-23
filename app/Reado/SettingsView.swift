@@ -11,7 +11,7 @@ struct SettingsView: View {
     /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
     @AppStorage("appTheme") private var appTheme = AppTheme.system.rawValue
 
-    @State private var cefrLevel: CEFRLevel = .b2
+    @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10
     @State private var dayCutoffHour = 4
     // 3.12 — nhắc ôn tập (local notification), default TẮT + 20:00.
@@ -27,8 +27,8 @@ struct SettingsView: View {
         List {
             learningSection
             reminderSection
-            homeShortcutSection
             themeSection
+            agentSection
             fsrsSection
             if let message = saveError {
                 Section {
@@ -46,7 +46,7 @@ struct SettingsView: View {
             }
         }
         .onAppear { load() }
-        .onChange(of: cefrLevel) { saved = false }
+        .onChange(of: cefrLevels) { saved = false }
         .onChange(of: dailyNewLimit) { saved = false }
         .onChange(of: dayCutoffHour) { saved = false }
         .onChange(of: reminderEnabled) { saved = false }
@@ -60,10 +60,20 @@ struct SettingsView: View {
 
     private var learningSection: some View {
         Section {
-            // CEFR — target cho lần phân tích trang KẾ TIẾP (FR-15).
-            Picker("Trình độ", selection: $cefrLevel) {
-                ForEach(CEFRLevel.allCases) { level in
-                    Text(level.rawValue).tag(level)
+            // CEFR đa level (port UI lab §8) — target cho lần phân tích trang KẾ
+            // TIẾP (FR-15). Tối thiểu 1 level (không bỏ chip cuối cùng).
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Trình độ")
+                    Spacer()
+                    Text("\(cefrLevels.count)/4")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 8) {
+                    ForEach(CEFRLevel.allCases) { level in
+                        levelChip(level)
+                    }
                 }
             }
 
@@ -97,6 +107,35 @@ struct SettingsView: View {
         }
     }
 
+    /// Chip CEFR — bật/tắt; level đang chọn tô accent. Giữ tối thiểu 1 level.
+    private func levelChip(_ level: CEFRLevel) -> some View {
+        let isSelected = cefrLevels.contains(level)
+        return Button {
+            toggleLevel(level)
+        } label: {
+            Text(level.rawValue)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule().fill(
+                        isSelected ? Color.accentColor : Theme.surfaceStrong))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Trình độ \(level.rawValue)")
+        .accessibilityValue(isSelected ? "đang chọn" : "bỏ chọn")
+    }
+
+    private func toggleLevel(_ level: CEFRLevel) {
+        if cefrLevels.contains(level) {
+            guard cefrLevels.count > 1 else { return }  // giữ tối thiểu 1
+            cefrLevels.removeAll { $0 == level }
+        } else {
+            cefrLevels.append(level)
+        }
+    }
+
     // MARK: — Nhắc ôn tập (3.12)
 
     private var reminderSection: some View {
@@ -119,30 +158,18 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: — Đang đọc trên Home (FR-17)
+    // MARK: — Agent phân tích (FR-21 stub)
 
-    /// Named collection (bỏ kho tạm — không phải bài đọc chủ động) để bật/tắt
-    /// ghim; cùng rule tối đa 2 + chooser thay thế của J2 (dùng chung
-    /// `HomeShortcutToggle`).
-    private var namedCollections: [AppModel.CollectionOverview] {
-        model.collections.filter { !$0.isDefault }
-    }
-
-    private var homeShortcutSection: some View {
+    /// FR-21 (port UI lab §8): chọn agent/BYOK là task sau — R1 luôn đi proxy mặc
+    /// định. Đây là stub chỉ-đọc để không bỏ trống mục này.
+    private var agentSection: some View {
         Section {
-            if namedCollections.isEmpty {
-                Text("Chưa có collection — tạo ở tab Đọc rồi ghim lên Home.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(namedCollections) { collection in
-                    HomeShortcutToggle(
-                        collectionID: collection.id, label: collection.name)
-                }
-            }
+            LabeledContent("Đang dùng", value: "Proxy mặc định")
         } header: {
-            Label("Đang đọc trên Home", systemImage: "pin")
+            Label("Agent phân tích", systemImage: "sparkles")
         } footer: {
-            Text("Tối đa 2 collection mở nhanh trên Home (mở thẳng Collection Hub).")
+            Label("Mang key riêng (BYOK, OpenAI-compat) sẽ mở ở bản sau.",
+                  systemImage: "lock")
         }
     }
 
@@ -191,7 +218,7 @@ struct SettingsView: View {
     private func load() {
         guard let database = model.database else { return }
         if let settings = try? SettingsService.load(on: database) {
-            cefrLevel = settings.cefrLevel
+            cefrLevels = settings.cefrLevels
             dailyNewLimit = settings.dailyNewLimit
             dayCutoffHour = settings.dayCutoffHour
             reminderEnabled = settings.reminderEnabled
@@ -205,7 +232,7 @@ struct SettingsView: View {
         saveError = nil
         do {
             try model.saveLearningSettings(
-                cefrLevel: cefrLevel,
+                cefrLevels: cefrLevels,
                 dailyNewLimit: dailyNewLimit,
                 dayCutoffHour: dayCutoffHour,
                 reminderEnabled: reminderEnabled,

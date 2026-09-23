@@ -314,6 +314,36 @@ final class AnalysisTests: XCTestCase {
         XCTAssertEqual(drafts.map(\.isSelected), [false, false, true, true])
     }
 
+    /// port UI lab §5.5: preselect = verified VÀ cefr ∈ selectedLevels — verified
+    /// nhưng ngoài level chọn thì vẫn bỏ chọn sẵn; cefr rỗng cũng bỏ.
+    func testDraftBuilderPreselectsOnlyVerifiedInSelectedLevels() {
+        let items = [
+            vocabIn(term: "a-b2", cefr: "B2", verification: .verified),
+            vocabIn(term: "b-b2", cefr: "B2", verification: .unverified),
+            vocabIn(term: "c-c1", cefr: "C1", verification: .verified),
+            vocabIn(term: "d-none", cefr: nil, verification: .verified),
+        ]
+        let drafts = ReviewDraftBuilder.drafts(
+            from: items, selectedLevels: ["B2"])
+        // c-c1 (verified, ngoài B2) và d-none (verified, cefr rỗng) bỏ chọn sẵn.
+        let selected = Dictionary(
+            drafts.map { ($0.term, $0.isSelected) },
+            uniquingKeysWith: { a, _ in a })
+        XCTAssertEqual(selected["a-b2"], true)
+        XCTAssertEqual(selected["b-b2"], false)
+        XCTAssertEqual(selected["c-c1"], false)
+        XCTAssertEqual(selected["d-none"], false)
+    }
+
+    /// `selectedLevels = nil` giữ hành vi cũ: chọn mọi verified (tương thích).
+    func testDraftBuilderNilLevelsSelectsAllVerified() {
+        let drafts = ReviewDraftBuilder.drafts(from: [
+            vocabIn(term: "a", cefr: "B2", verification: .verified),
+            vocabIn(term: "b", cefr: "C1", verification: .verified),
+        ])
+        XCTAssertEqual(drafts.map(\.isSelected), [true, true])
+    }
+
     func testSelectedReturnsOnlySelectedItemsInDisplayOrder() throws {
         let drafts = [
             ReviewDraft(
