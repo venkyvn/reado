@@ -1,7 +1,7 @@
 # CLAUDE.md — Reado
 
-> Entry point duy nhất cho Claude Code (và bất kỳ agent nào). Đọc hết file này trước khi làm việc.
-> DSH (DeepSeek Harness) là tool chính — xem `AGENTS.md` bên cạnh file này.
+> Entry point duy nhất cho Claude Code. Đọc hết file này trước khi làm việc.
+> Protocol session, cache prefix, discovery: `AGENTS.md` (không nhân đôi luật cứng ở đây).
 
 ## 1. Reado là gì
 
@@ -21,7 +21,7 @@
     -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
     -derivedDataPath "$PWD/../DerivedData" -clonedSourcePackagesDirPath "$PWD/../.xcode-packages" test
   ```
-- Mốc khoẻ đã ghi: **182/182 test xanh** trên iPhone 18 Pro tại `9c1becc`. Máy không build iOS thì không chạy lại và không ghi số mới.
+- Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — **không** ghi mốc test vào file này (prefix cache). Máy không build iOS thì không chạy lại và không ghi số mới.
 - **Chống đốt token khi build:** `xcodebuild` luôn `| tee /tmp/build.log | grep -E "error:|warning:|TEST.*passed|TEST.*failed|BUILD" | tail -n 60` — không ném raw log vào context. Chỉ `grep` trong `/tmp/build.log` khi cần. Chi tiết: `AGENTS.md §2` + `§4`.
 
 ## 3. Sơ đồ docs
@@ -36,7 +36,8 @@
 | `docs/research/tech-stack.md` | Vì sao chọn stack (RQ), các quyết định đảo |
 | `docs/research/vocabulary.md` | Structure + card design + import — schema logic vocab |
 | `docs/research/review.md` | Scheduling FSRS + multi-client sync + rich-vocab cram |
-| `docs/agent/agent-rulebook.md` | Kho luật đầy đủ — mở khi task chạm điều khoản |
+| `docs/agent/agent-rulebook.md` | Index: đụng X thì grep file Y — không phải kho luật đầy đủ |
+| `docs/agent/plan-template.md` | Khung `/rplan` — Spec / HLD / Tasks |
 | `docs/agent/prompt-spec.md` | FR-02 prompt + output schema |
 | `docs/agent/coding-conventions.md` | Quy ước code Swift |
 | `docs/decisions-log.md` | ADR — thứ tự quyết định và vì sao |
@@ -67,6 +68,6 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 ## 6. Xử lý mơ hồ
 
 1. Chiếu vào 6 nguyên lý `docs/specs/vision.md` → mỗi nguyên lý có "Chống lại".
-2. Kiểm non-goals (NG-01..09) + bảng "Đã chốt" (`docs/agent/agent-rulebook.md`). Dòng đã chốt sai → BÁO LẠI, không sửa.
-3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner đúng câu còn mở ở mục 5 (Q-11). Ngưỡng leech đã chốt = 6.
+2. Kiểm non-goals (NG-01..09) + bảng "Đã chốt" (`CLAUDE.md` §5 và spec liên quan). Dòng đã chốt sai → BÁO LẠI, không sửa.
+3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner đúng câu còn mở ở mục 5 (Q-11). Ngưỡng leech đã chốt = 6. Thiếu hợp đồng / ranh giới → `/rplan` hoặc hỏi, không tự lấp.
 4. Chỉ là chi tiết hiển thị → chọn cách đơn giản nhất, ghi lại lựa chọn.

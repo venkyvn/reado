@@ -8,6 +8,7 @@ struct ReadingSessionView: View {
     let session: ReadingSession
 
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showTranslations = true
     @State private var summaryExpanded = false
 
@@ -35,7 +36,7 @@ struct ReadingSessionView: View {
     private func summarySection(_ summary: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                Motion.run(reduceMotion: reduceMotion) {
                     summaryExpanded.toggle()
                 }
             } label: {
@@ -45,6 +46,7 @@ struct ReadingSessionView: View {
                     Spacer()
                     Image(systemName: summaryExpanded ? "chevron.up" : "chevron.down")
                         .foregroundStyle(.secondary)
+                        .contentTransition(.symbolEffect(.replace))
                 }
             }
             .buttonStyle(.plain)
@@ -52,6 +54,7 @@ struct ReadingSessionView: View {
             if summaryExpanded {
                 Text(summary)
                     .font(.body)
+                    .revealTransition()
             }
         }
         .padding()
@@ -70,6 +73,7 @@ struct ReadingSessionView: View {
                         Text(seg.translationVI)
                             .font(.body)
                             .foregroundStyle(.secondary)
+                            .revealTransition()
                     }
                 }
             }
@@ -80,13 +84,14 @@ struct ReadingSessionView: View {
 
     private var translationToggle: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
+            Motion.run(reduceMotion: reduceMotion) {
                 showTranslations.toggle()
             }
         } label: {
             Label(
                 showTranslations ? "Ẩn bản dịch" : "Hiện bản dịch",
                 systemImage: showTranslations ? "eye.slash" : "eye")
+                .contentTransition(.symbolEffect(.replace))
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
@@ -94,6 +99,8 @@ struct ReadingSessionView: View {
         .buttonStyle(.bordered)
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .background(.ultraThinMaterial)
+        .padding(.bottom, 8)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
     }
 }

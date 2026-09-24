@@ -8,6 +8,8 @@ typealias ReviewItem = ReviewQueue.ReviewItem
 struct ReviewQueueView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var items: [ReviewQueue.ReviewItem] = []
     @State private var currentIndex: Int = 0
@@ -16,6 +18,8 @@ struct ReviewQueueView: View {
     // Vuốt Tinder (ADR-033): thẻ bám theo tay + tilt + fly-off. Mapping giữ ADR-025.
     @State private var dragOffset: CGSize = .zero
     @State private var isCommitting = false
+    /// Haptic ngưỡng chỉ kêu một lần mỗi lần vượt, không kêu lại mỗi frame kéo.
+    @State private var didPassThreshold = false
 
     /// Mặt đang hiện — true khi lật đủ 90° để lộ mặt sau (nghĩa + nút chấm).
     private var isFlipped: Bool { flipDegrees >= 90 }
@@ -48,12 +52,17 @@ struct ReviewQueueView: View {
                 errorView(error)
             } else if items.isEmpty {
                 emptyView
+                    .transition(.opacity)
             } else if currentIndex < items.count {
                 cardView
+                    .transition(.opacity)
             } else {
+                // Opacity thuần: "Xong rồi" không nảy vào (chống gamification).
                 doneView
+                    .transition(.opacity)
             }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: isLoading)
         .navigationTitle("Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -197,80 +206,127 @@ struct ReviewQueueView: View {
 
             Spacer(minLength: 0)
 
-            // Card body.
+            // Card body. Thẻ kế nằm dưới, phóng dần khi thẻ trên bị kéo — cảm giác chồng bài.
             GeometryReader { geo in
                 ZStack {
-                    // Lật 3D thuần: đổi mặt đúng mốc 90° (không crossfade mờ hai mặt).
-                    cardFace(item: item, back: false, size: geo.size)
-                        .rotation3DEffect(.degrees(flipDegrees),
-                                          axis: (x: 0, y: 1, z: 0))
-                        .opacity(flipDegrees < 90 ? 1 : 0)
-                    cardFace(item: item, back: true, size: geo.size)
-                        .rotation3DEffect(.degrees(flipDegrees - 180),
-                                          axis: (x: 0, y: 1, z: 0))
-                        .opacity(flipDegrees >= 90 ? 1 : 0)
+                    if currentIndex + 1 < items.count {
+                        cardFace(item: items[currentIndex + 1], back: false, size: geo.size)
+                            .scaleEffect(0.96 + 0.04 * swipeProgress)
+                            .offset(y: 14 * (1 - swipeProgress))
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                    // .id: thẻ mới không kế thừa offset của thẻ vừa bay ra.
+                    faceStack(item: item, size: geo.size)
+                        .id(item.cardID)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(swipeStamp)
+                        // Xoay trước, kéo sau. Ngược lại rotationEffect xoay quanh tâm
+                        // gốc (chưa offset) và thẻ đi theo cung tròn, lệch khỏi tay.
+                        // Neo tâm: neo dưới đáy + offset đủ sẽ làm thẻ chạy nhanh hơn ngón tay.
+                        .rotationEffect(.degrees(dragAngle))
+                        .offset(dragOffset)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(swipeStamp)
-                .offset(dragOffset)
-                .rotationEffect(.degrees(dragAngle))
             }
             .padding(.horizontal, 16)
+            .contentShape(RoundedRectangle(cornerRadius: 16))
             .gesture(swipeGesture)
+            // Tap chỉ thuộc vùng thẻ. Đặt trên VStack cha sẽ khiến nút chấm/
+            // Hoàn tác có thể đồng thời kích hoạt flip.
+            .onTapGesture {
+                guard !isCommitting else { return }
+                flipCard()
+            }
+            .frontGradeActions(enabled: !isFlipped, grade: performGrade)
+            .accessibilityAction(named: Text(isFlipped ? "Hiện mặt trước" : "Lật thẻ")) {
+                flipCard()
+            }
 
             Spacer(minLength: 0)
 
             // Bottom controls.
             if isFlipped {
                 gradeButtons
+                    .revealTransition()
             } else {
                 Text("Chạm để lật · vuốt trái/phải để chấm nhanh")
                     .foregroundStyle(.tertiary)
                     .font(.caption)
+                    .revealTransition()
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                flipDegrees = flipDegrees == 0 ? 180 : 0
-            }
+    }
+
+    private func flipCard() {
+        let target: Double = flipDegrees == 0 ? 180 : 0
+        // Reduce Motion: đổi mặt tức thì, không quay 3D.
+        Motion.run(reduceMotion: reduceMotion,
+                   .spring(response: 0.4, dampingFraction: 0.8)) {
+            flipDegrees = target
+        }
+        Haptics.selection()
+    }
+
+    /// Hai mặt thẻ, đổi đúng mốc 90° (không crossfade).
+    private func faceStack(item: ReviewQueue.ReviewItem, size: CGSize) -> some View {
+        ZStack {
+            cardFace(item: item, back: false, size: size)
+                .rotation3DEffect(.degrees(flipDegrees),
+                                  axis: (x: 0, y: 1, z: 0))
+                .opacity(flipDegrees < 90 ? 1 : 0)
+            cardFace(item: item, back: true, size: size)
+                .rotation3DEffect(.degrees(flipDegrees - 180),
+                                  axis: (x: 0, y: 1, z: 0))
+                .opacity(flipDegrees >= 90 ? 1 : 0)
         }
     }
 
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 20, coordinateSpace: .local)
             .onChanged { value in
-                guard !isCommitting else { return }
-                dragOffset = value.translation
+                guard !isCommitting, !reduceMotion else { return }
+                dragOffset = CGSize(
+                    width: value.translation.width,
+                    height: value.translation.height * SwipeMotion.verticalDamp)
+                let passed = abs(value.translation.width) >= SwipeCommit.threshold
+                if passed, !didPassThreshold {
+                    Haptics.threshold()
+                }
+                didPassThreshold = passed
             }
             .onEnded { value in
                 guard !isCommitting else { return }
-                // Ngưỡng theo điểm thoát dự đoán (fling Tinder chuẩn): kéo nhanh
-                // dưới 110pt vẫn chấm nếu vận tốc đủ để bay qua ngưỡng.
+                // Ngưỡng theo điểm thoát dự đoán: hất nhanh dưới 110pt vẫn chấm.
                 let predicted = value.predictedEndTranslation.width
-                if predicted < -110 {
-                    commitSwipe(.again, value: value)
-                } else if predicted > 110 {
-                    commitSwipe(.good, value: value)
+                guard let rating = SwipeCommit.rating(predictedWidth: predicted) else {
+                    snapBack()
+                    return
+                }
+                if reduceMotion {
+                    performGrade(rating)
                 } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                        dragOffset = .zero
-                    }
+                    commitSwipe(rating, predictedWidth: predicted)
                 }
             }
     }
 
+    /// 0…1 theo quãng kéo ngang. Stamp, thẻ kế, và haptic cùng một thước.
+    private var swipeProgress: CGFloat {
+        min(abs(dragOffset.width) / SwipeCommit.threshold, 1)
+    }
+
     /// Tilt theo tay: ~1° mỗi 15pt, kẹp ±12° để thẻ không xoay quá giả.
     private var dragAngle: Double {
-        min(max(Double(dragOffset.width) / 15, -12), 12)
+        min(max(Double(dragOffset.width) / SwipeMotion.pointsPerDegree,
+                -SwipeMotion.maxTilt),
+            SwipeMotion.maxTilt)
     }
 
     /// Stamp "Quên"/"Được" hiện theo hướng kéo, đậm dần tới ngưỡng chấm.
     @ViewBuilder
     private var swipeStamp: some View {
-        let progress = min(abs(dragOffset.width) / 110, 1)
-        if progress > 0.02 {
+        if swipeProgress > 0.02 {
             ZStack {
                 if dragOffset.width < 0 {
                     badgeLabel("Quên", color: Theme.danger)
@@ -283,7 +339,7 @@ struct ReviewQueueView: View {
                 }
             }
             .padding(24)
-            .opacity(progress)
+            .opacity(swipeProgress)
         }
     }
 
@@ -299,16 +355,24 @@ struct ReviewQueueView: View {
                     .strokeBorder(.white.opacity(0.7), lineWidth: 2))
     }
 
-    private func commitSwipe(_ rating: ReadoRating, value: DragGesture.Value) {
+    private func commitSwipe(_ rating: ReadoRating, predictedWidth: CGFloat) {
         isCommitting = true
-        let dir: CGFloat = value.translation.width > 0 ? 1 : -1
+        Haptics.action()
+        let dir = SwipeCommit.direction(predictedWidth: predictedWidth)
+        // Giữ height đang damp — lấy translation.height thô sẽ làm thẻ nhảy dọc lúc bay.
         withAnimation(.easeOut(duration: 0.22)) {
-            dragOffset = CGSize(width: dir * 720, height: value.translation.height)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            dragOffset = .zero
+            dragOffset = CGSize(width: dir * SwipeMotion.flyDistance, height: dragOffset.height)
+        } completion: {
             isCommitting = false
-            performGrade(rating)
+            // gradeNow, không performGrade: cờ vừa hạ, đọc lại @State trong cùng lượt có thể vẫn thấy true.
+            gradeNow(rating)
+        }
+    }
+
+    private func snapBack() {
+        didPassThreshold = false
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+            dragOffset = .zero
         }
     }
 
@@ -321,7 +385,9 @@ struct ReviewQueueView: View {
                 // FR-12: mặt trước = term + pos.
                 VStack(spacing: 12) {
                     Text(item.term)
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.title.bold())
+                        .minimumScaleFactor(0.8)
+                        .multilineTextAlignment(.center)
                     Text(item.pos)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -330,36 +396,64 @@ struct ReviewQueueView: View {
                         .background(Capsule().fill(Theme.surface))
                 }
             } else {
-                // FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection.
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(item.meaningVI)
-                        .font(.headline)
-                    if let ipa = item.ipa {
-                        Text(ipa).font(.subheadline).foregroundStyle(.secondary)
+                if dynamicTypeSize.isAccessibilitySize {
+                    ScrollView {
+                        backFaceContent(item)
                     }
-                    Text(item.example)
-                        .font(.body)
-                        .italic()
-                    Divider()
-                    Text(item.collectionName)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                    .scrollIndicators(.hidden)
+                } else {
+                    backFaceContent(item)
                 }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection.
+    private func backFaceContent(_ item: ReviewQueue.ReviewItem) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(item.meaningVI)
+                .font(.headline)
+            if let ipa = item.ipa {
+                Text(ipa).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Text(item.example)
+                .font(.body)
+                .italic()
+            Divider()
+            Text(item.collectionName)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     // MARK: — Grade buttons (ADR-025: TRÁI=Again(1), PHẢI=Good(3); Hard/Easy nút)
 
     private var gradeButtons: some View {
-        HStack(spacing: 12) {
-            gradeButton(.again)
-            gradeButton(.hard)
-            gradeButton(.good)
-            gradeButton(.easy)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12),
+                    ],
+                    spacing: 12
+                ) {
+                    gradeButton(.again)
+                    gradeButton(.hard)
+                    gradeButton(.good)
+                    gradeButton(.easy)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    gradeButton(.again)
+                    gradeButton(.hard)
+                    gradeButton(.good)
+                    gradeButton(.easy)
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 20)
@@ -372,7 +466,7 @@ struct ReviewQueueView: View {
             Text(rating.label)
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .frame(minHeight: 44)
                 .background(rating.buttonBackground)
                 .foregroundStyle(rating.buttonForeground)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -380,7 +474,21 @@ struct ReviewQueueView: View {
     }
 
     private func performGrade(_ rating: ReadoRating) {
+        // Nút và action vẫn bấm được trong lúc thẻ bay — chặn chấm đè.
+        guard !isCommitting else { return }
+        Haptics.action()
+        gradeNow(rating)
+    }
+
+    private func gradeNow(_ rating: ReadoRating) {
         guard currentIndex < items.count else { return }
+        // Thả offset ngay, ngoài animation đổi thẻ — thẻ sau không trượt từ vị trí kéo.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            dragOffset = .zero
+            didPassThreshold = false
+        }
         let item = items[currentIndex]
         guard let snapshot = lastSnapshot else { return }
         let gradedSnapshot = snapshot
@@ -390,7 +498,9 @@ struct ReviewQueueView: View {
             // Lưu snapshot/log của thẻ vừa chấm để undo (FR-12) — tách khỏi lastSnapshot.
             lastLogID = logID
             undoSnapshot = gradedSnapshot
-            showUndoToast = true
+            Motion.run(reduceMotion: reduceMotion) {
+                showUndoToast = true
+            }
             withAnimation(.spring(response: 0.3)) {
                 currentIndex += 1
                 flipDegrees = 0
@@ -418,8 +528,11 @@ struct ReviewQueueView: View {
                 currentIndex = prevIndex
                 flipDegrees = 0
                 dragOffset = .zero
+                didPassThreshold = false
             }
-            showUndoToast = false
+            Motion.run(reduceMotion: reduceMotion) {
+                showUndoToast = false
+            }
             lastLogID = nil
             // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
         } catch {
@@ -437,6 +550,8 @@ struct ReviewQueueView: View {
             self.currentIndex = 0
             self.flipDegrees = 0
             self.dragOffset = .zero
+            self.isCommitting = false
+            self.didPassThreshold = false
             self.showUndoToast = false
             self.lastLogID = nil
             if let first = items.first,
@@ -477,6 +592,7 @@ private struct ScopePickerSheet: View {
                     Button {
                         isAll = true
                         selected = []
+                        Haptics.selection()
                     } label: {
                         HStack {
                             Label("Tất cả collection", systemImage: "square.stack.3d.up")
@@ -498,6 +614,7 @@ private struct ScopePickerSheet: View {
                                 selected.insert(collection.id)
                             }
                             isAll = false
+                            Haptics.selection()
                         } label: {
                             HStack {
                                 Text(collection.name)
@@ -534,6 +651,32 @@ private struct ScopePickerSheet: View {
             }
         }
     }
+}
+
+private extension View {
+    /// Action Quên/Được chỉ khi mặt trước — mặt sau đã có bốn nút, tránh trùng rotor.
+    @ViewBuilder
+    func frontGradeActions(
+        enabled: Bool,
+        grade: @escaping (ReadoRating) -> Void
+    ) -> some View {
+        if enabled {
+            self
+                .accessibilityAction(named: Text("Quên")) { grade(.again) }
+                .accessibilityAction(named: Text("Được")) { grade(.good) }
+        } else {
+            self
+        }
+    }
+}
+
+/// Cảm giác kéo — không thuộc quyết định chấm (cái đó là `SwipeCommit`).
+private enum SwipeMotion {
+    static let verticalDamp: CGFloat = 0.35
+    static let flyDistance: CGFloat = 720
+    static let maxTilt: Double = 12
+    /// ~1° mỗi 15pt.
+    static let pointsPerDegree: Double = 15
 }
 
 extension ReadoRating {

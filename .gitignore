@@ -15,6 +15,7 @@ xcuserdata/
 # Dependencies & build
 node_modules/
 dist/
+proxy/.venv/
 
 # OS noise
 .DS_Store

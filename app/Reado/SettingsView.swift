@@ -3,10 +3,10 @@ import SwiftUI
 
 /// FR-15 — J-R1-S: núm học tập (CEFR, hạn mức thẻ mới, giờ chuyển ngày) +
 /// 3.12 nhắc ôn tập (toggle + giờ). FSRS không mở núm cho user (R1 dùng tham
-/// số mặc định — tránh tự bắn chân). Quản lý shortcut (FR-17) và chọn agent
-/// (FR-21) là task sau.
+/// số mặc định — tránh tự bắn chân). FR-21: nhiều key, một agent đang chọn.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
     /// Mặc định mới là rừng (không còn "Hệ thống"); user cũ được migrate một
@@ -22,6 +22,10 @@ struct SettingsView: View {
     @State private var didLoad = false
     @State private var saveError: String?
     @State private var saved = false
+    @State private var agents: [AnalysisAgent] = []
+    @State private var activeAgentID = ""
+    @State private var showAddAgent = false
+    @State private var agentError: String?
 
     var body: some View {
         List {
@@ -36,6 +40,11 @@ struct SettingsView: View {
                 }
             }
         }
+        // Chỉ bốn giá trị này: List không animate mỗi lần Stepper/Picker đổi.
+        .animation(reduceMotion ? nil : Motion.reveal, value: saveError)
+        .animation(reduceMotion ? nil : Motion.reveal, value: saved)
+        .animation(reduceMotion ? nil : Motion.reveal, value: reminderEnabled)
+        .animation(reduceMotion ? nil : Motion.reveal, value: agentError)
         .navigationTitle("Cài đặt")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -45,6 +54,11 @@ struct SettingsView: View {
             }
         }
         .onAppear { load() }
+        .sheet(isPresented: $showAddAgent) {
+            AddAgentSheet { name, base, modelName, key in
+                addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
+            }
+        }
         .onChange(of: cefrLevels) { saved = false }
         .onChange(of: dailyNewLimit) { saved = false }
         .onChange(of: dayCutoffHour) { saved = false }
@@ -102,6 +116,7 @@ struct SettingsView: View {
         } footer: {
             if saved {
                 Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
+                    .revealTransition()
             }
         }
     }
@@ -110,13 +125,15 @@ struct SettingsView: View {
     private func levelChip(_ level: CEFRLevel) -> some View {
         let isSelected = cefrLevels.contains(level)
         return Button {
+            let previous = cefrLevels
             toggleLevel(level)
+            if cefrLevels != previous { Haptics.selection() }
         } label: {
             Text(level.rawValue)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 7)
+                .frame(minHeight: 44)
                 .background(
                     Capsule().fill(
                         isSelected ? Color.accentColor : Theme.surfaceStrong))
@@ -124,6 +141,7 @@ struct SettingsView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Trình độ \(level.rawValue)")
         .accessibilityValue(isSelected ? "đang chọn" : "bỏ chọn")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func toggleLevel(_ level: CEFRLevel) {
@@ -147,6 +165,7 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.wheel)
+                .revealTransition()
             }
         } header: {
             Label("Nhắc ôn tập", systemImage: "bell")
@@ -157,18 +176,48 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: — Agent phân tích (FR-21 stub)
+    // MARK: — Agent phân tích (FR-21)
 
-    /// FR-21 (port UI lab §8): chọn agent/BYOK là task sau — R1 luôn đi proxy mặc
-    /// định. Đây là stub chỉ-đọc để không bỏ trống mục này.
     private var agentSection: some View {
         Section {
-            LabeledContent("Đang dùng", value: "Proxy mặc định")
+            ForEach(agents) { agent in
+                Button {
+                    select(agent)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(agent.name)
+                            Text(agent.isBuiltinProxy ? "Proxy Reado" : (agent.model ?? ""))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if agent.id == activeAgentID {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .swipeActions {
+                    if !agent.isBuiltinProxy {
+                        Button(role: .destructive) { remove(agent) } label: {
+                            Text("Xoá")
+                        }
+                    }
+                }
+            }
+            Button("Thêm key") { showAddAgent = true }
+            if let agentError {
+                Text(agentError)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.danger)
+                    .revealTransition()
+            }
         } header: {
             Label("Agent phân tích", systemImage: "sparkles")
         } footer: {
-            Label("Mang key riêng (BYOK, OpenAI-compat) sẽ mở ở bản sau.",
-                  systemImage: "lock")
+            Text("Lần chụp kế tiếp dùng agent đang chọn. Một lần gọi đọc trang, dịch và lấy từ. Key nằm trên máy, không vào file xuất.")
         }
     }
 
@@ -201,6 +250,55 @@ struct SettingsView: View {
             reminderMinutes = settings.reminderMinutes
             didLoad = true
         }
+        reloadAgents()
+    }
+
+    private func reloadAgents() {
+        guard let database = model.database else { return }
+        if let listed = try? AnalysisAgentStore.list(on: database) {
+            agents = listed.agents
+            activeAgentID = listed.activeID
+        }
+    }
+
+    private func select(_ agent: AnalysisAgent) {
+        guard let database = model.database else { return }
+        agentError = nil
+        do {
+            try AnalysisAgentStore.setActive(on: database, id: agent.id)
+            activeAgentID = agent.id
+        } catch {
+            agentError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        }
+    }
+
+    private func remove(_ agent: AnalysisAgent) {
+        guard let database = model.database else { return }
+        agentError = nil
+        do {
+            try AnalysisAgentStore.delete(on: database, id: agent.id)
+            reloadAgents()
+        } catch {
+            agentError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        }
+    }
+
+    /// `nil` = đã lưu. Chuỗi = lỗi hiện trong sheet.
+    private func addAgent(name: String, baseURL: String, model: String, apiKey: String) -> String? {
+        guard let database = self.model.database else { return "Chưa mở được kho" }
+        do {
+            try AnalysisAgentStore.add(
+                on: database,
+                name: name,
+                baseURL: baseURL,
+                model: model,
+                apiKey: apiKey)
+            agentError = nil
+            reloadAgents()
+            return nil
+        } catch {
+            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        }
     }
 
     private func save() {
@@ -213,14 +311,151 @@ struct SettingsView: View {
                 reminderEnabled: reminderEnabled,
                 reminderMinutes: reminderMinutes)
             saved = true
+            Haptics.success()
         } catch {
             saveError =
                 (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
+            Haptics.error()
         }
     }
 
     private static func hourLabel(_ hour: Int) -> String {
         String(format: "%02d:00", hour)
     }
+}
+
+/// Sheet thêm một key OpenAI-compat. Mặc định điền endpoint Gemini.
+private struct AddAgentSheet: View {
+    var onSave: (String, String, String, String) -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = "Gemini"
+    @State private var baseURL = AnalysisAgentStore.geminiBaseURL
+    @State private var model = AnalysisAgentStore.geminiModel
+    @State private var apiKey = ""
+    @State private var error: String?
+    @State private var keyStatus: KeyCheck = .idle
+    @State private var checkTask: Task<Void, Never>?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Tên", text: $name)
+                TextField("Base URL", text: $baseURL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("Model", text: $model)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                HStack {
+                    SecureField("API key", text: $apiKey)
+                    keyMark
+                }
+                keyCaption
+                if let error {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.danger)
+                }
+            }
+            .navigationTitle("Thêm key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Huỷ") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Thêm") { submit() }
+                        .disabled(keyStatus != .valid)
+                }
+            }
+            .onChange(of: apiKey) { scheduleKeyCheck() }
+            .onChange(of: baseURL) { scheduleKeyCheck() }
+            .onDisappear { checkTask?.cancel() }
+        }
+    }
+
+    @ViewBuilder
+    private var keyMark: some View {
+        switch keyStatus {
+        case .idle:
+            EmptyView()
+        case .checking:
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel("Đang kiểm tra key")
+        case .valid:
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Theme.ok)
+                .symbolEffect(.bounce, value: keyStatus)
+                .accessibilityLabel("Key hợp lệ")
+        case .invalid:
+            Image(systemName: "xmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(Theme.danger)
+                .symbolEffect(.bounce, value: keyStatus)
+                .accessibilityLabel("Key không hợp lệ")
+        }
+    }
+
+    @ViewBuilder
+    private var keyCaption: some View {
+        switch keyStatus {
+        case .idle:
+            EmptyView()
+        case .checking:
+            Text("Đang kiểm tra key…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        case .valid:
+            Text("Key dùng được")
+                .font(.footnote)
+                .foregroundStyle(Theme.ok)
+        case let .invalid(message):
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(Theme.danger)
+        }
+    }
+
+    private func scheduleKeyCheck() {
+        checkTask?.cancel()
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = baseURL
+        guard !key.isEmpty else {
+            keyStatus = .idle
+            return
+        }
+        keyStatus = .checking
+        checkTask = Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            let verdict = await AgentKeyChecker.check(baseURL: base, apiKey: key)
+            guard !Task.isCancelled else { return }
+            switch verdict {
+            case .valid:
+                keyStatus = .valid
+            case let .invalid(message):
+                keyStatus = .invalid(message)
+            }
+        }
+    }
+
+    private func submit() {
+        guard keyStatus == .valid else { return }
+        if let message = onSave(name, baseURL, model, apiKey) {
+            error = message
+        } else {
+            dismiss()
+        }
+    }
+}
+
+private enum KeyCheck: Equatable {
+    case idle
+    case checking
+    case valid
+    case invalid(String)
 }

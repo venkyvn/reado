@@ -431,3 +431,6 @@
   chốt 2026-09-24.
 - **Hệ quả:** `ReviewQueueView` thêm offset/tilt/stamp + `predictedEndTranslation`; hint mặt
   trước giờ đúng nghĩa. journeys mục 4 "Gesture" bỏ "sau khi lật thẻ".
+  Hướng bay lấy cùng dấu predicted (không lấy vị trí tay lúc nhả). Xoay rồi mới offset,
+  neo tâm thẻ. Thẻ kế nhô phía sau. Reduce Motion bỏ bám tay/bay; VoiceOver có action
+  Quên/Được trên mặt trước. Ngưỡng nằm ở `SwipeCommit` (test được).

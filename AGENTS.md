@@ -1,14 +1,25 @@
-# AGENTS.md — Reado v2 (DSH protocol)
+# AGENTS.md — Reado (protocol Claude Code)
 
-Luật dự án: đọc `CLAUDE.md` (rồi `docs/agent/agent-rulebook.md` khi task chạm điều khoản).
-DSH là tool chính. File này KHÔNG nhân đôi CLAUDE.md — chỉ chứa protocol riêng cho DSH.
+Luật dự án: đọc `CLAUDE.md`. Khi đụng điều khoản cụ thể, mở `docs/agent/agent-rulebook.md` (index → grep đúng spec). File này **không** nhân đôi luật cứng.
+
+## 0. Cache prefix — thứ tự bất biến
+
+Claude Code cache theo prefix. Phá thứ tự = miss cache.
+
+1. `CLAUDE.md` (tự load) — chỉ luật, mục lục docs, quickstart. **Cấm** nhét ROADMAP, journal, HEAD, số test, output `repo_map`.
+2. File này — protocol ổn định.
+3. Turn 1: `docs/session-brief.md` §1–3 (state đổi mỗi session — **sau** breakpoint, không nhét vào CLAUDE.md).
+
+Cấm đảo thứ tự đọc Turn 1. Cấm sửa `CLAUDE.md` trừ khi luật/Q đổi. Commands (`.claude/commands/*`) chỉ load khi gọi — **không copy** bảng luật cứng.
+
+Turn 2: cấm đọc lại file đã có trong ngữ cảnh. `repo_map.py` không chạy lại trừ khi fen bảo refresh.
 
 ## 1. Session protocol
 
-- **Turn 1 — session mới:** Đọc `CLAUDE.md`, rồi `docs/session-brief.md` mục 1–3. Câu đang mở chỉ ở `CLAUDE.md` mục 5.
+- **Turn 1 — session mới:** `CLAUDE.md` đã ở prefix. Đọc `docs/session-brief.md` mục 1–3. Chạy `python3 scripts/repo_map.py` (stdout). Câu đang mở chỉ ở `CLAUDE.md` mục 5. Gợi `/rplan` nếu fen đã nêu task — **đừng code**. Template plan: `docs/agent/plan-template.md`.
 - **Từ Turn 2:** CẤM đọc lại `session-brief.md` hay bất kỳ file đã có trong ngữ cảnh.
 - **Không tự đọc lại file vừa sửa:** Nội dung vừa ghi đã nằm sẵn trong context. Cấm `read` để xác nhận lại.
-- **Lệnh code cụ thể:** Viết code ngay bằng `write`/`edit`. Không đọc tài liệu dạo đầu.
+- **Khi nào được `write` ngay:** (a) fen nói rõ code / sửa bug **và** (b) không đổi hợp đồng (schema, FR mới, transaction, protocol module, Q mở). Ngược lại: `/rplan` hoặc hỏi fen. Skip plan (ghi 1 câu rồi code): bug thuần UI, copy, test bổ sung khi FR/journey đã chốt — fen vẫn có thể bắt plan trước.
 - **Sau khi làm xong task lớn:** Chốt session (xem mục 3).
 
 ## 2. File discovery & reading — chống đốt token
@@ -28,7 +39,7 @@ DerivedData/ .tmp/ .xcode-packages/ .build/ .swiftpm/ node_modules/ .git/
 ### 2b. Đọc có chọn lọc (Targeted Reading)
 
 - **Cấm** `read` cả file lớn khi chỉ cần 1 FR/1 hàm: dùng `grep -n "từ_khoá" <file>` rồi `read` có `offset`/`limit` (80 dòng).
-- **CẤM read nguyên** các file ≥25KB sau (chỉ grep + read quanh trúng): `ROADMAP.md` · `docs/archive/mvp-plan-pwa-gen.md` (~128K) · `docs/research/vocabulary.md` (~100K) · `docs/agent/agent-rulebook.md` (~100K) · `docs/research/review.md` (~76K) · `docs/specs/prd.md` · `docs/specs/journeys.md` (~60K) · `docs/archive/*-pwa-gen.md` (tombs) · `docs/decisions-log.md` · `docs/research/tech-stack.md` · `docs/agent/prompt-spec.md` · `docs/specs/sync-server-ddl.md` · `docs/specs/db.md` · `docs/specs/solution-design.md`.
+- **CẤM read nguyên** các file ≥25KB sau (chỉ grep + read quanh trúng): `ROADMAP.md` · `docs/archive/mvp-plan-pwa-gen.md` · `docs/research/vocabulary.md` · `docs/research/review.md` · `docs/specs/prd.md` · `docs/specs/journeys.md` · `docs/archive/*-pwa-gen.md` (tombs) · `docs/decisions-log.md` · `docs/research/tech-stack.md` · `docs/agent/prompt-spec.md` · `docs/specs/sync-server-ddl.md` · `docs/specs/db.md` · `docs/specs/solution-design.md`.
 - Một turn không `read` quá 3 file lớn cùng lúc. Thiếu gì → `grep` tiếp, không `read` dự phòng.
 - **KHÔNG `read` lại file vừa sửa** (nội dung vừa ghi đã nằm sẵn trong context). Verify bằng `grep -c "tên file" project.pbxproj` chứ không read.
 
@@ -51,18 +62,23 @@ python3 scripts/pbxproj_tool.py add --file app/ReadoTests/SettingsTests.swift --
 grep -c "SettingsView" app/Reado.xcodeproj/project.pbxproj   # mong đợi ≥ 3
 ```
 
-### 2d. smart_glob — CẤM glob trần (tool bắt buộc)
+### 2d. repo_map — tree + interface (bắt buộc cho Swift)
 
-Khi cần danh sách file/dir — cấm `glob **/*.md` trần (session3: 123 kết quả → ~15k token chỉ để đọc danh sách). Dùng `scripts/smart_glob.py`:
+Cần bản đồ code / public surface — **cấm** `glob **/*.swift` trần. Stdout only (không ghi file vào docs — bust cache):
 
 ```bash
-# Liệt kê md (thu hẹp trước khi đọc)
+python3 scripts/repo_map.py              # tree + signatures, mặc định --limit 80
+python3 scripts/repo_map.py --root app/ReadoKit/Sources --limit 40
+```
+
+Skeleton tĩnh (ít đổi) vẫn ở `docs/agent/coding-conventions.md` §2 và `docs/specs/solution-design.md` §3.
+
+### 2e. smart_glob — md / path không phải Swift tree
+
+Khi cần danh sách file/dir **không** phải Swift map — cấm `glob **/*.md` trần. Dùng `scripts/smart_glob.py`:
+
+```bash
 python3 scripts/smart_glob.py --ext .md --limit 15
-
-# Swift trong app/, loại cache
-python3 scripts/smart_glob.py --ext .swift --root app --limit 15
-
-# Grep luôn thay thế — không cần glob rồi read
 grep -rn "FR-16" docs/specs/prd.md | head -n 20
 ```
 
@@ -70,22 +86,13 @@ grep -rn "FR-16" docs/specs/prd.md | head -n 20
 
 ### 3a. Flow chốt task (bắt buộc)
 
-Task lớn xong → flow bắt buộc:
-
-1. **Hỏi owner approve** — hỏi 1 câu duy nhất, ví dụ: *"Task X xong rồi, approve để commit + handoff không?"*.
-2. **Owner approve** → agent **chủ động làm tất cả**, doc trước commit:
-   a. Thay khối hiện tại của `docs/session-brief.md` §1 (không nối bullet task cũ). HEAD trong brief lấy từ `git log -1 --oneline` sau commit; chưa commit thì ghi "HEAD xem git".
-   b. Append 3–5 dòng vào `docs/journal/YYYY-MM-DD.md` (gì xong / gì còn / bẫy nào).
-   c. Nếu task thay đổi trạng thái ROADMAP/PROJECT — cập nhật luôn.
-   d. Stage `app/` cộng các doc vừa sửa, rồi `git commit` đúng format `feat(scope): tiếng Việt — tóm tắt` theo conventions mục 7b.
-3. **Không chờ owner nhắc lại** — commit + handoff là một bước, không tách rời.
-4. Kết thúc phiên — không dồn việc vào session đang phình.
+Task lớn xong → `/rhandoff` (AGENTS.md không lặp checklist). Một câu hỏi approve; sau approve: brief §1, journal, ROADMAP nếu cần, khép `docs/plans/<id>.md` nếu có, rồi commit.
 
 ### 3b. Giới hạn chống phình (bắt buộc)
 
-- **1 task = 1 session.** Cấm gộp `2.4 + 2.5` vào cùng session. Xong task → chốt session → task tiếp ở session mới.
+- **1 task = 1 session.** Cấm gộp `2.4 + 2.5` vào cùng session. Xong task → chốt session → task tiếp ở session mới. Plan tầng 2 có nhiều task thì chỉ **implement task đầu** đã confirm.
 - **Tối đa 12–15 steps/turn.** Vượt ngưỡng → dừng, tóm tắt đã làm, hỏi owner `commit + handoff` hay tiếp tục.
-- **Input >60k/step là tín hiệu handoff.** Context đã phình — mỗi step sau tốn gấp đôi, rẻ hơn nhiều nếu `commit` + mở session mới (Turn 1 đọc `CLAUDE.md` rồi brief mục 1–3).
+- **Input >60k/step là tín hiệu handoff.** Context đã phình — mỗi step sau tốn gấp đôi, rẻ hơn nhiều nếu `commit` + mở session mới (Turn 1: prefix + brief mục 1–3 + map).
 - **Ví dụ vi phạm (session1.txt Turn 7):** 36 steps, input leo từ 59k → 137k/step, tổng 2.26M input/turn — tốn gấp 34× so với 3 turn trước. Nguyên nhân: gộp 2 task + đọc chùm 5 file lớn + không handoff.
 
 ## 4. Bẫy build máy này

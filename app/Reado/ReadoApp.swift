@@ -1,5 +1,6 @@
 import ReadoKit
 import SwiftUI
+import UIKit
 
 /// Design tokens duy nhất của Reado — mọi màu semantic đều qua đây
 /// (docs/ux/visual-redesign-plan.md §0). Không hardcode màu ở view.
@@ -54,6 +55,65 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .indigo: Color(red: 0.231, green: 0.290, blue: 0.420)    // #3B4A6B
         case .sepia: Color(red: 0.549, green: 0.357, blue: 0.247)     // #8C5B3F
         }
+    }
+}
+
+/// Nhịp motion duy nhất của app — nội dung hiện/ẩn báo "vừa xuất hiện", không ăn mừng
+/// (vision "Journey Over Summary"). MASTER: 150–300ms, lệch dọc 8–16pt.
+/// Sheet / tab / push KHÔNG đi qua đây — hệ thống tự animate, đè vào là hỏng.
+enum Motion {
+    static let reveal = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.28)
+
+    /// Hiện/ẩn nội dung trong cùng một màn.
+    static let revealTransition = AnyTransition.opacity.combined(
+        with: .offset(y: 10))
+
+    /// Reduce Motion → gán state thẳng, không animate.
+    static func run(
+        reduceMotion: Bool,
+        _ animation: Animation = reveal,
+        _ change: () -> Void
+    ) {
+        if reduceMotion {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction, change)
+        } else {
+            withAnimation(animation, change)
+        }
+    }
+}
+
+/// Haptic semantic dùng chung — intensity theo ý nghĩa, không theo từng màn.
+enum Haptics {
+    /// Đổi lựa chọn, lật thẻ, chọn ngày.
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    /// Chạm tới ngưỡng của một gesture liên tục.
+    static func threshold() {
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+    }
+
+    /// Xác nhận hành động chính: chấm thẻ, mở camera.
+    static func action() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    static func error() {
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
+}
+
+extension View {
+    /// Transition reveal cho nhánh `if`. Cặp với `Motion.run` ở chỗ đổi cờ.
+    func revealTransition() -> some View {
+        transition(Motion.revealTransition)
     }
 }
 

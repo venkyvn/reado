@@ -1,7 +1,7 @@
 # PROJECT.md — Reado
 > **AI Agent Index — mục lục nội dung repo.**
 > Entry point duy nhất là [CLAUDE.md](CLAUDE.md) — agent mới đọc nó trước tiên,
-> rồi [AGENTS.md](AGENTS.md) cho protocol DSH. File này giúp tìm file nhanh, không
+> rồi [AGENTS.md](AGENTS.md) cho protocol Claude Code. File này giúp tìm file nhanh, không
 > phải nguồn chỉ đạo làm việc.
 
 ---

@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 
 struct ExportView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedCollectionIDs: Set<String>
     @State private var isExporting = false
     @State private var exportError: String?
@@ -30,6 +31,7 @@ struct ExportView: View {
                 errorSection(err)
             }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: exportError)
         .navigationTitle("Dữ liệu")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareCSV) {
@@ -59,6 +61,7 @@ struct ExportView: View {
                 } else {
                     selectedCollectionIDs = Set(model.collections.map(\.id))
                 }
+                Haptics.selection()
             } label: {
                 HStack {
                     Text(selectedCollectionIDs.count == model.collections.count
@@ -150,6 +153,7 @@ struct ExportView: View {
         } else {
             selectedCollectionIDs.insert(id)
         }
+        Haptics.selection()
     }
 
     private func exportCSV() {

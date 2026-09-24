@@ -10,7 +10,7 @@ cùng từ vựng đã trích xuất, rồi ôn lại số từ đó bằng spac
 
 > **Nếu bạn là agent được giao build project này:** đọc
 > [CLAUDE.md](CLAUDE.md) trước tiên (entry point duy nhất), rồi
-> [AGENTS.md](AGENTS.md) cho protocol DSH, rồi [ROADMAP.md](ROADMAP.md) để biết
+> [AGENTS.md](AGENTS.md) cho protocol Claude Code, rồi [ROADMAP.md](ROADMAP.md) để biết
 > tiến độ và checklist. AGENTS có thứ tự đọc, danh sách quyết định **không được**
 > tranh luận lại, và danh sách câu hỏi **phải hỏi** thay vì tự quyết.
 

@@ -10,6 +10,8 @@ struct CollectionDetailView: View {
     let collectionID: String
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var isSelecting = false
     @State private var selectedIDs: Set<String> = []
@@ -196,8 +198,10 @@ struct CollectionDetailView: View {
             // Kho tạm: chế độ "Sắp xếp" để chọn nguyên lô theo thời điểm thêm (J6).
             if isInbox {
                 Button(isSelecting ? "Xong" : "Sắp xếp") {
-                    isSelecting.toggle()
-                    if !isSelecting { selectedIDs = [] }
+                    Motion.run(reduceMotion: reduceMotion) {
+                        isSelecting.toggle()
+                        if !isSelecting { selectedIDs = [] }
+                    }
                 }
             }
             Menu {
@@ -229,20 +233,18 @@ struct CollectionDetailView: View {
                     .foregroundStyle(
                         selectedIDs.contains(entry.id)
                             ? Color.accentColor : .secondary)
+                    .contentTransition(.symbolEffect(.replace))
+                    .transition(.opacity.combined(with: .offset(x: -12)))
             }
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(entry.term)
-                        .font(.headline)
-                    Text(entry.pos)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let cefr = entry.cefr, !cefr.isEmpty {
-                        Text(cefr.uppercased())
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Theme.level.opacity(0.12)))
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        Text(entry.term).font(.headline)
+                        vocabBadges(entry)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(entry.term).font(.headline)
+                        vocabBadges(entry)
                     }
                 }
                 if let ipa = entry.ipa, !ipa.isEmpty {
@@ -255,19 +257,56 @@ struct CollectionDetailView: View {
                 Text(entry.example)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
             }
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
         .onTapGesture {
             guard isSelecting else { return }
-            if selectedIDs.contains(entry.id) {
-                selectedIDs.remove(entry.id)
-            } else {
-                selectedIDs.insert(entry.id)
+            toggleSelection(entry.id)
+        }
+        .animation(reduceMotion ? nil : Motion.reveal, value: isSelecting)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(entry.term), \(entry.meaningVI)")
+        .accessibilityValue(
+            isSelecting
+                ? (selectedIDs.contains(entry.id) ? "Đã chọn" : "Chưa chọn")
+                : "")
+        .accessibilityHint(isSelecting ? "Chạm hai lần để đổi trạng thái chọn" : "")
+        .accessibilityAddTraits(isSelecting ? .isButton : [])
+        .accessibilityAddTraits(
+            isSelecting && selectedIDs.contains(entry.id) ? .isSelected : [])
+        .accessibilityAction {
+            guard isSelecting else { return }
+            toggleSelection(entry.id)
+        }
+    }
+
+    private func vocabBadges(_ entry: VocabRepository.VocabularyListEntry) -> some View {
+        HStack(spacing: 6) {
+            Text(entry.pos)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if let cefr = entry.cefr, !cefr.isEmpty {
+                Text(cefr.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.level.opacity(0.12)))
             }
         }
+    }
+
+    private func toggleSelection(_ id: String) {
+        Motion.run(reduceMotion: reduceMotion) {
+            if selectedIDs.contains(id) {
+                selectedIDs.remove(id)
+            } else {
+                selectedIDs.insert(id)
+            }
+        }
+        Haptics.selection()
     }
 
     private func reloadList() {

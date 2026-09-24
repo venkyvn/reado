@@ -157,12 +157,9 @@ final class AppModel {
         defer { isAnalyzing = false }
 
         do {
-            // FR-02: đọc cefr_level từ settings (seed = 'B2'; FR-15 chưa có UI).
-            let (_, cefrLevel) = try AnalyzerFactory.active(db: database)
-            // 0.7 CHƯA CÓ: proxy chưa deploy → dùng MockAnalyzer (owner chốt 2026-09-19:
-            // "chưa integrate với gemini thì trong quá trình phân tích cứ tạo mock data").
-            // Gỡ khi proxy deploy: `let analyzer = AnalyzerFactory.active(db:).analyzer`.
-            let analyzer: PageAnalyzer = MockAnalyzer()
+            // FR-02: agent seed là reado_proxy → ReadoProxyClient. URL lấy từ
+            // READO_PROXY_BASE_URL nếu có, không thì AnalyzerFactory.proxyBaseURL.
+            let (analyzer, cefrLevel) = try AnalyzerFactory.active(db: database)
             let result = try await analyzer.analyze(
                 image: image.imageData,
                 imageMime: image.mimeType,

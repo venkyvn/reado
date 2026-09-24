@@ -11,26 +11,39 @@ public protocol PageAnalyzer: Sendable {
     ) async throws -> PageAnalysis
 }
 
-/// Nhà máy chọn analyzer theo agent đang active (FR-21). Walking skeleton đi
-/// proxy mặc định; khi proxy chưa có (0.7) dùng mock để owner test UI trước.
+/// Nhà máy chọn analyzer theo agent đang active (FR-21).
 public enum AnalyzerFactory {
     public static let proxyBaseURL = "https://proxy.reado.app"
 
-    /// Tạo analyzer cho agent id. R1: proxy builtin luôn có; mock chỉ cho dev/test.
+    /// URL thật lúc chạy. Scheme Xcode có thể đặt `READO_PROXY_BASE_URL`
+    /// (HTTPS mà iPhone mở được). Trống thì dùng `proxyBaseURL`.
+    public static var resolvedProxyBaseURL: String {
+        let fromEnv = ProcessInfo.processInfo.environment["READO_PROXY_BASE_URL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return fromEnv.isEmpty ? proxyBaseURL : fromEnv
+    }
+
+    /// Tạo analyzer cho agent. `openai_compat` thiếu id/url/model thì mock (cấu hình hỏng).
     /// `session` injectable cho test (default URLSession.shared ở production).
     public static func analyzer(
         for kind: String,
         baseURL: String?,
         model: String?,
+        agentID: String? = nil,
         session: URLSession = .shared
     ) -> PageAnalyzer {
         switch kind {
         case "openai_compat":
-            // FR-21 — chưa implement UI; FR-21 adapter (1.5/3.11) dùng OpenAICompatClient.
-            // Walking skeleton chạy proxy mặc định → mock chỉ dùng khi BYOK chưa có.
-            return MockAnalyzer()
+            guard let agentID, let baseURL, let model, !baseURL.isEmpty, !model.isEmpty else {
+                return MockAnalyzer()
+            }
+            return OpenAICompatClient(
+                session: session,
+                baseURL: baseURL,
+                model: model,
+                agentID: agentID)
         case "reado_proxy":
-            return ReadoProxyClient(session: session, baseURL: baseURL ?? proxyBaseURL)
+            return ReadoProxyClient(session: session, baseURL: baseURL ?? resolvedProxyBaseURL)
         default:
             return MockAnalyzer()
         }
@@ -49,20 +62,21 @@ public enum AnalyzerFactory {
         let activeAgentID = rows.first?.last?.textValue
         if let activeAgentID {
             let agentRows = try db.rows(
-                "SELECT kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
+                "SELECT id, kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
                 [.text(activeAgentID)])
-            if let row = agentRows.first, row.count >= 3 {
+            if let row = agentRows.first, row.count >= 4 {
                 return (
                     analyzer(
-                        for: row[0].textValue ?? "reado_proxy",
-                        baseURL: row[1].textValue,
-                        model: row[2].textValue,
+                        for: row[1].textValue ?? "reado_proxy",
+                        baseURL: row[2].textValue,
+                        model: row[3].textValue,
+                        agentID: row[0].textValue,
                         session: session),
                     cefrLevel)
             }
         }
         // Fallback: agent seed luôn tồn tại (reado_proxy) — không bao giờ tới đây.
-        return (ReadoProxyClient(session: session, baseURL: proxyBaseURL), cefrLevel)
+        return (ReadoProxyClient(session: session, baseURL: resolvedProxyBaseURL), cefrLevel)
     }
 
     /// Ghép các CEFR level đã chọn thành chuỗi cho prompt; cột JSON rỗng/cài cũ

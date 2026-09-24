@@ -8,12 +8,12 @@
 
 ## 1. Tình trạng hiện tại (cập nhật 2026-09-24)
 
-- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `HEAD xem git` (commit vuốt Tinder — chạy `git log -1` để lấy hash). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
-- **Analysis:** vẫn `MockAnalyzer` trong `AppModel` cho tới proxy 0.7.
+- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `HEAD xem git` (port máy kia — protocol agent + OpenAI-compat adapter + SwipeCommit + proxy — chạy `git log -1` để lấy hash). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
+- **Analysis:** agent chọn trong Cài đặt (`AnalysisAgentStore`). Proxy mặc định `ReadoProxyClient` (chưa deploy — trước Run đặt `READO_PROXY_BASE_URL`). Adapter OpenAI-compat `OpenAICompatClient` (FR-21) đã hoàn thiện + test xanh — key ở mục Agent (Keychain, không vào SQLite/export), `AgentURLRule` khóa miền origin. `MockAnalyzer` chỉ còn cho kind lạ/agent thiếu url/model.
 - **IA hiện tại:** 3 tab (Home / Ôn / Kho), pin Home tối đa 5, CEFR nhiều level, migration v3.
 - **Ôn tập:** vuốt Tinder trên **cả hai mặt thẻ** (ADR-033) — thẻ bám tay + tilt + stamp "Quên"/"Được" + fly-off; mapping ADR-025 giữ (trái=Again / phải=Good).
-- **Test gần nhất đã ghi:** 182/182 trên iPhone 18 Pro (vuốt Tinder, thuần UI). Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
-- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · 3.11 FR-21 (proxy 0.7 + adapter 1.5) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước).
+- **Test gần nhất đã ghi:** **194/194** trên iPhone 18 Pro — port máy kia (adapter OpenAI-compat + SwipeCommit + protocol), `** TEST SUCCEEDED **`. Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
+- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy 0.7 chưa deploy (adapter FR-21 đã code + test xanh, chờ deploy proxy) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước).
 - **Leech:** owner chốt 2026-09-24 = 6 lần Again. Không gộp với Q-08.
 
 ## 2. Chờ owner (không tự bắt đầu)

@@ -49,7 +49,7 @@ public enum ReviewSchedulerError: Error, LocalizedError, Equatable {
 /// Mức chấm Reado — KHÔNG để kiểu thư viện ngoài lọt vào API công khai.
 /// Map 1:1 với review_logs.rating (db.md CHECK 1–4) và vuốt ADR-025:
 /// TRÁI = again(1), PHẢI = good(3); hard(2)/easy(4) là nút.
-public enum ReadoRating: Int, CaseIterable, Sendable {
+public enum ReadoRating: Int, CaseIterable, Equatable, Sendable {
     case again = 1
     case hard = 2
     case good = 3

@@ -1,6 +1,5 @@
 import ReadoKit
 import SwiftUI
-import UIKit
 
 /// Tab gốc — port UI lab (2026-09-23): ba tab Home / Ôn / Kho thay cho
 /// NavigationStack + modal sheet cũ. Capture/Analysis/Settings/Dữ liệu vẫn là
@@ -20,6 +19,7 @@ private enum ShellRoute: Hashable {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTab: AppTab = .home
     // port UI lab §5.7: sau Lưu → push Hub bộ vừa lưu lên Home stack.
     @State private var homePath: [ShellRoute] = []
@@ -64,8 +64,11 @@ struct RootView: View {
             if showShutter {
                 FloatShutter(action: openShutterCapture)
                     .padding(.bottom, 84)
+                    // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt lên như nội dung.
+                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
             }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: showShutter)
         .sheet(isPresented: $showCapture, onDismiss: {
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
             if model.lastCapturedImage != nil {
@@ -104,7 +107,7 @@ struct RootView: View {
     /// Mở chụp từ shutter nổi — đích = bộ hub đang mở (nếu có), không thì kho tạm.
     private func openShutterCapture() {
         // port UI lab §9: haptic lúc chụp.
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        Haptics.action()
         model.analysisTargetCollectionID = model.shutterTargetCollectionID
         showCapture = true
     }
@@ -178,11 +181,19 @@ private struct HomeTabView: View {
     let onData: () -> Void
 
     var body: some View {
-        List {
-            dailyProgressRows
-            inboxRow
-            streakRow
-            homePinRows
+        Group {
+            if model.database == nil, model.failure == nil {
+                ProgressView("Đang mở kho…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let failure = model.failure {
+                ContentUnavailableView {
+                    Label("Không mở được kho", systemImage: "externaldrive.badge.exclamationmark")
+                } description: {
+                    Text(failure)
+                }
+            } else {
+                homeList
+            }
         }
         .navigationTitle("Reado")
         .toolbar {
@@ -199,6 +210,15 @@ private struct HomeTabView: View {
                 }
                 .accessibilityLabel("Dữ liệu")
             }
+        }
+    }
+
+    private var homeList: some View {
+        List {
+            dailyProgressRows
+            inboxRow
+            streakRow
+            homePinRows
         }
         .refreshable { model.reloadOverview() }
     }

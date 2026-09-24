@@ -9,6 +9,7 @@ import ReadoKit
 struct AnalysisView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var drafts: [ReviewDraft] = []
     @State private var expandedIDs: Set<String> = []
@@ -48,19 +49,24 @@ struct AnalysisView: View {
         Group {
             if model.analysisFailure != nil {
                 failureView
+                    .transition(.opacity)
             } else if model.isAnalyzing {
                 // FR-02: progress rõ — màn hình không đứng im.
                 ProgressView("Đang phân tích trang sách...")
                     .padding()
                     .frame(maxWidth: .infinity)
+                    .transition(.opacity)
             } else if let result = model.analysisResult {
                 resultList(result)
+                    .transition(.opacity)
             } else {
                 ContentUnavailableView(
                     "Chưa có trang để phân tích",
                     systemImage: "photo.on.rectangle.angled")
+                    .transition(.opacity)
             }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: model.isAnalyzing)
         .navigationTitle("Duyệt & lưu từ vựng")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -220,8 +226,10 @@ struct AnalysisView: View {
                 summaryVI: result?.summaryVI ?? "")
             hasConfirmed = true
             saveAlert = .success(saved)
+            Haptics.success()
         } catch {
             saveAlert = .failure(error.localizedDescription)
+            Haptics.error()
         }
     }
 
@@ -295,18 +303,22 @@ struct AnalysisView: View {
     }
 
     private func toggleExpand(_ id: String) {
-        if expandedIDs.contains(id) {
-            expandedIDs.remove(id)
-        } else {
-            expandedIDs.insert(id)
+        Motion.run(reduceMotion: reduceMotion) {
+            if expandedIDs.contains(id) {
+                expandedIDs.remove(id)
+            } else {
+                expandedIDs.insert(id)
+            }
         }
     }
 
     private func toggleSegment(_ index: Int) {
-        if revealedSegments.contains(index) {
-            revealedSegments.remove(index)
-        } else {
-            revealedSegments.insert(index)
+        Motion.run(reduceMotion: reduceMotion) {
+            if revealedSegments.contains(index) {
+                revealedSegments.remove(index)
+            } else {
+                revealedSegments.insert(index)
+            }
         }
     }
 }
@@ -317,6 +329,8 @@ struct AnalysisView: View {
 /// thái xác minh (FR-02); chạm card mở inline 6 field (FR-03). Thiết kế hàng tách
 /// bấm chọn với bấm mở — checkbox KHÔNG nằm trong vùng mở card.
 private struct ReviewCardRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var draft: ReviewDraft
     let isExpanded: Bool
     let onToggleExpand: () -> Void
@@ -328,54 +342,18 @@ private struct ReviewCardRow: View {
                 Button {
                     onToggleExpand()
                 } label: {
-                    HStack(alignment: .top, spacing: 6) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: 6) {
-                                Text(draft.term)
-                                    .font(.headline)
-                                Text(draft.pos)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        Capsule().fill(
-                                            Theme.surfaceStrong))
-                            }
-                            if !draft.meaningVI.isEmpty {
-                                Text(draft.meaningVI)
-                                    .font(.subheadline)
-                                    .lineLimit(2)
-                            }
-                            if !isExpanded {
-                                if !draft.ipa.isEmpty {
-                                    Text(draft.ipa)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                                if !draft.example.isEmpty {
-                                    Text(draft.example)
-                                        .font(.caption2)
-                                        .italic()
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                            }
-                        }
-                        Spacer(minLength: 2)
-                        VerificationBadge(status: draft.verification)
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                    }
+                    summaryLabel
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("\(draft.term), \(draft.meaningVI)")
+                .accessibilityValue(isExpanded ? "Đang mở" : "Đang thu gọn")
+                .accessibilityHint(isExpanded ? "Thu gọn thông tin" : "Mở để sửa thông tin")
             }
 
             if isExpanded {
                 editor
-                    .padding(.leading, 44)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : 44)
+                    .revealTransition()
             }
         }
         .padding(.vertical, 4)
@@ -386,15 +364,96 @@ private struct ReviewCardRow: View {
     private var selectButton: some View {
         Button {
             draft.isSelected.toggle()
+            Haptics.selection()
         } label: {
             Image(systemName: draft.isSelected ? "checkmark.circle.fill" : "circle")
                 .font(.title3)
                 .foregroundStyle(
                     draft.isSelected ? Color.accentColor : Color.secondary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
             draft.isSelected ? "Bỏ chọn \(draft.term)" : "Chọn \(draft.term) để ôn tập")
+        .accessibilityValue(draft.isSelected ? "Đã chọn" : "Chưa chọn")
+        .accessibilityAddTraits(draft.isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var summaryLabel: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                summaryText
+                HStack {
+                    VerificationBadge(status: draft.verification)
+                    Spacer()
+                    expandChevron
+                }
+            }
+        } else {
+            HStack(alignment: .top, spacing: 6) {
+                summaryText
+                Spacer(minLength: 2)
+                VerificationBadge(status: draft.verification)
+                expandChevron
+            }
+        }
+    }
+
+    private var summaryText: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    Text(draft.term).font(.headline)
+                    posBadge
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(draft.term).font(.headline)
+                    posBadge
+                }
+            }
+            if !draft.meaningVI.isEmpty {
+                Text(draft.meaningVI)
+                    .font(.subheadline)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            }
+            if !isExpanded {
+                if !draft.ipa.isEmpty {
+                    Text(draft.ipa)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if !draft.example.isEmpty {
+                    Text(draft.example)
+                        .font(.caption)
+                        .italic()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                }
+            }
+        }
+    }
+
+    private var posBadge: some View {
+        Text(draft.pos)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Theme.surfaceStrong))
+    }
+
+    private var expandChevron: some View {
+        Image(systemName: "chevron.down")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+            .frame(width: 44, height: 44)
+            .animation(
+                reduceMotion ? nil : Motion.reveal,
+                value: isExpanded)
     }
 
     /// FR-03: sửa được mọi field ngay dưới card, không rời danh sách.
@@ -468,7 +527,7 @@ private struct SegmentBlock: View {
                     Text(segment.translationVI)
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                        .transition(.opacity)
+                        .revealTransition()
                 } else {
                     Label("Dịch", systemImage: "globe")
                         .font(.caption)

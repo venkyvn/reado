@@ -156,3 +156,28 @@ final class ReviewSchedulerTests: XCTestCase {
         XCTAssertEqual(one, two)
     }
 }
+
+/// ADR-033 — ngưỡng vuốt và hướng bay. Hướng phải theo predicted, không theo
+/// vị trí tay lúc nhả (hất ngược sẽ lệch stamp với điểm chấm).
+final class SwipeCommitTests: XCTestCase {
+
+    func testSlowDragBelowThresholdDoesNotGrade() {
+        XCTAssertNil(SwipeCommit.rating(predictedWidth: -110))
+        XCTAssertNil(SwipeCommit.rating(predictedWidth: 110))
+        XCTAssertNil(SwipeCommit.rating(predictedWidth: 0))
+    }
+
+    func testPredictedPastThresholdMapsLeftAgainRightGood() {
+        XCTAssertEqual(SwipeCommit.rating(predictedWidth: -111), .again)
+        XCTAssertEqual(SwipeCommit.rating(predictedWidth: 111), .good)
+    }
+
+    func testFlyOffDirectionFollowsPredictedNotReleasePosition() {
+        // Tay còn ở bên trái (translation âm) nhưng hất sang phải: predicted dương
+        // → Good và bay phải. Ngược lại cũng vậy.
+        XCTAssertEqual(SwipeCommit.rating(predictedWidth: 400), .good)
+        XCTAssertEqual(SwipeCommit.direction(predictedWidth: 400), 1)
+        XCTAssertEqual(SwipeCommit.rating(predictedWidth: -400), .again)
+        XCTAssertEqual(SwipeCommit.direction(predictedWidth: -400), -1)
+    }
+}

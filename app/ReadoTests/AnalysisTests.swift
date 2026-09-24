@@ -36,6 +36,72 @@ final class AnalysisTests: XCTestCase {
 
     // MARK: - Decoder (FR-02: JSON đúng schema → PageAnalysis; sai → lỗi, không lưu)
 
+    func testNormalizerKeepsPageWhenOneWordIsOff() throws {
+        let raw: [String: Any] = [
+            "segments": [
+                ["source_en": "Hello world.", "translation_vi": "Chào thế giới."],
+                ["source_en": "  ", "translation_vi": "bỏ"],
+            ],
+            "vocabulary": [
+                [
+                    "term": "world",
+                    "pos": "adjective",
+                    "meaning_vi": "thế giới",
+                    "cefr": "B2+",
+                    "example": "Hello world.",
+                ],
+                [
+                    "term": "broken",
+                    "pos": "noun",
+                    "meaning_vi": " ",
+                    "example": "Hello world.",
+                ],
+            ],
+            "summary_vi": "Một lời chào.",
+        ]
+        let normalized = try AnalysisResponseNormalizer.normalize(jsonData(raw))
+        let analysis = try AnalysisResponseDecoder.decode(normalized)
+        XCTAssertEqual(analysis.segments.count, 1)
+        XCTAssertEqual(analysis.vocabulary.count, 1)
+        XCTAssertEqual(analysis.vocabulary[0].term, "world")
+        XCTAssertEqual(analysis.vocabulary[0].pos, "other")
+        XCTAssertNil(analysis.vocabulary[0].cefr)
+    }
+
+    func testNormalizerEmptyPageIsNotEnglish() {
+        let raw: [String: Any] = [
+            "segments": [],
+            "vocabulary": [["term": "x", "pos": "noun", "meaning_vi": "", "example": ""]],
+        ]
+        XCTAssertThrowsError(try AnalysisResponseNormalizer.normalize(jsonData(raw))) { error in
+            guard case AnalysisError.notEnglishText = error else {
+                return XCTFail("mong đợi notEnglishText, nhận \(error)")
+            }
+        }
+    }
+
+    func testAgentKeyCheckerAccepts200AndRejects401() async {
+        StubURLProtocol.handler = { request in
+            let ok = request.url?.path.hasSuffix("/models") == true
+                && request.value(forHTTPHeaderField: "Authorization") == "Bearer good-key"
+            let status = ok ? 200 : 401
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+            return (response, Data())
+        }
+        let session = StubURLProtocol.makeSession()
+        let good = await AgentKeyChecker.check(
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+            apiKey: "good-key",
+            session: session)
+        XCTAssertEqual(good, .valid)
+        let bad = await AgentKeyChecker.check(
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+            apiKey: "bad-key",
+            session: session)
+        XCTAssertEqual(bad, .invalid("Key không được chấp nhận"))
+    }
+
     func testDecoderValidResponseMapsAllThreeGroups() throws {
         let analysis = try AnalysisResponseDecoder.decode(jsonData(validResponseJSON()))
         XCTAssertEqual(analysis.segments.count, 1)
@@ -143,6 +209,156 @@ final class AnalysisTests: XCTestCase {
         let analyzer = AnalyzerFactory.analyzer(
             for: "nope", baseURL: nil, model: nil)
         XCTAssertTrue(analyzer is MockAnalyzer)
+    }
+
+    func testFactoryOpenAICompatNeedsURLModelAndID() {
+        XCTAssertTrue(
+            AnalyzerFactory.analyzer(for: "openai_compat", baseURL: nil, model: nil) is MockAnalyzer)
+        XCTAssertTrue(
+            AnalyzerFactory.analyzer(
+                for: "openai_compat",
+                baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+                model: "gemini-2.5-flash",
+                agentID: "agent-1") is OpenAICompatClient)
+    }
+
+    func testAgentURLRule() {
+        XCTAssertTrue(AgentURLRule.allows("https://generativelanguage.googleapis.com/v1beta/openai"))
+        XCTAssertTrue(AgentURLRule.allows("http://192.168.1.8:8080"))
+        XCTAssertTrue(AgentURLRule.allows("http://127.0.0.1:8080"))
+        XCTAssertFalse(AgentURLRule.allows("http://example.com"))
+        XCTAssertFalse(AgentURLRule.allows("ftp://example.com"))
+        XCTAssertEqual(
+            AgentURLRule.storedBase("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions/"),
+            "https://generativelanguage.googleapis.com/v1beta/openai")
+    }
+
+    func testAgentStoreAddDeleteFallsBackToProxy() throws {
+        let db = try Fixtures.seededDB()
+        let secrets = MemorySecrets()
+        let id = try AnalysisAgentStore.add(
+            on: db,
+            name: "Gemini",
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            model: "gemini-2.5-flash",
+            apiKey: "secret-key",
+            secrets: secrets)
+        let listed = try AnalysisAgentStore.list(on: db, secrets: secrets)
+        XCTAssertEqual(listed.activeID, id)
+        XCTAssertEqual(listed.agents.count, 2)
+        let added = try XCTUnwrap(listed.agents.first { $0.id == id })
+        XCTAssertEqual(added.baseURL, "https://generativelanguage.googleapis.com/v1beta/openai")
+        XCTAssertTrue(added.hasKey)
+        let stored = try db.rows(
+            "SELECT name, base_url, model FROM analysis_agents WHERE id = ?;",
+            [.text(id)])
+        let blob = stored.flatMap { $0.compactMap(\.textValue) }.joined(separator: " ")
+        XCTAssertFalse(blob.contains("secret-key"))
+        let (analyzer, _) = try AnalyzerFactory.active(db: db)
+        XCTAssertTrue(analyzer is OpenAICompatClient)
+
+        try AnalysisAgentStore.delete(on: db, id: id, secrets: secrets)
+        let after = try AnalysisAgentStore.list(on: db, secrets: secrets)
+        XCTAssertEqual(after.activeID, Seeder.readoProxyAgentID)
+        XCTAssertEqual(after.agents.count, 1)
+        XCTAssertFalse(secrets.contains(agentID: id))
+        XCTAssertThrowsError(
+            try AnalysisAgentStore.delete(on: db, id: Seeder.readoProxyAgentID, secrets: secrets))
+    }
+
+    func testOpenAICompatClientPostsChatCompletion() async throws {
+        let captured = RequestCapture()
+        StubURLProtocol.handler = { request in
+            captured.request = request
+            let page = """
+            {"segments":[{"source_en":"Hello world.","translation_vi":"Chào thế giới."}],"vocabulary":[{"term":"world","pos":"noun","meaning_vi":"thế giới","example":"Hello world."}],"summary_vi":"Một lời chào."}
+            """
+            let envelope: [String: Any] = [
+                "choices": [["message": ["content": page]]]
+            ]
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, try JSONSerialization.data(withJSONObject: envelope))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+            model: "gemini-2.5-flash",
+            agentID: "agent-1",
+            apiKey: "test-key")
+        let result = try await client.analyze(
+            image: Data([0x01]),
+            imageMime: "image/jpeg",
+            cefr: "B2",
+            imageHash: "abc")
+        let request = try XCTUnwrap(captured.request)
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
+        let body = try XCTUnwrap(bodyData(of: request))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["model"] as? String, "gemini-2.5-flash")
+        // JSONSerialization escape `/` thành `\/` — so chuỗi raw sẽ sai, phải decode JSON.
+        let messages = try XCTUnwrap(json["messages"] as? [[String: Any]])
+        let content = try XCTUnwrap(messages[0]["content"] as? [[String: Any]])
+        let imagePart = try XCTUnwrap(content.first { ($0["type"] as? String) == "image_url" })
+        let imageURL = try XCTUnwrap(imagePart["image_url"] as? [String: Any])
+        XCTAssertEqual(imageURL["url"] as? String, "data:image/jpeg;base64,AQ==")
+        let bodyText = String(decoding: body, as: UTF8.self)
+        XCTAssertFalse(bodyText.contains("test-key"))
+        XCTAssertEqual(result.vocabulary[0].term, "world")
+        XCTAssertEqual(result.meta.model, "gemini-2.5-flash")
+        XCTAssertEqual(result.meta.imageHash, "abc")
+    }
+
+    func testOpenAICompatClientKeepsWordsWhenPosIsOff() async throws {
+        StubURLProtocol.handler = { request in
+            let page = """
+            {"segments":[{"source_en":"Hello world.","translation_vi":"Chào."}],"vocabulary":[{"term":"world","pos":"adjective","meaning_vi":"thế giới","example":"Hello world."},{"term":"hello","pos":"noun","meaning_vi":"chào","example":"Hello world."}]}
+            """
+            let envelope: [String: Any] = [
+                "choices": [["message": ["content": page]]]
+            ]
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, try JSONSerialization.data(withJSONObject: envelope))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com",
+            model: "m",
+            agentID: "a",
+            apiKey: "k")
+        let result = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+        XCTAssertEqual(result.vocabulary.map(\.term), ["world", "hello"])
+        XCTAssertEqual(result.vocabulary[0].pos, "other")
+    }
+
+    func testOpenAICompatClientMaps401() async throws {
+        StubURLProtocol.handler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!
+            let data = Data(#"{"error":{"message":"bad key"}}"#.utf8)
+            return (response, data)
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com",
+            model: "m",
+            agentID: "a",
+            apiKey: "k")
+        do {
+            _ = try await client.analyze(
+                image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi")
+        } catch {
+            guard case let AnalysisError.providerError(message) = error else {
+                return XCTFail("mong đợi providerError, nhận \(error)")
+            }
+            XCTAssertTrue(message.contains("bad key"))
+        }
     }
 
     // MARK: - ReadoProxyClient wire (SD 4.1/4.2)
@@ -449,6 +665,22 @@ final class AnalysisTests: XCTestCase {
         XCTAssertEqual(rows[0][1].textValue, inboxID, "đích ngầm = kho tạm")
         XCTAssertEqual(rows[0][2].textValue, "new")
         XCTAssertEqual(rows[0][3].textValue, "2026-09-18T02:00:00Z")
+    }
+}
+
+private final class MemorySecrets: AgentSecretStore, @unchecked Sendable {
+    private var keys: [String: String] = [:]
+
+    func save(agentID: String, apiKey: String) throws {
+        keys[agentID] = apiKey
+    }
+
+    func contains(agentID: String) -> Bool {
+        keys[agentID]?.isEmpty == false
+    }
+
+    func delete(agentID: String) {
+        keys.removeValue(forKey: agentID)
     }
 }
 

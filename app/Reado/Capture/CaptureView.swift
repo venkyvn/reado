@@ -9,6 +9,7 @@ import TOCropViewController
 struct CaptureView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showSourcePicker = false
     @State private var showCamera = false
@@ -18,6 +19,7 @@ struct CaptureView: View {
     @State private var showCrop = false
     @State private var sourceImage: UIImage?
     @State private var isProcessing = false
+    @State private var showProcessingError = false
     // J2/port UI lab: đích lưu chọn NGAY lúc chụp (không chọn lại lúc duyệt từ).
     // nil = kho tạm; mở từ Hub → prefill sẵn tên bộ. `initialDest` để "quên" đích
     // khi hủy phiên chụp mà không chụp gì.
@@ -34,12 +36,20 @@ struct CaptureView: View {
         ZStack {
             if isProcessing {
                 ProgressView("Đang xử lý ảnh...")
+                    .transition(.opacity)
             } else {
                 captureButtons
+                    .transition(.opacity)
             }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: isProcessing)
         .navigationTitle("Chụp trang")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Không xử lý được ảnh", isPresented: $showProcessingError) {
+            Button("Đóng", role: .cancel) {}
+        } message: {
+            Text("Hãy thử chụp lại hoặc chọn một ảnh khác.")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Đóng") {
@@ -292,6 +302,8 @@ struct CaptureView: View {
             dismiss()
         } else {
             isProcessing = false
+            showProcessingError = true
+            Haptics.error()
         }
     }
 }

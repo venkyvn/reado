@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 struct ImportView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var rows: [CSVImport.CSVRow] = []
     @State private var parseError: String?
@@ -43,13 +44,20 @@ struct ImportView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let parseError {
-            errorState(parseError)
-        } else if rows.isEmpty {
-            emptyState
-        } else {
-            previewList
+        ZStack {
+            if let parseError {
+                errorState(parseError)
+                    .transition(.opacity)
+            } else if rows.isEmpty {
+                emptyState
+                    .transition(.opacity)
+            } else {
+                previewList
+                    .transition(.opacity)
+            }
         }
+        .animation(reduceMotion ? nil : Motion.reveal, value: parseError)
+        .animation(reduceMotion ? nil : Motion.reveal, value: rows.isEmpty)
     }
 
     private var emptyState: some View {
@@ -74,7 +82,7 @@ struct ImportView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.largeTitle)
-                .foregroundStyle(.orange)
+                .foregroundStyle(Theme.warn)
             Text(message)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
@@ -110,6 +118,7 @@ struct ImportView: View {
             guard let text = String(data: data, encoding: .utf8) else {
                 parseError = "Không đọc được file (không phải UTF-8)"
                 rows = []
+                Haptics.error()
                 return
             }
             let parsed = try model.parseImport(text)
@@ -118,6 +127,7 @@ struct ImportView: View {
         } catch {
             rows = []
             parseError = "Lỗi nhập: \(error.localizedDescription)"
+            Haptics.error()
         }
     }
 
@@ -126,32 +136,65 @@ struct ImportView: View {
         defer { isImporting = false }
         do {
             _ = try model.importRows(rows)
+            Haptics.success()
             dismiss()
         } catch {
             parseError = "Lỗi gộp: \(error.localizedDescription)"
+            Haptics.error()
         }
     }
 }
 
 /// Một dòng preview — checkbox + cảnh báo trùng + các field sửa được.
 private struct ImportRowView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var row: CSVImport.CSVRow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Toggle("", isOn: $row.isSelected)
-                    .labelsHidden()
+                Button {
+                    row.isSelected.toggle()
+                    Haptics.selection()
+                } label: {
+                    Image(systemName: row.isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(row.isSelected ? Color.accentColor : .secondary)
+                        .contentTransition(.symbolEffect(.replace))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(row.isSelected ? "Bỏ chọn \(row.term)" : "Chọn \(row.term)")
+                .accessibilityValue(row.isSelected ? "Đã chọn" : "Chưa chọn")
+                .accessibilityAddTraits(row.isSelected ? .isSelected : [])
                 TextField("term", text: $row.term)
                     .font(.headline)
                 if row.duplicateTerm {
                     Label("trùng", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.warn)
                 }
             }
             TextField("nghĩa tiếng Việt", text: $row.meaningVI, axis: .vertical)
                 .font(.subheadline)
+            metadataFields
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var metadataFields: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Từ loại", text: $row.pos)
+                TextField("IPA", text: $row.ipa)
+                TextField("CEFR", text: $row.cefr)
+                TextField("Ví dụ", text: $row.example, axis: .vertical)
+                TextField("Collection", text: $row.collection)
+            }
+            .font(.body)
+        } else {
             HStack(spacing: 8) {
                 TextField("pos", text: $row.pos)
                 TextField("ipa", text: $row.ipa)
@@ -165,6 +208,5 @@ private struct ImportRowView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 2)
     }
 }

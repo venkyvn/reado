@@ -7,6 +7,8 @@ import SwiftUI
 /// (không popover). CTA: còn due → Ôn (J4), 0 due → Chụp trang (J1). Không Cram.
 struct StreakCalendarView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var selectedDay: StreakDay?
     @State private var showReview = false
@@ -51,19 +53,35 @@ struct StreakCalendarView: View {
 
     // MARK: — Streak hiện tại + dài nhất
 
+    @ViewBuilder
     private var header: some View {
-        HStack(spacing: 16) {
-            stat(
-                title: "Chuỗi hiện tại",
-                value: "\(heatmap?.currentStreak ?? 0) ngày",
-                icon: "flame.fill",
-                tint: Theme.due)
-            stat(
-                title: "Dài nhất",
-                value: "\(heatmap?.longestStreak ?? 0) ngày",
-                icon: "crown.fill",
-                tint: Theme.warn)
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 12) {
+                currentStreak
+                longestStreak
+            }
+        } else {
+            HStack(spacing: 16) {
+                currentStreak
+                longestStreak
+            }
         }
+    }
+
+    private var currentStreak: some View {
+        stat(
+            title: "Chuỗi hiện tại",
+            value: "\(heatmap?.currentStreak ?? 0) ngày",
+            icon: "flame.fill",
+            tint: Theme.due)
+    }
+
+    private var longestStreak: some View {
+        stat(
+            title: "Dài nhất",
+            value: "\(heatmap?.longestStreak ?? 0) ngày",
+            icon: "crown.fill",
+            tint: Theme.warn)
     }
 
     private func stat(title: String, value: String, icon: String, tint: Color) -> some View {
@@ -90,8 +108,36 @@ struct StreakCalendarView: View {
                 .foregroundStyle(.secondary)
             GeometryReader { geo in
                 grid(width: geo.size.width)
+                    // 126 ô không thể đồng thời đạt 44pt mà vẫn vừa 18 cột.
+                    // Một vùng tap lớn chọn ô gần nhất; VoiceOver duyệt tuần tự.
+                    .contentShape(Rectangle())
+                    .gesture(
+                        SpatialTapGesture()
+                            .onEnded { selectDay(at: $0.location, width: geo.size.width) })
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Lịch học 18 tuần")
+                    .accessibilityValue(heatmapAccessibilityValue)
+                    .accessibilityHint("Vuốt lên hoặc xuống để duyệt từng ngày")
+                    .accessibilityAdjustableAction { direction in
+                        moveAccessibleSelection(direction)
+                    }
             }
             .aspectRatio(18.0 / 7.0, contentMode: .fit)
+            HStack(spacing: 4) {
+                Text("Ít")
+                ForEach(1...5, id: \.self) { level in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Theme.due.opacity(0.25 + 0.15 * Double(level)))
+                        .frame(width: 12, height: 12)
+                        .accessibilityHidden(true)
+                }
+                Text("Nhiều")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Mức độ ôn, từ ít đến nhiều")
         }
     }
 
@@ -116,10 +162,57 @@ struct StreakCalendarView: View {
         RoundedRectangle(cornerRadius: 2)
             .fill(color(for: day))
             .frame(width: size, height: size)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if let day { selectedDay = day }
+            .overlay {
+                if day?.date == selectedDay?.date {
+                    RoundedRectangle(cornerRadius: 2)
+                        .strokeBorder(.primary, lineWidth: 2)
+                }
             }
+    }
+
+    private func selectDay(at location: CGPoint, width: CGFloat) {
+        let spacing: CGFloat = 3
+        let size = max(6, (width - spacing * CGFloat(StreakCalendarService.weekCount - 1))
+            / CGFloat(StreakCalendarService.weekCount))
+        let step = size + spacing
+        let col = min(max(Int(location.x / step), 0), StreakCalendarService.weekCount - 1)
+        let row = min(max(Int(location.y / step), 0), StreakCalendarService.daysPerWeek - 1)
+        guard let day = day(at: col, row: row) else { return }
+        Motion.run(reduceMotion: reduceMotion) { selectedDay = day }
+        Haptics.selection()
+    }
+
+    private var availableDays: [StreakDay] {
+        heatmap?.weeks.flatMap { $0 }.compactMap { $0 } ?? []
+    }
+
+    private var heatmapAccessibilityValue: String {
+        guard let day = selectedDay else { return "Chưa chọn ngày" }
+        return dayAccessibilityValue(day)
+    }
+
+    private func dayAccessibilityValue(_ day: StreakDay) -> String {
+        let date = day.date.formatted(date: .long, time: .omitted)
+        return "\(date), \(day.reviewCount) thẻ ôn, \(day.pageCount) trang chụp"
+    }
+
+    private func moveAccessibleSelection(_ direction: AccessibilityAdjustmentDirection) {
+        let days = availableDays
+        guard !days.isEmpty else { return }
+        let current = selectedDay.flatMap { selected in
+            days.firstIndex { $0.date == selected.date }
+        }
+        let next: Int
+        switch direction {
+        case .increment:
+            next = min((current ?? -1) + 1, days.count - 1)
+        case .decrement:
+            next = max((current ?? days.count) - 1, 0)
+        @unknown default:
+            return
+        }
+        Motion.run(reduceMotion: reduceMotion) { selectedDay = days[next] }
+        Haptics.selection()
     }
 
     private func day(at col: Int, row: Int) -> StreakDay? {
@@ -135,7 +228,7 @@ struct StreakCalendarView: View {
             return Color(.systemGray5)
         }
         let level = Self.intensity(for: day.reviewCount)
-        return Color.orange.opacity(0.25 + 0.15 * Double(level))
+        return Theme.due.opacity(0.25 + 0.15 * Double(level))
     }
 
     /// Cường độ màu 1…5 theo số thẻ ôn (1 / 2 / 3–4 / 5–6 / 7+).
@@ -169,6 +262,7 @@ struct StreakCalendarView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .card()
+            .revealTransition()
         }
     }
 
@@ -188,7 +282,9 @@ struct StreakCalendarView: View {
         .buttonStyle(.borderedProminent)
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .background(.ultraThinMaterial)
+        .padding(.bottom, 8)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
     }
 
     private func reload() {
