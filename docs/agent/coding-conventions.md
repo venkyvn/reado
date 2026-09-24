@@ -1,0 +1,147 @@
+# Coding Conventions — Reado (Swift / iOS)
+
+| Field | Value |
+|---|---|
+| Created | 2026-09-18 (bản này thay bản TS PWA-gen — đã archive: [coding-conventions-pwa-gen.md](docs/archive/coding-conventions-pwa-gen.md)) |
+| Phạm vi | Code Swift R1: `app/Reado` (SwiftUI) + `app/ReadoKit` (package). Nguồn luật: bộ docs sản phẩm (PRD, db.md, tech-stack, rulebook). Mâu thuẫn với docs sản phẩm → docs thắng, ghi lại vào ROADMAP mục 4 |
+
+## 1. Ngôn ngữ & tên gọi
+
+- **Định danh code: tiếng Anh** — API/domain term ở lại codebase (`dueCardIDs`,
+  `dailyNewLimit`, `requestRetention`). Người đọc sau đổi provider vẫn hiểu.
+- **Chữ người dùng thấy (UI): tiếng Việt.** String hiển thị không nằm trong ReadoKit
+  (trừ tên seed cố định như `Seeder.defaultCollectionName`) — app layer sở hữu UI copy.
+- **Comment giải thích *vì sao*, tiếng Việt, ngắn.** Không kể lại *cái gì*. Quyết định
+  quan trọng ghi mã chốt kèm nguồn: `// Q-12 CHỐT: ...` / `// db.md A.1: ...`.
+
+## 2. Layout thư mục (ranh giới cứng)
+
+```
+app/
+  Reado.xcodeproj        — project Xcode (viết tay objectVersion 60; xem bẫy mục 6)
+  Reado/                 — app SwiftUI. UI + bootstrap; KHÔNG chạy SQL trực tiếp?
+                          (chỉ qua ReadoKit public API)
+  ReadoKit/              — package nền; toàn bộ logic sản phẩm
+    Sources/CSQLite/     — system library SQLite C (shim.h + module.modulemap)
+    Sources/ReadoKit/
+      Primitive           — Identifier, ISOTimestamp, Clock (không phụ thuộc tầng khác)
+      Time/               — DayBoundary — mọi phép "hôm nay" đi qua đây
+      Database/           — SQLiteDatabase (wrapping C API), Migration, Seeder
+      Review/             — ReviewScheduler (FSRS), CardSnapshot, ReviewService,
+                            ReviewQueue
+    Tests/ReadoKitTests/  — smoke nhanh cho `swift test` macOS
+  ReadoTests/            — bộ test hành vi chính, chạy iOS Simulator qua xcodebuild
+```
+
+- **ReadoKit là adapter cô lập thư viện ngoài:** kiểu của swift-fsrs (`Card`,
+  `Rating`, `CardState`) KHÔNG lọt vào API public — vào/ra qua `CardSnapshot`,
+  `ReadoRating`, `ReviewOutcome`. Muốn đổi thư viện FSRS chỉ đụng tầng `Review/`.
+- App layer không `import FSRS`, không `import CSQLite`.
+- Logic LIÊN QUAN dữ liệu (kể cả đọc overview) sống ở ReadoKit; View chỉ hiển thị.
+
+## 3. Dialect SQLite — đã chốt (db.md A.1, AGENTS mục 4)
+
+- `uuid` TEXT thường có gạch nối; sinh client-side qua `Identifier.uuid()`.
+- Timestamp TEXT ISO-8601 **UTC hậu tố `Z`, không fractional** qua `ISOTimestamp` —
+  chuỗi cùng độ dài nên so sánh lexicographic = so sánh thời gian.
+- Boolean = INTEGER 0/1; `fsrs_params` TEXT JSON + cột `fsrs_version` đi kèm.
+- `PRAGMA foreign_keys = ON` cho **mọi** connection (`SQLiteDatabase.init` làm sẵn).
+- Không dùng `datetime('now')` trần trong SQL — app truyền timestamp qua `Clock`.
+- Schema chỉ đổi qua `Migration` (user_version); DDL chuẩn nằm đúng từng dòng db.md.
+
+## 4. Dữ liệu & transaction
+
+- `cards.state` có **BỐN** giá trị `new/learning/review/relearning` — không gộp.
+- Một lần chấm = `UPDATE cards` + `INSERT review_logs` **CÙNG transaction**
+  (`ReviewService.record`). Log ghi ảnh chụp **TRƯỚC** khi chấm (`CardSnapshot`).
+- Undo = XOÁ đúng dòng log vừa ghi + trả card về snapshot, cùng transaction —
+  không UPDATE log cũ.
+- KHÔNG `unique (collection_id, term_normalized)` trên `vocab_items` — chống trùng
+  ở FR-10 lúc trích xuất.
+- `review_logs.scheduled_days` = nhịp MỚI sau lần chấm (convention ts-fsrs); nhịp
+  trong log của swift-fsrs là nhịp CŨ (`last.scheduledDays`) — đừng lẫn.
+
+## 5. FSRS
+
+- Luôn `ReadoFSRS.parameters(from:)` — `FSRSDefaults.defaultWv6` (21 trọng số);
+  **cấm** `FSRS()` không tham số (FSRS-5 = silent breakage).
+- Q-12: `enableShortTerm = false`, `learningSteps = []`, `relearningSteps = []` —
+  state `learning` không xuất hiện ở R1.
+- `fsrs_params` trong DB phải đi kèm `fsrs_version = 'fsrs-6'` và đủ 21 phần tử,
+  nếu không `ReviewSchedulerError.unsupportedParamsVersion`.
+- Mọi phép "hôm nay" đi qua `DayBoundary.window(now:timezone:dayCutoffHour:)`.
+
+## 6. Concurrency (package biên dịch Swift 6 mode)
+
+- Package tools 6.0 → strict concurrency bật sẵn: không `static let` cho class không
+  Sendable (`ISO8601DateFormatter`…). Dùng struct Sendable (`ISO8601FormatStyle`).
+- `@unchecked Sendable` chỉ cho wrapper sở hữu `OpaquePointer` C API
+  (`SQLiteDatabase`, `SQLiteStatement`) — không dùng để lách trách nhiệm concurrency.
+- Thời gian inject qua `Clock` (protocol Sendable) — cấm `Date()` trần trong logic.
+
+## 7. Kiểm thử
+
+- Acceptance criteria của FR = test case (rulebook mục 4). Test hành vi ở
+  `app/ReadoTests`, chạy iOS Simulator: `xcodebuild -project Reado.xcodeproj
+  -scheme Reado -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test`.
+- **ReadoTests KHÔNG có `TEST_HOST` — chỉ link `ReadoKit` (local package), KHÔNG
+  link app target.** Hệ quả: `AppModel`/SwiftUI view KHÔNG unit-test được. Test
+  logic ở ReadoKit (enum error, queue/service/decoder, repository); hành vi của
+  AppModel/view verify bằng owner e2e, không bằng unit test.
+- DB trong test dùng `SQLiteDatabase(inMemory:)`; fixtures qua enum `Fixtures`
+  (time + timezone cố định, không phụ thuộc đồng hồ thật).
+- Test file mới PHẢI có đủ 4 dòng trong pbxproj (PBXBuildFile + PBXFileReference
+  + group child + sources phase) — thiếu `PBXFileReference` là file bị skip **ngầm**
+  không báo lỗi build. Tin cột `Executed N tests`, không tin số trong commit cũ.
+- "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào ROADMAP.
+
+## 7b. Commit message — bắt buộc (owner chốt 2026-09-19)
+
+Mỗi task = một commit riêng. Format chuẩn:
+
+```
+feat(scope): tóm tắt bằng tiếng Việt — chi tiết cần thiết
+```
+
+- **Prefix** luôn là `feat:` (gitmoji không dùng). Scope trong ngoặc đơn: `app`,
+  `kit`, `docs`, `test`, `chore`…
+- `:` rồi một khoảng trắng rồi tóm tắt **tiếng Việt, mô tả FR/task đã làm**. Con
+  người đọc vào là biết đổi gì, không cần mở diff.
+- Tách `-` nếu có hai việc khác loại trong cùng commit (chi tiết lẻ).
+- Không để body trống: tóm tắt phải tự đứng được.
+- Không viết hoa sau dấu hai chấm kiểu Conventional Commits tiếng Anh — dùng tiếng
+  Việt như repo vẫn làm (`feat(app): xoá PWA — …`).
+
+Ví dụ:
+
+```
+feat(app): FR-01 capture — camera/photos picker + crop xoay, chọn/tạo collection tại chỗ
+feat(kit): FR-02 analysis — protocol PageAnalyzer + proxy client, mock cho walking skeleton
+```
+
+## 8. Điều cấm (danh sách đóng, từ docs)
+
+1. KHÔNG tự viết SRS algorithm — chỉ swift-fsrs + defaultWv6.
+2. KHÔNG thêm `unique` trên `vocab_items (collection_id, term_normalized)`.
+3. KHÔNG implement FR-07 / FR-13; không xoá dòng bia mộ khỏi docs.
+4. KHÔNG lưu ảnh trang vào SQLite (NFR-04 — chỉ segments JSON).
+5. KHÔNG ghi key API vào SQLite/plist/log (user key = Keychain, FR-21).
+6. KHÔNG tự chốt câu hỏi mở của owner; không đảo quyết định đã chốt.
+7. KHÔNG thêm dependencies ngoài nếu không thực sự cần (chỉ swift-fsrs hiện tại).
+8. KHÔNG `timestamptz` thiếu timezone — mọi ts app-side qua `Clock` + `ISOTimestamp`.
+9. KHÔNG lưu state SAU khi chấm vào log — snapshot TRƯỚC, cùng transaction.
+10. KHÔNG để kiểu lib ngoài lọt vào API public của ReadoKit (mục 1).
+
+## 9. Bẫy đã biết (thêm khi đụng)
+
+- **Bẫy `find` trong Swift Package:** Thư mục `.build/` của SPM chứa hàng ngàn file header hệ thống. Tuyệt đối không chạy `find` trần trên toàn bộ workspace, việc này sẽ làm tràn context window và tiêu tốn hàng chục ngàn token vô ích.
+- **pbxproj viết tay:** objectVersion 60 + `XCSwiftPackageProductDependency` cho
+  local package (class `PBXSwiftPackageProductDependency` parse fail ở objectVersion
+  này; bump lên 77 mới dùng được). Scheme share nằm ở `xcshareddata/xcschemes/`.
+- **`swift-fsrs` buildLog:** `log.scheduledDays` là nhịp CŨ — nhịp mới ở
+  `item.card.scheduledDays` (mục 4).
+- **SQLite `COLLATE NOCASE` chỉ gập ASCII** — gập hoa thường tiếng Việt là việc
+  tầng app lúc trim/insert (FR-20), không kỳ vọng DB làm (báo ROADMAP mục 4).
+- **ISO8601FormatStyle:** style khởi tạo trần không có field nào — phải compose
+  `.year().month().day().time(includingFractionalSeconds: false).timeZone(separator: .omitted)`
+  thì mới parse/format được (bẫy đã tốn 1 lần crash fixture trong test).

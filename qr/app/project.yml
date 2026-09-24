@@ -1,0 +1,65 @@
+name: Reado
+options:
+  bundleIdPrefix: app
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: 7.6.0
+  FSRS:
+    url: https://github.com/open-spaced-repetition/swift-fsrs
+    branch: main
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+targets:
+  Reado:
+    type: application
+    platform: iOS
+    sources:
+      - Reado
+    dependencies:
+      - package: GRDB
+        product: GRDB
+      - package: FSRS
+        product: FSRS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.reado
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Reado
+        INFOPLIST_KEY_NSCameraUsageDescription: Chụp trang sách để phân tích từ vựng.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Chọn ảnh trang từ thư viện.
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  ReadoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - ReadoTests
+    dependencies:
+      - target: Reado
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.reado.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Reado.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Reado"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  Reado:
+    build:
+      targets:
+        Reado: all
+        ReadoTests: [test]
+    test:
+      targets:
+        - ReadoTests

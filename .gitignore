@@ -24,10 +24,19 @@ scripts/verify/samples/*
 !scripts/verify/samples/.gitkeep
 scripts/verify/output/
 
-# Owner 2026-09-19 (chiều): git chỉ theo dõi code app/
-/*
-!/app/
-!/.gitignore
+# 2026-09-24 (owner): bỏ whitelist "chỉ app/" — track toàn bộ source + docs.
+# Các khối bí mật + build cache phía trên vẫn áp dụng.
+
+# qr/ = mock GRDB — chỉ commit source, bỏ cache build của nó
+.build-qr/
+.xcode-packages-qr/
+
+# Permission config cục bộ từng máy (không phải nội dung phân tích)
+.claude/settings.local.json
+
+# .env.example đang chứa key Gemini thật của owner — giữ ngoài git
+# (đảo lại dòng `!.env.example` phía trên).
+.env.example
 
 # Rác bytecode Python
 **/__pycache__/
