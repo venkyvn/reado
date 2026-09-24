@@ -39,6 +39,7 @@ enum Fixtures {
         term: String,
         normalized: String? = nil,
         id: String = Identifier.uuid(),
+        pos: String = "noun",
         createdAt: String = "2026-09-01T00:00:00Z"
     ) throws -> String {
         try db.run(
@@ -46,13 +47,14 @@ enum Fixtures {
             INSERT INTO vocab_items (
               id, collection_id, term, term_normalized, pos, ipa,
               meaning_vi, example, cefr, created_at
-            ) VALUES (?, ?, ?, ?, 'noun', NULL, 'nghĩa giả', 'câu ví dụ giả', NULL, ?);
+            ) VALUES (?, ?, ?, ?, ?, NULL, 'nghĩa giả', 'câu ví dụ giả', NULL, ?);
             """,
             [
                 .text(id),
                 .text(collectionID),
                 .text(term),
                 .text(normalized ?? term),
+                .text(pos),
                 .text(createdAt),
             ])
         return id

@@ -15,6 +15,7 @@ public enum Seeder {
     /// FR-19 — ngưỡng leech mặc định R1. 🔶 TẠM = 6, CHƯA CHỐT — thuộc nhóm Q-08.
     /// PRD FR-19: "ngưỡng cụ thể chưa chốt… nếu 'thẻ sai' đúng thì nên thấp hơn Anki 8".
     /// Chờ owner chốt số; đổi đây + literal trong LeechTests cùng lúc.
+    /// Owner chốt 2026-09-24: suspend khi lapses >= 6. Không phải placeholder.
     public static let defaultLeechLapses = 6
 
     public static func isSeeded(on db: SQLiteDatabase) throws -> Bool {

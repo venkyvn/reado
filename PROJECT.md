@@ -98,7 +98,8 @@ leech, capture failure (91 test xanh, 2026-09-24). `app/ReadoKit/Tests` là smok
 - NG-05: R1 is one user. Do not prompt UI for J7–J9 (login / account).
 - Walking skeleton first: capture → analyze → review & edit → save → review
   (FR-01, FR-02, FR-03, FR-09, FR-11, FR-12) plus the default collection (`is_default` of FR-17).
-- Q-06, Q-08, Q-09, Q-10, Q-11 are owner decisions. Ask. Do not pick silently.
+- Câu đang mở chỉ còn Q-11. Ngưỡng leech đã chốt = 6. Danh sách đầy đủ ở
+  [CLAUDE.md](CLAUDE.md) mục 5. Q-06, Q-08, Q-09, Q-10 đã chốt — không hỏi lại.
   Do not re-open Q-01–Q-02 or Q-12. Q-03 = hybrid (v0.9); đừng đảo về proxy-only
   im lặng.
 - Owner's manual Gemini prompt is not in the repo. Do not treat the reconstructed

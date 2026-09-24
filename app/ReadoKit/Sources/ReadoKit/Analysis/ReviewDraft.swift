@@ -89,9 +89,14 @@ public enum ReviewDraftBuilder {
     ///   → giữ hành vi cũ (chọn mọi verified) cho test tương thích.
     public static func drafts(
         from items: [PageAnalysis.VocabularyItemIn],
-        selectedLevels: Set<String>? = nil
+        selectedLevels: Set<String>? = nil,
+        excludingMature: Set<String> = []
     ) -> [ReviewDraft] {
-        let all = items.map { item in
+        let visible = items.filter { item in
+            !excludingMature.contains(
+                VocabRepository.matureKey(term: item.term, pos: item.pos))
+        }
+        let all = visible.map { item in
             ReviewDraft(
                 term: item.term,
                 pos: item.pos,

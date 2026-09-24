@@ -621,8 +621,7 @@ trí nhớ trên thẻ: nhìn "Sapiens" thì não phải tự dựng lại bối
 
 **`term`** — thứ hiện ở mặt trước. Lưu **đúng dạng đã gặp**, không đưa về nguyên
 thể: gặp `weathered the storm` thì lưu vậy, vì dạng thật sự đọc mới là dạng gắn với
-ký ức. Câu hỏi có nên đưa `running` về `run` hay không chính là Q-06, vẫn mở, nhưng
-đã bớt cấp bách vì không còn ràng buộc `unique` ép phải chọn.
+ký ức. Q-06 đã chốt (ADR-032, 2026-09-22): không lemmatize — `running` và `run` là hai dòng.
 
 **`term_normalized`** — chữ thường, cắt khoảng trắng thừa. Sau khi bỏ `unique`, nó
 **đổi vai từ khoá ràng buộc thành khoá tra cứu**: Gemini trả về 8 từ từ một trang,
@@ -1231,10 +1230,7 @@ trùng duy nhất còn lại** — từ nào người dùng đã thuộc thì kh
 
 Hạt giống cho session sau. Xếp theo mức độ ảnh hưởng tới schema.
 
-1. **Word family và lemmatization theo Nation.** Nation dùng khái niệm word
-   family (một headword cùng các dạng biến thể). Liệu Reado nên gộp theo word
-   family, hay giữ từng word form riêng? Đây chính là Q-06 nhưng hỏi ở tầng lý
-   thuyết. Ảnh hưởng trực tiếp tới cột `term_normalized`.
+1. **Word family và lemmatization theo Nation.** Q-06 đã chốt: không lemmatize, mỗi word form một dòng. Câu nghiên cứu còn lại (gộp word family) không mở lại Q-06; nếu làm thì là quyết định mới, không phải task R1.
 2. **Frequency band.** Nation có các danh sách theo tần suất (2000/3000 từ đầu
    tiên), và có BNC/COCA. Reado có nên dùng tần suất để ưu tiên thẻ nào học
    trước, thay vì chỉ dựa vào thứ tự gặp trong sách?

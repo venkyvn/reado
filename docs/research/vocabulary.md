@@ -621,8 +621,7 @@ trí nhớ trên thẻ: nhìn "Sapiens" thì não phải tự dựng lại bối
 
 **`term`** — thứ hiện ở mặt trước. Lưu **đúng dạng đã gặp**, không đưa về nguyên
 thể: gặp `weathered the storm` thì lưu vậy, vì dạng thật sự đọc mới là dạng gắn với
-ký ức. Câu hỏi có nên đưa `running` về `run` hay không chính là Q-06, vẫn mở, nhưng
-đã bớt cấp bách vì không còn ràng buộc `unique` ép phải chọn.
+ký ức. Q-06 đã chốt (ADR-032, 2026-09-22): không lemmatize — `running` và `run` là hai dòng.
 
 **`term_normalized`** — chữ thường, cắt khoảng trắng thừa. Sau khi bỏ `unique`, nó
 **đổi vai từ khoá ràng buộc thành khoá tra cứu**: Gemini trả về 8 từ từ một trang,
@@ -775,9 +774,9 @@ chúng là chốt ở đó chứ không phải ở đây.
 
 | Câu hỏi | Ghi chú |
 |---|---|
-| Ngưỡng "đã thuộc" để bộ lọc trích xuất bỏ qua một từ | Đo bằng FSRS stability, nhưng ngưỡng bao nhiêu thì chưa biết. PRD Q-08 |
-| Bộ lọc trích xuất so khớp trong phạm vi collection hay toàn cục | Toàn cục thì chặt hơn nhưng chặn cả nghĩa mới của từ cũ. PRD Q-09 |
-| Có lemmatize `term_normalized` không | Bớt cấp bách sau khi bỏ `unique`, nhưng ảnh hưởng chất lượng bộ lọc. PRD Q-06 |
+| Ngưỡng "đã thuộc" để bộ lọc trích xuất bỏ qua một từ | Đã chốt Q-08: `stability >= 21`. Task 3.8 chưa bật trong code |
+| Bộ lọc trích xuất so khớp trong phạm vi collection hay toàn cục | Đã chốt Q-09: theo collection |
+| Có lemmatize `term_normalized` không | Đã chốt Q-06: không lemmatize |
 | ~~Buffer cuộn giữ bao nhiêu trang, hết phiên có xoá không~~ | **Chốt 2026-09-18 (Q-10):** 10 phiên gần nhất mỗi collection có tên; kho tạm không lưu; phiên thứ 11 trôi |
 | Ai sinh `word_relations` ở R2, và bao lâu một lần | AI đề xuất là chắc, nhưng trigger và chi phí chưa tính. Chưa vào PRD vì thuộc R2 |
 | Hai chế độ R2 làm ước lượng thấp `stability` — xử lý thế nào | Bẫy 5. Ảnh hưởng cả FR-10 chứ không riêng tầng lịch. PRD Q-11, mốc: trước khi bật R2 |
@@ -1216,7 +1215,7 @@ trùng duy nhất còn lại** — từ nào người dùng đã thuộc thì kh
 
 | Câu hỏi | Ghi chú |
 |---|---|
-| Q-06 — có lemmatize không | `running` / `run`, `took` / `take`. Bớt cấp bách sau khi bỏ `unique`, nhưng vẫn ảnh hưởng chất lượng bộ lọc 1T |
+| Q-06 — có lemmatize không | **Đã chốt 2026-09-22:** không. `running` / `run` là hai dòng |
 | Thời điểm mở thẻ productive | GP2 để schema sẵn, chưa quyết khi nào bật. Lưu ý: chế độ "Gợi nhớ theo nhóm" ở R2 cho chiều productive mà không nhân đôi số thẻ |
 | Giới hạn thẻ mới mỗi ngày là bao nhiêu | Schema đặt `daily_new_limit` mặc định 10, chưa kiểm chứng |
 
@@ -1232,10 +1231,7 @@ trùng duy nhất còn lại** — từ nào người dùng đã thuộc thì kh
 
 Hạt giống cho session sau. Xếp theo mức độ ảnh hưởng tới schema.
 
-1. **Word family và lemmatization theo Nation.** Nation dùng khái niệm word
-   family (một headword cùng các dạng biến thể). Liệu Reado nên gộp theo word
-   family, hay giữ từng word form riêng? Đây chính là Q-06 nhưng hỏi ở tầng lý
-   thuyết. Ảnh hưởng trực tiếp tới cột `term_normalized`.
+1. **Word family và lemmatization theo Nation.** Q-06 đã chốt: không lemmatize, mỗi word form một dòng. Câu nghiên cứu còn lại (gộp word family) không mở lại Q-06; nếu làm thì là quyết định mới, không phải task R1.
 2. **Frequency band.** Nation có các danh sách theo tần suất (2000/3000 từ đầu
    tiên), và có BNC/COCA. Reado có nên dùng tần suất để ưu tiên thẻ nào học
    trước, thay vì chỉ dựa vào thứ tự gặp trong sách?

@@ -323,6 +323,21 @@ final class AppModel {
         return try? SettingsService.load(on: database)
     }
 
+    /// FR-10: term+pos đã thuộc (stability >= 21, state review) trong collection
+    /// đang chụp. Chưa chọn bộ → kho tạm. Lỗi DB → tập rỗng, không giấu từ.
+    func matureKeysForCapture() -> Set<String> {
+        guard let database else { return [] }
+        let collectionID: String?
+        if let analysisTargetCollectionID {
+            collectionID = analysisTargetCollectionID
+        } else {
+            collectionID = try? database.scalarString(
+                "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+        }
+        guard let collectionID else { return [] }
+        return (try? VocabRepository.matureKeys(on: database, collectionID: collectionID)) ?? []
+    }
+
     /// Lưu các núm (CEFR đa level + 3 học tập + 2 nhắc ôn) + reload overview để số
     /// đếm Home nhận hạn mức / giờ chuyển ngày mới NGAY. CEFR có hiệu lực từ lần
     /// `capture` kế tiếp (FR-15: trang đã phân tích không chạy lại).

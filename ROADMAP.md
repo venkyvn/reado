@@ -72,9 +72,9 @@ Các ADR thuần PWA-tech (016 shadcn · 017 zustand · 018 i18n · 021 lazy · 
 
 **CHƯA CHỐT — không tự quyết, không lấp:**
 Q-11 stability jitter hai chế độ R2 (chốt trước Phase 4) ·
-ngưỡng leech FR-19 (đếm `lapses`; Anki mặc định 8, code placeholder 6 — chốt riêng, KHÔNG gộp Q-08) ·
-hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · model Gemini (chốt ở 0.8, bước A-01/A-02) ·
-`settings.timezone` còn thiếu trên schema logic — bổ sung lúc SD 0.6.
+ngưỡng leech FR-19 = 6 (owner chốt 2026-09-24, không gộp Q-08) ·
+hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · model Gemini (chốt ở 0.8, bước A-01/A-02).
+`settings.timezone` đã có trên schema (seed từ device, task 1.3) — không còn thiếu.
 (Đã đóng 09-17/09-18: Q-01/02/03 pivot · local-vs-APNs = local cho R1 · framework proxy = Python · encrypted.txt = xoá · chỗ đặt code PWA cũ.
 Đã đóng 2026-09-22: Q-06 không lemmatize · Q-08 stability ≥ 21 · Q-09 theo collection.)
 
@@ -156,7 +156,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | 3.10 | FR-20 CSV Import — scope v2: **CSV gộp, không JSON** (cập nhật lại docs/vocabulary.md cho khớp khi làm: bỏ nhánh JSON, giữ atomic/remap/preview) | Đi cùng phao cứu sinh; scope đã chốt | ✅ 2026-09-24 — 141/141 test xanh iPhone 18 Pro, commit `602ded5`. `CSVImport` (parse tab/comma quote-aware, delimiter-detect từ header, map cột theo tên; khớp collection **không hoa thường giữ dấu** qua `fold`=trim+`lowercased()` Unicode, trống→kho tạm, lạ→tạo mới; card `new`/due hôm nay mirror `saveCapture`; trùng term→cảnh báo không tự loại; atomic 1 transaction) + `ImportView` (fileImporter + preview sửa field/bỏ dòng + "Gộp (N)") + ExportView section "Nhập" + 12 test `CSVImportTests` |
 | 3.12 | Reminder ôn tập (nếu ∈ R1 — chốt local vs APNs ở 0.5) | Q-05 đã chốt **local** (0.5) — chỉ còn code | ✅ 2026-09-24 — 148/148 test xanh iPhone 18 Pro, commit `caa958f`. `LearningSettings` + `reminderEnabled`/`reminderMinutes` (default tắt/20:00) + Migration v2 (2 cột `settings`) + `ReminderService` (time/describe thuần) + `NotificationScheduler` (UNCalendarNotificationTrigger lặp hằng ngày) + SettingsView section "Nhắc ôn tập" (Toggle + wheel 15') + ReadoApp khôi phục lịch lúc khởi động + 7 test `ReminderTests` |
 | 3.4 | FR-05 Buffer cuộn ~10 trang + FR-06 tóm tắt trang | Q-10 **đã chốt** (ADR-029) — làm như T1 (J2 hub + sessions) | ✅ 2026-09-22 — commit `a7a2e15`, 165/165 test iPhone 18 Pro. `ReadingSessionRepository` (codec `{source_en,translation_vi}`, `listSessions` mới-trước, `insertInsideTransaction` chèn cùng transaction #4); `saveCapture` ghi phiên chỉ cho collection có tên + trim 10; `AnalysisView` picker đích; `CollectionDetailView` (J2 hub) ôn scoped + chụp vào bộ + list phiên → `ReadingSessionView` (ADR-007 xen kẽ + ADR-030 nút ẩn/hiện dịch + FR-06 summary gập). ⚠️ **Chưa làm "Từ session collect thêm"** — xem §4 |
-| 3.8 | FR-10 Lọc "đã thuộc" lúc trích xuất | Cần **chốt Q-06/Q-08/Q-09** bằng dữ liệu thật trước → lùi | ⬜ |
+| 3.8 | FR-10 Lọc "đã thuộc" lúc trích xuất | Q-06/Q-08/Q-09 **đã chốt** (ADR-032, 2026-09-22). Còn chờ dữ liệu thật trước khi bật — không hỏi lại ba Q | ⬜ chưa code |
 | 3.11 | FR-21 đầy đủ: list agent OpenAI-compat + add key Keychain + chọn active cho FR-02 | Sau skeleton (PRD mục 10); còn chờ 0.7 proxy + 1.5 adapter | ⬜ |
 | 3.13 | Đo + ghi nhận NFR-01/NFR-02 (chưa chốt ngưỡng) + kiểm M-07 bằng dữ liệu thật | R1 chỉ đo, R2 mới chốt ngưỡng; M-07 cần dữ liệu thật → cuối | ⬜ |
 

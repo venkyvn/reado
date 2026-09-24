@@ -21,7 +21,7 @@
     -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
     -derivedDataPath "$PWD/../DerivedData" -clonedSourcePackagesDirPath "$PWD/../.xcode-packages" test
   ```
-- Mốc khoẻ: **98/98 test xanh** (migration/seed, queue, grade+undo, snapshot, primitives, export, leech, capture failure, daily progress).
+- Mốc khoẻ đã ghi: **182/182 test xanh** trên iPhone 18 Pro tại `9c1becc`. Máy không build iOS thì không chạy lại và không ghi số mới.
 - **Chống đốt token khi build:** `xcodebuild` luôn `| tee /tmp/build.log | grep -E "error:|warning:|TEST.*passed|TEST.*failed|BUILD" | tail -n 60` — không ném raw log vào context. Chỉ `grep` trong `/tmp/build.log` khi cần. Chi tiết: `AGENTS.md §2` + `§4`.
 
 ## 3. Sơ đồ docs
@@ -58,12 +58,15 @@
 
 ## 5. Đã chốt / còn mở
 
-- **Chốt:** Q-01 iOS native · Q-02 local SQLite · Q-03 proxy hybrid · Q-10 10 phiên đọc/collection · Q-12 tắt steps.
-- **Mở — phải HỎI owner (có đánh đổi):** Q-06, Q-08, Q-09, Q-11. Chi tiết: `docs/agent/agent-rulebook.md`.
+Danh sách này là nguồn duy nhất. Agent và command không chép lại số Q.
+
+- **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 proxy hybrid · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp theo collection · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
+- **Chốt thêm 2026-09-24:** ngưỡng leech FR-19 = **6** lần Again. Không gộp với Q-08.
+- **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ
 
 1. Chiếu vào 6 nguyên lý `docs/specs/vision.md` → mỗi nguyên lý có "Chống lại".
 2. Kiểm non-goals (NG-01..09) + bảng "Đã chốt" (`docs/agent/agent-rulebook.md`). Dòng đã chốt sai → BÁO LẠI, không sửa.
-3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner (Q-06/08/09/11).
+3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner đúng câu còn mở ở mục 5 (Q-11). Ngưỡng leech đã chốt = 6.
 4. Chỉ là chi tiết hiển thị → chọn cách đơn giản nhất, ghi lại lựa chọn.

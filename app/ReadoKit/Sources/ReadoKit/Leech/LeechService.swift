@@ -3,7 +3,7 @@ import Foundation
 /// FR-19 — Leech Handling.
 ///
 /// Phát hiện card bị chấm *Again* vượt ngưỡng (`settings.leech_lapses`) và đưa ra khỏi hàng đợi ôn tập
-/// bằng cách set `cards.suspended_at`. Ngưỡng NULL = tính năng tắt (Q-08 chưa chốt số — R1 mặc định 6).
+/// bằng cách set `cards.suspended_at`. Ngưỡng NULL = tắt. Owner chốt 2026-09-24: seed = 6. Không phải Q-08.
 public enum LeechService {
 
     /// Kết quả một lần kiểm tra leech sau khi chấm.

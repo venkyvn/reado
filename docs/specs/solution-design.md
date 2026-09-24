@@ -279,13 +279,10 @@ Thứ tự theo ROADMAP 2.1→2.6. Fix dần `AppModel` scaffold trong lúc đi 
    gọi `analyze`, hiện progress, kết quả vào buffer in-memory (chưa lưu — FR-02).
 3. **2.3 Duyệt & sửa** — item `unverified`/`suspect` lên đầu, **bỏ chọn sẵn** (FR-02/03);
    sửa field; chọn collection; commit = transaction #4. Note FR-03: sửa lại `example`
-   phải chấp nhận khi chưa khớp gốc — hành vi user chủ động (MỞ: có đánh dấu hay không,
-   chốt lúc 2.3).
+   phải chấp nhận khi chưa khớp gốc — hành vi user chủ động (đã chốt lúc 2.3: sửa example không đổi nhãn verification).
 4. **2.4 `is_default`** — kho tạm luôn là collection đích khi không chọn; Home shortcut
    theo journeys.
-5. **2.5 Hàng đợi + vuốt** — dùng `ReviewQueue` (shape **ĐỀ XUẤT**, chốt cùng bước này —
-   ROADMAP mục 4); vuốt theo ADR-025; undo theo `ReviewService.undo`; lật card mở chi
-   tiết (ADR-008).
+5. **2.5 Hàng đợi + vuốt** — `ReviewQueue` hai nhánh (shape đã chốt khi task này ship); vuốt theo ADR-025; undo theo `ReviewService.undo`; lật card mở chi tiết (ADR-008).
 6. **2.6 e2e** — owner chạy thật trên iPhone gồm ôn offline (NFR-03); `xcodebuild test`
    xanh là bằng chứng tối thiểu, không thay thế.
 
@@ -310,7 +307,9 @@ chốt cùng 3.11).
 5. `AppContainer` actor hoá thay `AppModel` khi vào 2.2.
 6. DDL giữ **một nguồn áp dụng = migration code**, docs làm bản đối chiếu (mục 5).
 
-### 12.2 Vẫn MỞ (đã có mốc chốt riêng — KHÔNG lấp ở đây)
+### 12.2 Chỗ còn mở, và chỗ doc này từng ghi mở nhưng đã đóng
+
+Còn mở — không lấp:
 
 | Việc | Mốc |
 |---|---|
@@ -318,11 +317,17 @@ chốt cùng 3.11).
 | Hosting vendor · auth proxy · FastAPI/Flask | lúc deploy / 0.7 |
 | Model Gemini cụ thể | 0.8 (A-01/A-02) |
 | `response_format` từng provider OpenAI-compat · telemetry BYOK | 3.11 |
-| Shape query `ReviewQueue` (đang là đề xuất code) | 2.5 |
-| Cơ chế gập hoa thường tiếng Việt (NOCASE ASCII-only) | 3.10 (FR-20) |
-| Ngưỡng "gần khớp" verify · giới hạn item/trang · thư viện crop · đa trang | 0.8 / khi chạm |
-| `edited_count` FR-03 | 2.3 |
-| Q-06/Q-08/Q-09 (FR-10) · Q-10 buffer · Q-11 (R2) | theo ROADMAP mục 1 |
+| Ngưỡng "gần khớp" verify · giới hạn item/trang · đa trang một lúc | 0.8 / khi chạm |
+| `edited_count` FR-03 | Vẫn mở — task 2.3 không thêm cột này; code không có field |
+| Q-11 (jitter R2) | `CLAUDE.md` mục 5. Leech đã chốt = 6 |
 
-Tất cả các chỗ MỞ trên, nếu người implement sau "thấy hiển nhiên" thì **giá trị của
-hiển nhiên không được dùng** — việc cần làm là hỏi owner (cam kết AGENTS mục 3).
+Đã đóng — đừng hỏi lại:
+
+| Việc | Chốt |
+|---|---|
+| Shape query `ReviewQueue` | Task 2.5 ship (hai nhánh). FR-18 thêm `scope` sau đó |
+| Gập hoa thường tiếng Việt | 2026-09-24: `lowercased()` Unicode, giữ dấu |
+| Q-06 / Q-08 / Q-09 / Q-10 | `CLAUDE.md` mục 5 |
+
+Tất cả các chỗ còn mở, nếu người implement sau "thấy hiển nhiên" thì **giá trị của
+hiển nhiên không được dùng** — việc cần làm là hỏi owner.

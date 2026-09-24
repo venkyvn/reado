@@ -5,7 +5,7 @@ DSH là tool chính. File này KHÔNG nhân đôi CLAUDE.md — chỉ chứa pro
 
 ## 1. Session protocol
 
-- **Turn 1 — session mới:** Đọc DUY NHẤT `docs/session-brief.md` để nhận bàn giao.
+- **Turn 1 — session mới:** Đọc `CLAUDE.md`, rồi `docs/session-brief.md` mục 1–3. Câu đang mở chỉ ở `CLAUDE.md` mục 5.
 - **Từ Turn 2:** CẤM đọc lại `session-brief.md` hay bất kỳ file đã có trong ngữ cảnh.
 - **Không tự đọc lại file vừa sửa:** Nội dung vừa ghi đã nằm sẵn trong context. Cấm `read` để xác nhận lại.
 - **Lệnh code cụ thể:** Viết code ngay bằng `write`/`edit`. Không đọc tài liệu dạo đầu.
@@ -43,8 +43,9 @@ python3 scripts/pbxproj_tool.py add --file app/Reado/SettingsView.swift --group 
 # Thêm test file
 python3 scripts/pbxproj_tool.py add --file app/ReadoTests/SettingsTests.swift --group ReadoTests --target ReadoTests
 
-# Gỡ file
-python3 scripts/pbxproj_tool.py remove --file app/Reado/OldView.swift --group Reado --target Reado
+# Gỡ file: KHÔNG gọi `remove`. Lệnh đó hỏng (hàm `remove_file` high-level shadow
+# bản low-level → TypeError). Sửa tay đủ 4 dòng pbxproj rồi grep-verify, hoặc sửa tool trước.
+# Chi tiết: docs/session-brief.md mục 3.
 
 # Verify sau khi thêm — CHỈ grep 3 dòng, KHÔNG read lại:
 grep -c "SettingsView" app/Reado.xcodeproj/project.pbxproj   # mong đợi ≥ 3
@@ -72,11 +73,11 @@ grep -rn "FR-16" docs/specs/prd.md | head -n 20
 Task lớn xong → flow bắt buộc:
 
 1. **Hỏi owner approve** — hỏi 1 câu duy nhất, ví dụ: *"Task X xong rồi, approve để commit + handoff không?"*.
-2. **Owner approve** → agent **chủ động làm tất cả**:
-   a. `git commit` đúng format `feat(scope): tiếng Việt — tóm tắt` theo conventions mục 7b.
-   b. Cập nhật `docs/session-brief.md` (§1 tình trạng + §2.5 đã xong + HEAD commit hash).
-   c. Append 3–5 dòng vào `docs/journal/YYYY-MM-DD.md` (gì xong / gì còn / bẫy nào).
-   d. Nếu task thay đổi trạng thái ROADMAP/PROJECT — cập nhật luôn.
+2. **Owner approve** → agent **chủ động làm tất cả**, doc trước commit:
+   a. Thay khối hiện tại của `docs/session-brief.md` §1 (không nối bullet task cũ). HEAD trong brief lấy từ `git log -1 --oneline` sau commit; chưa commit thì ghi "HEAD xem git".
+   b. Append 3–5 dòng vào `docs/journal/YYYY-MM-DD.md` (gì xong / gì còn / bẫy nào).
+   c. Nếu task thay đổi trạng thái ROADMAP/PROJECT — cập nhật luôn.
+   d. Stage `app/` cộng các doc vừa sửa, rồi `git commit` đúng format `feat(scope): tiếng Việt — tóm tắt` theo conventions mục 7b.
 3. **Không chờ owner nhắc lại** — commit + handoff là một bước, không tách rời.
 4. Kết thúc phiên — không dồn việc vào session đang phình.
 
@@ -84,7 +85,7 @@ Task lớn xong → flow bắt buộc:
 
 - **1 task = 1 session.** Cấm gộp `2.4 + 2.5` vào cùng session. Xong task → chốt session → task tiếp ở session mới.
 - **Tối đa 12–15 steps/turn.** Vượt ngưỡng → dừng, tóm tắt đã làm, hỏi owner `commit + handoff` hay tiếp tục.
-- **Input >60k/step là tín hiệu handoff.** Context đã phình — mỗi step sau tốn gấp đôi, rẻ hơn nhiều nếu `commit` + mở session mới (Turn 1 chỉ đọc `session-brief.md`).
+- **Input >60k/step là tín hiệu handoff.** Context đã phình — mỗi step sau tốn gấp đôi, rẻ hơn nhiều nếu `commit` + mở session mới (Turn 1 đọc `CLAUDE.md` rồi brief mục 1–3).
 - **Ví dụ vi phạm (session1.txt Turn 7):** 36 steps, input leo từ 59k → 137k/step, tổng 2.26M input/turn — tốn gấp 34× so với 3 turn trước. Nguyên nhân: gộp 2 task + đọc chùm 5 file lớn + không handoff.
 
 ## 4. Bẫy build máy này

@@ -82,6 +82,44 @@ public enum VocabRepository {
             .lowercased()
     }
 
+    /// Q-08: stability từ mức này trở lên, state `review`, là "đã thuộc".
+    /// `known_stability` NULL trong settings cũng dùng số này — NULL không tắt lọc.
+    public static let defaultMatureStability = 21.0
+
+    /// Khoá so khớp FR-10: form từ (không lemmatize) + loại từ, trong một collection.
+    public static func matureKey(term: String, pos: String) -> String {
+        let posKey = pos.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "\(normalizedTerm(term))|\(posKey)"
+    }
+
+    /// Term+pos đã thuộc trong đúng collection (Q-09). Không tính leech
+    /// (`suspended_at`) và không tính collection khác.
+    public static func matureKeys(
+        on db: SQLiteDatabase, collectionID: String
+    ) throws -> Set<String> {
+        let setting = try db.rows(
+            "SELECT known_stability FROM settings WHERE id = 1 LIMIT 1;")
+        let threshold = setting.first?.first?.doubleValue ?? defaultMatureStability
+        let rows = try db.rows(
+            """
+            SELECT v.term_normalized, v.pos
+            FROM vocab_items v
+            JOIN cards c ON c.vocab_item_id = v.id
+            WHERE v.collection_id = ?
+              AND c.state = 'review'
+              AND c.stability >= ?
+              AND c.suspended_at IS NULL;
+            """,
+            [.text(collectionID), .double(threshold)])
+        return Set(rows.compactMap { row in
+            guard row.count >= 2,
+                  let term = row[0].textValue,
+                  let pos = row[1].textValue
+            else { return nil }
+            return "\(term)|\(pos.lowercased())"
+        })
+    }
+
     /// Tạo collection mới. Tên trim trước khi insert (db.md A.2.2 — NOCASE
     /// không thay trim). Trả nil nếu trùng tên (index unique).
     public static func createCollection(

@@ -175,9 +175,17 @@ CREATE TABLE settings (
   leech_lapses       INTEGER,        -- FR-19 hanh dong; NULL = chua bat. lapses van dem
   fsrs_params        TEXT,           -- JSON array; null = default thu vien
   fsrs_version       TEXT,           -- 'fsrs-6' ke ca khi fsrs_params null
-  home_shortcut_1_id TEXT REFERENCES collections(id) ON DELETE SET NULL,
-  home_shortcut_2_id TEXT REFERENCES collections(id) ON DELETE SET NULL,
-  active_agent_id    TEXT NOT NULL REFERENCES analysis_agents(id)
+  home_shortcut_1_id TEXT REFERENCES collections(id) ON DELETE SET NULL, -- deprecate: v3 copy sang home_pin_ids rồi NULL
+  home_shortcut_2_id TEXT REFERENCES collections(id) ON DELETE SET NULL, -- deprecate, cùng lý do
+  active_agent_id    TEXT NOT NULL REFERENCES analysis_agents(id),
+  -- Các cột dưới KHÔNG có trong DDL v1. Migration v2/v3 ALTER thêm.
+  -- Shape này là bảng sau currentVersion = 3.
+  reminder_enabled    INTEGER NOT NULL DEFAULT 0,          -- v2. 0 = tắt
+  reminder_minutes    INTEGER NOT NULL DEFAULT 1200,       -- v2. phút từ nửa đêm; 1200 = 20:00
+  cefr_levels         TEXT NOT NULL DEFAULT '["B2"]',     -- v3. JSON array A2–C1. cefr_level đơn deprecate
+  home_pin_ids        TEXT NOT NULL DEFAULT '[]',         -- v3. JSON, tối đa 5, thứ tự user ghim
+  review_priority_ids TEXT NOT NULL DEFAULT '[]',         -- v3. JSON, tối đa 3 collection ôn nhanh
+  review_all          INTEGER NOT NULL DEFAULT 0          -- v3. 1 = ôn mọi collection
 );
 ```
 
@@ -193,16 +201,16 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 
 1. `INSERT` collection kho tạm, `is_default = 1`.
 2. `INSERT` `analysis_agents`: `id = '00000000-0000-4000-a000-000000000001'`, `kind = 'reado_proxy'`, `name = 'Reado'`, `base_url` / `model` null, `created_at` now UTC `Z`. Hàng này **không xoá được**.
-3. `INSERT` `settings` (`id = 1`): `timezone` = IANA của device, `fsrs_version = 'fsrs-6'`, `fsrs_params` null (default thư viện + `defaultWv6` lúc gọi FSRS), `home_shortcut_*` null, `known_stability` / `leech_lapses` null, `active_agent_id` = id proxy ở bước 2.
+3. `INSERT` `settings` (`id = 1`): `timezone` = IANA của device, `fsrs_version = 'fsrs-6'`, `fsrs_params` null (default thư viện + `defaultWv6` lúc gọi FSRS), `home_shortcut_*` null, `known_stability` null, `leech_lapses` = 6 (**owner chốt 2026-09-24** — không phải Q-08), `active_agent_id` = id proxy ở bước 2. Cột v2/v3 lấy DEFAULT của ALTER (`reminder` tắt, `cefr_levels` `["B2"]`, pin và priority rỗng).
 
 ### A.2.2 App-rule — không CHECK SQL
 
 | Rule | Vì sao |
 |---|---|
 | R1 chỉ `INSERT` card `direction = 'receptive'` | GP2: cột `productive` sẵn, feature R2 |
-| Không gán `home_shortcut_*` = kho tạm (`is_default = 1`) | FR-17: kho tạm không phải bài đọc chủ động |
-| Không để hai shortcut trùng `collection_id` | Hai slot, hai collection |
-| `known_stability` / `leech_lapses` NULL | Chưa bật lọc FR-10 / hành động leech. Q-08 chưa chốt số. Cột `cards.lapses` vẫn đếm |
+| Không gán `home_pin_ids` gồm kho tạm (`is_default = 1`) | FR-17: kho tạm không phải bài đọc chủ động. Tối đa 5 id, không trùng. `home_shortcut_1/2` deprecate |
+| `known_stability` NULL | Coi như 21 (Q-08). NULL không tắt bộ lọc. Task 3.8 lọc lúc dựng danh sách duyệt |
+| `leech_lapses` = 6 lúc seed | Owner chốt 2026-09-24. Không gộp với Q-08 |
 | Trim `collections.name` trước ghi | Unique `COLLATE NOCASE` không thay trim |
 | Key user (FR-21) chỉ Keychain theo `analysis_agents.id`; không cột SQLite | NFR-07 hybrid |
 | Không `DELETE` hàng `kind = reado_proxy` | FR-21; seed bắt buộc |
@@ -218,7 +226,7 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | API key Gemini **sản phẩm** | **Proxy `.env`** — Q-03 / NFR-07. Không cột trên máy |
 | API key **user** (FR-21) | **Keychain** theo `analysis_agents.id`. Metadata agent ở SQLite; key không |
 | `word_relations` | **R2** — structure mục 5.1 |
-| Buffer bản song ngữ (FR-05) | Bộ nhớ phiên, không bảng |
+| Buffer bản song ngữ (FR-05) | Bảng `reading_sessions`: tối đa 10 phiên / collection có tên, JSON segments + summary. Kho tạm không ghi. Không ảnh |
 
 ### A.4 Field cố ý không lưu
 

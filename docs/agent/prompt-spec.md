@@ -156,7 +156,7 @@ Bốn chỗ trong prompt trên là quyết định đã chốt ở doc khác, kh
 | Chỗ | Vì sao | Nguồn |
 |---|---|---|
 | `source_en` giữ đúng từng chữ | Nó là **nguyên liệu xác minh** `example` ở mục 6. Cho AI "sửa lỗi" là mất cơ chế xác minh | FR-02 |
-| `term` giữ đúng dạng xuất hiện | Dạng thật sự đọc mới là dạng gắn với ký ức. Q-06 (lemmatize) vẫn mở, nhưng chuẩn hoá nếu cần thì làm **phía client**, không nhờ AI | structure mục 6.4 |
+| `term` giữ đúng dạng xuất hiện | Dạng thật sự đọc mới là dạng gắn với ký ức. Q-06 đã chốt: không lemmatize. Chuẩn hoá chữ thường làm phía client | structure mục 6.4 |
 | `meaning_vi` chỉ một nghĩa | Không có ràng buộc `unique`, nên "một dòng một nghĩa" là lời khai trung thực | structure mục 6.3 |
 | Từ đa nghĩa tách thành hai phần tử | Cùng lý do trên. Đây là Q-07 **đã được giải** | PRD mục 12 |
 
@@ -246,20 +246,22 @@ khớp `RICH_LIMITS` trong `app/src/domain/verify.ts`.
 | `id` | **client sinh** | uuid, sinh được khi offline — xem structure mục 6.4 |
 | `collection_id` | **luồng capture** (FR-01) | Không bao giờ null; chưa chọn thì vào kho tạm |
 | `term` | `vocabulary[].term` | Nguyên dạng |
-| `term_normalized` | **client tính** | Chữ thường, cắt khoảng trắng thừa. **Không** nhờ AI. Q-06 (lemmatize) còn mở |
+| `term_normalized` | **client tính** | Chữ thường, cắt khoảng trắng thừa. **Không** nhờ AI. Q-06 đã chốt: không lemmatize |
 | `pos` | `vocabulary[].pos` | |
 | `ipa` | `vocabulary[].ipa` | Rỗng thì lưu null |
 | `meaning_vi` | `vocabulary[].meaning_vi` | |
 | `example` | `vocabulary[].example` | **Phải qua xác minh ở mục 6 trước khi lưu** |
 | `cefr` | `vocabulary[].cefr` | Coi là gợi ý, không phải sự thật — M-03 đang đo tỷ lệ sai |
 | `created_at` | **hệ thống** | Cột này làm cho kho tạm dùng được (structure mục 6.4) |
-| `tags` / `synonyms` / `antonyms` | `vocabulary[].tags / synonyms / antonyms` | **Owner mở lại 2026-09-08:** AI sinh kèm lúc capture; lưu `JSON.stringify` dạng array, rỗng = `'[]'`; sửa được ở màn duyệt. Xem [rich-vocab-cram-ddl.md](docs/research/review.md) |
+| `tags` / `synonyms` / `antonyms` | — | **Không có cột trên SQLite R1** (`db.md` A.2). Đừng thêm. Rich vocab là R2 |
 
-### `segments[]` và `summary_vi` → không lưu
+### `segments[]` và `summary_vi` → `reading_sessions`, không vào `vocab_items`
 
-Hai nhóm này phục vụ FR-05 (đọc song ngữ) và FR-06 (tóm tắt), sống trong buffer cuộn
-local rồi trôi đi. Nhưng **`segments[]` có một nhiệm vụ thứ hai**: nó là nguyên liệu xác
-minh ở mục 6.
+Hai nhóm này phục vụ FR-05 (đọc song ngữ) và FR-06 (tóm tắt). App ghi chúng vào
+`reading_sessions` khi đích là collection có tên, tối đa 10 phiên rồi trim
+(Q-10 / ADR-029). Kho tạm không ghi phiên. Không lưu ảnh.
+
+**`segments[]` còn một nhiệm vụ thứ hai**: nó là nguyên liệu xác minh ở mục 6.
 
 Điều đó tạo ra một phụ thuộc đáng ghi lại: hai nhóm dữ liệu tưởng rời nhau lại cần nhau,
 và đó là **một lý do nữa để giữ đúng một lần gọi**. Tách OCR thành bước riêng thì
@@ -348,7 +350,7 @@ Thêm chúng vào prompt là đảo một quyết định đã chốt ở doc kh
 | `collocations`, `register`, `word_parts` | GP3 **đã bị loại bỏ**. `example` đã chứa collocation một cách tự nhiên — *"proved remarkably resilient"* cho thấy cách dùng mà không cần cột riêng. Ba field này làm nặng cả prompt lẫn màn hình duyệt | card-design GP3, structure mục 11 |
 | ~~Topic tag / chủ đề của từ~~ | ~~Đã bị loại bỏ. Collection làm đúng việc đó bằng chủ ý người dùng, miễn phí, và không bị trôi dạt tên gọi~~ **Owner MỞ LẠI 2026-09-08:** AI sinh sẵn kèm lúc capture (user không phải gõ) + user sửa được; collection vẫn là trục tổ chức chính, tag chỉ là bổ trợ | structure mục 3.3 + 11; lý do mới ở [rich-vocab-cram-ddl.md](docs/research/review.md) mục 1 |
 | ~~Từ đồng nghĩa / trái nghĩa~~ | ~~Thuộc `word_relations` ở R2, và cơ chế là AI đề xuất, người duyệt — không phải sinh kèm lúc trích xuất~~ **Owner MỞ LẠI 2026-09-08:** thêm 2 cột hiển thị bổ trợ do AI sinh kèm lúc capture; `word_relations` R2 **không bị huỷ** — nó vẫn là cơ chế *luyện* cặp quan hệ | structure mục 5; [rich-vocab-cram-ddl.md](docs/research/review.md) mục 1 |
-| Dạng nguyên thể của `term` | Q-06 còn mở. Nếu cần chuẩn hoá thì làm phía client để đổi ý được mà không phải gọi lại AI | structure mục 6.4 |
+| Dạng nguyên thể của `term` | Q-06 đã chốt: không lemmatize. Client chỉ chữ thường + trim | structure mục 6.4 |
 | Câu ví dụ do AI tự đặt | Ràng buộc bắt buộc của FR-02, và là chỗ neo của nguyên lý 1 | mục 6 |
 | Nên đưa từ nào vào bộ ôn tập | Đó là quyết định của owner ở FR-09, và của bộ lọc `stability` ở FR-10 | FR-09, FR-10 |
 | Giải thích ngữ pháp | **NG-08** | PRD mục 3 |

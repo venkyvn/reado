@@ -194,7 +194,8 @@ struct AnalysisView: View {
         let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
         drafts = ReviewDraftBuilder.drafts(
             from: result.vocabulary,
-            selectedLevels: levels.map(Set.init))
+            selectedLevels: levels.map(Set.init),
+            excludingMature: model.matureKeysForCapture())
     }
 
     private func quitTapped() {

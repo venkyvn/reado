@@ -1,13 +1,9 @@
 import Foundation
 
-/// Hàng đợi ôn — HAI nhánh (rulebook mục 8):
-/// - thẻ MỚI bị chặn bởi `daily_new_limit`;
+/// Hàng đợi ôn — HAI nhánh (rulebook mục 8). Shape đã chốt lúc task 2.5 ship:
+/// - thẻ MỚI bị chặn bởi `daily_new_limit` (toàn cục, trước khi lọc scope);
 /// - thẻ ÔN LẠI thì KHÔNG bị giới hạn này.
-///
-/// > CHƯA CHỐT — hình dạng query cố ý chưa chốt trong research doc; đây là
-/// > ĐỀ XUẤT triển khai cho ROADMAP task 1.4, sẽ đối chiếu lại lúc solution
-/// > design của FR-11. Điều đã chốt: hai nhánh, `suspended_at IS NULL`, thẻ mới
-/// > giới hạn bởi daily_new_limit còn thẻ ôn thì không.
+/// `suspended_at IS NULL`. FR-18 thêm `scope`: nil = tất cả collection.
 public enum ReviewQueue {
 
     /// Nhánh 1 — thẻ mới đến hạn, quota = daily_new_limit trừ số thẻ mới đã
