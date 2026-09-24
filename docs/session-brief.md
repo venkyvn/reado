@@ -8,10 +8,11 @@
 
 ## 1. Tình trạng hiện tại (cập nhật 2026-09-24)
 
-- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `88eeee1`. Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
+- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `HEAD xem git` (commit vuốt Tinder — chạy `git log -1` để lấy hash). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
 - **Analysis:** vẫn `MockAnalyzer` trong `AppModel` cho tới proxy 0.7.
 - **IA hiện tại:** 3 tab (Home / Ôn / Kho), pin Home tối đa 5, CEFR nhiều level, migration v3.
-- **Test gần nhất đã ghi:** 182/182 trên iPhone 18 Pro tại `9c1becc`. Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
+- **Ôn tập:** vuốt Tinder trên **cả hai mặt thẻ** (ADR-033) — thẻ bám tay + tilt + stamp "Quên"/"Được" + fly-off; mapping ADR-025 giữ (trái=Again / phải=Good).
+- **Test gần nhất đã ghi:** 182/182 trên iPhone 18 Pro (vuốt Tinder, thuần UI). Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
 - **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · 3.11 FR-21 (proxy 0.7 + adapter 1.5) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước).
 - **Leech:** owner chốt 2026-09-24 = 6 lần Again. Không gộp với Q-08.
 

@@ -13,6 +13,10 @@ struct ReviewQueueView: View {
     @State private var currentIndex: Int = 0
     @State private var flipDegrees: Double = 0
 
+    // Vuốt Tinder (ADR-033): thẻ bám theo tay + tilt + fly-off. Mapping giữ ADR-025.
+    @State private var dragOffset: CGSize = .zero
+    @State private var isCommitting = false
+
     /// Mặt đang hiện — true khi lật đủ 90° để lộ mặt sau (nghĩa + nút chấm).
     private var isFlipped: Bool { flipDegrees >= 90 }
 
@@ -208,6 +212,9 @@ struct ReviewQueueView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(swipeStamp)
+                .offset(dragOffset)
+                .rotationEffect(.degrees(dragAngle))
             }
             .padding(.horizontal, 16)
             .gesture(swipeGesture)
@@ -232,18 +239,77 @@ struct ReviewQueueView: View {
     }
 
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 40, coordinateSpace: .local)
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
+            .onChanged { value in
+                guard !isCommitting else { return }
+                dragOffset = value.translation
+            }
             .onEnded { value in
-                guard isFlipped else { return }
-                let dx = value.translation.width
-                if dx < -60 {
-                    // Vuốt trái = Again(1) — ADR-025.
-                    performGrade(.again)
-                } else if dx > 60 {
-                    // Vuốt phải = Good(3).
-                    performGrade(.good)
+                guard !isCommitting else { return }
+                // Ngưỡng theo điểm thoát dự đoán (fling Tinder chuẩn): kéo nhanh
+                // dưới 110pt vẫn chấm nếu vận tốc đủ để bay qua ngưỡng.
+                let predicted = value.predictedEndTranslation.width
+                if predicted < -110 {
+                    commitSwipe(.again, value: value)
+                } else if predicted > 110 {
+                    commitSwipe(.good, value: value)
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                        dragOffset = .zero
+                    }
                 }
             }
+    }
+
+    /// Tilt theo tay: ~1° mỗi 15pt, kẹp ±12° để thẻ không xoay quá giả.
+    private var dragAngle: Double {
+        min(max(Double(dragOffset.width) / 15, -12), 12)
+    }
+
+    /// Stamp "Quên"/"Được" hiện theo hướng kéo, đậm dần tới ngưỡng chấm.
+    @ViewBuilder
+    private var swipeStamp: some View {
+        let progress = min(abs(dragOffset.width) / 110, 1)
+        if progress > 0.02 {
+            ZStack {
+                if dragOffset.width < 0 {
+                    badgeLabel("Quên", color: Theme.danger)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .rotationEffect(.degrees(-10))
+                } else {
+                    badgeLabel("Được", color: Theme.ok)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .rotationEffect(.degrees(10))
+                }
+            }
+            .padding(24)
+            .opacity(progress)
+        }
+    }
+
+    private func badgeLabel(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.title2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(color, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.white.opacity(0.7), lineWidth: 2))
+    }
+
+    private func commitSwipe(_ rating: ReadoRating, value: DragGesture.Value) {
+        isCommitting = true
+        let dir: CGFloat = value.translation.width > 0 ? 1 : -1
+        withAnimation(.easeOut(duration: 0.22)) {
+            dragOffset = CGSize(width: dir * 720, height: value.translation.height)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            dragOffset = .zero
+            isCommitting = false
+            performGrade(rating)
+        }
     }
 
     private func cardFace(item: ReviewQueue.ReviewItem, back: Bool, size: CGSize) -> some View {
@@ -351,6 +417,7 @@ struct ReviewQueueView: View {
             withAnimation(.spring(response: 0.3)) {
                 currentIndex = prevIndex
                 flipDegrees = 0
+                dragOffset = .zero
             }
             showUndoToast = false
             lastLogID = nil
@@ -369,6 +436,7 @@ struct ReviewQueueView: View {
             // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.
             self.currentIndex = 0
             self.flipDegrees = 0
+            self.dragOffset = .zero
             self.showUndoToast = false
             self.lastLogID = nil
             if let first = items.first,

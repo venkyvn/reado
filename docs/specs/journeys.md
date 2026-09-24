@@ -510,7 +510,7 @@ Nhét vào từng J ở trên. **Không** tạo journey riêng cho lỗi. Tóm t
 
 ### Gesture (mock UI R1)
 
-- **Màn ôn (J3/J4/J5):** sau khi lật thẻ, vuốt trái = Again, vuốt phải = Good. Hard / Easy vẫn là nút. Không rút FSRS còn 2 giá trị. (Chốt 2026-09-18 — ADR-025, đảo ADR-009 cũ.)
+- **Màn ôn (J3/J4/J5):** vuốt trái = Again, vuốt phải = Good trên **cả hai mặt thẻ** (Tinder-style: bám tay + tilt + stamp "Quên"/"Được" + fly-off). Hard / Easy vẫn là nút. Không rút FSRS còn 2 giá trị. (Chốt 2026-09-18 — ADR-025, đảo ADR-009 cũ; nới "cả hai mặt" 2026-09-24 — ADR-033.)
 - **Màn khác (trừ Home):** vuốt từ **mép trái ~24px** sang phải = back. Trên màn ôn, full-card swipe là grade — back chỉ lấy dải mép, không đụng thẻ.
 - Vocab picker (FR-03) **không** dùng Tinder — vẫn list + sửa 6 field.
 

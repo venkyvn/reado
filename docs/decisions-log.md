@@ -417,3 +417,17 @@
   **Ngưỡng leech FR-19 (đếm `lapses`) VẪN MỞ** — Anki mặc định 8, code placeholder 6
   (`Seeder.defaultLeechLapses`); đừng gộp với Q-08 (đã thuộc = stability, leech =
   "sai hoài").
+
+## ADR-033 — Vuốt chấm Tinder-style trên CẢ hai mặt thẻ (iOS v2)
+
+- **Ngày:** 2026-09-24
+- **Quyết định:** Vuốt chấm màn ôn chuyển Tinder-style: thẻ kéo theo tay, nghiêng theo
+  hướng kéo, stamp "Quên" (trái, đỏ) / "Được" (phải, xanh), ngưỡng điểm-thoát-dự-đoán 110pt
+  → bay ra + chấm, dưới ngưỡng bật về. Vuốt hoạt động trên **CẢ hai mặt thẻ** (kể cả chưa
+  lật) — đảo đoạn "sau khi lật thẻ" của ADR-025. Mapping giữ nguyên: trái = Again(1),
+  phải = Good(3); Hard/Easy là nút; tap vẫn lật.
+- **Lý do:** Owner yêu cầu cải tiến cảm giác từ drag tĩnh (nhận diện sau khi thả, ngưỡng 60pt).
+  ADR-024 (PWA) từng ghi "vuốt cả hai mặt", ADR-025 giữ hiệu lực "tới khi owner đổi" — owner
+  chốt 2026-09-24.
+- **Hệ quả:** `ReviewQueueView` thêm offset/tilt/stamp + `predictedEndTranslation`; hint mặt
+  trước giờ đúng nghĩa. journeys mục 4 "Gesture" bỏ "sau khi lật thẻ".
