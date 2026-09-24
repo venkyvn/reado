@@ -69,7 +69,7 @@ struct CollectionDetailView: View {
                     description: Text(
                         isInbox
                             ? "Chụp trang để thêm từ vào kho tạm."
-                            : "Từ chưa phân loại nằm trong kho tạm; chụp nhanh (không chọn collection) để dồn về đó."))
+                            : "Từ chưa phân loại nằm trong kho tạm; chụp nhanh (không chọn bộ) để dồn về đó."))
                     .listRowSeparator(.hidden)
             } else {
                 ForEach(model.vocabulary) { entry in
@@ -77,7 +77,7 @@ struct CollectionDetailView: View {
                 }
             }
         }
-        .navigationTitle(overview?.name ?? "Collection")
+        .navigationTitle(overview?.name ?? "Bộ")
         .toolbar { toolbarContent }
         .onAppear {
             reloadList()
@@ -93,7 +93,7 @@ struct CollectionDetailView: View {
             // Lưu từ shutter (port §5.7) bump overview → hub đang mở tự refresh.
             reloadList()
         }
-        .alert("Đổi tên collection", isPresented: $showRename) {
+        .alert("Đổi tên bộ", isPresented: $showRename) {
             TextField("Tên mới", text: $renameText)
             Button("Lưu") {
                 _ = try? model.renameCollection(
@@ -118,7 +118,7 @@ struct CollectionDetailView: View {
         } message: {
             if wordCount > 0 {
                 Text(
-                    "Collection còn \(wordCount) từ. Chọn collection đích để chuyển chúng sang, rồi xoá — lịch ôn không bị reset.")
+                    "Bộ còn \(wordCount) từ. Chọn bộ đích để chuyển chúng sang, rồi xoá — lịch ôn không bị reset.")
             }
         }
         .sheet(item: $moveSheetIntention) { intention in
@@ -138,7 +138,7 @@ struct CollectionDetailView: View {
     }
 
     private var deleteAlertTitle: String {
-        wordCount > 0 ? "Xoá collection" : "Xoá collection này?"
+        wordCount > 0 ? "Xoá bộ" : "Xoá bộ này?"
     }
 
     // J2 hub: danh sách phiên đọc song ngữ (tối đa 10, mới nhất trước). Kho tạm
@@ -392,7 +392,7 @@ private struct CollectionMoveSheet: View {
                     Button {
                         showCreate = true
                     } label: {
-                        Label("Tạo collection mới", systemImage: "plus")
+                        Label("Tạo bộ mới", systemImage: "plus")
                     }
                 }
             }
@@ -403,8 +403,8 @@ private struct CollectionMoveSheet: View {
                     Button("Huỷ") { dismiss() }
                 }
             }
-            .alert("Tạo collection", isPresented: $showCreate) {
-                TextField("Tên collection", text: $newCollectionName)
+            .alert("Tạo bộ", isPresented: $showCreate) {
+                TextField("Tên bộ", text: $newCollectionName)
                 Button("Tạo") {
                     let newID: String? =
                         (try? model.createCollection(name: newCollectionName))

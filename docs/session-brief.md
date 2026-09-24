@@ -8,11 +8,11 @@
 
 ## 1. Tình trạng hiện tại (cập nhật 2026-09-24)
 
-- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `HEAD xem git` (agent-json-settings-camera — bóc JSON đa provider + sửa/xoá agent + quyền camera — chạy `git log -1` để lấy hash). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
-- **Analysis:** agent chọn trong Cài đặt (`AnalysisAgentStore` — thêm `update`, key trống = giữ Keychain; swipe agent có Sửa/Xoá). Proxy mặc định `ReadoProxyClient` (chưa deploy — trước Run đặt `READO_PROXY_BASE_URL`). Adapter OpenAI-compat `OpenAICompatClient` (FR-21) bóc JSON khỏi wrapping nhiều provider (` thinking`/fence/`content` object+parts/`choices[0].text`) + `Prompt` v2 (mẫu MỘT object) — key ở mục Agent (Keychain, không vào SQLite/export), `AgentURLRule` khóa miền origin. `MockAnalyzer` chỉ còn cho kind lạ/agent thiếu url/model.
-- **IA hiện tại:** 3 tab (Home / Ôn / Kho), pin Home tối đa 5, CEFR nhiều level, migration v3.
+- **Git:** `git log -1 --oneline` là HEAD thật. Lần ghi gần nhất: `HEAD xem git` (shell-tabbar-and-copy — shell tabbar + copy UI + OCR trên máy — chạy `git log -1` để lấy hash). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
+- **Analysis:** OCR trên máy trước mỗi lần gọi agent (ADR-034): `PageOCR` (Vision, ghép dòng theo bbox + tách 2 cột khi khe X rõ); `OpenAICompatClient` gửi **chỉ text** (bỏ `image_url`) → `Prompt` v4 (`PAGE_OCR`, `PROMPT_VERSION` 4); OCR trống/không đọc được → `AnalysisError.imageUnreadable` (FR-04), không gửi JPEG. `reado_proxy` không đổi (vẫn multipart ảnh). Key agent ở Keychain (không vào SQLite/export), `AgentURLRule` khóa miền origin. `MockAnalyzer` chỉ còn cho kind lạ/agent thiếu url/model.
+- **IA hiện tại:** 3 tab (Home / Ôn / Kho) qua capsule `ShellTabBar` 64pt thay native tab bar; Cài đặt + Dữ liệu sheet → push. Copy UI gỡ `FR-*`, `collection` → bộ, nhãn **Kho tạm**, hint `trái Quên · phải Được`. Pin Home tối đa 5, CEFR nhiều level, migration v3.
 - **Ôn tập:** vuốt Tinder trên **cả hai mặt thẻ** (ADR-033) — thẻ bám tay + tilt + stamp "Quên"/"Được" + fly-off; mapping ADR-025 giữ (trái=Again / phải=Good).
-- **Test gần nhất đã ghi:** **196/196** trên iPhone 18 Pro — agent-json-settings-camera (bóc JSON đa provider + sửa/xoá agent + quyền camera), `** TEST SUCCEEDED **`. Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
+- **Test gần nhất đã ghi:** **204/204** trên iPhone 18 Pro — shell-tabbar-and-copy (shell tabbar + copy UI + OCR trên máy), `** TEST SUCCEEDED **`. Máy không build iOS thì không chạy lại, và không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
 - **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy 0.7 chưa deploy (adapter FR-21 đã code + test xanh, chờ deploy proxy) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước).
 - **Leech:** owner chốt 2026-09-24 = 6 lần Again. Không gộp với Q-08.
 

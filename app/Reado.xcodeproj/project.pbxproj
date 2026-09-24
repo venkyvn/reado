@@ -58,6 +58,10 @@
 		5C0100000700000000000000 /* StreakCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000700000000000000 /* StreakCalendarView.swift */; };
 
 		5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000B00000000000000 /* StreakCalendarTests.swift */; };
+
+		5C0200000C00000000000000 /* PageOCRTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000C00000000000000 /* PageOCRTests.swift */; };
+
+		5C0100000800000000000000 /* ShellTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000800000000000000 /* ShellTabBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -112,6 +116,10 @@
 		5B0100000700000000000000 /* StreakCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarView.swift; sourceTree = "<group>"; };
 
 		5B0200000B00000000000000 /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
+
+		5B0200000C00000000000000 /* PageOCRTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageOCRTests.swift; sourceTree = "<group>"; };
+
+		5B0100000800000000000000 /* ShellTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellTabBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,7 +179,8 @@
 				5B0100000400000000000000 /* NotificationScheduler.swift */,
 				5B0100000500000000000000 /* HomePinToggle.swift */,
 				5B0100000600000000000000 /* ReadingSessionView.swift */,
-				5B0100000700000000000000 /* StreakCalendarView.swift */,);
+				5B0100000700000000000000 /* StreakCalendarView.swift */,
+				5B0100000800000000000000 /* ShellTabBar.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -196,7 +205,8 @@
 				5B0200000800000000000000 /* ReminderTests.swift */,
 				5B0200000900000000000000 /* HomePinTests.swift */,
 				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
-				5B0200000B00000000000000 /* StreakCalendarTests.swift */,);
+				5B0200000B00000000000000 /* StreakCalendarTests.swift */,
+				5B0200000C00000000000000 /* PageOCRTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -313,7 +323,8 @@
 				5C0100000400000000000000 /* NotificationScheduler.swift in Sources */,
 				5C0100000500000000000000 /* HomePinToggle.swift in Sources */,
 				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
-				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,);
+				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,
+				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -338,7 +349,8 @@
 				5C0200000800000000000000 /* ReminderTests.swift in Sources */,
 				5C0200000900000000000000 /* HomePinTests.swift in Sources */,
 				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
-				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,);
+				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,
+				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -410,6 +422,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Reado;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reado dùng camera để chụp trang sách cần dịch.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Reado dùng micro khi mở camera hệ thống để chụp trang.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Reado đọc ảnh trang sách bạn chọn từ thư viện.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -438,6 +451,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Reado;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reado dùng camera để chụp trang sách cần dịch.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Reado dùng micro khi mở camera hệ thống để chụp trang.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Reado đọc ảnh trang sách bạn chọn từ thư viện.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

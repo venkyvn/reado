@@ -47,7 +47,7 @@ struct HomePinToggle: View {
                 }
                 Button("Huỷ", role: .cancel) {}
             } message: {
-                Text("Home giữ tối đa 5 collection đang đọc.")
+                Text("Home giữ tối đa 5 bộ đang đọc.")
             }
     }
 

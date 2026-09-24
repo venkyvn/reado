@@ -1,7 +1,8 @@
 import Foundation
 
 /// FR-21 — `{base}/chat/completions`, Bearer từ Keychain ngay trước khi gửi.
-/// `verification` thiếu thì decoder gọi VerifyEngine; không verify lần hai.
+/// OCR trên máy trước POST; body chỉ `type:text`. `verification` thiếu thì
+/// decoder gọi VerifyEngine; không verify lần hai.
 public struct OpenAICompatClient: PageAnalyzer {
     private let session: URLSession
     private let baseURL: String
@@ -9,19 +10,22 @@ public struct OpenAICompatClient: PageAnalyzer {
     private let agentID: String
     /// Chỉ test. Nil thì `analyze` đọc Keychain.
     private let apiKeyOverride: String?
+    private let ocr: PageTextRecognizer
 
     public init(
         session: URLSession = .shared,
         baseURL: String,
         model: String,
         agentID: String,
-        apiKey: String? = nil
+        apiKey: String? = nil,
+        ocr: PageTextRecognizer = PageOCR.live
     ) {
         self.session = session
         self.baseURL = AgentURLRule.storedBase(baseURL)
         self.model = model
         self.agentID = agentID
         self.apiKeyOverride = apiKey
+        self.ocr = ocr
     }
 
     public func analyze(
@@ -30,9 +34,16 @@ public struct OpenAICompatClient: PageAnalyzer {
         cefr: String,
         imageHash: String
     ) async throws -> PageAnalysis {
+        _ = imageMime
         let apiKey = apiKeyOverride ?? KeychainStore.load(agentID: agentID)
         guard let apiKey, !apiKey.isEmpty else {
             throw AnalysisError.providerError("Chưa có API key — mở Cài đặt và thêm key")
+        }
+
+        let pageOCR = try await ocr.recognize(imageData: image)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !pageOCR.isEmpty else {
+            throw AnalysisError.imageUnreadable
         }
 
         var request = URLRequest(url: try endpoint())
@@ -42,9 +53,7 @@ public struct OpenAICompatClient: PageAnalyzer {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try Self.body(
             model: model,
-            prompt: Prompt.text(cefrLevel: cefr),
-            image: image,
-            imageMime: imageMime)
+            prompt: Prompt.text(cefrLevel: cefr, pageOCR: pageOCR))
 
         let data: Data
         let response: URLResponse
@@ -80,11 +89,8 @@ public struct OpenAICompatClient: PageAnalyzer {
 
     private static func body(
         model: String,
-        prompt: String,
-        image: Data,
-        imageMime: String
+        prompt: String
     ) throws -> Data {
-        let dataURI = "data:\(imageMime);base64,\(image.base64EncodedString())"
         let payload: [String: Any] = [
             "model": model,
             "messages": [
@@ -92,7 +98,6 @@ public struct OpenAICompatClient: PageAnalyzer {
                     "role": "user",
                     "content": [
                         ["type": "text", "text": prompt],
-                        ["type": "image_url", "image_url": ["url": dataURI]],
                     ],
                 ],
             ],

@@ -191,7 +191,7 @@ private struct ImportRowView: View {
                 TextField("IPA", text: $row.ipa)
                 TextField("CEFR", text: $row.cefr)
                 TextField("Ví dụ", text: $row.example, axis: .vertical)
-                TextField("Collection", text: $row.collection)
+                TextField("Bộ", text: $row.collection)
             }
             .font(.body)
         } else {

@@ -434,3 +434,19 @@
   Hướng bay lấy cùng dấu predicted (không lấy vị trí tay lúc nhả). Xoay rồi mới offset,
   neo tâm thẻ. Thẻ kế nhô phía sau. Reduce Motion bỏ bám tay/bay; VoiceOver có action
   Quên/Được trên mặt trước. Ngưỡng nằm ở `SwipeCommit` (test được).
+
+## ADR-034 — A-01: OCR trên máy, một lần gọi agent text (dịch + vocab)
+
+- **Ngày:** 2026-09-24
+- **Quyết định:** Reinterpret A-01. Capture vẫn là ảnh (NG-07). `openai_compat` chạy
+  `VNRecognizeTextRequest` trên máy, ghép dòng theo bounding box (hai cột nếu khe X rõ),
+  rồi **một** lần `chat/completions` **chỉ text** — agent làm dịch + vocab + summary.
+  OCR trống / không đọc được → `AnalysisError.imageUnreadable` (FR-04), **không** gửi
+  JPEG, **không** fallback ảnh. `reado_proxy` không đổi (vẫn multipart ảnh). Không thêm
+  agent thứ hai; không Translation.framework; không Live Text overlay.
+- **Lý do:** Owner chốt: ảnh không rời máy (NFR-04/NFR-02); A-01 nghĩa là **một lần
+  phân tích** (FR-21), không bắt buộc multimodal. OCR là hạ tầng capture như crop.
+- **Hệ quả:** `PageOCR` + prompt `PAGE_OCR` (`PROMPT_VERSION` 3) + `OpenAICompatClient`
+  bỏ `image_url`. Model text (không-VL) dùng được. So 3–5 trang sách thật với lần gửi
+  ảnh (chữ + tiền) làm sau khi T2 chạy được trên máy. PRD chữ "multimodal" chưa viết
+  lại — ADR này là nguồn chốt.

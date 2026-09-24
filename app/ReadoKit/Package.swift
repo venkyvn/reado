@@ -35,6 +35,11 @@ let package = Package(
             dependencies: [
                 "CSQLite",
                 .product(name: "FSRS", package: "swift-fsrs"),
+            ],
+            linkerSettings: [
+                .linkedFramework("Vision"),
+                .linkedFramework("ImageIO"),
+                .linkedFramework("CoreGraphics"),
             ]
         ),
         .testTarget(

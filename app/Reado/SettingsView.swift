@@ -56,6 +56,9 @@ struct SettingsView: View {
             }
         }
         .onAppear { load() }
+        // Push (không còn sheet) — reload Home khi pop, kể cả khi không bấm Lưu
+        // (theme / agent đổi sống). `saveLearningSettings` cũng reload sẵn.
+        .onDisappear { model.reloadOverview() }
         .sheet(isPresented: $showAddAgent) {
             AgentFormSheet(agent: nil) { name, base, modelName, key in
                 addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
@@ -126,9 +129,12 @@ struct SettingsView: View {
         } header: {
             Label("Học tập", systemImage: "book.closed")
         } footer: {
-            if saved {
-                Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
-                    .revealTransition()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Streak và hạn mức thẻ mới tính từ giờ này, không phải nửa đêm.")
+                if saved {
+                    Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
+                        .revealTransition()
+                }
             }
         }
     }
@@ -237,7 +243,7 @@ struct SettingsView: View {
         } header: {
             Label("Agent phân tích", systemImage: "sparkles")
         } footer: {
-            Text("Lần chụp kế tiếp dùng agent đang chọn. Một lần gọi đọc trang, dịch và lấy từ. Key nằm trên máy, không vào file xuất.")
+            Text("Lần chụp kế tiếp dùng agent đang chọn. OCR trên máy, agent dịch và lấy từ. Key nằm trên máy, không vào file xuất.")
         }
     }
 

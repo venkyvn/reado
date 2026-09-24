@@ -8,9 +8,10 @@ import UIKit
 /// Lưu ý: `accent` KHÔNG nằm ở đây — màu nhấn do người dùng chọn qua Settings
 /// (`AppTheme`) và áp ở `ReadoApp` qua `.tint`. View dùng `Color.accentColor`.
 enum Theme {
-    /// Nền phụ (pill, ô editor, card).
-    static let surface = Color.secondary.opacity(0.08)
-    static let surfaceStrong = Color.secondary.opacity(0.12)
+    /// Nền phụ (pill, ô editor, card). System fill, không phải `secondary.opacity`:
+    /// alpha cố định đủ tách nền sáng nhưng gần như tàng hình trên nền tối.
+    static let surface = Color(.tertiarySystemFill)
+    static let surfaceStrong = Color(.secondarySystemFill)
 
     /// Trạng thái — dùng màu hệ thống để tự thích nghi dark mode.
     static let due = Color.orange    // đến hạn / streak / tồn đọng
@@ -47,14 +48,35 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Màu nhấn; nil = dùng accent hệ thống (xanh iOS mặc định).
+    /// Màu nhấn; nil = dùng accent hệ thống (xanh iOS mặc định). Hex sáng chọn cho
+    /// nền trắng nên quá tối trên nền đen — dark mode dùng bản nhạt cùng hue, nếu
+    /// không chữ và nút accent chìm hẳn vào nền.
     var accent: Color? {
         switch self {
         case .system: nil
-        case .forest: Color(red: 0.184, green: 0.420, blue: 0.310)    // #2F6B4F
-        case .indigo: Color(red: 0.231, green: 0.290, blue: 0.420)    // #3B4A6B
-        case .sepia: Color(red: 0.549, green: 0.357, blue: 0.247)     // #8C5B3F
+        case .forest: Color(light: 0x2F6B4F, dark: 0x6FBF95)
+        case .indigo: Color(light: 0x3B4A6B, dark: 0x93A9DC)
+        case .sepia: Color(light: 0x8C5B3F, dark: 0xD79C79)
         }
+    }
+}
+
+private extension Color {
+    /// Một token hai sắc độ, resolve theo trait nên đổi Appearance là đổi theo.
+    init(light: UInt32, dark: UInt32) {
+        self.init(UIColor { traits in
+            UIColor(rgb: traits.userInterfaceStyle == .dark ? dark : light)
+        })
+    }
+}
+
+private extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(
+            red: CGFloat((rgb >> 16) & 0xFF) / 255,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255,
+            blue: CGFloat(rgb & 0xFF) / 255,
+            alpha: 1)
     }
 }
 

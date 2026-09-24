@@ -312,7 +312,8 @@ final class AnalysisTests: XCTestCase {
             baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
             model: "gemini-2.5-flash",
             agentID: "agent-1",
-            apiKey: "test-key")
+            apiKey: "test-key",
+            ocr: FixedPageOCR(text: "Hello world."))
         let result = try await client.analyze(
             image: Data([0x01]),
             imageMime: "image/jpeg",
@@ -326,17 +327,47 @@ final class AnalysisTests: XCTestCase {
         let body = try XCTUnwrap(bodyData(of: request))
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         XCTAssertEqual(json["model"] as? String, "gemini-2.5-flash")
-        // JSONSerialization escape `/` thành `\/` — so chuỗi raw sẽ sai, phải decode JSON.
         let messages = try XCTUnwrap(json["messages"] as? [[String: Any]])
         let content = try XCTUnwrap(messages[0]["content"] as? [[String: Any]])
-        let imagePart = try XCTUnwrap(content.first { ($0["type"] as? String) == "image_url" })
-        let imageURL = try XCTUnwrap(imagePart["image_url"] as? [String: Any])
-        XCTAssertEqual(imageURL["url"] as? String, "data:image/jpeg;base64,AQ==")
+        XCTAssertNil(content.first { ($0["type"] as? String) == "image_url" })
+        XCTAssertEqual(content.map { $0["type"] as? String }, ["text"])
+        let prompt = try XCTUnwrap(content[0]["text"] as? String)
+        XCTAssertTrue(prompt.contains("PAGE_OCR:"))
+        XCTAssertTrue(prompt.contains("Hello world."))
         let bodyText = String(decoding: body, as: UTF8.self)
         XCTAssertFalse(bodyText.contains("test-key"))
+        XCTAssertFalse(bodyText.contains("image_url"))
         XCTAssertEqual(result.vocabulary[0].term, "world")
         XCTAssertEqual(result.meta.model, "gemini-2.5-flash")
         XCTAssertEqual(result.meta.imageHash, "abc")
+        XCTAssertEqual(result.meta.promptVersion, Prompt.version)
+    }
+
+    func testOpenAICompatClientEmptyOCRDoesNotPost() async {
+        let posted = RequestCapture()
+        StubURLProtocol.handler = { request in
+            posted.request = request
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data())
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "   "))
+        do {
+            _ = try await client.analyze(
+                image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi imageUnreadable")
+        } catch {
+            guard case AnalysisError.imageUnreadable = error else {
+                return XCTFail("mong đợi imageUnreadable, nhận \(error)")
+            }
+        }
+        XCTAssertNil(posted.request)
     }
 
     func testOpenAICompatClientKeepsWordsWhenPosIsOff() async throws {
@@ -356,7 +387,8 @@ final class AnalysisTests: XCTestCase {
             baseURL: "https://example.com",
             model: "m",
             agentID: "a",
-            apiKey: "k")
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
         let result = try await client.analyze(
             image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
         XCTAssertEqual(result.vocabulary.map(\.term), ["world", "hello"])
@@ -384,7 +416,8 @@ final class AnalysisTests: XCTestCase {
             baseURL: "https://example.com/v1",
             model: "qwen-vl",
             agentID: "qwen",
-            apiKey: "k")
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "A {braced} phrase."))
 
         let result = try await client.analyze(
             image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
@@ -414,7 +447,8 @@ final class AnalysisTests: XCTestCase {
             baseURL: "https://example.com/v1",
             model: "provider-object-content",
             agentID: "agent",
-            apiKey: "k")
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello."))
 
         let result = try await client.analyze(
             image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
@@ -434,7 +468,8 @@ final class AnalysisTests: XCTestCase {
             baseURL: "https://example.com",
             model: "m",
             agentID: "a",
-            apiKey: "k")
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
         do {
             _ = try await client.analyze(
                 image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
@@ -752,6 +787,11 @@ final class AnalysisTests: XCTestCase {
         XCTAssertEqual(rows[0][2].textValue, "new")
         XCTAssertEqual(rows[0][3].textValue, "2026-09-18T02:00:00Z")
     }
+}
+
+private struct FixedPageOCR: PageTextRecognizer {
+    let text: String
+    func recognize(imageData: Data) async throws -> String { text }
 }
 
 private final class MemorySecrets: AgentSecretStore, @unchecked Sendable {

@@ -2,12 +2,37 @@ import ReadoKit
 import SwiftUI
 
 /// Tab gốc — port UI lab (2026-09-23): ba tab Home / Ôn / Kho thay cho
-/// NavigationStack + modal sheet cũ. Capture/Analysis/Settings/Dữ liệu vẫn là
-/// sheet phủ toàn tab; chụp nhanh bằng `FloatShutter` nổi (không tab Chụp).
-enum AppTab: Hashable {
+/// NavigationStack + modal sheet cũ. Capture/Analysis vẫn là sheet phủ toàn
+/// tab; Cài đặt/Dữ liệu là push trên Home. Chụp nhanh bằng `FloatShutter` nổi
+/// (không tab Chụp). Thanh tab = `ShellTabBar` capsule, ẩn native tab bar.
+enum AppTab: Hashable, CaseIterable {
     case home
     case review
     case kho
+
+    var title: String {
+        switch self {
+        case .home: "Home"
+        case .review: "Ôn"
+        case .kho: "Kho"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .home: "house"
+        case .review: "brain.head.profile"
+        case .kho: "archivebox"
+        }
+    }
+
+    var selectedIcon: String {
+        switch self {
+        case .home: "house.fill"
+        case .review: "brain.head.profile.fill"
+        case .kho: "archivebox.fill"
+        }
+    }
 }
 
 /// Route đẩy vào NavigationStack của Home/Kho — để FloatShutter biết đang đứng
@@ -15,6 +40,8 @@ enum AppTab: Hashable {
 private enum ShellRoute: Hashable {
     case hub(String)
     case streak
+    case settings
+    case data
 }
 
 struct RootView: View {
@@ -26,27 +53,29 @@ struct RootView: View {
     @State private var khoPath: [ShellRoute] = []
     @State private var showCapture = false
     @State private var showAnalysis = false
-    @State private var showExport = false
-    @State private var showSettings = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack(path: $homePath) {
                 HomeTabView(
                     onReview: { selectedTab = .review },
-                    onSettings: { showSettings = true },
-                    onData: { showExport = true })
+                    onSettings: { homePath.append(.settings) },
+                    onData: { homePath.append(.data) })
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
                     }
             }
-            .tabItem { Label("Home", systemImage: "house") }
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarBackground(.hidden, for: .tabBar)
+            .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
             .tag(AppTab.home)
 
             NavigationStack {
                 ReviewQueueView(showsCloseButton: false)
             }
-            .tabItem { Label("Ôn", systemImage: "brain.head.profile") }
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarBackground(.hidden, for: .tabBar)
+            .tabItem { Label(AppTab.review.title, systemImage: AppTab.review.icon) }
             .tag(AppTab.review)
 
             NavigationStack(path: $khoPath) {
@@ -55,20 +84,27 @@ struct RootView: View {
                         shellDestination($0)
                     }
             }
-            .tabItem { Label("Kho", systemImage: "archivebox") }
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarBackground(.hidden, for: .tabBar)
+            .tabItem { Label(AppTab.kho.title, systemImage: AppTab.kho.icon) }
             .tag(AppTab.kho)
         }
         .overlay(alignment: .bottom) {
             // Shutter nổi trên Home / Kho root và Hub; ẩn trên Ôn, lịch streak và
-            // phiên đọc (port UI lab §10).
+            // phiên đọc (port UI lab §10). Overlay (không inset) để không đẩy list.
+            // Overlay TRƯỚC inset: safeArea = home indicator (native bar đã ẩn).
             if showShutter {
                 FloatShutter(action: openShutterCapture)
-                    .padding(.bottom, 84)
+                    .padding(.bottom, ShellTabBar.shutterLift)
+                    .safeAreaPadding(.bottom)
                     // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt lên như nội dung.
                     .transition(.opacity.combined(with: .scale(scale: 0.88)))
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: showShutter)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ShellTabBar(selection: $selectedTab, onReselect: popSelectedTabToRoot)
+        }
         .sheet(isPresented: $showCapture, onDismiss: {
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
             if model.lastCapturedImage != nil {
@@ -95,13 +131,16 @@ struct RootView: View {
         }) {
             NavigationStack { AnalysisView() }
         }
-        .sheet(isPresented: $showExport) {
-            NavigationStack { ExportView() }
-        }
-        .sheet(isPresented: $showSettings, onDismiss: { model.reloadOverview() }) {
-            NavigationStack { SettingsView() }
-        }
         .onAppear { model.reloadOverview() }
+    }
+
+    /// Bấm lại tab đang đứng → pop stack về root (Home / Kho). Tab Ôn không có path.
+    private func popSelectedTabToRoot(_ tab: AppTab) {
+        switch tab {
+        case .home: homePath = []
+        case .kho: khoPath = []
+        case .review: break
+        }
     }
 
     /// Mở chụp từ shutter nổi — đích = bộ hub đang mở (nếu có), không thì kho tạm.
@@ -124,7 +163,7 @@ struct RootView: View {
     }
 
     /// Root (path rỗng) hoặc đang mở 1 Hub = còn trên bề mặt chụp. Bất kỳ route
-    /// khác (streak) = vào sâu, ẩn shutter.
+    /// khác (streak / settings / data) = vào sâu, ẩn shutter.
     private func isCaptureSurface(_ path: [ShellRoute]) -> Bool {
         if path.isEmpty { return true }
         if path.count == 1, case .hub = path[0] { return true }
@@ -139,12 +178,17 @@ struct RootView: View {
             CollectionDetailView(collectionID: collectionID)
         case .streak:
             StreakCalendarView()
+        case .settings:
+            SettingsView()
+        case .data:
+            ExportView()
         }
     }
 }
 
 /// Nút chụp nổi — chỉ nút này dùng hình shutter tròn (máy ảnh thật = hệ thống).
 private struct FloatShutter: View {
+    static let size: CGFloat = 64
     let action: () -> Void
 
     var body: some View {
@@ -152,7 +196,7 @@ private struct FloatShutter: View {
             Image(systemName: "camera.fill")
                 .font(.title2)
                 .foregroundStyle(.white)
-                .frame(width: 64, height: 64)
+                .frame(width: Self.size, height: Self.size)
                 .background(Circle().fill(Color.accentColor))
                 .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
         }
@@ -276,15 +320,8 @@ private struct HomeTabView: View {
                         .frame(width: 40, height: 40)
                         .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(inbox.name)
-                                .font(.headline)
-                            Text("Mặc định")
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(Theme.surfaceStrong))
-                        }
+                        Text(inbox.name)
+                            .font(.headline)
                         Text("\(inbox.totalItems) từ · trang chưa phân loại")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -394,7 +431,7 @@ private struct KhoTabView: View {
                 }
             }
 
-            Section("Collection") {
+            Section("Bộ") {
                 ForEach(model.collections) { collection in
                     NavigationLink(value: ShellRoute.hub(collection.id)) {
                         collectionRow(collection)
@@ -415,19 +452,19 @@ private struct KhoTabView: View {
                     newCollectionName = ""
                     showNewCollection = true
                 } label: {
-                    Label("Tạo collection", systemImage: "plus")
+                    Label("Tạo bộ", systemImage: "plus")
                 }
-                .accessibilityLabel("Tạo collection")
+                .accessibilityLabel("Tạo bộ")
             }
         }
-        .alert("Tạo collection", isPresented: $showNewCollection) {
-            TextField("Tên collection", text: $newCollectionName)
+        .alert("Tạo bộ", isPresented: $showNewCollection) {
+            TextField("Tên bộ", text: $newCollectionName)
             Button("Tạo") {
                 _ = try? model.createCollection(name: newCollectionName)
             }
             Button("Huỷ", role: .cancel) {}
         } message: {
-            Text("Từ chưa phân loại vào kho tạm; collection có tên để gom theo sách hoặc ngữ cảnh.")
+            Text("Từ chưa phân loại vào kho tạm; đặt tên bộ để gom theo sách hoặc ngữ cảnh.")
         }
         .alert(
             "Không thực hiện được",
@@ -442,7 +479,7 @@ private struct KhoTabView: View {
         .overlay {
             if model.collections.isEmpty {
                 ContentUnavailableView(
-                    "Chưa có collection",
+                    "Chưa có bộ",
                     systemImage: "books.vertical")
             }
         }
@@ -466,13 +503,6 @@ private struct KhoTabView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(collection.name)
-                    if collection.isDefault {
-                        Text("Mặc định")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Theme.surfaceStrong))
-                    }
                     if model.homePinIDs.contains(collection.id) {
                         Image(systemName: "pin.fill")
                             .font(.caption)
@@ -511,7 +541,7 @@ private struct KhoTabView: View {
         Button {
             run { try model.toggleReviewPriority(collection.id) }
         } label: {
-            Label(isPriority ? "Bỏ ôn" : "Ôn", systemImage: isPriority ? "bolt.slash" : "bolt")
+            Label(isPriority ? "Bỏ ưu tiên" : "Ưu tiên", systemImage: isPriority ? "bolt.slash" : "bolt")
         }
         .tint(isPriority ? .gray : .indigo)
         .disabled(

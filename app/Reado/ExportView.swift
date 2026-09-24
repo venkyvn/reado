@@ -100,7 +100,7 @@ struct ExportView: View {
             Text("Phạm vi xuất")
         } footer: {
             if selectedCollectionIDs.isEmpty {
-                Text("Không chọn collection nào → xuất tất cả.")
+                Text("Không chọn bộ nào → xuất tất cả.")
                     .font(.footnote)
             }
         }
@@ -133,7 +133,7 @@ struct ExportView: View {
             Button {
                 showImport = true
             } label: {
-                Label("Nhập CSV từ vựng (FR-20)", systemImage: "square.and.arrow.down")
+                Label("Nhập CSV từ vựng", systemImage: "square.and.arrow.down")
             }
         }
     }

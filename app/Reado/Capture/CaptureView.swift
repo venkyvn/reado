@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 import PhotosUI
@@ -15,7 +16,6 @@ struct CaptureView: View {
     @State private var showCamera = false
     @State private var showPhotoLibrary = false
     @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var croppedImage: UIImage?
     @State private var showCrop = false
     @State private var sourceImage: UIImage?
     @State private var isProcessing = false
@@ -31,6 +31,7 @@ struct CaptureView: View {
     // destBar không mở được qua camera nên cần state riêng, gắn vào cover.
     @State private var showDestOnCamera = false
     @State private var showCreateOnCamera = false
+    @State private var showCameraDenied = false
 
     var body: some View {
         ZStack {
@@ -50,6 +51,11 @@ struct CaptureView: View {
         } message: {
             Text("Hãy thử chụp lại hoặc chọn một ảnh khác.")
         }
+        .alert("Chưa có quyền camera", isPresented: $showCameraDenied) {
+            Button("Đóng", role: .cancel) {}
+        } message: {
+            Text("Bật Camera cho Reado trong Cài đặt → Reado, rồi chụp lại.")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Đóng") {
@@ -61,9 +67,9 @@ struct CaptureView: View {
         }
         .onAppear { initialDest = model.analysisTargetCollectionID }
         .confirmationDialog("Chọn ảnh", isPresented: $showSourcePicker) {
-            Button("Chụp ảnh") { showCamera = true }
+            Button("Chụp ảnh") { openCamera() }
             Button("Chọn từ thư viện") { showPhotoLibrary = true }
-            Button("Hủy", role: .cancel) {}
+            Button("Huỷ", role: .cancel) {}
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView(
@@ -79,11 +85,9 @@ struct CaptureView: View {
                         showPhotoLibrary = true
                     }
                 })
+                .ignoresSafeArea()
                 .onDisappear {
-                    if let img = sourceImage {
-                        croppedImage = img
-                        showCrop = true
-                    }
+                    if sourceImage != nil { showCrop = true }
                 }
                 .sheet(isPresented: $showDestOnCamera) {
                     destPickerSheet(close: { showDestOnCamera = false })
@@ -95,15 +99,14 @@ struct CaptureView: View {
         .sheet(isPresented: $showPhotoLibrary) {
             PhotoLibraryView(image: $sourceImage)
                 .onDisappear {
-                    if let img = sourceImage {
-                        croppedImage = img
-                        showCrop = true
-                    }
+                    if sourceImage != nil { showCrop = true }
                 }
         }
         .sheet(isPresented: $showCrop) {
-            if let img = croppedImage {
-                CropView(image: img, croppedImage: $croppedImage)
+            if let img = sourceImage {
+                CropView(image: img) { accepted in
+                    processImage(accepted)
+                }
             }
         }
         .sheet(isPresented: $showDestPicker) {
@@ -112,11 +115,6 @@ struct CaptureView: View {
         .sheet(isPresented: $showNewCollection) {
             newCollectionSheet(close: { showNewCollection = false })
         }
-        .onChange(of: croppedImage) {
-            if let img = croppedImage {
-                processImage(img)
-            }
-        }
     }
 
     private var captureButtons: some View {
@@ -124,7 +122,7 @@ struct CaptureView: View {
             destBar
 
             Button {
-                showCamera = true
+                openCamera()
             } label: {
                 Label("Chụp ảnh", systemImage: "camera.fill")
                     .font(.headline)
@@ -176,7 +174,7 @@ struct CaptureView: View {
                     in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Đổi collection lưu, hiện \(destName)")
+            .accessibilityLabel("Đổi bộ lưu, hiện \(destName)")
 
             Button {
                 newCollectionName = ""
@@ -186,7 +184,7 @@ struct CaptureView: View {
                     .font(.title2)
                     .foregroundStyle(Color.accentColor)
             }
-            .accessibilityLabel("Tạo collection mới")
+            .accessibilityLabel("Tạo bộ mới")
         }
     }
 
@@ -227,7 +225,7 @@ struct CaptureView: View {
                         close()
                     } label: {
                         HStack {
-                            Label("Kho tạm (mặc định)", systemImage: "tray")
+                            Label("Kho tạm", systemImage: "tray")
                                 .foregroundStyle(.primary)
                             Spacer()
                             if model.analysisTargetCollectionID == nil {
@@ -238,7 +236,7 @@ struct CaptureView: View {
                     }
                 }
 
-                Section("Collection") {
+                Section("Bộ") {
                     ForEach(model.collections.filter { !$0.isDefault }) { c in
                         Button {
                             selectDest(c.id)
@@ -271,7 +269,7 @@ struct CaptureView: View {
     private func newCollectionSheet(close: @escaping () -> Void) -> some View {
         NavigationStack {
             Form {
-                TextField("Tên collection", text: $newCollectionName)
+                TextField("Tên bộ", text: $newCollectionName)
                 Button {
                     let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
                     if let id = try? model.createCollection(name: name) {
@@ -284,11 +282,24 @@ struct CaptureView: View {
                 }
                 .disabled(newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .navigationTitle("Tạo collection")
+            .navigationTitle("Tạo bộ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Huỷ") { close() }
+                }
+            }
+        }
+    }
+
+    private func openCamera() {
+        Task {
+            let granted = await CameraAuthorization.ensure()
+            await MainActor.run {
+                if granted {
+                    showCamera = true
+                } else {
+                    showCameraDenied = true
                 }
             }
         }
@@ -325,6 +336,8 @@ struct CameraView: UIViewControllerRepresentable {
         picker.delegate = context.coordinator
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
             picker.sourceType = .camera
+            picker.cameraCaptureMode = .photo
+            picker.view.backgroundColor = .black
             context.coordinator.attachOverlay(to: picker)
         } else {
             // Simulator / thiết bị không camera → thư viện, không gắn overlay.
@@ -351,6 +364,7 @@ struct CameraView: UIViewControllerRepresentable {
         }
 
         /// Gắn overlay SwiftUI lên camera — chip tên bộ + tạo mới + thư viện.
+        /// Overlay phải trong suốt: UIView mặc định opaque nên che preview (đen).
         func attachOverlay(to picker: UIImagePickerController) {
             let overlay = CameraOverlayView()
             overlay.frame = UIScreen.main.bounds
@@ -358,6 +372,7 @@ struct CameraView: UIViewControllerRepresentable {
             picker.cameraOverlayView = overlay
 
             let hosting = UIHostingController(rootView: contentView)
+            hosting.view.isOpaque = false
             hosting.view.backgroundColor = .clear
             hosting.view.frame = overlay.bounds
             hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -398,9 +413,35 @@ struct CameraView: UIViewControllerRepresentable {
 /// Overlay camera — pass-through: tap vùng trống rơi xuống picker (nút chụp hệ
 /// thống, tap-to-focus); chỉ các nút SwiftUI thật mới ăn tap.
 private final class CameraOverlayView: UIView {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isOpaque = false
+        backgroundColor = .clear
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        isOpaque = false
+        backgroundColor = .clear
+    }
+
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let hit = super.hitTest(point, with: event)
         return hit === self ? nil : hit
+    }
+}
+
+/// Xin quyền camera trước khi mở picker — denied thì báo, không để preview đen im.
+private enum CameraAuthorization {
+    static func ensure() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            return true
+        case .notDetermined:
+            return await AVCaptureDevice.requestAccess(for: .video)
+        default:
+            return false
+        }
     }
 }
 
@@ -435,7 +476,7 @@ private struct CameraOverlayContent: View {
                         .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Đổi collection lưu, hiện \(destName)")
+                    .accessibilityLabel("Đổi bộ lưu, hiện \(destName)")
 
                     Spacer()
 
@@ -447,7 +488,7 @@ private struct CameraOverlayContent: View {
                             .background(.black.opacity(0.45), in: Circle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Tạo collection mới")
+                    .accessibilityLabel("Tạo bộ mới")
                 }
                 Spacer()
                 HStack {
@@ -513,7 +554,7 @@ struct PhotoLibraryView: UIViewControllerRepresentable {
 
 struct CropView: UIViewControllerRepresentable {
     let image: UIImage
-    @Binding var croppedImage: UIImage?
+    let onAccepted: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> TOCropViewController {
@@ -541,8 +582,8 @@ struct CropView: UIViewControllerRepresentable {
                                didCropTo croppedImage: UIImage,
                                with cropRect: CGRect,
                                angle: Int) {
-            parent.croppedImage = croppedImage
             parent.dismiss()
+            parent.onAccepted(croppedImage)
         }
 
         func cropViewController(_ cropViewController: TOCropViewController,

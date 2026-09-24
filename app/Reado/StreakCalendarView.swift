@@ -27,7 +27,7 @@ struct StreakCalendarView: View {
             }
             .padding()
         }
-        .navigationTitle("Lịch streak")
+        .navigationTitle("Lịch ôn")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.loadStreakHeatmap() }
         .sheet(isPresented: $showReview, onDismiss: { reload() }) {

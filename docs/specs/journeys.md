@@ -338,7 +338,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 4. Đặt **giờ chuyển ngày** `day_cutoff_hour` (mặc định 04:00, 0–23) — streak và số đếm "hôm nay" tính theo giờ này (FR-11, FR-14).
 5. Mục **Đang đọc trên Home** liệt kê named collections và trạng thái hiện tại; bật/tắt ở đây dùng cùng rule tối đa hai và chooser thay thế của J2 (FR-17).
 6. `request_retention` và tham số FSRS: **không** hiện cho user ở R1 (PRD mục 10).
-7. Mục **Agent phân tích trang** (FR-21): list radio active; subtitle = `model` hoặc “Proxy Reado”. Thêm agent: tên, base URL, model, key (ô bảo mật). Sửa / xoá được agent user; **không** xoá proxy. Hint một dòng: lần gọi = OCR + dịch + vocab, không phải OCR riêng. Capture **tiếp theo** dùng agent mới; trang đã phân tích không chạy lại.
+7. Mục **Agent phân tích trang** (FR-21): list radio active; subtitle = `model` hoặc “Proxy Reado”. Thêm agent: tên, base URL, model, key (ô bảo mật). Sửa / xoá được agent user; **không** xoá proxy. Hint một dòng: OCR trên máy, agent dịch+từ (một lần gọi phân tích; không phải agent OCR riêng). Capture **tiếp theo** dùng agent mới; trang đã phân tích không chạy lại.
 8. **Không** đặt export/import trên màn này. Cửa dữ liệu là J-R1-D. Export **không** kèm key.
 
 ### Empty / error (J-R1-S)

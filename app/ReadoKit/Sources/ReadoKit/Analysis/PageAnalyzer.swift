@@ -1,7 +1,8 @@
 import Foundation
 
 /// Cổng giao tiếp với AI (FR-02). UI chỉ thấy protocol này — đổi provider
-/// không đụng SwiftUI (ADR-028). Một lần gọi multimodal: OCR + dịch + vocab.
+/// không đụng SwiftUI (ADR-028). Input vẫn là ảnh (NG-07). `openai_compat`
+/// OCR trên máy rồi **một** lần gọi text (dịch + vocab); proxy vẫn gửi ảnh.
 public protocol PageAnalyzer: Sendable {
     func analyze(
         image: Data,

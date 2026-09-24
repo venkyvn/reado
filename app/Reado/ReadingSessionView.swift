@@ -3,13 +3,17 @@ import SwiftUI
 
 /// FR-05 + FR-06 — đọc lại một phiên đọc song ngữ đã lưu (J2 hub).
 /// ADR-007: song ngữ xen kẽ theo đoạn; ADR-030: MỘT nút nhỏ cố định dưới đáy
-/// bật/tắt toàn bộ bản dịch (mặc định hiện). FR-06: ý chính thu gọn, chạm mở.
+/// bật/tắt toàn bộ bản dịch (mặc định hiện) — nút đặt mặc định, chạm một đoạn
+/// lật riêng đoạn đó. FR-06: ý chính thu gọn, chạm mở.
 struct ReadingSessionView: View {
     let session: ReadingSession
 
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showTranslations = true
+    /// Đoạn đang đi ngược nút đáy. Bấm nút đáy xoá hết — nếu không, sau vài lần
+    /// chạm lẻ thì nút không còn nói đúng trạng thái đang thấy trên màn hình.
+    @State private var overriddenSegments: Set<Int> = []
     @State private var summaryExpanded = false
 
     var body: some View {
@@ -65,19 +69,44 @@ struct ReadingSessionView: View {
 
     private var segmentsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(Array(session.segments.enumerated()), id: \.offset) { _, seg in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(seg.sourceEN)
-                        .font(.title3)
-                    if showTranslations {
-                        Text(seg.translationVI)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .revealTransition()
+            ForEach(Array(session.segments.enumerated()), id: \.offset) { index, seg in
+                Button {
+                    toggleSegment(index)
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(seg.sourceEN)
+                            .font(.title3)
+                        if isRevealed(index) {
+                            Text(seg.translationVI)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .revealTransition()
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(seg.sourceEN)
+                .accessibilityValue(isRevealed(index) ? seg.translationVI : "Bản dịch đang ẩn")
+                .accessibilityHint(isRevealed(index) ? "Ẩn bản dịch đoạn này" : "Hiện bản dịch đoạn này")
             }
         }
+    }
+
+    private func isRevealed(_ index: Int) -> Bool {
+        overriddenSegments.contains(index) ? !showTranslations : showTranslations
+    }
+
+    private func toggleSegment(_ index: Int) {
+        Motion.run(reduceMotion: reduceMotion) {
+            if overriddenSegments.contains(index) {
+                overriddenSegments.remove(index)
+            } else {
+                overriddenSegments.insert(index)
+            }
+        }
+        Haptics.selection()
     }
 
     // MARK: — Nút cố định dưới đáy (ADR-030)
@@ -86,6 +115,7 @@ struct ReadingSessionView: View {
         Button {
             Motion.run(reduceMotion: reduceMotion) {
                 showTranslations.toggle()
+                overriddenSegments.removeAll()
             }
         } label: {
             Label(

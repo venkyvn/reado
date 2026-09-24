@@ -51,11 +51,19 @@ struct AnalysisView: View {
                 failureView
                     .transition(.opacity)
             } else if model.isAnalyzing {
-                // FR-02: progress rõ — màn hình không đứng im.
-                ProgressView("Đang phân tích trang sách...")
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .transition(.opacity)
+                // FR-02: progress rõ — hai bước: OCR trên máy, rồi gọi agent.
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Đang đọc chữ trên máy…")
+                        .font(.headline)
+                    Text("Rồi dịch trang và lấy từ.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .transition(.opacity)
             } else if let result = model.analysisResult {
                 resultList(result)
                     .transition(.opacity)
@@ -531,7 +539,7 @@ private struct SegmentBlock: View {
                 } else {
                     Label("Dịch", systemImage: "globe")
                         .font(.caption)
-                        .foregroundStyle(Color.accentColor.opacity(0.8))
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

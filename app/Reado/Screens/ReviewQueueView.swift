@@ -57,7 +57,7 @@ struct ReviewQueueView: View {
                 cardView
                     .transition(.opacity)
             } else {
-                // Opacity thuần: "Xong rồi" không nảy vào (chống gamification).
+                // Opacity thuần: "Hết thẻ hôm nay" không nảy vào (chống gamification).
                 doneView
                     .transition(.opacity)
             }
@@ -119,7 +119,7 @@ struct ReviewQueueView: View {
             ContentUnavailableView {
                 Label("Không có gì cần ôn", systemImage: "checkmark.circle")
             } description: {
-                Text("Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới (FR-01).")
+                Text("Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới.")
             }
         }
     }
@@ -129,7 +129,7 @@ struct ReviewQueueView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(Theme.ok)
-            Text("Xong rồi!")
+            Text("Hết thẻ hôm nay")
                 .font(.title2.bold())
             Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
@@ -144,7 +144,7 @@ struct ReviewQueueView: View {
     }
 
     // FR-18: nợ ngoài phạm vi phải nhìn thấy (research/vocabulary.md 4.2) — khi
-    // còn card due ngoài scope, đừng giấu dưới một "Xong rồi" không điều kiện.
+    // còn card due ngoài scope, đừng giấu dưới một "Hết thẻ hôm nay" không điều kiện.
     @ViewBuilder
     private var debtBanner: some View {
         if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
@@ -250,7 +250,7 @@ struct ReviewQueueView: View {
                 gradeButtons
                     .revealTransition()
             } else {
-                Text("Chạm để lật · vuốt trái/phải để chấm nhanh")
+                Text("Chạm để lật · trái Quên · phải Được")
                     .foregroundStyle(.tertiary)
                     .font(.caption)
                     .revealTransition()
@@ -595,7 +595,7 @@ private struct ScopePickerSheet: View {
                         Haptics.selection()
                     } label: {
                         HStack {
-                            Label("Tất cả collection", systemImage: "square.stack.3d.up")
+                            Label("Tất cả bộ", systemImage: "square.stack.3d.up")
                                 .foregroundStyle(.primary)
                             Spacer()
                             if isAll {
@@ -605,7 +605,7 @@ private struct ScopePickerSheet: View {
                         }
                     }
                 }
-                Section("Hoặc trộn một / vài collection") {
+                Section("Hoặc trộn một / vài bộ") {
                     ForEach(model.collections) { collection in
                         Button {
                             if selected.contains(collection.id) {
@@ -704,7 +704,8 @@ extension ReadoRating {
         case .again: Theme.danger
         case .hard: .primary
         case .good: Color.accentColor
-        case .easy: .white
+        // Accent dark mode là bản nhạt — chữ trắng trên đó gần như không đọc được.
+        case .easy: Color(.systemBackground)
         }
     }
 }
