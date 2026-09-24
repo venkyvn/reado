@@ -7,6 +7,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
 
     /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
     /// Mặc định mới là rừng (không còn "Hệ thống"); user cũ được migrate một
@@ -25,6 +26,7 @@ struct SettingsView: View {
     @State private var agents: [AnalysisAgent] = []
     @State private var activeAgentID = ""
     @State private var showAddAgent = false
+    @State private var editingAgent: AnalysisAgent?
     @State private var agentError: String?
 
     var body: some View {
@@ -55,8 +57,18 @@ struct SettingsView: View {
         }
         .onAppear { load() }
         .sheet(isPresented: $showAddAgent) {
-            AddAgentSheet { name, base, modelName, key in
+            AgentFormSheet(agent: nil) { name, base, modelName, key in
                 addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
+            }
+        }
+        .sheet(item: $editingAgent) { agent in
+            AgentFormSheet(agent: agent) { name, base, modelName, key in
+                updateAgent(
+                    agent,
+                    name: name,
+                    baseURL: base,
+                    model: modelName,
+                    apiKey: key)
             }
         }
         .onChange(of: cefrLevels) { saved = false }
@@ -199,11 +211,19 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .swipeActions {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     if !agent.isBuiltinProxy {
-                        Button(role: .destructive) { remove(agent) } label: {
-                            Text("Xoá")
+                        Button {
+                            editingAgent = agent
+                        } label: {
+                            Label("Sửa", systemImage: "pencil")
                         }
+                        .tint(Color.accentColor)
+
+                        Button(role: .destructive) { remove(agent) } label: {
+                            Label("Xoá", systemImage: "trash")
+                        }
+                        .tint(Theme.danger)
                     }
                 }
             }
@@ -284,11 +304,42 @@ struct SettingsView: View {
     }
 
     /// `nil` = đã lưu. Chuỗi = lỗi hiện trong sheet.
-    private func addAgent(name: String, baseURL: String, model: String, apiKey: String) -> String? {
+    private func addAgent(
+        name: String,
+        baseURL: String,
+        model: String,
+        apiKey: String?
+    ) -> String? {
         guard let database = self.model.database else { return "Chưa mở được kho" }
+        guard let apiKey else { return "Thiếu API key" }
         do {
             try AnalysisAgentStore.add(
                 on: database,
+                name: name,
+                baseURL: baseURL,
+                model: model,
+                apiKey: apiKey)
+            agentError = nil
+            reloadAgents()
+            return nil
+        } catch {
+            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        }
+    }
+
+    /// Key để trống khi sửa = giữ secret đang có trong Keychain.
+    private func updateAgent(
+        _ agent: AnalysisAgent,
+        name: String,
+        baseURL: String,
+        model: String,
+        apiKey: String?
+    ) -> String? {
+        guard let database = self.model.database else { return "Chưa mở được kho" }
+        do {
+            try AnalysisAgentStore.update(
+                on: database,
+                id: agent.id,
                 name: name,
                 baseURL: baseURL,
                 model: model,
@@ -312,6 +363,7 @@ struct SettingsView: View {
                 reminderMinutes: reminderMinutes)
             saved = true
             Haptics.success()
+            dismiss()
         } catch {
             saveError =
                 (error as? LocalizedError)?.errorDescription
@@ -325,18 +377,31 @@ struct SettingsView: View {
     }
 }
 
-/// Sheet thêm một key OpenAI-compat. Mặc định điền endpoint Gemini.
-private struct AddAgentSheet: View {
-    var onSave: (String, String, String, String) -> String?
+/// Form dùng chung cho thêm/sửa agent OpenAI-compatible.
+private struct AgentFormSheet: View {
+    let agent: AnalysisAgent?
+    var onSave: (String, String, String, String?) -> String?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var name = "Gemini"
-    @State private var baseURL = AnalysisAgentStore.geminiBaseURL
-    @State private var model = AnalysisAgentStore.geminiModel
-    @State private var apiKey = ""
+    @State private var name: String
+    @State private var baseURL: String
+    @State private var model: String
+    @State private var apiKey: String
     @State private var error: String?
     @State private var keyStatus: KeyCheck = .idle
     @State private var checkTask: Task<Void, Never>?
+
+    init(
+        agent: AnalysisAgent?,
+        onSave: @escaping (String, String, String, String?) -> String?
+    ) {
+        self.agent = agent
+        self.onSave = onSave
+        _name = State(initialValue: agent?.name ?? "Gemini")
+        _baseURL = State(initialValue: agent?.baseURL ?? AnalysisAgentStore.geminiBaseURL)
+        _model = State(initialValue: agent?.model ?? AnalysisAgentStore.geminiModel)
+        _apiKey = State(initialValue: "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -349,7 +414,7 @@ private struct AddAgentSheet: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                 HStack {
-                    SecureField("API key", text: $apiKey)
+                    SecureField(agent == nil ? "API key" : "API key mới (không bắt buộc)", text: $apiKey)
                     keyMark
                 }
                 keyCaption
@@ -359,15 +424,15 @@ private struct AddAgentSheet: View {
                         .foregroundStyle(Theme.danger)
                 }
             }
-            .navigationTitle("Thêm key")
+            .navigationTitle(agent == nil ? "Thêm agent" : "Sửa agent")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Huỷ") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Thêm") { submit() }
-                        .disabled(keyStatus != .valid)
+                    Button(agent == nil ? "Thêm" : "Lưu") { submit() }
+                        .disabled(!canSubmit)
                 }
             }
             .onChange(of: apiKey) { scheduleKeyCheck() }
@@ -380,7 +445,11 @@ private struct AddAgentSheet: View {
     private var keyMark: some View {
         switch keyStatus {
         case .idle:
-            EmptyView()
+            if agent != nil {
+                Text("Để trống để giữ API key hiện tại.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         case .checking:
             ProgressView()
                 .controlSize(.small)
@@ -444,12 +513,26 @@ private struct AddAgentSheet: View {
     }
 
     private func submit() {
-        guard keyStatus == .valid else { return }
-        if let message = onSave(name, baseURL, model, apiKey) {
+        guard canSubmit else { return }
+        let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let replacementKey = trimmedKey.isEmpty ? nil : trimmedKey
+        if let message = onSave(name, baseURL, model, replacementKey) {
             error = message
         } else {
             dismiss()
         }
+    }
+
+    private var canSubmit: Bool {
+        let fieldsAreValid =
+            !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && AgentURLRule.allows(AgentURLRule.storedBase(baseURL))
+        guard fieldsAreValid else { return false }
+        if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return agent != nil
+        }
+        return keyStatus == .valid
     }
 }
 

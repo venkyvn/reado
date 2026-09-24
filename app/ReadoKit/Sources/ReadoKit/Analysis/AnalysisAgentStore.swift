@@ -130,6 +130,46 @@ public enum AnalysisAgentStore {
         return id
     }
 
+    /// Sửa metadata agent user. `apiKey == nil` giữ nguyên secret hiện tại.
+    public static func update(
+        on db: SQLiteDatabase,
+        id: String,
+        name: String,
+        baseURL: String,
+        model: String,
+        apiKey: String? = nil,
+        secrets: AgentSecretStore = KeychainAgentSecrets()
+    ) throws {
+        guard id != Seeder.readoProxyAgentID else { throw StoreError.notFound }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let replacementKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw StoreError.missingField("tên") }
+        guard !trimmedModel.isEmpty else { throw StoreError.missingField("model") }
+        let stored = AgentURLRule.storedBase(baseURL)
+        guard AgentURLRule.allows(stored) else { throw StoreError.insecureURL }
+        let rows = try db.rows(
+            "SELECT id FROM analysis_agents WHERE id = ? AND kind = 'openai_compat' LIMIT 1;",
+            [.text(id)])
+        guard !rows.isEmpty else { throw StoreError.notFound }
+        if replacementKey?.isEmpty != false, !secrets.contains(agentID: id) {
+            throw StoreError.missingKey
+        }
+
+        try db.inTransaction {
+            try db.run(
+                """
+                UPDATE analysis_agents
+                SET name = ?, base_url = ?, model = ?
+                WHERE id = ?;
+                """,
+                [.text(trimmedName), .text(stored), .text(trimmedModel), .text(id)])
+            if let replacementKey, !replacementKey.isEmpty {
+                try secrets.save(agentID: id, apiKey: replacementKey)
+            }
+        }
+    }
+
     public static func setActive(
         on db: SQLiteDatabase,
         id: String,

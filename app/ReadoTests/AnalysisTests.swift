@@ -233,7 +233,7 @@ final class AnalysisTests: XCTestCase {
             "https://generativelanguage.googleapis.com/v1beta/openai")
     }
 
-    func testAgentStoreAddDeleteFallsBackToProxy() throws {
+    func testAgentStoreAddEditDeleteFallsBackToProxy() throws {
         let db = try Fixtures.seededDB()
         let secrets = MemorySecrets()
         let id = try AnalysisAgentStore.add(
@@ -256,6 +256,33 @@ final class AnalysisTests: XCTestCase {
         XCTAssertFalse(blob.contains("secret-key"))
         let (analyzer, _) = try AnalyzerFactory.active(db: db)
         XCTAssertTrue(analyzer is OpenAICompatClient)
+
+        try AnalysisAgentStore.update(
+            on: db,
+            id: id,
+            name: " Qwen ",
+            baseURL: "https://example.com/v1/chat/completions",
+            model: " qwen-vl ",
+            secrets: secrets)
+        var edited = try XCTUnwrap(
+            AnalysisAgentStore.list(on: db, secrets: secrets).agents.first { $0.id == id })
+        XCTAssertEqual(edited.name, "Qwen")
+        XCTAssertEqual(edited.baseURL, "https://example.com/v1")
+        XCTAssertEqual(edited.model, "qwen-vl")
+        XCTAssertEqual(secrets.key(agentID: id), "secret-key")
+
+        try AnalysisAgentStore.update(
+            on: db,
+            id: id,
+            name: "Qwen",
+            baseURL: "https://example.com/v1",
+            model: "qwen-vl",
+            apiKey: "new-key",
+            secrets: secrets)
+        edited = try XCTUnwrap(
+            AnalysisAgentStore.list(on: db, secrets: secrets).agents.first { $0.id == id })
+        XCTAssertTrue(edited.hasKey)
+        XCTAssertEqual(secrets.key(agentID: id), "new-key")
 
         try AnalysisAgentStore.delete(on: db, id: id, secrets: secrets)
         let after = try AnalysisAgentStore.list(on: db, secrets: secrets)
@@ -334,6 +361,65 @@ final class AnalysisTests: XCTestCase {
             image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
         XCTAssertEqual(result.vocabulary.map(\.term), ["world", "hello"])
         XCTAssertEqual(result.vocabulary[0].pos, "other")
+    }
+
+    func testOpenAICompatClientExtractsJSONAfterThinkingAndMarkdown() async throws {
+        StubURLProtocol.handler = { request in
+            let content = """
+            <think>I should inspect the page and return {structured output}.</think>
+            Here is the result:
+            ```json
+            {"segments":[{"source_en":"A {braced} phrase.","translation_vi":"Một cụm có ngoặc."}],"vocabulary":[],"summary_vi":"Tóm tắt."}
+            ```
+            """
+            let envelope: [String: Any] = [
+                "choices": [["message": ["content": content]]]
+            ]
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, try JSONSerialization.data(withJSONObject: envelope))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "qwen-vl",
+            agentID: "qwen",
+            apiKey: "k")
+
+        let result = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+
+        XCTAssertEqual(result.segments.first?.sourceEN, "A {braced} phrase.")
+        XCTAssertEqual(result.summaryVI, "Tóm tắt.")
+    }
+
+    func testOpenAICompatClientAcceptsObjectContent() async throws {
+        StubURLProtocol.handler = { request in
+            let content: [String: Any] = [
+                "segments": [
+                    ["source_en": "Hello.", "translation_vi": "Xin chào."]
+                ],
+                "vocabulary": [],
+                "summary_vi": "Lời chào.",
+            ]
+            let envelope: [String: Any] = [
+                "choices": [["message": ["content": content]]]
+            ]
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, try JSONSerialization.data(withJSONObject: envelope))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "provider-object-content",
+            agentID: "agent",
+            apiKey: "k")
+
+        let result = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+
+        XCTAssertEqual(result.segments.first?.translationVI, "Xin chào.")
     }
 
     func testOpenAICompatClientMaps401() async throws {
@@ -681,6 +767,10 @@ private final class MemorySecrets: AgentSecretStore, @unchecked Sendable {
 
     func delete(agentID: String) {
         keys.removeValue(forKey: agentID)
+    }
+
+    func key(agentID: String) -> String? {
+        keys[agentID]
     }
 }
 

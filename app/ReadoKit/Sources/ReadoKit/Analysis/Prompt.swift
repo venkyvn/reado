@@ -6,7 +6,7 @@ import Foundation
 /// bằng chứng A-02 (baseline owner chưa dán, rulebook mục 8). Chỉ dùng để chạy thử A-01.
 public enum Prompt {
     /// Bump mỗi lần đổi prompt — proxy ghi vào analysis_events; app không tự suy ra.
-    public static let version = 1
+    public static let version = 2
 
     /// Prompt text gửi kèm ảnh. CEFR chèn ở chỗ `{CEFR_LEVEL}` đúng prompt-spec mục 3.
     public static func text(cefrLevel: String) -> String {
@@ -47,7 +47,11 @@ public enum Prompt {
         Nếu ảnh không đọc được hoặc không chứa văn bản tiếng Anh, trả về vocabulary và
         segments rỗng thay vì đoán.
 
-        Chỉ trả về JSON hợp lệ, không kèm giải thích hay markdown.
+        Output phải là đúng MỘT JSON object theo mẫu hình dạng sau:
+        {"segments":[{"source_en":"...","translation_vi":"..."}],"vocabulary":[{"term":"...","pos":"noun","ipa":"...","meaning_vi":"...","cefr":"B2","example":"..."}],"summary_vi":"..."}
+
+        Chỉ trả về JSON object hợp lệ bắt đầu bằng { và kết thúc bằng }. Không kèm
+        giải thích, markdown, code fence hay nội dung suy luận.
         """
     }
 }
