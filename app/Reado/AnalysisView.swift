@@ -34,6 +34,16 @@ struct AnalysisView: View {
         drafts.filter(\.isSelected).count
     }
 
+    /// FR-09 (port UI lab §5.6): chọn/bỏ toàn bộ trong một chạm. Không tính
+    /// unverified/suspect — chỉ bật/tắt card đang có.
+    private var allSelected: Bool {
+        !drafts.isEmpty && drafts.allSatisfy(\.isSelected)
+    }
+
+    private func setAllSelected(_ selected: Bool) {
+        for index in drafts.indices { drafts[index].isSelected = selected }
+    }
+
     var body: some View {
         Group {
             if model.analysisFailure != nil {
@@ -255,6 +265,10 @@ struct AnalysisView: View {
             // FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
             if !drafts.isEmpty {
                 Section {
+                    // Chọn/bỏ tất cả — để trong Section (header List nuốt tap).
+                    Button(allSelected ? "Bỏ chọn" : "Chọn tất cả") {
+                        setAllSelected(!allSelected)
+                    }
                     ForEach(Array(drafts.enumerated()), id: \.element.id) { index, _ in
                         ReviewCardRow(
                             draft: $drafts[index],

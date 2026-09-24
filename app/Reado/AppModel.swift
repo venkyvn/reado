@@ -64,6 +64,10 @@ final class AppModel {
     /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
     var shutterTargetCollectionID: String?
 
+    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
+    /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
+    var suppressFloatShutter = false
+
     /// Bump mỗi lần reload overview — để CollectionDetailView đang mở tự refresh
     /// (từ/phiên) sau khi lưu mà không cần push hub trùng.
     private(set) var dataRevision = 0
@@ -519,39 +523,41 @@ final class AppModel {
     }
 
     /// Ghim/bỏ ghim một collection (max 5, kho tạm bị chặn ở tầng service).
-    func togglePin(_ id: String) {
-        guard let database else { return }
-        let current = (try? HomePinService.ids(on: database)) ?? []
+    /// Ghim quá 5 → `HomePinService.set` ném `.tooMany` (không nuốt — UI mở alert).
+    func togglePin(_ id: String) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let current = try HomePinService.ids(on: database)
         let next = current.contains(id)
             ? current.filter { $0 != id }
-            : (current.count < HomePinService.maxPins ? current + [id] : current)
-        _ = try? HomePinService.set(on: database, ids: next)
+            : current + [id]
+        try HomePinService.set(on: database, ids: next)
         reloadOverview()
     }
 
     // MARK: — Ôn nhanh (port UI lab: scope ôn mặc định 1–3 bộ / tất cả)
 
     /// Bật/tắt một collection trong "Ôn nhanh" (tối đa 3). Bật → `reviewAll` tắt.
-    func toggleReviewPriority(_ id: String) {
-        guard let database else { return }
-        let scope = (try? ReviewScopeService.load(on: database)) ?? .empty
+    /// Đủ 3 mà cố thêm → ném `.tooMany` (UI đã disable, đây là fallback).
+    func toggleReviewPriority(_ id: String) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let scope = try ReviewScopeService.load(on: database)
         var ids = scope.priorityIDs
         if let i = ids.firstIndex(of: id) {
             ids.remove(at: i)
         } else if ids.count < ReviewScopeService.maxPriority {
             ids.append(id)
         } else {
-            return  // đủ 3 — UI đã disable.
+            throw ReviewScopeError.tooMany
         }
-        _ = try? ReviewScopeService.update(
+        try ReviewScopeService.update(
             on: database, priorityIDs: ids, reviewAll: false)
         reloadOverview()
     }
 
     /// Bật/tắt "Ôn tất cả" cho Ôn nhanh.
-    func setReviewAll(_ on: Bool) {
-        guard let database else { return }
-        _ = try? ReviewScopeService.update(
+    func setReviewAll(_ on: Bool) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try ReviewScopeService.update(
             on: database, priorityIDs: [], reviewAll: on)
         reloadOverview()
     }

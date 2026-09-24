@@ -75,7 +75,12 @@ extension View {
 struct ReadoApp: App {
     @State private var model = AppModel()
     /// Chủ đề màu nhấn — lưu UserDefaults, đổi ngay không cần khởi động lại.
-    @AppStorage("appTheme") private var appTheme = AppTheme.system.rawValue
+    /// Mặc định mới = rừng; user cũ đã ghi "system" được migrate một lần.
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+    /// Cờ "đã áp mặc định rừng một lần" — set vô điều kiện lúc khởi động lần đầu
+    /// để người đã chủ động chọn theme (Chàm/Nâu giấy/Hệ thống) không bị kéo lại
+    /// về rừng ở các lần mở app sau.
+    @AppStorage("reado.appliedForestDefault") private var appliedForestDefault = false
 
     var body: some Scene {
         WindowGroup {
@@ -85,6 +90,17 @@ struct ReadoApp: App {
                 // 3.12: khôi phục lịch nhắc từ settings lúc khởi động. Tắt →
                 // dọn pending (không hỏi quyền); bật → đặt lại trigger hằng ngày.
                 .task { await model.syncReminderSchedule(requestPermission: true) }
+                .onAppear { applyForestDefaultIfNeeded() }
+        }
+    }
+
+    /// Một lần duy nhất: user cũ chưa từng chọn theme (đã lưu "system") → chuyển
+    /// về mặc định rừng mới. Cờ set vô điều kiện nên ai đã chọn rồi là giữ nguyên.
+    private func applyForestDefaultIfNeeded() {
+        guard !appliedForestDefault else { return }
+        appliedForestDefault = true
+        if appTheme == AppTheme.system.rawValue {
+            appTheme = AppTheme.forest.rawValue
         }
     }
 }

@@ -7,6 +7,7 @@ import SwiftUI
 struct ReadingSessionView: View {
     let session: ReadingSession
 
+    @Environment(AppModel.self) private var model
     @State private var showTranslations = true
     @State private var summaryExpanded = false
 
@@ -23,6 +24,10 @@ struct ReadingSessionView: View {
         .navigationTitle("Phiên đọc")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { translationToggle }
+        // Phiên đọc push bên trong Hub (không vào ShellRoute) → tắt shutter nổi
+        // FloatShutter của RootView khi đang đọc (port UI lab §10).
+        .onAppear { model.suppressFloatShutter = true }
+        .onDisappear { model.suppressFloatShutter = false }
     }
 
     // MARK: — Ý chính (FR-06, thu gọn mặc định)

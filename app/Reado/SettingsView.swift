@@ -2,14 +2,16 @@ import ReadoKit
 import SwiftUI
 
 /// FR-15 — J-R1-S: núm học tập (CEFR, hạn mức thẻ mới, giờ chuyển ngày) +
-/// 3.12 nhắc ôn tập (toggle + giờ). `request_retention` + núm FSRS còn lại
-/// chỉ-đọc (R1 không mở user — tránh tự bắn chân). Quản lý shortcut (FR-17)
-/// và chọn agent (FR-21) là task sau.
+/// 3.12 nhắc ôn tập (toggle + giờ). FSRS không mở núm cho user (R1 dùng tham
+/// số mặc định — tránh tự bắn chân). Quản lý shortcut (FR-17) và chọn agent
+/// (FR-21) là task sau.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
-    @AppStorage("appTheme") private var appTheme = AppTheme.system.rawValue
+    /// Mặc định mới là rừng (không còn "Hệ thống"); user cũ được migrate một
+    /// lần ở ReadoApp.
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
 
     @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10
@@ -20,8 +22,6 @@ struct SettingsView: View {
     @State private var didLoad = false
     @State private var saveError: String?
     @State private var saved = false
-    /// Nhóm FSRS chỉ-đọc — đọc qua ReadoFSRS để hiện mà không cho sửa.
-    @State private var fsrs: SchedulingSettings?
 
     var body: some View {
         List {
@@ -29,7 +29,6 @@ struct SettingsView: View {
             reminderSection
             themeSection
             agentSection
-            fsrsSection
             if let message = saveError {
                 Section {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
@@ -190,29 +189,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: — Thuật toán ôn tập (chỉ-đọc)
-
-    private var fsrsSection: some View {
-        Section {
-            if let fsrs {
-                LabeledContent(
-                    "Mục tiêu nhớ",
-                    value: Self.retentionLabel(fsrs.requestRetention))
-                LabeledContent(
-                    "Khoảng cách tối đa",
-                    value: "\(Int(fsrs.maximumInterval)) ngày")
-                LabeledContent(
-                    "Tham số FSRS",
-                    value: fsrs.fsrsVersion ?? "mặc định (fsrs-6)")
-            }
-        } header: {
-            Label("Thuật toán ôn tập", systemImage: "function")
-        } footer: {
-            Label("R1 dùng tham số mặc định — các núm này chưa mở để tránh lệch lịch.",
-                  systemImage: "lock")
-        }
-    }
-
     // MARK: — Load / save
 
     private func load() {
@@ -225,7 +201,6 @@ struct SettingsView: View {
             reminderMinutes = settings.reminderMinutes
             didLoad = true
         }
-        fsrs = try? ReadoFSRS.readSettings(on: database)
     }
 
     private func save() {
@@ -247,9 +222,5 @@ struct SettingsView: View {
 
     private static func hourLabel(_ hour: Int) -> String {
         String(format: "%02d:00", hour)
-    }
-
-    private static func retentionLabel(_ retention: Double) -> String {
-        String(format: "%.0f%%", retention * 100)
     }
 }
