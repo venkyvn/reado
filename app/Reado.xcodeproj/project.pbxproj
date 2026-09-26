@@ -78,6 +78,12 @@
 		5C0201000100000000000000 /* LearnMoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000100000000000000 /* LearnMoreTests.swift */; };
 
 		5C0100000B00000000000000 /* Pronunciation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000B00000000000000 /* Pronunciation.swift */; };
+
+		5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000C00000000000000 /* OnboardingChecklistSection.swift */; };
+
+		5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000200000000000000 /* OnboardingChecklistTests.swift */; };
+
+		5C0201000300000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000300000000000000 /* OCRProbeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -152,6 +158,12 @@
 		5B0201000100000000000000 /* LearnMoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnMoreTests.swift; sourceTree = "<group>"; };
 
 		5B0100000B00000000000000 /* Pronunciation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pronunciation.swift; sourceTree = "<group>"; };
+
+		5B0100000C00000000000000 /* OnboardingChecklistSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistSection.swift; sourceTree = "<group>"; };
+
+		5B0201000200000000000000 /* OnboardingChecklistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistTests.swift; sourceTree = "<group>"; };
+
+		5B0201000300000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,7 +227,8 @@
 				5B0100000800000000000000 /* ShellTabBar.swift */,
 				5B0100000900000000000000 /* CameraController.swift */,
 				5B0100000A00000000000000 /* SessionDoneView.swift */,
-				5B0100000B00000000000000 /* Pronunciation.swift */,);
+				5B0100000B00000000000000 /* Pronunciation.swift */,
+				5B0100000C00000000000000 /* OnboardingChecklistSection.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -245,7 +258,9 @@
 				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,
 				5B0200000E00000000000000 /* DebugTraceTests.swift */,
 				5B0200000F00000000000000 /* SessionTallyTests.swift */,
-				5B0201000100000000000000 /* LearnMoreTests.swift */,);
+				5B0201000100000000000000 /* LearnMoreTests.swift */,
+				5B0201000200000000000000 /* OnboardingChecklistTests.swift */,
+				5B0201000300000000000000 /* OCRProbeTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -366,7 +381,8 @@
 				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,
 				5C0100000900000000000000 /* CameraController.swift in Sources */,
 				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,
-				5C0100000B00000000000000 /* Pronunciation.swift in Sources */,);
+				5C0100000B00000000000000 /* Pronunciation.swift in Sources */,
+				5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -396,7 +412,9 @@
 				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,
 				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,
 				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,
-				5C0201000100000000000000 /* LearnMoreTests.swift in Sources */,);
+				5C0201000100000000000000 /* LearnMoreTests.swift in Sources */,
+				5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */,
+				5C0201000300000000000000 /* OCRProbeTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

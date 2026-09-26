@@ -350,6 +350,8 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 | `daily_new_limit` = 0 | Cấm hoặc cảnh báo: J3 chết |
 | Giờ chuyển ngày ngoài 0–23 | Không lưu — schema `CHECK (day_cutoff_hour BETWEEN 0 AND 23)` |
 | Không có named collection | Mục Đang đọc trên Home giải thích tạo collection ở tab Đọc; không đưa kho tạm vào danh sách |
+
+→ ADR-041: checklist 3 bước ở đầu Home (CEFR/agent/chụp) đóng dòng "CEFR trống lần đầu" — bước 1 hiện CEFR đang lọc, không trang mẫu (NG-03).
 | Thiếu tên / URL / model / key khi thêm agent | Không lưu; báo field thiếu |
 | `base_url` không HTTPS (trừ loopback / RFC1918) | Không lưu |
 | Đòi xoá agent `reado_proxy` | Không cho |

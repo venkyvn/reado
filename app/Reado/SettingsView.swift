@@ -391,7 +391,7 @@ struct SettingsView: View {
 
 /// Mẫu điền sẵn khi thêm agent mới — AI-Box mặc định (giá cạnh tranh, đã đo
 /// timeout thật 2026-09-26). Chỉ hiện lúc thêm mới, không hiện lúc sửa.
-private enum AgentPreset: String, CaseIterable, Identifiable {
+enum AgentPreset: String, CaseIterable, Identifiable {
     case aibox, gemini, custom
     var id: String { rawValue }
     var label: String {
@@ -404,7 +404,9 @@ private enum AgentPreset: String, CaseIterable, Identifiable {
 }
 
 /// Form dùng chung cho thêm/sửa agent OpenAI-compatible.
-private struct AgentFormSheet: View {
+/// U2 ux-polish-r1 (ADR-041): dùng lại từ `OnboardingChecklistSection`, không
+/// còn `private` — nội bộ vẫn chỉ gọi từ cùng target `Reado`.
+struct AgentFormSheet: View {
     let agent: AnalysisAgent?
     var onSave: (String, String, String, String?) -> String?
 
@@ -589,7 +591,7 @@ private struct AgentFormSheet: View {
     }
 }
 
-private enum KeyCheck: Equatable {
+enum KeyCheck: Equatable {
     case idle
     case checking
     case valid

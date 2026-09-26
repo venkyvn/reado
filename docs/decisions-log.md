@@ -623,3 +623,33 @@
   `docs/specs/prd.md` mục 3 thêm 1 dòng ghi ranh giới, không sửa dòng NG-01/02
   gốc (CLAUDE.md §4 "FR-07/FR-13 là bia mộ" — áp dụng tương tự cho các dòng
   NG đã chốt: không xoá, chỉ chú thích thêm).
+
+## ADR-041 — Onboarding = checklist 3 bước trên Home, không trang mẫu (T5 ux-polish-r1)
+
+- **Ngày:** 2026-09-26
+- **Bối cảnh:** Research UX (U2) gợi ý "cho thấy giá trị trước khi cấu hình"
+  — cách phổ biến là demo bằng trang mẫu dựng sẵn. Nhưng Reado cấm nội dung
+  do app soạn sẵn (NG-03) và vision #1 (Authentic Input Over Graded Readers):
+  Reado không sản xuất nội dung, không đứng cạnh người đọc bằng thứ tiếng
+  Anh không ai thật sự viết ra. Đồng thời `journeys.md` J-R1-S có dòng mở
+  "CEFR trống lần đầu — bắt chọn trước capture đầu … phải nhìn thấy được"
+  chưa có UI nào đóng, và proxy mặc định (`proxy.reado.app`) chưa deploy nên
+  agent mặc định luôn lỗi — user mới không tự biết phải thêm agent BYOK.
+- **Quyết định:** Onboarding là **checklist 3 bước trên Home** (không trang
+  mẫu, không nội dung soạn sẵn): (1) xác nhận CEFR đang lọc từ, (2) kết nối
+  agent phân tích (mẫu AI-Box, dán key), (3) chụp trang sách thật đầu tiên.
+  Mỗi bước suy trạng thái từ dữ liệu thật (agent active có key, đã có trang
+  phân tích) — không lưu tiến trình riêng vào DB. Chỉ 2 cờ UserDefaults:
+  `cefrConfirmed` (bấm "Đúng"/"Đổi" ở bước 1) và `dismissed` ("Ẩn hướng dẫn").
+  Checklist tự ẩn khi agent sẵn sàng VÀ đã có trang đầu (user cũ không thấy).
+- **Lý do:** Trang mẫu = nội dung app soạn sẵn → vi phạm NG-03 trực tiếp;
+  checklist chỉ trỏ vào đúng luồng thật (CEFR/agent/chụp) không tạo bề mặt
+  nội dung mới phải bảo trì. Suy trạng thái từ dữ liệu thật (không counter
+  riêng) tránh lệch giữa "đã làm" và "app nghĩ đã làm".
+- **Hệ quả:** `ReadoKit/Onboarding/OnboardingChecklist.swift` (mới, hàm thuần
+  — test không cần DB/UI). `AppModel` thêm `activeAgentReady`/`hasFirstPage`
+  + `addAgent(...)` (dùng chung với `SettingsView`). `AgentPreset`/
+  `AgentFormSheet`/`KeyCheck` ở `SettingsView.swift` bỏ `private` để dùng lại.
+  `OnboardingChecklistSection.swift` (mới) — Section đầu `HomeTabView`.
+  `journeys.md` J-R1-S không sửa dòng cũ (bia mộ tương tự FR-07/13), thêm ghi
+  chú trỏ ADR-041.

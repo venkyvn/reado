@@ -60,7 +60,8 @@ struct RootView: View {
                 HomeTabView(
                     onReview: { selectedTab = .review },
                     onSettings: { homePath.append(.settings) },
-                    onData: { homePath.append(.data) })
+                    onData: { homePath.append(.data) },
+                    onCapture: openShutterCapture)
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
                     }
@@ -254,6 +255,7 @@ private struct HomeTabView: View {
     let onReview: () -> Void
     let onSettings: () -> Void
     let onData: () -> Void
+    let onCapture: () -> Void
 
     var body: some View {
         Group {
@@ -290,6 +292,7 @@ private struct HomeTabView: View {
 
     private var homeList: some View {
         List {
+            OnboardingChecklistSection(onOpenSettings: onSettings, onCapture: onCapture)
             dailyProgressRows
             inboxRow
             streakRow

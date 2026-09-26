@@ -35,6 +35,10 @@ final class AppModel {
     /// Ôn nhanh (port UI lab) — scope ôn mặc định của tab Ôn: 1–3 bộ ưu tiên
     /// hoặc "tất cả" (`reviewAll`).
     private(set) var reviewScopeDefault: ReviewScope = .empty
+    /// ADR-041: agent đang active chạy được thật — proxy mặc định chưa deploy
+    /// nên chỉ agent BYOK có key mới tính "sẵn sàng". TODO: khi proxy deploy
+    /// xong, đổi điều kiện thành `hasKey` (proxy luôn `hasKey = true`).
+    private(set) var activeAgentReady = false
 
     // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
     // một detail mở một lúc nên một biến là đủ).
@@ -175,7 +179,21 @@ final class AppModel {
         dailyProgress = (try? Self.loadDailyProgress(db: database, extraNew: effectiveExtraNew))
         homePinIDs = (try? HomePinService.ids(on: database)) ?? []
         reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
+        // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới
+        // tính "sẵn sàng" cho checklist onboarding.
+        if let list = try? AnalysisAgentStore.list(on: database) {
+            activeAgentReady = list.agents.first { $0.id == list.activeID }
+                .map { !$0.isBuiltinProxy && $0.hasKey } ?? false
+        } else {
+            activeAgentReady = false
+        }
         dataRevision &+= 1
+    }
+
+    /// ADR-041: đã có ít nhất một trang phân tích hoặc một từ trong kho —
+    /// dùng để ẩn checklist onboarding cho user cũ (không đếm riêng).
+    var hasFirstPage: Bool {
+        (dailyProgress?.pagesAnalyzed ?? 0) > 0 || collections.contains { $0.totalItems > 0 }
     }
 
     /// Phần nới "Học thêm" còn hiệu lực HÔM NAY (0 nếu qua ngày mới hoặc chưa
@@ -377,6 +395,22 @@ final class AppModel {
                   scheduler: scheduler, snapshot: snapshot, now: SystemClock().now)
         else { return [:] }
         return outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
+    }
+
+    /// ADR-041: thêm agent BYOK từ checklist onboarding — cùng logic với
+    /// `SettingsView.addAgent` (mặc định đặt active). `nil` = đã lưu, chuỗi =
+    /// lỗi hiện trong sheet.
+    func addAgent(name: String, baseURL: String, model: String, apiKey: String?) -> String? {
+        guard let database else { return "Chưa mở được kho" }
+        guard let apiKey else { return "Thiếu API key" }
+        do {
+            try AnalysisAgentStore.add(
+                on: database, name: name, baseURL: baseURL, model: model, apiKey: apiKey)
+            reloadOverview()
+            return nil
+        } catch {
+            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+        }
     }
 
     /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa
