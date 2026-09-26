@@ -14,12 +14,19 @@ public struct DailyProgress: Equatable, Sendable {
     public let pagesAnalyzed: Int
     /// Ngày ôn LIÊN TỤC tính theo giờ chuyển ngày (FR-14).
     public let streak: Int
+    /// Có ≥1 lượt ôn `mode = 'srs'` từ đầu cửa sổ ngày hiện tại (FR-11 giờ
+    /// chuyển ngày) — dùng cho dòng nhắc "giữ streak" (ý 7, không tính `cram`).
+    public let reviewedToday: Bool
 
-    public init(dueToday: Int, backlog: Int, pagesAnalyzed: Int, streak: Int) {
+    public init(
+        dueToday: Int, backlog: Int, pagesAnalyzed: Int, streak: Int,
+        reviewedToday: Bool
+    ) {
         self.dueToday = dueToday
         self.backlog = backlog
         self.pagesAnalyzed = pagesAnalyzed
         self.streak = streak
+        self.reviewedToday = reviewedToday
     }
 }
 
@@ -70,11 +77,19 @@ public enum DailyProgressService {
         let streak = try self.streak(
             on: db, now: now, timezone: timezone, cutoffHour: cutoffHour)
 
+        // reviewedToday: >= dayStartIso cùng cách so lexicographic mà
+        // `newIntroducedCount` đang dùng — chuỗi ISO cùng độ dài nên so sánh
+        // chuỗi = so sánh thời gian.
+        let reviewedToday = ((try? db.scalarInt64(
+            "SELECT COUNT(*) FROM review_logs WHERE mode = 'srs' AND reviewed_at >= ?;",
+            [.text(dayStartIso)])) ?? 0) > 0
+
         return DailyProgress(
             dueToday: dueToday,
             backlog: backlog,
             pagesAnalyzed: pagesAnalyzed,
-            streak: streak)
+            streak: streak,
+            reviewedToday: reviewedToday)
     }
 
     /// Streak = số ngày ôn liên tục tính từ hôm nay (nếu hôm nay chưa ôn thì tính

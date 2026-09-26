@@ -104,6 +104,7 @@ enum Fixtures {
         in db: SQLiteDatabase,
         cardID: String,
         reviewedAtIso: String,
+        mode: String = "srs",
         id: String = Identifier.uuid()
     ) throws -> String {
         try db.run(
@@ -112,9 +113,9 @@ enum Fixtures {
               id, card_id, mode, rating, state_before, stability_before,
               difficulty_before, learning_steps_before, due_before,
               elapsed_days, scheduled_days, reviewed_at
-            ) VALUES (?, ?, 'srs', 3, 'new', 0, 0, 0, '2026-09-01T00:00:00Z', 0, 1, ?);
+            ) VALUES (?, ?, ?, 3, 'new', 0, 0, 0, '2026-09-01T00:00:00Z', 0, 1, ?);
             """,
-            [.text(id), .text(cardID), .text(reviewedAtIso)])
+            [.text(id), .text(cardID), .text(mode), .text(reviewedAtIso)])
         return id
     }
 

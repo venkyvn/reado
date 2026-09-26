@@ -255,4 +255,47 @@ final class VocabularyListTests: XCTestCase {
         XCTAssertEqual(
             summary.lastAddedAt, Fixtures.iso("2026-09-05T00:00:00Z"))
     }
+
+    /// Ý 4 motivation-r1 — `masteredCount` (Q-08): `state='review' AND
+    /// stability >= 21 AND suspended_at IS NULL`. Khớp đúng điều kiện
+    /// `Mastery.stabilityThreshold` / `VocabRepository.matureKeys` (FR-10).
+    func testSummaryMasteredCount() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "M")
+
+        // review + stability=21 → tính.
+        let mastered = try insertVocab(db, collection: col, term: "mastered")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: mastered, state: "review", stability: 21)
+
+        // learning + stability=30 → chưa qua state review, KHÔNG tính.
+        let learning = try insertVocab(db, collection: col, term: "learning")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: learning, state: "learning", stability: 30)
+
+        // review + stability=21 nhưng suspended (leech) → KHÔNG tính.
+        let suspended = try insertVocab(db, collection: col, term: "suspended")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: suspended, state: "review", stability: 21,
+            suspendedIso: "2026-09-10T00:00:00Z")
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        XCTAssertEqual(summary.wordCount, 3)
+        XCTAssertEqual(summary.masteredCount, 1)
+    }
+
+    /// Bộ rỗng (0 vocab) → cả wordCount và masteredCount đều 0 — UI ẩn thanh
+    /// tiến độ thay vì hiện "0/0" trông như lỗi.
+    func testSummaryMasteredCountEmptyCollection() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "Rỗng")
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        XCTAssertEqual(summary.wordCount, 0)
+        XCTAssertEqual(summary.masteredCount, 0)
+    }
 }

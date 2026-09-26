@@ -107,6 +107,8 @@ final class AppModel {
         let totalItems: Int
         let dueNow: Int
         let lastAddedAt: Date?
+        /// Q-08 "đã thuộc" — ý 4 motivation-r1 ("Đã thuộc X/Y" ở hub + Kho).
+        let masteredCount: Int
     }
 
     init() {
@@ -467,7 +469,8 @@ final class AppModel {
                 isDefault: summary.isDefault,
                 totalItems: summary.wordCount,
                 dueNow: summary.dueNow,
-                lastAddedAt: summary.lastAddedAt)
+                lastAddedAt: summary.lastAddedAt,
+                masteredCount: summary.masteredCount)
         }
     }
 

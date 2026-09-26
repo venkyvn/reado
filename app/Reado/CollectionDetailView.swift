@@ -37,6 +37,18 @@ struct CollectionDetailView: View {
             if let overview {
                 Section {
                     LabeledContent("Số từ", value: "\(overview.totalItems)")
+                    // Ý 4 motivation-r1: "Đã thuộc X/Y" (Q-08). Bộ rỗng ẩn hẳn
+                    // thanh này — 0/0 trông như lỗi, không phải tiến bộ.
+                    if overview.totalItems > 0 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ProgressView(
+                                value: Double(overview.masteredCount),
+                                total: Double(overview.totalItems))
+                            Text("Đã thuộc \(overview.masteredCount)/\(overview.totalItems)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     if let lastAddedAt = overview.lastAddedAt {
                         LabeledContent(
                             "Lần thêm gần nhất",

@@ -67,6 +67,10 @@ public enum VocabRepository {
         public let wordCount: Int
         public let dueNow: Int
         public let lastAddedAt: Date?
+        /// Q-08 "đã thuộc" (`Mastery.stabilityThreshold`) — số VOCAB ITEM (không
+        /// phải card) có ≥1 card `state='review'`, `stability >= ngưỡng`, chưa
+        /// suspend. Ý 4 (motivation-r1) — "Đã thuộc X/Y" ở hub + dòng bộ Kho.
+        public let masteredCount: Int
     }
 
     /// Thứ tự sắp danh sách từ: FR-08 gộp cùng `term` cạnh nhau; J6 kho tạm theo
@@ -304,8 +308,9 @@ public enum VocabRepository {
     // MARK: — FR-17(a) + Home overview
 
     /// Tổng quan mọi collection — tên, số từ, thẻ đến hạn (`due_at <= now`, chưa
-    /// suspend), lần thêm từ gần nhất. `COUNT(DISTINCT v.id)` chống việc JOIN
-    /// cards nhân dòng (một vocab tối đa 2 card theo direction).
+    /// suspend), lần thêm từ gần nhất, số từ đã thuộc (Q-08, ý 4 motivation-r1).
+    /// `COUNT(DISTINCT v.id)` chống việc JOIN cards nhân dòng (một vocab tối đa
+    /// 2 card theo direction) — áp dụng cả cho `mastered_count`.
     public static func allCollectionSummaries(
         on db: SQLiteDatabase, now: Date
     ) throws -> [CollectionSummary] {
@@ -316,16 +321,20 @@ public enum VocabRepository {
                    COUNT(DISTINCT v.id) AS word_count,
                    SUM(CASE WHEN ca.suspended_at IS NULL AND ca.due_at <= ?
                         THEN 1 ELSE 0 END) AS due_now,
-                   MAX(v.created_at) AS last_added
+                   MAX(v.created_at) AS last_added,
+                   COUNT(DISTINCT CASE
+                        WHEN ca.state = 'review' AND ca.stability >= ?
+                             AND ca.suspended_at IS NULL
+                        THEN v.id END) AS mastered_count
             FROM collections c
             LEFT JOIN vocab_items v ON v.collection_id = c.id
             LEFT JOIN cards ca ON ca.vocab_item_id = v.id
             GROUP BY c.id
             ORDER BY c.is_default DESC, c.name COLLATE NOCASE;
             """,
-            [.text(nowIso)])
+            [.text(nowIso), .double(Mastery.stabilityThreshold)])
         return try rows.map { row in
-            guard row.count >= 6 else {
+            guard row.count >= 7 else {
                 throw DatabaseError.failed(
                     "thiếu cột summary", statement: "collection_summaries")
             }
@@ -335,7 +344,8 @@ public enum VocabRepository {
                 isDefault: (row[2].intValue ?? 0) != 0,
                 wordCount: Int(row[3].intValue ?? 0),
                 dueNow: Int(row[4].intValue ?? 0),
-                lastAddedAt: row[5].textValue.flatMap { ISOTimestamp.date(from: $0) })
+                lastAddedAt: row[5].textValue.flatMap { ISOTimestamp.date(from: $0) },
+                masteredCount: Int(row[6].intValue ?? 0))
         }
     }
 

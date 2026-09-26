@@ -279,6 +279,7 @@ private struct HomeTabView: View {
             dailyProgressRows
             inboxRow
             streakRow
+            streakNudgeRow
             homePinRows
         }
         .refreshable { model.reloadOverview() }
@@ -373,6 +374,23 @@ private struct HomeTabView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    /// Ý 7 motivation-r1: nhắc giữ streak khi streak > 0 và hôm nay CHƯA ôn thẻ
+    /// nào — ẩn hoàn toàn khi đã ôn hoặc streak = 0 (không nhắc người mới bắt đầu).
+    @ViewBuilder
+    private var streakNudgeRow: some View {
+        if let progress = model.dailyProgress,
+           progress.streak > 0, !progress.reviewedToday {
+            Button(action: onReview) {
+                Label(
+                    "Hôm nay chưa ôn — 1 thẻ là giữ lửa 🔥 \(progress.streak) ngày",
+                    systemImage: "flame")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.due)
             }
             .listRowSeparator(.hidden)
         }
@@ -526,7 +544,7 @@ private struct KhoTabView: View {
                             .foregroundStyle(Color.accentColor)
                     }
                 }
-                Text("\(collection.totalItems) từ")
+                Text(wordCountLabel(collection))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -549,6 +567,13 @@ private struct KhoTabView: View {
                     .background(Capsule().fill(Theme.due.opacity(0.18)))
             }
         }
+    }
+
+    /// Ý 4 motivation-r1: "N từ · Đã thuộc X/Y" — bộ rỗng bỏ hẳn phần "Đã thuộc"
+    /// (0/0 trông như lỗi, không phải tiến bộ).
+    private func wordCountLabel(_ collection: AppModel.CollectionOverview) -> String {
+        guard collection.totalItems > 0 else { return "\(collection.totalItems) từ" }
+        return "\(collection.totalItems) từ · Đã thuộc \(collection.masteredCount)/\(collection.totalItems)"
     }
 
     /// Vuốt trái → bật/tắt "Ôn nhanh" (tối đa 3). Đủ 3 mà chưa chọn → vô hiệu.

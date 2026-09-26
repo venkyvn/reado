@@ -117,6 +117,60 @@ final class DailyProgressTests: XCTestCase {
         XCTAssertEqual(p.streak, 2, "theo cutoff 04:00 VN, hai log là hai ngày liên tiếp")
     }
 
+    // MARK: — Ý 7 motivation-r1: reviewedToday (streak-nudge)
+
+    /// Chưa có log nào → `reviewedToday == false`.
+    func testReviewedTodayFalseWhenNoLogs() throws {
+        let db = try Fixtures.seededDB()
+        let p = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertFalse(p.reviewedToday)
+    }
+
+    /// `fixedNow` = 09:00 VN 18/09, cutoff 04:00 VN → cửa sổ "hôm nay" bắt đầu
+    /// 04:00 VN 18/09 = 21:00 UTC 17/09. Log 03:59 VN 18/09 (= 20:59 UTC 17/09)
+    /// nằm TRƯỚC cutoff → vẫn thuộc phiên hôm QUA → `reviewedToday == false`.
+    func testReviewedTodayFalseWhenLogBeforeCutoff() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
+        let card = try Fixtures.insertCard(in: db, vocabItemID: v, state: "review")
+        try Fixtures.insertLog(in: db, cardID: card, reviewedAtIso: "2026-09-17T20:59:00Z")
+
+        let p = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertFalse(p.reviewedToday)
+    }
+
+    /// Log ngay tại/khi qua cutoff (04:00 VN 18/09 = 21:00 UTC 17/09) → cùng
+    /// "ngày học" hiện tại → `reviewedToday == true`.
+    func testReviewedTodayTrueWhenLogAtOrAfterCutoff() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
+        let card = try Fixtures.insertCard(in: db, vocabItemID: v, state: "review")
+        try Fixtures.insertLog(in: db, cardID: card, reviewedAtIso: "2026-09-17T21:00:00Z")
+
+        let p = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertTrue(p.reviewedToday)
+    }
+
+    /// `mode = 'cram'` KHÔNG tính vào `reviewedToday` — chỉ `mode = 'srs'`
+    /// (cram là R2, cột đã tồn tại theo DDL nhưng chưa có luồng UI ghi).
+    func testReviewedTodayIgnoresCramMode() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
+        let card = try Fixtures.insertCard(in: db, vocabItemID: v, state: "review")
+        try Fixtures.insertLog(
+            in: db, cardID: card, reviewedAtIso: "2026-09-18T02:00:00Z", mode: "cram")
+
+        let p = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertFalse(p.reviewedToday)
+    }
+
     /// FR-14 crit 1: số trang đã phân tích đếm `reading_sessions` (0 khi FR-05/06
     /// chưa ghi, tự đúng sau này).
     func testPagesAnalyzedCountsReadingSessions() throws {
