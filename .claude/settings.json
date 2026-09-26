@@ -1,27 +1,55 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git --no-pager diff --stat)",
-      "Bash(git --no-pager log --oneline -3)",
-      "Bash(TMPDIR=__TRACKED_VAR__/../.tmp xcodebuild -project Reado.xcodeproj -scheme Reado -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath __TRACKED_VAR__/../DerivedData -clonedSourcePackagesDirPath __TRACKED_VAR__/../.xcode-packages test)",
-      "Bash(git --no-pager log --oneline -1)",
-      "Bash(node scripts/verify/check-doc-links.mjs *)",
-      "Bash(node scripts/verify/check-doc-links.mjs)",
-      "Bash(echo \"EXIT=$?\")",
-      "Bash(git check-ignore *)",
-      "Bash(git ls-tree *)",
-      "Bash(python3 scripts/pbxproj_tool.py *)",
-      "Bash(python3 scripts/repo_map.py *)",
+      "Bash(scripts/test.sh)",
+      "Bash(scripts/test.sh *)",
       "Bash(python3 scripts/repo_map.py)",
-      "Bash(python3 -m py_compile scripts/repo_map.py)",
-      "Bash(echo \"exit=$?\")",
-      "Bash(tee /tmp/build.log)",
+      "Bash(python3 scripts/repo_map.py *)",
+      "Bash(python3 scripts/pbxproj_tool.py add *)",
+      "Bash(python3 scripts/pbxproj_tool.py remove *)",
+      "Bash(python3 scripts/pbxproj_tool.py check)",
+      "Bash(python3 scripts/pbxproj_tool.py list)",
+      "Bash(node scripts/verify/check-doc-links.mjs)",
+      "Bash(node scripts/verify/check-doc-links.mjs *)",
+      "Bash(xcrun simctl list *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show *)",
+      "Bash(git --no-pager *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(python3 -m py_compile scripts/pbxproj_tool.py)"
+      "Bash(git check-ignore *)",
+      "Bash(git ls-files*)",
+      "Bash(git ls-tree *)",
+      "Bash(grep *)",
+      "Bash(ls *)",
+      "Bash(sed -n *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)"
     ],
-    "additionalDirectories": [
-      "/tmp"
+    "deny": [
+      "Read(./DerivedData/**)",
+      "Read(./.xcode-packages/**)"
+    ],
+    "additionalDirectories": ["/tmp"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.py" }
+        ]
+      }
     ]
   }
 }

@@ -1,8 +1,7 @@
 # PROJECT.md — Reado
 > **AI Agent Index — mục lục nội dung repo.**
-> Entry point duy nhất là [CLAUDE.md](CLAUDE.md) — agent mới đọc nó trước tiên,
-> rồi [AGENTS.md](AGENTS.md) cho protocol Claude Code. File này giúp tìm file nhanh, không
-> phải nguồn chỉ đạo làm việc.
+> Entry point duy nhất là [CLAUDE.md](CLAUDE.md) — agent mới đọc nó trước tiên.
+> File này giúp tìm file nhanh, không phải nguồn chỉ đạo làm việc.
 
 ---
 
@@ -42,7 +41,6 @@ Q-03 *proxy-only* **đã đảo**; bia mộ tech-stack mục 2.3.
 
 | Path | What |
 |---|---|
-| [AGENTS.md](AGENTS.md) | How to work with the docs: read order, settled tables, questions you must ask |
 | [ROADMAP.md](ROADMAP.md) | Tracker tiến độ hiện hành (v2): phases, checklist theo FR, quy ước "xong" có bằng chứng |
 | [docs/specs/vision.md](docs/specs/vision.md) | Six principles — the resolver for ambiguity |
 | [docs/specs/prd.md](docs/specs/prd.md) | FR-01..FR-21 (FR-07 and FR-13 are tombs), NFRs, R1/R2 scope |
@@ -87,7 +85,7 @@ leech, capture failure (91 test xanh, 2026-09-24). `app/ReadoKit/Tests` là smok
 
 ## 5. Constraints (do not violate)
 
-- Read [AGENTS.md](AGENTS.md) before any other work. Do not fill owner-owned
+- Read [CLAUDE.md](CLAUDE.md) before any other work. Do not fill owner-owned
   blanks with a "reasonable default".
 - Do not implement FR-07 or FR-13 (tombs). Do not delete tomb entries.
 - Do not add a `unique` constraint on `vocab_items`. Dedup is FR-10 at extract time.

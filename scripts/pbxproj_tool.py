@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 pbxproj_tool.py — Thao tác project.pbxproj bằng lệnh, không edit tay.
 
 Vấn đề: session trước agent edit pbxproj tay 12 lần (read toàn file 5 lần → đốt ~600k token).
@@ -19,6 +19,8 @@ Cách dùng (chạy từ gốc repo):
 
     python3 scripts/pbxproj_tool.py list --pbxproj app/Reado.xcodeproj/project.pbxproj   # xem cấu trúc
 
+    python3 scripts/pbxproj_tool.py check   # đối chiếu git ls-files vs 4 tham chiếu bắt buộc/file
+
 WORKSPACE-AGNOSTIC: nhận pbxproj qua flag `--pbxproj` hoặc từ var env PBXPROJ, mặc định tìm
 app/**/project.pbxproj (loại .xcode-packages).
 
@@ -33,7 +35,7 @@ ID scheme hoà hợp với project hiện có (Reado kit riêng, objectVersion 6
 
 Sau khi chạy: agent KHÔNG cần đọc lại pbxproj. Kiểm tra bằng:
     grep -c "NewScreen" app/Reado.xcodeproj/project.pbxproj   # phải ≥ 3 (fileRef+buildFile+buildPhase)
-Build check: dùng lệnh xcodebuild như trong AGENTS.md rồi grep log.
+Build check: `scripts/test.sh` rồi grep /tmp/build.log.
 """
 
 import argparse
@@ -212,7 +214,7 @@ def remove_file_from_content(content: str, file_path: str, group_name: str, targ
     """Gỡ toàn bộ tham chiếu của file (buildfile + fileref + children + build phase)."""
     name = Path(file_path).name
     # 1) children của group
-    pat = re.compile(r'(' + re.escape(group_id) + r'\s*=\s*\{\s*isa\s*=\s*PBXGroup;[\s\S]*?)(children\s*=\s*\()')
+    pat = re.compile(r'(' + re.escape(group_id) + r'\s*(?:/\*[^*]*\*/)?\s*=\s*\{\s*isa\s*=\s*PBXGroup;[\s\S]*?)(children\s*=\s*\()')
     m = pat.search(content)
     if m:
         before = m.group(1) + m.group(2)
@@ -228,7 +230,7 @@ def remove_file_from_content(content: str, file_path: str, group_name: str, targ
     file_ref_ids = set(re.findall(r'(\b[0-9A-Fa-f]{24})\s*/\*\s*' + re.escape(name) + r'\s*\*/', content))
     if file_ref_ids:
         for fr in file_ref_ids:
-            pat_bf = re.compile(r'\n[ \t]*(\b[0-9A-Fa-f]{24})(\s*/\*\s*' + re.escape(name) + r'\s*in\s*Sources\s*\*/\s*=\s*\{isa\s*=\s*PBXBuildFile;\s*fileRef\s*=\s*' + re.escape(fr) + r';)')
+            pat_bf = re.compile(r'\n[ \t]*(\b[0-9A-Fa-f]{24})(\s*/\*\s*' + re.escape(name) + r'\s*in\s*Sources\s*\*/\s*=\s*\{isa\s*=\s*PBXBuildFile;\s*fileRef\s*=\s*' + re.escape(fr) + r'\s*(?:/\*[^*]*\*/)?\s*;\s*\};)')
             content = pat_bf.sub('', content)
             # xoá trong Sources build phase list
             pat_ph = re.compile(r'\n[ \t]*(?:[0-9A-Fa-f]{24}) /\* ' + re.escape(name) + r' in Sources \*/,')
@@ -327,12 +329,76 @@ def show_list(pbxproj: Path):
         print("  ", line.strip())
 
 
+def check_project(pbxproj: Path) -> int:
+    """Đối chiếu mọi *.swift track trong git (app/Reado, app/ReadoTests) với 4 dấu vết
+    bắt buộc trong pbxproj: PBXFileReference, PBXBuildFile, group child, Sources phase.
+    Thiếu 1 trong 4 → file bị Xcode skip NGẦM (không lỗi build, test "thừa xanh").
+    Trả 0 = sạch, 1 = có vấn đề (in danh sách thiếu)."""
+    import subprocess
+
+    content = read_pbxproj(pbxproj)
+    root = Path.cwd()  # quy ước tool: luôn chạy từ gốc repo (như add_file)
+
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files", "app/Reado", "app/ReadoTests"],
+            cwd=root, capture_output=True, text=True, check=True,
+        ).stdout.splitlines()
+    except Exception as exc:
+        print(f"Không chạy được git ls-files: {exc}", file=sys.stderr)
+        return 1
+
+    swift_files = [f for f in tracked if f.endswith(".swift") and "/Reado.xcodeproj/" not in f]
+    problems = []
+    for rel in swift_files:
+        name = Path(rel).name
+        has_fileref = bool(re.search(
+            r'/\*\s*' + re.escape(name) + r'\s*\*/\s*=\s*\{isa\s*=\s*PBXFileReference;', content))
+        has_buildfile = bool(re.search(
+            r'/\*\s*' + re.escape(name) + r'\s*in\s*Sources\s*\*/\s*=\s*\{isa\s*=\s*PBXBuildFile;', content))
+        has_child = bool(re.search(
+            r'\b[0-9A-Fa-f]{24}\s*/\*\s*' + re.escape(name) + r'\s*\*/,', content))
+        has_phase = bool(re.search(
+            r'\b[0-9A-Fa-f]{24}\s*/\*\s*' + re.escape(name) + r'\s*in\s*Sources\s*\*/,', content))
+        missing = [
+            label for label, ok in (
+                ("PBXFileReference", has_fileref),
+                ("PBXBuildFile", has_buildfile),
+                ("group child", has_child),
+                ("Sources phase", has_phase),
+            ) if not ok
+        ]
+        if missing:
+            problems.append((rel, missing))
+
+    # Ngược lại: PBXFileReference .swift mà tên không khớp file nào đang track
+    # (path trong pbxproj chỉ là basename, tương đối theo group — so theo tên là đúng quy ước tool này).
+    existing_names = {Path(f).name for f in swift_files}
+    dangling = []
+    for m in re.finditer(
+        r'/\*\s*([^*]+?\.swift)\s*\*/\s*=\s*\{isa\s*=\s*PBXFileReference;', content
+    ):
+        comment_name = m.group(1)
+        if comment_name not in existing_names:
+            dangling.append(comment_name)
+
+    if not problems and not dangling:
+        print(f"OK: {len(swift_files)} file Swift đủ 4 tham chiếu trong pbxproj")
+        return 0
+
+    for rel, missing in problems:
+        print(f"THIẾU {', '.join(missing)}: {rel}")
+    for name in dangling:
+        print(f"TREO (fileRef trỏ file không tồn tại trên đĩa): {name}")
+    return 1
+
+
 # ---------------------------------------------------------------------------
 
 def main():
     ap = argparse.ArgumentParser(description="Thao tác project.pbxproj — chống edit tay đốt token")
-    ap.add_argument("action", choices=["add", "remove", "list"],
-                    help="add=thêm file, remove=gỡ file, list=liệt kê cấu trúc")
+    ap.add_argument("action", choices=["add", "remove", "list", "check"],
+                    help="add=thêm file, remove=gỡ file, list=liệt kê cấu trúc, check=đối chiếu git ls-files vs 4 tham chiếu")
     ap.add_argument("--pbxproj", help="đường dẫn pbxproj (mặc định tự tìm)")
     ap.add_argument("--file", help="đường dẫn file Swift cần thêm/gỡ")
     ap.add_argument("--group", default="Reado", help="PBXGroup chứa file: Reado | ReadoTests")
@@ -360,6 +426,8 @@ def main():
         remove_file(pbx, args.file, args.group, args.target)
     elif args.action == "list":
         show_list(pbx)
+    elif args.action == "check":
+        sys.exit(check_project(pbx))
 
 
 if __name__ == "__main__":

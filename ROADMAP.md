@@ -1,6 +1,6 @@
 > 📍 **Tracker tiến độ HIỆN HÀNH — thế hệ v2 (iOS native), kế nhiệm `MVP_PLAN.md`.**
 > File này là nguồn duy nhất về *"đang tới đâu, làm gì tiếp, kiểm gì thì xong"*.
-> Nguồn về *"xây cái gì, vì sao"* vẫn là bộ docs sản phẩm (`AGENTS.md` → `docs/`).
+> Nguồn về *"xây cái gì, vì sao"* vẫn là bộ docs sản phẩm (`CLAUDE.md` → `docs/`).
 > Tracker thế hệ PWA (09-08..09-09) đã chuyển vào
 > [docs/archive/mvp-plan-pwa-gen.md](docs/archive/mvp-plan-pwa-gen.md) — mọi tham chiếu
 > "MVP_PLAN mục N" trong tài liệu cũ trỏ về đó, KHÔNG theo task trong đó nữa.
@@ -20,7 +20,7 @@
 
 ## 0. Cách dùng file này
 
-1. **Bootstrap session mới:** `AGENTS.md` → [docs/session-brief.md](docs/session-brief.md) → file này
+1. **Bootstrap session mới:** `CLAUDE.md` → `/rstart` (session-brief) → file này
    (nếu task đụng tiến độ) → làm việc → cập nhật mục 2 và mục 6 **cuối mỗi session**. Đừng tin trí nhớ.
 2. **Trạng thái item:** `⬜` chưa làm · `🔄` đang làm (kèm ngày + người) · `✅` xong (kèm ngày + bằng
    chứng) · `⛔` blocked (kèm lý do) · `📌` quyết định đã chốt.

@@ -58,7 +58,7 @@ song.
 >    *chi tiết triển khai* ở mục 13, nhưng A-01, A-02 và M-07 đều đứng trên nó. Doc này
 >    cũng ghi rõ một chỗ trống chặn A-02: prompt baseline thủ công chưa có trong repo.
 >
-> Kèm theo, [AGENTS.md](AGENTS.md) ở root nói thứ tự đọc, những gì không được tranh
+> Kèm theo, [CLAUDE.md](CLAUDE.md) ở root nói thứ tự đọc, những gì không được tranh
 > luận lại, và những câu hỏi phải hỏi thay vì tự quyết.
 
 > **v0.6 — chiều ngược của FR-16.** NFR-05 đòi mang dữ liệu đi được; round-trip còn

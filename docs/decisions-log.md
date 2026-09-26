@@ -450,3 +450,10 @@
   bỏ `image_url`. Model text (không-VL) dùng được. So 3–5 trang sách thật với lần gửi
   ảnh (chữ + tiền) làm sau khi T2 chạy được trên máy. PRD chữ "multimodal" chưa viết
   lại — ADR này là nguồn chốt.
+
+## ADR-035 — Agent tooling: chỉ Claude Code; protocol gộp vào CLAUDE.md
+
+- **Ngày:** 2026-09-26
+- **Quyết định:** Bỏ DSH / Cursor. `AGENTS.md` thành stub; protocol còn giá trị (workflow, đọc file lớn, pbxproj, bẫy build) chuyển vào `CLAUDE.md` §7. Build/test chỉ qua `scripts/test.sh`. Xoá `.cursorignore`, `scripts/smart_glob.py`, các luật token kiểu DSH (cache prefix, cấm read lại, trần steps/turn).
+- **Lý do:** Claude Code chỉ tự load `CLAUDE.md`; prompt cache, dedupe Read, Glob tôn trọng `.gitignore` đã do harness lo. Lệnh build lệch nhau + permission pattern hỏng làm mỗi lần build phải hỏi.
+- **Hệ quả:** Bẫy cố định ở `CLAUDE.md` §7; `session-brief.md` §3 chỉ còn bẫy mới. `.claude/settings.json` allow `scripts/test.sh`, deny Read cache build.

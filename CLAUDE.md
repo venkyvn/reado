@@ -1,7 +1,7 @@
 # CLAUDE.md — Reado
 
 > Entry point duy nhất cho Claude Code. Đọc hết file này trước khi làm việc.
-> Protocol session, cache prefix, discovery: `AGENTS.md` (không nhân đôi luật cứng ở đây).
+> Cách làm việc (workflow, đọc file, bẫy build): §7. Trạng thái session: `docs/session-brief.md`.
 
 ## 1. Reado là gì
 
@@ -13,16 +13,16 @@
 
 ## 2. Quickstart
 
-- **KHÔNG dùng `swift build`** — cache đụng `~/Library`. Luôn dùng `xcodebuild` với 3 cờ cache gom vào workspace (xem AGENTS.md).
-- Build & test:
+- Build & test — **chỉ** dùng script (đã gom 3 cờ cache + tự boot simulator + lọc log):
   ```bash
-  cd app
-  TMPDIR="$PWD/../.tmp" xcodebuild -project Reado.xcodeproj -scheme Reado \
-    -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
-    -derivedDataPath "$PWD/../DerivedData" -clonedSourcePackagesDirPath "$PWD/../.xcode-packages" test
+  scripts/test.sh                                            # build + toàn bộ test
+  scripts/test.sh build                                      # chỉ build
+  scripts/test.sh test -only-testing:ReadoTests/<Class>       # 1 lớp test khi đang sửa; full trước /rhandoff
   ```
-- Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — **không** ghi mốc test vào file này (prefix cache). Máy không build iOS thì không chạy lại và không ghi số mới.
-- **Chống đốt token khi build:** `xcodebuild` luôn `| tee /tmp/build.log | grep -E "error:|warning:|TEST.*passed|TEST.*failed|BUILD" | tail -n 60` — không ném raw log vào context. Chỉ `grep` trong `/tmp/build.log` khi cần. Chi tiết: `AGENTS.md §2` + `§4`.
+  Log đầy đủ ở `/tmp/build.log`, kết quả ở `.tmp/results/last.xcresult` — cần chi tiết thì đọc 2 chỗ đó, không đọc nguyên.
+- Proxy: `cd proxy && python3 -m unittest -q`.
+- **Cấm `swift build`** (đụng cache `~/Library`).
+- Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — không ghi vào file này.
 
 ## 3. Sơ đồ docs
 
@@ -71,3 +71,33 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 2. Kiểm non-goals (NG-01..09) + bảng "Đã chốt" (`CLAUDE.md` §5 và spec liên quan). Dòng đã chốt sai → BÁO LẠI, không sửa.
 3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner đúng câu còn mở ở mục 5 (Q-11). Ngưỡng leech đã chốt = 6. Thiếu hợp đồng / ranh giới → `/rplan` hoặc hỏi, không tự lấp.
 4. Chỉ là chi tiết hiển thị → chọn cách đơn giản nhất, ghi lại lựa chọn.
+
+## 7. Cách làm việc
+
+**Workflow**
+- Đầu session: `/rstart`. Task nhỏ (bug UI, copy, test bổ sung khi FR/journey đã chốt) → code luôn, nói 1 câu lý do skip plan.
+- Đụng hợp đồng (schema, FR mới, transaction, protocol module, Q mở) → `/rplan` (hoặc plan mode) trước, owner confirm rồi mới code.
+- Xong task → `/rhandoff`. 1 task tầng 2 / session; context dài → `/rhandoff` rồi `/clear`.
+
+**Đọc file**
+- File lớn — Grep trước, Read có offset/limit, không đọc nguyên: `ROADMAP.md`, `docs/specs/{prd,journeys,db,solution-design,sync-server-ddl}.md`, `docs/research/{vocabulary,review,tech-stack}.md`, `docs/agent/prompt-spec.md`, `docs/decisions-log.md`, `docs/archive/*`.
+- Bản đồ Swift: `python3 scripts/repo_map.py` (`--root app/ReadoKit/Sources --limit 40` để hẹp). Không in ra file docs.
+- Index "đụng X → grep Y": `docs/agent/agent-rulebook.md`.
+
+**pbxproj** — cấm edit tay/đọc nguyên `project.pbxproj`:
+- Thêm: `python3 scripts/pbxproj_tool.py add --file app/Reado/X.swift --group Reado --target Reado` (test: `--group ReadoTests --target ReadoTests`).
+- Gỡ: `python3 scripts/pbxproj_tool.py remove --file app/Reado/X.swift --group Reado --target Reado`.
+- Kiểm đủ 4 tham chiếu (PBXFileReference, PBXBuildFile, group child, Sources phase) cho mọi file Swift track trong git: `python3 scripts/pbxproj_tool.py check` — `scripts/test.sh` tự chạy cổng này trước khi build, thiếu 1 dòng thì Xcode skip file **ngầm** (test "thừa xanh").
+- Chạy xcodebuild tự re-sort pbxproj → trước commit chỉ giữ hunk thật.
+
+**Hooks** (`.claude/hooks/`)
+- `guard.py` (PreToolUse) chặn: edit tay `project.pbxproj`, `swift build`/`swift test`, `xcodebuild` gọi trần (không qua `scripts/test.sh`).
+- `session-context.sh` (SessionStart) tự nạp HEAD + thay đổi chưa commit + `docs/session-brief.md` §1–2 vào context khi mở/`/clear`/`/compact` — đỡ phải tự đọc lại.
+
+**Bẫy build**
+- Simulator: **iPhone 18 Pro**. `Reado.xcodeproj` viết tay objectVersion 60; local package dùng `XCSwiftPackageProductDependency`.
+- `ISO8601FormatStyle()` trần không parse nổi — compose đủ field (`ISOTimestamp.swift`).
+- SQLite `COLLATE NOCASE` chỉ gập ASCII — gập tiếng Việt ở tầng app (FR-20).
+- TOCropViewController từ SPM từ xa — build đầu cần mạng.
+- `scripts/test.sh` tự boot simulator (`simctl bootstatus -b`) trước khi gọi xcodebuild — simulator ở trạng thái `Shutdown` từng làm `xcodebuild test` treo vô thời hạn vì boot ngầm không đáng tin. Vẫn treo > 10 phút sau khi đã boot → kill, báo owner chạy tay trong Terminal.
+- Không chạy được simulator → không bịa số test, không ghi "xong".

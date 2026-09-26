@@ -2,14 +2,14 @@
 
 Bản PWA đầy đủ đã archive: `docs/archive/agents-pwa-gen.md` — **đừng dùng làm luật hiện hành**.
 
-Luật cứng sống ở `CLAUDE.md` §4–5. Protocol session / cache / đọc file sống ở `AGENTS.md`. File này chỉ **định tuyến**: đụng chủ đề nào thì grep file đó, không `read` nguyên file lớn.
+Luật cứng sống ở `CLAUDE.md` §4–5. Protocol session / đọc file / pbxproj / bẫy build sống ở `CLAUDE.md` §7. File này chỉ **định tuyến**: đụng chủ đề nào thì grep file đó, không `read` nguyên file lớn.
 
 ## Khi đụng X → grep Y
 
 | Đụng | File | Ghi chú |
 |---|---|---|
 | Luật cứng, Q mở | `CLAUDE.md` §4–5 | Một nguồn Q; command không chép số Q |
-| Session, cache prefix, glob, handoff | `AGENTS.md` | Không nhân đôi CLAUDE.md |
+| Session, đọc file, pbxproj, bẫy build | `CLAUDE.md` §7 | Không nhân đôi bảng luật cứng |
 | Schema / DDL / dialect SQLite | `docs/specs/db.md` | Grep cột / bảng; cấm read nguyên |
 | Lịch ôn, FSRS, cram, sync Later | `docs/research/review.md` | Grep mục cần |
 | Tổ chức collection / thẻ / import | `docs/research/vocabulary.md` | Grep; đây **không** phải rulebook |

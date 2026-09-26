@@ -44,7 +44,7 @@ Những pattern đã có FR/journey tương ứng — ghi rõ ánh xạ để kh
 | 5 | **Radial glow sau button** (`radial-gradient` vàng nhạt) | Micro-interaction cho **FAB capture (J1)** hoặc nút Học/Ôn trên Home (FR-14) | SwiftUI: `RadialGradient` overlay phía sau button, opacity thấp (0.5 → transparent). Chỉ dùng khi cần nhấn mạnh CTA chính |
 | 6 | **Numbered label 01/02/03/04 (white/50, 11px medium)** trên card | **Queue position indicator** cho **Review Queue (FR-11)** hoặc thứ tự trong lưới chọn collection | Text nhỏ `11pt medium, opacity 0.5` ở góc card. Hữu ích khi queue dài |
 
-> Tất cả các pattern trên **không** tạo journey mới. Chúng chỉ là chi tiết hiển thị — chọn cách đơn giản nhất khi implement (theo `docs/specs/vision.md` + `AGENTS.md`).
+> Tất cả các pattern trên **không** tạo journey mới. Chúng chỉ là chi tiết hiển thị — chọn cách đơn giản nhất khi implement (theo `docs/specs/vision.md` + `CLAUDE.md`).
 
 ---
 
@@ -80,7 +80,7 @@ Ghi rõ để không ai copy nhầm.
 
 1. Khi prompt UI cho một màn Reado (theo `docs/specs/journeys.md`), mở file này trước để xem pattern nào đã map sẵn.
 2. Pattern ở mục 2 thì áp thẳng vào SwiftUI (kèm FR/journey đã ghi). Pattern ở mục 3 chỉ tham chiếu khi owner duyệt scope mới — không tự động thành FR.
-3. Mọi chi tiết hiển thị chưa rõ → chọn cách đơn giản nhất, ghi lại lựa chọn (theo `AGENTS.md` mục 4).
+3. Mọi chi tiết hiển thị chưa rõ → chọn cách đơn giản nhất, ghi lại lựa chọn (theo `CLAUDE.md` §6).
 
 ---
 

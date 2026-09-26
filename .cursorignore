@@ -1,8 +1,0 @@
-DerivedData/
-.tmp/
-.xcode-packages/
-.build/
-.swiftpm/
-node_modules/
-ref/
-qr/

@@ -3,7 +3,7 @@ description: Spec → hỏi nếu mơ hồ → HLD → task breakdown. Không co
 argument-hint: "[FR hoặc task-id]"
 ---
 
-Lập plan Reado theo AGENTS.md (spec-driven, hai tầng). **Đừng `write` code.** Template: `docs/agent/plan-template.md`.
+Lập plan Reado theo CLAUDE.md §7 (spec-driven, hai tầng). **Đừng `write` code.** Template: `docs/agent/plan-template.md`.
 
 1. **Spec** — grep FR/GWT trong `docs/specs/prd.md` và journey trong `docs/specs/journeys.md` (cấm read nguyên file lớn). Ghi in-scope / out-of-scope / không đụng. Không viết PRD mới.
 2. **Thiếu hợp đồng** (schema mới, FR chưa có, Q mở ở `CLAUDE.md` §5, docs lệch code) → hỏi fen **một lượt**, dừng. Không reasonable default.
