@@ -155,6 +155,59 @@ final class ReviewSchedulerTests: XCTestCase {
             .good, snapshot: Fixtures.cardSnapshot(due: now), now: now)
         XCTAssertEqual(one, two)
     }
+
+    // MARK: — U1 ux-polish-r1: IntervalPreview (nhãn nhịp ôn trên nút chấm)
+
+    func testIntervalPreviewMatchesGradeForNewCard() throws {
+        let scheduler = try makeScheduler(fuzz: false)
+        let now = Fixtures.fixedNow
+        let snapshot = Fixtures.cardSnapshot(due: now)
+        let outcomes = try IntervalPreview.outcomes(
+            scheduler: scheduler, snapshot: snapshot, now: now)
+        for rating in ReadoRating.allCases {
+            let direct = try scheduler.grade(rating, snapshot: snapshot, now: now)
+            XCTAssertEqual(outcomes[rating], direct, "lệch ở \(rating)")
+        }
+    }
+
+    func testIntervalPreviewMatchesGradeForReviewCard() throws {
+        let scheduler = try makeScheduler(fuzz: false)
+        let now = Fixtures.fixedNow
+        let snapshot = Fixtures.cardSnapshot(
+            due: now, stability: 10, difficulty: 4, reps: 3, state: "review",
+            lastReview: now.addingTimeInterval(-10 * 86400))
+        let outcomes = try IntervalPreview.outcomes(
+            scheduler: scheduler, snapshot: snapshot, now: now)
+        for rating in ReadoRating.allCases {
+            let direct = try scheduler.grade(rating, snapshot: snapshot, now: now)
+            XCTAssertEqual(outcomes[rating], direct, "lệch ở \(rating)")
+        }
+    }
+
+    func testIntervalPreviewOrderedAgainToEasy() throws {
+        // Thẻ review đã có lịch sử — nhịp phải tăng dần Again ≤ Hard ≤ Good ≤ Easy.
+        let scheduler = try makeScheduler(fuzz: false)
+        let now = Fixtures.fixedNow
+        let snapshot = Fixtures.cardSnapshot(
+            due: now, stability: 10, difficulty: 4, reps: 3, state: "review",
+            lastReview: now.addingTimeInterval(-10 * 86400))
+        let outcomes = try IntervalPreview.outcomes(
+            scheduler: scheduler, snapshot: snapshot, now: now)
+        let days = ReadoRating.allCases.map { outcomes[$0]!.scheduledDays }
+        XCTAssertEqual(days, days.sorted(), "nhịp phải tăng dần Again→Easy: \(days)")
+    }
+
+    func testIntervalLabelBuckets() {
+        XCTAssertEqual(IntervalPreview.label(days: 0), "<1 ngày")
+        XCTAssertEqual(IntervalPreview.label(days: 1), "1 ngày")
+        XCTAssertEqual(IntervalPreview.label(days: 29), "29 ngày")
+        XCTAssertEqual(IntervalPreview.label(days: 30), "1 tháng")
+        XCTAssertEqual(IntervalPreview.label(days: 45), "2 tháng")
+        XCTAssertEqual(IntervalPreview.label(days: 364), "12 tháng")
+        XCTAssertEqual(IntervalPreview.label(days: 365), "1 năm")
+        XCTAssertEqual(IntervalPreview.label(days: 548), "1,5 năm")
+        XCTAssertEqual(IntervalPreview.label(days: 730), "2 năm")
+    }
 }
 
 /// ADR-033 — ngưỡng vuốt và hướng bay. Hướng phải theo predicted, không theo

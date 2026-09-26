@@ -366,6 +366,19 @@ final class AppModel {
         return GradeResult(logID: logID, crossedMastery: crossedMastery)
     }
 
+    /// U1 ux-polish-r1: nhãn nhịp ôn kế tiếp cho 4 mức chấm (preview
+    /// `swift-fsrs` thật qua `IntervalPreview` — không tự tính). Lỗi (DB đóng,
+    /// settings hỏng) → rỗng, nút chấm vẫn hoạt động bình thường, chỉ ẩn nhãn.
+    func intervalLabels(for snapshot: CardSnapshot) -> [ReadoRating: String] {
+        guard let database,
+              let settings = try? ReadoFSRS.readSettings(on: database),
+              let scheduler = try? ReviewScheduler(settings: settings),
+              let outcomes = try? IntervalPreview.outcomes(
+                  scheduler: scheduler, snapshot: snapshot, now: SystemClock().now)
+        else { return [:] }
+        return outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
+    }
+
     /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa
     /// ghi — cùng transaction (không UPDATE log cũ).
     func undoReview(cardID: String, logID: String, snapshot: CardSnapshot) throws {

@@ -42,6 +42,10 @@ struct ReviewQueueView: View {
     @State private var scope: Set<String>? = nil
     @State private var showScopePicker = false
 
+    // U1 ux-polish-r1: nhãn nhịp ôn kế tiếp cho 4 nút chấm — refresh mỗi lần
+    // `lastSnapshot` đổi thẻ (loadQueue/gradeNow/undo), không tính trong body.
+    @State private var intervalLabels: [ReadoRating: String] = [:]
+
     /// Mở sẵn phạm vi (J2 "Ôn bộ này") — nil = tất cả collection. `showsCloseButton`
 /// false khi nhúng làm TAB (không nút "Đóng"); sheet "Ôn bộ này" để true.
     private let showsCloseButton: Bool
@@ -305,6 +309,11 @@ struct ReviewQueueView: View {
         }
     }
 
+    /// U1: nạp lại nhãn nhịp ôn cho thẻ đang đứng ở `lastSnapshot`.
+    private func refreshIntervals() {
+        intervalLabels = lastSnapshot.map { model.intervalLabels(for: $0) } ?? [:]
+    }
+
     private func flipCard() {
         let target: Double = flipDegrees == 0 ? 180 : 0
         // Reduce Motion: đổi mặt tức thì, không quay 3D.
@@ -376,11 +385,11 @@ struct ReviewQueueView: View {
         if swipeProgress > 0.02 {
             ZStack {
                 if dragOffset.width < 0 {
-                    badgeLabel("Quên", color: Theme.danger)
+                    badgeLabel(stampText(.again), color: Theme.danger)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .rotationEffect(.degrees(-10))
                 } else {
-                    badgeLabel("Được", color: Theme.ok)
+                    badgeLabel(stampText(.good), color: Theme.ok)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .rotationEffect(.degrees(10))
                 }
@@ -388,6 +397,12 @@ struct ReviewQueueView: View {
             .padding(24)
             .opacity(swipeProgress)
         }
+    }
+
+    /// U1: nhãn stamp kèm nhịp ôn khi có sẵn — "Quên · 1 ngày" thay vì trơ "Quên".
+    private func stampText(_ rating: ReadoRating) -> String {
+        guard let hint = intervalLabels[rating] else { return rating.label }
+        return "\(rating.label) · \(hint)"
     }
 
     private func badgeLabel(_ text: String, color: Color) -> some View {
@@ -507,17 +522,27 @@ struct ReviewQueueView: View {
     }
 
     private func gradeButton(_ rating: ReadoRating) -> some View {
-        Button {
+        let hint = intervalLabels[rating]
+        return Button {
             performGrade(rating)
         } label: {
-            Text(rating.label)
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
-                .background(rating.buttonBackground)
-                .foregroundStyle(rating.buttonForeground)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(spacing: 2) {
+                Text(rating.label)
+                    .font(.subheadline.weight(.semibold))
+                if let hint {
+                    Text(hint)
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .opacity(0.8)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 52)
+            .background(rating.buttonBackground)
+            .foregroundStyle(rating.buttonForeground)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+        .accessibilityLabel(hint.map { "\(rating.label), ôn lại sau \($0)" } ?? rating.label)
     }
 
     private func performGrade(_ rating: ReadoRating) {
@@ -560,6 +585,7 @@ struct ReviewQueueView: View {
             if currentIndex < items.count,
                let nextSnap = model.reviewSnapshots[items[currentIndex].cardID] {
                 lastSnapshot = nextSnap
+                refreshIntervals()
             } else {
                 // Vừa chấm hết hàng đợi — nạp lại streak/tiến độ trước khi
                 // SessionDoneView hiện, nếu không streak vẫn là số lúc mở màn
@@ -611,6 +637,7 @@ struct ReviewQueueView: View {
             masteredToastTask?.cancel()
             lastLogID = nil
             // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
+            refreshIntervals()
         } catch {
             // AppModel đã set reviewError.
         }
@@ -639,6 +666,7 @@ struct ReviewQueueView: View {
             } else {
                 lastSnapshot = nil
             }
+            refreshIntervals()
         } catch {
             // reviewError đã set trong model.
         }
