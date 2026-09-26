@@ -564,3 +564,37 @@
   thêm. `docs/ux/visual-redesign-plan.md` §3 giữ nguyên cho nút grade; chỉ
   màn xong buổi đổi diễn giải. Test: `SessionTallyTests` (mới) + suite cũ
   228 test, 227 xanh/1 skip (`LiveAIBoxTests`, không có key mạng thật).
+
+## ADR-039 — "Học thêm 10 từ" nới hạn mức trong bộ nhớ app, N cố định (T2)
+
+- **Ngày:** 2026-09-26
+- **Bối cảnh:** `SessionDoneView` (T1, ADR-038) ăn mừng tiến bộ đo được nhưng
+  chưa cho user chủ động học thêm khi vừa hết hàng đợi mà vẫn còn thẻ mới tồn
+  trong kho (bị `daily_new_limit`, FR-11 chặn). Owner 2026-09-26 chốt hai câu
+  hỏi mở (Q-A, Q-B) trước khi code.
+- **Quyết định:**
+  - **Q-A:** phần nới hạn mức giữ **trong bộ nhớ app** (`AppModel`), gắn theo
+    `dayStart` (giờ chuyển ngày FR-11, không nửa đêm hệ thống) — KHÔNG lưu
+    DB, KHÔNG migration, KHÔNG đổi `Migration.swift`. Thoát app mất phần nới
+    chưa dùng; thẻ đã học vẫn đếm đúng vì `newIntroducedCount` suy từ
+    `review_logs`, không phải một counter riêng.
+  - **Q-B:** N = **10 từ cố định**, một nút "Học thêm 10 từ" — không cấu hình
+    số lượng, không nhiều nút.
+  - Hạn mức nới vẫn áp **toàn cục trước khi lọc phạm vi** (FR-11 criterion cũ)
+    — `ReviewQueue.loadFullQueue`/`DailyProgressService.load` nhận thêm tham
+    số `extraNew` cộng thẳng vào trần trước khi trừ `introduced`, không đổi
+    thứ tự tính hay cách đếm.
+- **Lý do:** Không schema tránh migration/sync rủi ro cho một tính năng có
+  thể bỏ dở giữa ngày; N cố định giữ CTA đơn giản, đúng tinh thần "user chủ
+  động, hệ thống không tự nới" (không phá cơ chế bảo vệ M-02/M-07 mà
+  `daily_new_limit` tồn tại để giữ).
+- **Hệ quả:** `ReviewQueue` thêm `currentDayStartIso(on:now:)` (gom logic tính
+  `dayStart` dùng chung, trước đó lặp lại ở `loadFullQueue`/
+  `DailyProgressService.load`) và `effectiveExtra(stored:currentDayStart:)`
+  (hàm thuần, test không cần DB). `DailyProgress` thêm `totalNewRemaining`
+  (tổng thẻ `state='new'` còn tồn, không áp hạn mức) để `SessionDoneView` ẩn
+  CTA khi kho đã hết thẻ mới. `AppModel` giữ `extraNewQuota: (dayStart,
+  count)?` riêng phiên app; `learnMore()` cộng 10 rồi `reloadOverview()`,
+  view (`ReviewQueueView`) tự gọi lại `loadQueue()` để nạp đúng hàng đợi mới
+  — tránh hai tác vụ async cùng ghi `reviewItems`. Test: `LearnMoreTests`
+  (mới, 7 test) + suite cũ, 240 xanh/241 (1 skip `LiveAIBoxTests`).

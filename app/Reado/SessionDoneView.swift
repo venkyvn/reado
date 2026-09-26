@@ -11,6 +11,11 @@ struct SessionDoneView: View {
 
     let tally: SessionTally
     let streak: Int
+    /// Ý 3 motivation-r1: CTA "Học thêm 10 từ" chỉ hiện khi kho còn thẻ new
+    /// chưa giới thiệu (`DailyProgress.totalNewRemaining > 0`) — nới hạn mức
+    /// vô nghĩa khi không còn gì để nới.
+    let canLearnMore: Bool
+    let onLearnMore: () -> Void
     let onHome: () -> Void
 
     /// Giới hạn hiển thị — danh sách dài quá thì rối, không phải bảng thành tích.
@@ -25,6 +30,11 @@ struct SessionDoneView: View {
                 statsGrid
                 masteredSection
                 Spacer(minLength: 12)
+                if canLearnMore {
+                    Button("Học thêm 10 từ", action: onLearnMore)
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                }
                 Button("Về Home", action: onHome)
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)

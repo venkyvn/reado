@@ -117,6 +117,36 @@ public enum ReviewQueue {
         )
     }
 
+    /// `dayStart` (ISO) hiện tại theo `settings.timezone` + `day_cutoff_hour` —
+    /// cùng cửa sổ "hôm nay" mà `loadFullQueue`/`DailyProgressService` dùng.
+    /// `AppModel` (ý 3 "Học thêm") gọi hàm này để gắn phần nới hạn mức đúng ngày
+    /// học hiện tại, KHÔNG dùng `Calendar.current` nửa đêm hệ thống.
+    public static func currentDayStartIso(on db: SQLiteDatabase, now: Date) -> String {
+        let timezoneID: String = (try? db.scalarString(
+            "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
+        let cutoffHour: Int = {
+            if let v = try? db.scalarInt64(
+                "SELECT day_cutoff_hour FROM settings WHERE id = 1;") {
+                return Int(v)
+            }
+            return 4
+        }()
+        let tz = TimeZone(identifier: timezoneID) ?? .current
+        return DayBoundary.window(
+            now: now, timezone: tz, dayCutoffHour: cutoffHour).start
+    }
+
+    /// Hàm THUẦN (không DB) — phần nới "Học thêm" chỉ còn hiệu lực trong đúng
+    /// `dayStart` đã lưu; qua ngày mới (giờ chuyển ngày FR-11, không nửa đêm hệ
+    /// thống) thì mất, không cộng dồn (Q-A đã chốt 2026-09-26).
+    public static func effectiveExtra(
+        stored: (dayStart: String, count: Int)?,
+        currentDayStart: String
+    ) -> Int {
+        guard let stored, stored.dayStart == currentDayStart else { return 0 }
+        return stored.count
+    }
+
     // MARK: — FR-11 full queue façade (cards → [ReviewItem] + snapshot map)
 
     /// Một item hiển thị trên hàng đợi — FR-12 cần term/pos/meaning_vi/ipa/example/
@@ -153,30 +183,22 @@ public enum ReviewQueue {
     /// Đọc toàn bộ hàng đợi hiện tại (hai nhánh gộp) kèm chi tiết vocab
     /// + collection cho UI + map cardID→snapshot TRƯỚC (FR-12 undo cần).
     /// `dailyNewLimit` / `now` caller truyền vào để tính quota chính xác.
+    /// `extraNew` (ý 3 motivation-r1, "Học thêm 10 từ"): phần nới hạn mức new
+    /// RIÊNG ngày hiện tại, giữ trong bộ nhớ app (`AppModel`, không schema) —
+    /// mặc định 0 = hành vi cũ. Vẫn áp TOÀN CỤC trước khi lọc phạm vi (FR-11).
     public static func loadFullQueue(
         on db: SQLiteDatabase,
         dailyNewLimit: Int,
         now: Date,
-        scope: Set<String>? = nil
+        scope: Set<String>? = nil,
+        extraNew: Int = 0
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
         let nowIso = ISOTimestamp.string(from: now)
-        // Tính dayStartIso theo settings.timezone + cutoff_hour.
-        let timezoneID: String = (try? db.scalarString(
-            "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
-        let cutoffHour: Int = {
-            if let v = try? db.scalarInt64(
-                "SELECT day_cutoff_hour FROM settings WHERE id = 1;") {
-                return Int(v)
-            }
-            return 4
-        }()
-        let tz = TimeZone(identifier: timezoneID) ?? .current
-        let dayStartIso = DayBoundary.window(
-            now: now, timezone: tz, dayCutoffHour: cutoffHour).start
+        let dayStartIso = currentDayStartIso(on: db, now: now)
 
         // Nhánh 1 — new (quota).
         let introduced = try newIntroducedCount(on: db, dayStartIso: dayStartIso)
-        let remainingQuota = max(0, Int64(dailyNewLimit) - introduced)
+        let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - introduced)
         let newIDs = try newCardIDs(on: db, quota: remainingQuota, scope: scope)
         // Nhánh 2 — due (review/relearning, đến cuối ngày cutoff).
         let dueIDs = try dueCardIDs(on: db, dueBeforeIso: nowIso, scope: scope)

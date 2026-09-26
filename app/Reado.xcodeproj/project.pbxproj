@@ -74,6 +74,8 @@
 		5C0100000A00000000000000 /* SessionDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000A00000000000000 /* SessionDoneView.swift */; };
 
 		5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000F00000000000000 /* SessionTallyTests.swift */; };
+
+		5C0201000100000000000000 /* LearnMoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000100000000000000 /* LearnMoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -144,6 +146,8 @@
 		5B0100000A00000000000000 /* SessionDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDoneView.swift; sourceTree = "<group>"; };
 
 		5B0200000F00000000000000 /* SessionTallyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTallyTests.swift; sourceTree = "<group>"; };
+
+		5B0201000100000000000000 /* LearnMoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnMoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -235,7 +239,8 @@
 				5B0200000C00000000000000 /* PageOCRTests.swift */,
 				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,
 				5B0200000E00000000000000 /* DebugTraceTests.swift */,
-				5B0200000F00000000000000 /* SessionTallyTests.swift */,);
+				5B0200000F00000000000000 /* SessionTallyTests.swift */,
+				5B0201000100000000000000 /* LearnMoreTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -384,7 +389,8 @@
 				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,
 				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,
 				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,
-				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,);
+				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,
+				5C0201000100000000000000 /* LearnMoreTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

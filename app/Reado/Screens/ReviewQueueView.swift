@@ -65,7 +65,18 @@ struct ReviewQueueView: View {
                     .transition(.opacity)
             } else if tally.reviewed > 0 {
                 // ADR-038: vừa chấm hết phiên → màn ăn mừng tiến bộ đo được.
-                SessionDoneView(tally: tally, streak: model.dailyProgress?.streak ?? 0) {
+                SessionDoneView(
+                    tally: tally,
+                    streak: model.dailyProgress?.streak ?? 0,
+                    canLearnMore: (model.dailyProgress?.totalNewRemaining ?? 0) > 0,
+                    onLearnMore: {
+                        // Ý 3: nới hạn mức riêng hôm nay rồi nạp lại đúng hàng
+                        // đợi (scope hiện tại) — quay lại cardView, không phải
+                        // dismiss sheet, để thẻ new vừa nới hiện ra.
+                        model.learnMore()
+                        Task { await loadQueue() }
+                    }
+                ) {
                     dismiss()
                 }
                 .transition(.opacity)

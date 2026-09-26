@@ -480,6 +480,11 @@ dọn, và toàn bộ giá trị của FR-18 mất theo.
   collection đang hoạt động vẫn chỉ ra tổng cộng `daily_new_limit` card mới mỗi
   ngày, không phải bốn lần con số đó. Phạm vi quyết định *card nào* được chọn trong
   hạn mức, không nới hạn mức.
+- **Given** hàng đợi hôm nay đã hết, **when** người dùng chủ động bấm "Học thêm 10
+  từ", **then** hạn mức new **riêng ngày học hiện tại** tăng 10, vẫn áp **toàn cục
+  trước khi lọc phạm vi** như criterion trên; hệ thống **không bao giờ tự nới** —
+  phần nới này chỉ tồn tại trong bộ nhớ app, mất khi qua ngày mới hoặc thoát app
+  (motivation-r1 ý 3, ADR-039).
 - **Given** hệ thống cần biết hôm nay đã giới thiệu bao nhiêu card mới, **when** nó
   đếm, **then** con số được **suy ra từ review log** — số lần chấm trong ngày mà card
   lúc đó đang ở trạng thái `new` — chứ **không** từ một cột counter riêng. Counter và

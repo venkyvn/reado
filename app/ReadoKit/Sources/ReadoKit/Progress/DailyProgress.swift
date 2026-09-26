@@ -17,16 +17,21 @@ public struct DailyProgress: Equatable, Sendable {
     /// Có ≥1 lượt ôn `mode = 'srs'` từ đầu cửa sổ ngày hiện tại (FR-11 giờ
     /// chuyển ngày) — dùng cho dòng nhắc "giữ streak" (ý 7, không tính `cram`).
     public let reviewedToday: Bool
+    /// Tổng thẻ `state = 'new'` còn tồn trong kho (chưa từng giới thiệu),
+    /// KHÔNG áp hạn mức — dùng để ẩn CTA "Học thêm 10 từ" (ý 3) khi kho đã hết
+    /// thẻ mới, tránh nút nới hạn mức vô nghĩa.
+    public let totalNewRemaining: Int
 
     public init(
         dueToday: Int, backlog: Int, pagesAnalyzed: Int, streak: Int,
-        reviewedToday: Bool
+        reviewedToday: Bool, totalNewRemaining: Int
     ) {
         self.dueToday = dueToday
         self.backlog = backlog
         self.pagesAnalyzed = pagesAnalyzed
         self.streak = streak
         self.reviewedToday = reviewedToday
+        self.totalNewRemaining = totalNewRemaining
     }
 }
 
@@ -38,11 +43,13 @@ public enum DailyProgressService {
     public static func load(
         on db: SQLiteDatabase,
         dailyNewLimit: Int,
-        now: Date
+        now: Date,
+        extraNew: Int = 0
     ) throws -> DailyProgress {
         let nowIso = ISOTimestamp.string(from: now)
 
         // timezone + giờ chuyển ngày — đúng cặp giá trị FR-11 dùng chung.
+        let dayStartIso = ReviewQueue.currentDayStartIso(on: db, now: now)
         let timezoneID: String = (try? db.scalarString(
             "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
         let cutoffHour: Int = {
@@ -53,14 +60,14 @@ public enum DailyProgressService {
             return 4
         }()
         let timezone = TimeZone(identifier: timezoneID) ?? .current
-        let dayStartIso = DayBoundary.window(
-            now: now, timezone: timezone, dayCutoffHour: cutoffHour).start
 
         // Nhánh new (hạn mức) — luật FR-11: quota trừ số thẻ mới đã giới thiệu.
+        // `extraNew` (ý 3 "Học thêm 10 từ"): nới trần RIÊNG hôm nay, giữ ở
+        // AppModel — số hiển thị Home phải khớp đúng hàng đợi thật sau khi bấm.
         let totalNew = Int((try db.scalarInt64(
             "SELECT COUNT(*) FROM cards WHERE state = 'new' AND suspended_at IS NULL;")) ?? 0)
         let introduced = Int(try ReviewQueue.newIntroducedCount(on: db, dayStartIso: dayStartIso))
-        let remainingQuota = max(0, Int64(dailyNewLimit) - Int64(introduced))
+        let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - Int64(introduced))
         let newQueued = try ReviewQueue.newCardIDs(on: db, quota: remainingQuota).count
 
         // Nhánh due — không hạn mức (FR-11).
@@ -89,7 +96,8 @@ public enum DailyProgressService {
             backlog: backlog,
             pagesAnalyzed: pagesAnalyzed,
             streak: streak,
-            reviewedToday: reviewedToday)
+            reviewedToday: reviewedToday,
+            totalNewRemaining: totalNew)
     }
 
     /// Streak = số ngày ôn liên tục tính từ hôm nay (nếu hôm nay chưa ôn thì tính

@@ -97,6 +97,14 @@ final class AppModel {
     private(set) var reviewScope: Set<String>? = nil
     private(set) var dueOutsideScope = 0
 
+    /// Ý 3 motivation-r1 ("Học thêm 10 từ", Q-A/Q-B đã chốt): phần nới hạn mức
+    /// new RIÊNG ngày học hiện tại — chỉ bộ nhớ app, KHÔNG lưu DB/migration.
+    /// Gắn theo `dayStart` (giờ chuyển ngày FR-11, không nửa đêm hệ thống) —
+    /// qua ngày mới tự mất qua `ReviewQueue.effectiveExtra`.
+    private var extraNewQuota: (dayStart: String, count: Int)?
+    /// Q-B đã chốt: N = 10 từ cố định, một nút "Học thêm 10 từ".
+    private static let learnMoreBatchSize = 10
+
     /// Các review item hiện hàng đợi (hai nhánh) — cách đọc cho ReviewQueueView.
     var reviewQueue: [ReviewQueue.ReviewItem] { reviewItems }
 
@@ -164,10 +172,19 @@ final class AppModel {
     func reloadOverview() {
         guard let database else { return }
         collections = (try? Self.loadOverview(db: database)) ?? []
-        dailyProgress = (try? Self.loadDailyProgress(db: database))
+        dailyProgress = (try? Self.loadDailyProgress(db: database, extraNew: effectiveExtraNew))
         homePinIDs = (try? HomePinService.ids(on: database)) ?? []
         reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
         dataRevision &+= 1
+    }
+
+    /// Phần nới "Học thêm" còn hiệu lực HÔM NAY (0 nếu qua ngày mới hoặc chưa
+    /// bấm) — hàm thuần `ReviewQueue.effectiveExtra` test riêng, ở đây chỉ nối
+    /// với `dayStart` thật của DB đang mở.
+    private var effectiveExtraNew: Int {
+        guard let database else { return 0 }
+        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: SystemClock().now)
+        return ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
     }
 
     // MARK: — FR-01 Capture
@@ -306,7 +323,8 @@ final class AppModel {
             let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
             let now = SystemClock().now
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
-                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope)
+                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope,
+                extraNew: effectiveExtraNew)
             reviewItems = items
             reviewSnapshots = snapshots
             currentReviewSnapshot = items.first.flatMap { snapshots[$0.cardID] }
@@ -356,17 +374,34 @@ final class AppModel {
             on: database, cardID: cardID, logID: logID, before: snapshot)
     }
 
+    /// Ý 3 motivation-r1 — user chủ động bấm "Học thêm 10 từ" trên
+    /// `SessionDoneView` sau khi hàng đợi hết: nới hạn mức new RIÊNG ngày học
+    /// hiện tại (Q-B: N=10 cố định), rồi nạp lại overview đã có (số Home).
+    /// Hệ thống KHÔNG bao giờ tự nới — chỉ chạy khi user bấm. Hàng đợi
+    /// (`reviewItems`) do caller nạp lại qua `loadReviewQueue`/`loadQueue` của
+    /// view — tránh hai tác vụ async cùng ghi `reviewItems` một lúc.
+    func learnMore() {
+        guard let database else { return }
+        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: SystemClock().now)
+        // Khác ngày với lần nới trước → `effectiveExtra` trả 0, không cộng dồn
+        // từ ngày cũ (Q-A đã chốt).
+        let current = ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
+        extraNewQuota = (dayStart: dayStart, count: current + Self.learnMoreBatchSize)
+        reloadOverview()
+    }
+
     /// FR-15: đọc 3 núm học tập — fallback về seed default khi chưa seed.
     static func currentSettings(_ db: SQLiteDatabase) -> LearningSettings {
         (try? SettingsService.load(on: db)) ?? .defaults
     }
 
     /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
-    /// `dailyNewLimit` đã đọc từ settings.
-    static func loadDailyProgress(db: SQLiteDatabase) throws -> DailyProgress {
+    /// `dailyNewLimit` đã đọc từ settings. `extraNew` (ý 3): phần nới "Học
+    /// thêm" còn hiệu lực hôm nay để số Home khớp đúng hàng đợi thật.
+    static func loadDailyProgress(db: SQLiteDatabase, extraNew: Int = 0) throws -> DailyProgress {
         let dailyNewLimit = currentSettings(db).dailyNewLimit
         return try DailyProgressService.load(
-            on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now)
+            on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now, extraNew: extraNew)
     }
 
     /// J-R1-P: nạp lịch streak (heatmap 18 tuần + streak hiện tại/dài nhất).

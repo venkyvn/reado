@@ -246,6 +246,7 @@ Leech (FR-19) không đếm vào số Home và không vào queue — badge, khô
 | State | Hành vi |
 |---|---|
 | Hết new trong hạn mức, backlog > 0 | Home: "xong hạn mức hôm nay", backlog nhãn riêng, không CTA giả "học tiếp" cùng nhánh |
+| Hết new trong hạn mức, backlog > 0, vừa chấm ≥1 thẻ trong phiên | `SessionDoneView` (J4 bước 4) thêm CTA "Học thêm 10 từ" — nới hạn mức new **riêng ngày học hiện tại** (Q-A bộ nhớ app, Q-B N=10 cố định, ADR-039); bấm → nạp lại đúng hàng đợi (vẫn áp toàn cục trước lọc phạm vi). Backlog = 0 (không còn thẻ new nào tồn) → **ẩn** CTA, không nới hạn mức vô nghĩa. Hệ thống không bao giờ tự nới. |
 | Hết new và backlog = 0 | CTA sang J1/J2 |
 | 0 new vì chưa capture | Cùng CTA capture; không empty-state chết |
 
