@@ -112,13 +112,16 @@ struct RootView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ShellTabBar(selection: $selectedTab, onReselect: popSelectedTabToRoot)
         }
-        .sheet(isPresented: $showCapture, onDismiss: {
+        // ADR-036: fullScreenCover (không sheet) — CaptureView tự vẽ full-bleed
+        // đen; sheet để lộ viền bo góc + không che hết status bar, không hợp
+        // camera. Không bọc NavigationStack: CaptureView tự có chrome (X/dest/+).
+        .fullScreenCover(isPresented: $showCapture, onDismiss: {
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
             if model.lastCapturedImage != nil {
                 showAnalysis = true
             }
         }) {
-            NavigationStack { CaptureView() }
+            CaptureView()
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
             // port UI lab §5.7: Lưu xong → về Hub bộ vừa lưu (kể cả kho tạm).

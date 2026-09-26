@@ -457,3 +457,29 @@
 - **Quyết định:** Bỏ DSH / Cursor. `AGENTS.md` thành stub; protocol còn giá trị (workflow, đọc file lớn, pbxproj, bẫy build) chuyển vào `CLAUDE.md` §7. Build/test chỉ qua `scripts/test.sh`. Xoá `.cursorignore`, `scripts/smart_glob.py`, các luật token kiểu DSH (cache prefix, cấm read lại, trần steps/turn).
 - **Lý do:** Claude Code chỉ tự load `CLAUDE.md`; prompt cache, dedupe Read, Glob tôn trọng `.gitignore` đã do harness lo. Lệnh build lệch nhau + permission pattern hỏng làm mỗi lần build phải hỏi.
 - **Hệ quả:** Bẫy cố định ở `CLAUDE.md` §7; `session-brief.md` §3 chỉ còn bẫy mới. `.claude/settings.json` allow `scripts/test.sh`, deny Read cache build.
+
+## ADR-036 — Camera tự vẽ bằng AVFoundation, bỏ `UIImagePickerController`
+
+- **Ngày:** 2026-09-26
+- **Quyết định:** `CaptureView` không còn dùng `UIImagePickerController` (camera lẫn
+  thư viện). Camera chuyển sang `CameraController` (`AVCaptureSession` +
+  `AVCapturePhotoOutput`, tự vẽ preview bằng `AVCaptureVideoPreviewLayer`) với
+  chrome SwiftUI thật (nút X, chip đích lưu, `+`, thư viện, shutter, flash) đè
+  lên trên. Thư viện chuyển sang `PhotosPicker` (PhotosUI). Crop
+  (`TOCropViewController`) hiển thị trực tiếp trong `ZStack` của `CaptureView`
+  (không `.sheet`) nên full màn. `RootView`/`StreakCalendarView` mở `CaptureView`
+  bằng `.fullScreenCover` thay `.sheet`.
+- **Lý do:** Bug thật owner báo (2026-09-26): chụp ảnh màn đen, không có nút
+  thoát khi đổi ý, chọn ảnh thư viện lần đầu đen (phải thoát vào lại mới hiện),
+  khung crop đè tab bar. Đọc code: `picker.addChild(hosting)` gắn overlay
+  SwiftUI làm con của `UIImagePickerController` (một `UINavigationController`)
+  → hosting view (nền trong nhưng vẫn chiếm layer) đẩy lên TRÊN preview camera
+  + nút Cancel/chụp hệ thống → che hết, không có đường thoát. Thư viện qua
+  `UIImagePickerController` trong sheet lồng sheet là bệnh đen quen của iOS
+  17+. Crop mở bằng `.sheet` không full màn nên toolbar của crop đè tab bar.
+- **Hệ quả:** J1 vẫn ≤3 thao tác (chụp/chọn → crop → duyệt từ). Không thêm
+  dependency (AVFoundation/PhotosUI là hệ thống, TOCropViewController đã có).
+  Verify: build + 211/212 test xanh (không có logic thuần mới cho camera nên
+  không thêm unit test); chrome (X/chip/+/thư viện/shutter/flash) và luồng xin
+  quyền camera đã xem trên simulator (screenshot); preview + chụp thật cần máy
+  thật (simulator có thể không có camera, tuỳ Mac host webcam passthrough).

@@ -64,6 +64,9 @@
 		5C0100000800000000000000 /* ShellTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000800000000000000 /* ShellTabBar.swift */; };
 
 		5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000D00000000000000 /* LiveAIBoxTests.swift */; };
+
+
+		5C0100000900000000000000 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000900000000000000 /* CameraController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -124,6 +127,9 @@
 		5B0100000800000000000000 /* ShellTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellTabBar.swift; sourceTree = "<group>"; };
 
 		5B0200000D00000000000000 /* LiveAIBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAIBoxTests.swift; sourceTree = "<group>"; };
+
+
+		5B0100000900000000000000 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -184,7 +190,8 @@
 				5B0100000500000000000000 /* HomePinToggle.swift */,
 				5B0100000600000000000000 /* ReadingSessionView.swift */,
 				5B0100000700000000000000 /* StreakCalendarView.swift */,
-				5B0100000800000000000000 /* ShellTabBar.swift */,);
+				5B0100000800000000000000 /* ShellTabBar.swift */,
+				5B0100000900000000000000 /* CameraController.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -329,7 +336,8 @@
 				5C0100000500000000000000 /* HomePinToggle.swift in Sources */,
 				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
 				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,
-				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,);
+				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,
+				5C0100000900000000000000 /* CameraController.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {

@@ -33,11 +33,12 @@ struct StreakCalendarView: View {
         .sheet(isPresented: $showReview, onDismiss: { reload() }) {
             NavigationStack { ReviewQueueView() }
         }
-        .sheet(isPresented: $showCapture, onDismiss: {
+        // ADR-036: fullScreenCover — xem RootView cho lý do.
+        .fullScreenCover(isPresented: $showCapture, onDismiss: {
             // J1: chụp xong (đã có ảnh) → mở phân tích, đích ngầm kho tạm.
             if model.lastCapturedImage != nil { showAnalysis = true }
         }) {
-            NavigationStack { CaptureView() }
+            CaptureView()
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
             if model.pendingRecapture {
