@@ -243,6 +243,7 @@ struct ReviewQueueView: View {
                 Text("\(currentIndex + 1)/\(items.count)")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
                 Spacer()
                 // FR-12: undo nút nổi 1 bước.
                 if showUndoToast {

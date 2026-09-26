@@ -151,6 +151,21 @@ extension View {
     func card(cornerRadius: CGFloat = 12) -> some View {
         modifier(SurfaceCardModifier(cornerRadius: cornerRadius))
     }
+
+    /// ux-polish-r1 T4: Liquid Glass cho chrome nổi (tab bar, shutter) — khớp
+    /// `design-system/reado/MASTER.md` (FROZEN: glass trên chrome, nội dung
+    /// đọc đặc). Deployment target 17.0 → iOS < 26 rơi về material cũ.
+    @ViewBuilder
+    func chromeGlass<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self
+                .background(.regularMaterial, in: shape)
+                .overlay { shape.stroke(Theme.surfaceStrong, lineWidth: 0.5) }
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        }
+    }
 }
 
 @main

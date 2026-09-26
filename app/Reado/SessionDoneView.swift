@@ -27,8 +27,12 @@ struct SessionDoneView: View {
         ScrollView {
             VStack(spacing: 20) {
                 header
+                    .opacity(appeared ? 1 : 0)
+                    .animation(reduceMotion ? nil : Motion.reveal, value: appeared)
                 statsGrid
                 masteredSection
+                    .opacity(appeared ? 1 : 0)
+                    .animation(reduceMotion ? nil : Motion.reveal.delay(0.16), value: appeared)
                 Spacer(minLength: 12)
                 if canLearnMore {
                     Button("Học thêm 10 từ", action: onLearnMore)
@@ -41,10 +45,29 @@ struct SessionDoneView: View {
             }
             .padding()
         }
+        .background { doneBackground.ignoresSafeArea() }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .opacity(appeared ? 1 : 0)
         .onAppear {
             Motion.run(reduceMotion: reduceMotion) { appeared = true }
+        }
+    }
+
+    /// ux-polish-r1 T4: nền mesh nhẹ (iOS 18+) chỉ cho màn ăn mừng — vẫn số
+    /// thật (ADR-038), không đổi màu nút grade, không confetti.
+    @ViewBuilder
+    private var doneBackground: some View {
+        if #available(iOS 18, *) {
+            MeshGradient(
+                width: 2, height: 2,
+                points: [[0, 0], [1, 0], [0, 1], [1, 1]],
+                colors: [
+                    Color.accentColor.opacity(0.18), Theme.ok.opacity(0.10),
+                    Color(.systemBackground), Color(.systemBackground),
+                ])
+        } else {
+            LinearGradient(
+                colors: [Color.accentColor.opacity(0.15), Color(.systemBackground)],
+                startPoint: .top, endPoint: .center)
         }
     }
 
@@ -53,6 +76,7 @@ struct SessionDoneView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Theme.ok)
+                .symbolEffect(.bounce, value: reduceMotion ? false : appeared)
             Text("Xong hôm nay")
                 .font(.title2.bold())
         }
@@ -64,19 +88,21 @@ struct SessionDoneView: View {
     @ViewBuilder
     private var statsGrid: some View {
         HStack(spacing: 12) {
-            stat(value: "\(tally.reviewed)", label: "thẻ đã ôn", icon: "rectangle.stack.fill", tint: Color.accentColor)
+            stat(value: "\(tally.reviewed)", label: "thẻ đã ôn", icon: "rectangle.stack.fill", tint: Color.accentColor, index: 0)
             if let accuracy = tally.accuracy {
                 stat(
                     value: accuracy.formatted(.percent.precision(.fractionLength(0))),
                     label: "không Quên",
                     icon: "checkmark.seal.fill",
-                    tint: Theme.ok)
+                    tint: Theme.ok, index: 1)
             }
-            stat(value: "\(streak)", label: "ngày liên tục", icon: "flame.fill", tint: Theme.due)
+            stat(value: "\(streak)", label: "ngày liên tục", icon: "flame.fill", tint: Theme.due, index: 2)
         }
     }
 
-    private func stat(value: String, label: String, icon: String, tint: Color) -> some View {
+    /// `index`: thứ tự hiện lần lượt (0.08s mỗi ô) — không phải bảng thành tích,
+    /// chỉ giúp mắt bắt kịp 3 số đo cùng lúc đổ ra.
+    private func stat(value: String, label: String, icon: String, tint: Color, index: Int) -> some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .foregroundStyle(tint)
@@ -91,6 +117,9 @@ struct SessionDoneView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .card()
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 10)
+        .animation(reduceMotion ? nil : Motion.reveal.delay(Double(index) * 0.08), value: appeared)
     }
 
     // MARK: — Từ vừa thuộc (Q-08) — tối đa 5, "+N khác" nếu nhiều hơn.

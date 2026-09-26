@@ -209,16 +209,29 @@ private struct FloatShutter: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "camera.fill")
-                .font(.title2)
-                .foregroundStyle(.white)
-                .frame(width: Self.size, height: Self.size)
-                .background(Circle().fill(Color.accentColor))
-                .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        // ux-polish-r1 T4: Liquid Glass interactive (iOS 26+) — glass tự phản
+        // hồi khi nhấn, bỏ ShutterPressStyle thủ công. iOS < 26 giữ nguyên.
+        if #available(iOS 26, *) {
+            Button(action: action) {
+                Image(systemName: "camera.fill")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+                    .frame(width: Self.size, height: Self.size)
+            }
+            .glassEffect(.regular.tint(Color.accentColor).interactive(), in: Circle())
+            .accessibilityLabel("Chụp trang")
+        } else {
+            Button(action: action) {
+                Image(systemName: "camera.fill")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+                    .frame(width: Self.size, height: Self.size)
+                    .background(Circle().fill(Color.accentColor))
+                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(ShutterPressStyle())
+            .accessibilityLabel("Chụp trang")
         }
-        .buttonStyle(ShutterPressStyle())
-        .accessibilityLabel("Chụp trang")
     }
 }
 
@@ -237,6 +250,7 @@ private struct ShutterPressStyle: ButtonStyle {
 /// Không còn CTA "Chụp trang" to dưới đáy (đã chuyển thành shutter nổi).
 private struct HomeTabView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let onReview: () -> Void
     let onSettings: () -> Void
     let onData: () -> Void
@@ -306,11 +320,13 @@ private struct HomeTabView: View {
                             Text("\(progress.dueToday) thẻ sẽ ôn")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .contentTransition(.numericText())
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
                             .foregroundStyle(.tertiary)
                     }
+                    .animation(reduceMotion ? nil : Motion.reveal, value: progress.dueToday)
                 }
                 .listRowSeparator(.hidden)
             } else if progress.backlog > 0 {
@@ -367,13 +383,19 @@ private struct HomeTabView: View {
         if let progress = model.dailyProgress {
             NavigationLink(value: ShellRoute.streak) {
                 HStack(spacing: 12) {
-                    Label("\(progress.streak) ngày ôn liên tục", systemImage: "flame.fill")
-                        .foregroundStyle(Theme.due)
+                    HStack(spacing: 6) {
+                        Image(systemName: "flame.fill")
+                            .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
+                        Text("\(progress.streak) ngày ôn liên tục")
+                            .contentTransition(.numericText())
+                    }
+                    .foregroundStyle(Theme.due)
                     Spacer()
                     Text("\(progress.pagesAnalyzed) trang đã phân tích")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                .animation(reduceMotion ? nil : Motion.reveal, value: progress.streak)
             }
             .listRowSeparator(.hidden)
         }

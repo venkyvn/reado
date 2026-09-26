@@ -179,3 +179,30 @@ Legend: **[icon]** = SF Symbol; `token` = `Theme.*` (§0). Cột "Vấn đề" =
 | Vị trí | Hiện tại | Vấn đề | Đề xuất |
 |---|---|---|---|
 | toggle | `Toggle` thường | — | giữ (đã chuẩn native) |
+## 7. Liquid Glass (iOS 26) — ux-polish-r1 T4
+
+Deployment target vẫn 17.0 (`app/Reado.xcodeproj` + `Package.swift`) — mọi API
+Liquid Glass bọc `if #available(iOS 26, *)`, fallback giữ `.regularMaterial`
+cũ (không đổi hành vi iOS 17–25).
+
+- `View.chromeGlass(in:)` (`ReadoApp.swift`) — helper duy nhất cho chrome nổi:
+  `.glassEffect(.regular, in: shape)` khi có iOS 26, material+overlay+shadow
+  cũ khi không. Dùng ở `ShellTabBar` (capsule).
+- `FloatShutter` (`RootView.swift`): nhánh iOS 26 dùng
+  `.glassEffect(.regular.tint(Color.accentColor).interactive(), in: Circle())`
+  — glass tự phản hồi khi nhấn, bỏ `ShutterPressStyle` cho nhánh này (nhánh
+  cũ vẫn giữ `ShutterPressStyle` cho iOS < 26).
+- **Không** gộp `ShellTabBar` + `FloatShutter` vào một `GlassEffectContainer`/
+  `glassEffectID` để morph — hai view nằm ở hai lớp khác nhau (`overlay` vs
+  `safeAreaInset`, xem comment `RootView.swift` dòng ~93-102, đo bằng
+  screenshot); gộp container sẽ phá cách đặt vị trí đã đo.
+- Số đổi mượt: `.contentTransition(.numericText())` cho đếm thẻ ôn
+  (`ReviewQueueView`), "N thẻ sẽ ôn" và streak (Home). Icon `flame.fill` +
+  checkmark `SessionDoneView` dùng `.symbolEffect(.bounce, value:)`, tắt khi
+  Reduce Motion (giá trị truyền vào không đổi).
+- `SessionDoneView`: nền `MeshGradient` nhẹ (iOS 18+, fallback
+  `LinearGradient`) + 3 ô số đo hiện lần lượt (`Motion.reveal.delay`). Vẫn chỉ
+  số thật (ADR-038) — không confetti/particle, không đổi màu nút grade.
+- **Không đụng:** `Haptics` (giữ imperative, đổi sang `.sensoryFeedback` là
+  churn không cần thiết), glass trên nội dung đọc (card ôn, list, editor —
+  MASTER.md: nội dung đọc phải đặc), màn Capture (đã tự vẽ, ADR-036).

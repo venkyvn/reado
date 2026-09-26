@@ -28,11 +28,8 @@ struct ShellTabBar: View {
         }
         .padding(4)
         .frame(height: Self.height)
-        .background(.regularMaterial, in: Capsule())
-        .overlay {
-            Capsule().strokeBorder(Theme.surfaceStrong, lineWidth: 0.5)
-        }
-        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        // ux-polish-r1 T4: Liquid Glass (iOS 26+), fallback material dưới đó.
+        .chromeGlass(in: Capsule())
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, Self.outerBottomPadding)
@@ -56,10 +53,12 @@ struct ShellTabBar: View {
                 if dynamicTypeSize.isAccessibilitySize {
                     Image(systemName: selected ? tab.selectedIcon : tab.icon)
                         .font(.title2)
+                        .symbolEffect(.bounce, value: reduceMotion ? false : selected)
                 } else {
                     VStack(spacing: 2) {
                         Image(systemName: selected ? tab.selectedIcon : tab.icon)
                             .font(.title2)
+                            .symbolEffect(.bounce, value: reduceMotion ? false : selected)
                         Text(tab.title)
                             .font(.caption2)
                     }
