@@ -125,6 +125,7 @@ final class AppModel {
             reloadOverview()
         } catch {
             failure = String(describing: error)
+            DebugTrace.event("db", "initFailed", ["error": String(describing: error)])
         }
     }
 
@@ -192,6 +193,7 @@ final class AppModel {
             analysisProgress = nil
         }
 
+        let startedAt = Date()
         do {
             // FR-02: agent seed là reado_proxy → ReadoProxyClient. URL lấy từ
             // READO_PROXY_BASE_URL nếu có, không thì AnalyzerFactory.proxyBaseURL.
@@ -206,12 +208,21 @@ final class AppModel {
                 cefr: cefrLevel,
                 imageHash: image.imageHash)
             analysisResult = result
+            DebugTrace.event("analysis", "ok", [
+                "segments": result.segments.count,
+                "vocabulary": result.vocabulary.count,
+                "totalMs": Int(Date().timeIntervalSince(startedAt) * 1000),
+            ])
         } catch {
             // FR-04: phân loại lỗi để UI gợi ý đúng (chụp lại vs thử lại); KHÔNG
             // set analysisResult → không bịa dữ liệu, không lưu bản ghi hỏng.
             analysisFailure = (error as? AnalysisError) ?? .providerError(
                 (error as? LocalizedError)?.errorDescription
                     ?? String(describing: error))
+            DebugTrace.event("analysis", "failed", [
+                "error": String(describing: analysisFailure),
+                "totalMs": Int(Date().timeIntervalSince(startedAt) * 1000),
+            ])
         }
     }
 
@@ -237,6 +248,9 @@ final class AppModel {
             segments: segments,
             summaryVI: summaryVI,
             now: SystemClock().now)
+        DebugTrace.event("save", "selection", [
+            "saved": saved, "collectionID": collectionID ?? "kho_tam", "segments": segments.count,
+        ])
         if saved > 0 {
             reloadOverview()
             // port UI lab §5.7: Lưu → Hub bộ vừa chọn (kho tạm = hub kho tạm).
@@ -295,6 +309,7 @@ final class AppModel {
         } catch {
             reviewError = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
+            DebugTrace.event("review", "loadQueueFailed", ["error": String(describing: error)])
             throw error
         }
     }

@@ -14,6 +14,7 @@ Luật cứng sống ở `CLAUDE.md` §4–5. Protocol session / đọc file / p
 | Lịch ôn, FSRS, cram, sync Later | `docs/research/review.md` | Grep mục cần |
 | Tổ chức collection / thẻ / import | `docs/research/vocabulary.md` | Grep; đây **không** phải rulebook |
 | Capture AI, output schema, verify example | `docs/agent/prompt-spec.md` | FR-02 |
+| OCR ngắt đoạn sai, chỉnh ngưỡng, log chẩn đoán | `docs/decisions-log.md` ADR-037 | `scripts/pull_diagnostics.sh` + `scripts/diag_summary.py` |
 | Module iOS, proxy, transaction, wiring skeleton | `docs/specs/solution-design.md` | §3 kiến trúc; §10 walking skeleton |
 | Slice + tiến độ FR | `ROADMAP.md` Phase 2–3 | Chỉ grep task; không read nguyên |
 | Journey UI | `docs/specs/journeys.md` | J1–J6 + J-R1-* |

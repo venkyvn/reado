@@ -6,7 +6,11 @@ import Foundation
 /// bằng chứng A-02 (baseline owner chưa dán, rulebook mục 8). Chỉ dùng để chạy thử A-01.
 public enum Prompt {
     /// Bump mỗi lần đổi prompt — proxy ghi vào analysis_events; app không tự suy ra.
-    public static let version = 4
+    /// v5 (ADR-037): OCR (`PageOCR.linesWithBreaks`) giờ tự dò ranh giới đoạn bằng
+    /// hình học (khoảng trống dọc, thụt đầu dòng, hàng ngắn kết câu) thay vì chỉ
+    /// tách theo cột — `\n\n` đáng tin hơn v4, nên đổi luật từ "đoán hộ" sang
+    /// "tin OCR, chỉ sửa khi rõ ràng vô lý".
+    public static let version = 5
 
     /// Prompt text-mode: OCR đã chạy trên máy. `source_en` phải là substring của PAGE_OCR.
     public static func text(cefrLevel: String, pageOCR: String) -> String {
@@ -14,9 +18,13 @@ public enum Prompt {
         Bạn là một dịch giả chuyên nghiệp, giảng tiếng Anh cho người Việt trình độ \(cefrLevel).
         Ưu tiên bản dịch DỄ HIỂU: tiếng Việt tự nhiên, rõ ý; không dịch word-by-word.
 
-        Đầu vào là OCR một trang (sách / báo / tài liệu). OCR ghép theo HÀNG CHỮ, không theo paragraph:
-        - Một ký tự xuống dòng (\\n) = hết một hàng in. Câu thường bị cắt giữa chừng — đó vẫn CÙNG một paragraph.
-        - Hai lần xuống dòng (\\n\\n) = hết đoạn hoặc hết cột. Bắt đầu paragraph / segment mới.
+        Đầu vào là OCR một trang (sách / báo / tài liệu), đã dò ranh giới đoạn bằng hình học
+        (khoảng cách dòng, thụt đầu dòng, hàng kết câu ngắn) — không phải đoán theo nghĩa:
+        - Một ký tự xuống dòng (\\n) = hết một hàng in, CÙNG một paragraph với hàng sau.
+        - Hai lần xuống dòng (\\n\\n) = OCR đã xác định hết đoạn hoặc hết cột. TIN theo mặc định.
+        - CHỈ bỏ qua một chỗ \\n\\n cụ thể khi nó rõ ràng vô lý (ví dụ rơi giữa câu chưa
+          kết thúc) — khi đó ghép hai khối lại làm một paragraph. Không tự ý chia nhỏ
+          thêm một khối chỉ vì nó dài.
         - KHÔNG tạo một segment cho mỗi hàng OCR. KHÔNG gộp cả trang thành một segment.
 
         PAGE_OCR:

@@ -23,6 +23,10 @@ public struct ReadoProxyClient: PageAnalyzer {
         cefr: String,
         imageHash: String
     ) async throws -> PageAnalysis {
+        let trace = DebugTrace.startAnalysis()
+        trace.write(image: image)
+        trace.mergeMeta(["model": "proxy", "baseURL": baseURL, "cefr": cefr, "imageHash": imageHash])
+
         // SD 4.2 — hash là idempotency key; proxy cache theo hash để retry không tính phí đôi.
         let boundary = "Reado-\(Identifier.uuid())"
         var request = URLRequest(url: try endpoint())
@@ -43,21 +47,35 @@ public struct ReadoProxyClient: PageAnalyzer {
         } catch let urlError as URLError where urlError.code == .cannotFindHost {
             // `proxy.reado.app` chưa deploy (brief §1, 2026-09-26) — không resolve
             // DNS. Gợi ý thêm agent BYOK thay vì để lỗi mạng chung chung.
+            trace.mergeMeta(["error": "cannotFindHost"])
             throw AnalysisError.networkError(
                 "Proxy Reado chưa hoạt động — thêm agent (vd AI-Box) trong Cài đặt")
         } catch {
+            trace.mergeMeta(["error": String(describing: error)])
             throw AnalysisError.networkError(error.localizedDescription)
         }
 
         guard let http = response as? HTTPURLResponse else {
+            trace.mergeMeta(["error": "khôngPhảiHTTPResponse"])
             throw AnalysisError.networkError("không phải HTTP response")
         }
+        trace.mergeMeta(["httpStatus": http.statusCode])
+        trace.write(responseRaw: String(decoding: data.prefix(64 * 1024), as: UTF8.self))
 
         guard (200..<300).contains(http.statusCode) else {
             throw try Self.mapError(statusCode: http.statusCode, data: data)
         }
 
-        return try AnalysisResponseDecoder.decode(data)
+        do {
+            let analysis = try AnalysisResponseDecoder.decode(data)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                trace.write(analysisJSON: json)
+            }
+            return analysis
+        } catch {
+            trace.mergeMeta(["decodeError": String(describing: error)])
+            throw error
+        }
     }
 
     // MARK: - Private

@@ -112,6 +112,13 @@ A-02** — bằng chứng phải đến từ việc so với output của chính
 > **Đây là bản dựng lại, không phải bản gốc.** Nguồn: năm yêu cầu ở mục 2 cộng
 > acceptance criteria của [FR-02](docs/specs/prd.md). Dùng được để chạy thử A-01; **không** dùng
 > làm chuẩn cho A-02.
+>
+> **Đã lệch code:** bản dưới đây là prompt multimodal gốc, trước ADR-034 (OCR
+> trên máy + text-mode). Prompt THẬT đang chạy nằm ở
+> `app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift` (`Prompt.version`,
+> hiện tại **5** — ADR-037: OCR tự dò ranh giới đoạn bằng hình học trước khi
+> đưa vào prompt). Đổi luật `\n\n`/paragraph thì sửa `Prompt.swift`, không sửa
+> khối code dưới đây.
 
 ```
 Bạn là một dịch giả chuyên nghiệp có kiến thức sư phạm về giảng dạy tiếng Anh.

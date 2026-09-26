@@ -483,3 +483,54 @@
   không thêm unit test); chrome (X/chip/+/thư viện/shutter/flash) và luồng xin
   quyền camera đã xem trên simulator (screenshot); preview + chụp thật cần máy
   thật (simulator có thể không có camera, tuỳ Mac host webcam passthrough).
+
+## ADR-037 — Log chẩn đoán DEBUG (`DebugTrace`) + OCR tự ngắt đoạn + prompt v5
+
+- **Ngày:** 2026-09-26
+- **Bối cảnh:** Owner báo bản dịch bị chia sai đoạn (paragraph), lúc gộp nhiều
+  đoạn sách làm một, lúc chia vụn — không đều giữa các lần gọi. Owner không đọc
+  được OCR đã ra gì nên không tự debug được; owner build thẳng bằng Xcode Run
+  lên máy cá nhân dùng hằng ngày, ~7 ngày sửa một lần.
+- **Nguyên nhân:** `PageOCR.orderColumn` (trước ADR này) nối MỌI hàng trong một
+  cột bằng `\n` đơn; `\n\n` chỉ xuất hiện giữa hai cột. Trang 1 cột (phổ biến
+  nhất) gần như không bao giờ có `\n\n`, nên dù prompt v4 dạy "`\n\n` = đoạn
+  mới", model vẫn phải tự đoán ranh giới đoạn bằng nghĩa — đoán không ổn định.
+- **Quyết định:**
+  1. **OCR tự dò ranh giới đoạn bằng hình học** (`PageOCR.linesWithBreaks`,
+     cột ≥ 3 hàng): khoảng trống dọc > 1.5× median, hoặc thụt đầu dòng > 0.8×
+     chiều cao trung vị (kèm hàng sau quay lại lề), hoặc hàng trước ngắn +
+     kết câu (`. ? ! : " ” ’ )`) và cách lề phải > 15% bề rộng cột → chèn
+     `\n\n`. Cột < 3 hàng giữ `\n` như cũ (không đủ dữ liệu tính median tin cậy).
+  2. **Prompt v5** (`Prompt.version`): đổi luật từ "tự đoán ranh giới" sang
+     "tin `\n\n` của OCR, chỉ ghép lại khi rõ ràng vô lý (rơi giữa câu)".
+  3. **`DebugTrace`** (ReadoKit, `Diagnostics/`) — kho log **chỉ bản DEBUG**:
+     `Documents/Diagnostics/events.jsonl` (sự kiện rời: lỗi DB, quyền camera,
+     lưu collection...) và `Documents/Diagnostics/analyses/<ts>_<id8>/` (một
+     thư mục mỗi lần phân tích: `page.jpg`, `page_ocr.txt`, `ocr.json` — từng
+     hàng kèm lý do ngắt đoạn, `response_raw.txt`, `analysis.json`, `meta.json`
+     — model/timing/lỗi). Giữ tối đa 30 thư mục gần nhất, `events.jsonl` xoay
+     vòng ở 2 MB. `mergeMeta`/`event` tự redact field có tên giống secret
+     (key/token/authorization/secret/password) — lưới an toàn thứ hai, không
+     thay cho việc tự soát ở chỗ gọi.
+  4. **Ngoại lệ NFR-04** (ảnh gốc không lưu): CHỈ trong log DEBUG, ảnh đã crop
+     (không phải ảnh gốc trước crop) được giữ tạm để đối chiếu OCR, xoay vòng
+     30 lần, chỉ nằm trên máy — không rời máy, không có ở bản Release.
+  5. `scripts/pull_diagnostics.sh [sim|device]` kéo `Documents/Diagnostics/`
+     về `.tmp/diagnostics/<ts>/`; `scripts/diag_summary.py <dir>` in tóm tắt
+     (timing, số hàng OCR, chỗ ngắt đoạn kèm lý do, số segment) — đọc bản tóm
+     tắt này thay vì mở từng file JSON.
+- **Lý do:** Sửa gốc rễ (hình học OCR) thay vì chỉ vá prompt (model vẫn phải
+  đoán, kết quả đổi theo model/lần gọi). Log là cách duy nhất để owner "cắm
+  điện thoại vào" mà không cần tự đọc OCR — owner xác nhận chấp nhận đổi
+  NFR-04 phạm vi hẹp (DEBUG-only, xoay vòng, không rời máy) để đổi lấy khả
+  năng debug.
+- **Hệ quả:** `PageOCR.Line`/`OCRResult` public — `recognizeDetailed` có default
+  impl nên `FixedPageOCR` (AnalysisTests) không phải sửa. `OpenAICompatClient`
+  và `ReadoProxyClient` đều mở một `DebugTrace.AnalysisSession` mỗi lần
+  `analyze`. `CameraController`/`CaptureView` ghi sự kiện quyền/chụp/crop vì
+  ADR-036 (camera AVFoundation) chưa test được trên máy thật. Ngưỡng ở
+  `PageOCR` (gapBreakFactor/indentFactorOfHeight/shortEndingFactorOfWidth) là
+  hằng số đặt tên, chỉnh lại sau khi có log thật từ owner (không đoán tiếp
+  bằng mắt). Test: `PageOCRTests` (5 ca hình học mới) + `DebugTraceTests`
+  (ghi file, redact, xoay vòng 30 thư mục) — 220/221 xanh (1 skip
+  `LiveAIBoxTests` không có key mạng thật).

@@ -50,15 +50,29 @@ public struct OpenAICompatClient: PageAnalyzer {
         imageHash: String
     ) async throws -> PageAnalysis {
         _ = imageMime
+        // DebugTrace no-op ngoài bản DEBUG (ADR-037) — gọi thẳng, không cần
+        // `#if DEBUG` ở đây.
+        let trace = DebugTrace.startAnalysis()
+        trace.write(image: image)
+        trace.mergeMeta(["model": model, "baseURL": baseURL, "cefr": cefr, "imageHash": imageHash])
         onProgress?(.readingPage)
         let apiKey = apiKeyOverride ?? KeychainStore.load(agentID: agentID)
         guard let apiKey, !apiKey.isEmpty else {
             throw AnalysisError.providerError("Chưa có API key — mở Cài đặt và thêm key")
         }
 
-        let pageOCR = try await ocr.recognize(imageData: image)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let ocrStarted = Date()
+        let ocrResult = try await ocr.recognizeDetailed(imageData: image)
+        let pageOCR = ocrResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        trace.write(pageOCR: pageOCR)
+        trace.write(ocrDebug: Self.ocrDebugJSON(ocrResult))
+        trace.mergeMeta([
+            "ocrMs": Int(Date().timeIntervalSince(ocrStarted) * 1000),
+            "ocrChars": pageOCR.count,
+            "ocrLines": ocrResult.lines.count,
+        ])
         guard !pageOCR.isEmpty else {
+            trace.mergeMeta(["error": "imageUnreadable"])
             throw AnalysisError.imageUnreadable
         }
 
@@ -68,18 +82,22 @@ public struct OpenAICompatClient: PageAnalyzer {
             let analysis: PageAnalysis
             do {
                 analysis = try await send(
-                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: true)
+                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: true,
+                    trace: trace)
             } catch is ResponseFormatRejected {
                 // Server trả 400/422 nhắc response_format — một số OpenAI-compat
                 // gateway không hỗ trợ field này. Thử lại đúng một lần, bỏ field.
+                trace.mergeMeta(["retriedWithoutResponseFormat": true])
                 analysis = try await send(
-                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: false)
+                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: false,
+                    trace: trace)
             }
             #if DEBUG
             Self.logger.debug(
                 "analysis ok model=\(model, privacy: .public) totalMs=\(Int(Date().timeIntervalSince(started) * 1000), privacy: .public) ocrChars=\(pageOCR.count, privacy: .public)"
             )
             #endif
+            trace.mergeMeta(["totalMs": Int(Date().timeIntervalSince(started) * 1000)])
             return PageAnalysis(
                 segments: analysis.segments,
                 vocabulary: analysis.vocabulary,
@@ -91,8 +109,29 @@ public struct OpenAICompatClient: PageAnalyzer {
                 "analysis urlError model=\(model, privacy: .public) code=\(urlError.code.rawValue, privacy: .public)"
             )
             #endif
+            trace.mergeMeta(["error": "urlError", "urlErrorCode": urlError.code.rawValue])
             throw Self.mapURLError(urlError)
+        } catch {
+            trace.mergeMeta(["error": String(describing: error)])
+            throw error
         }
+    }
+
+    private static func ocrDebugJSON(_ result: PageOCR.OCRResult) -> [String: Any] {
+        [
+            "observationCount": result.observations.count,
+            "lines": result.lines.map { line in
+                [
+                    "text": String(line.text.prefix(200)),
+                    "minX": Double(line.minX),
+                    "maxX": Double(line.maxX),
+                    "yTop": Double(line.yTop),
+                    "height": Double(line.height),
+                    "breakBefore": line.breakBefore,
+                    "breakReason": line.breakReason ?? NSNull(),
+                ] as [String: Any]
+            },
+        ]
     }
 
     /// Gửi một lượt chat/completions dạng stream, đọc `data:` từng chunk cho
@@ -103,7 +142,8 @@ public struct OpenAICompatClient: PageAnalyzer {
         pageOCR: String,
         cefr: String,
         apiKey: String,
-        includeResponseFormat: Bool
+        includeResponseFormat: Bool,
+        trace: DebugTrace.AnalysisSession
     ) async throws -> PageAnalysis {
         var request = URLRequest(url: try endpoint())
         request.httpMethod = "POST"
@@ -126,10 +166,12 @@ public struct OpenAICompatClient: PageAnalyzer {
         guard let http = response as? HTTPURLResponse else {
             throw AnalysisError.networkError("không phải HTTP response")
         }
+        trace.mergeMeta(["httpStatus": http.statusCode, "includeResponseFormat": includeResponseFormat])
 
         guard (200..<300).contains(http.statusCode) else {
             var errorData = Data()
             for try await byte in bytes { errorData.append(byte) }
+            trace.write(responseRaw: String(decoding: errorData, as: UTF8.self))
             if includeResponseFormat,
                (http.statusCode == 400 || http.statusCode == 422),
                String(decoding: errorData, as: UTF8.self).lowercased().contains("response_format")
@@ -140,8 +182,18 @@ public struct OpenAICompatClient: PageAnalyzer {
         }
 
         let content = try await Self.readContent(from: bytes, onProgress: onProgress)
+        trace.write(responseRaw: content)
         let normalized = try AnalysisResponseNormalizer.normalize(Data(content.utf8))
-        return try AnalysisResponseDecoder.decode(normalized)
+        do {
+            let analysis = try AnalysisResponseDecoder.decode(normalized)
+            if let json = try? JSONSerialization.jsonObject(with: normalized) as? [String: Any] {
+                trace.write(analysisJSON: json)
+            }
+            return analysis
+        } catch {
+            trace.mergeMeta(["decodeError": String(describing: error)])
+            throw error
+        }
     }
 
     /// Đọc `bytes` dòng theo dòng; dòng khác rỗng đầu tiên quyết định chế độ.

@@ -1,4 +1,5 @@
 import AVFoundation
+import ReadoKit
 import SwiftUI
 import UIKit
 
@@ -41,17 +42,23 @@ final class CameraController: NSObject {
         case .authorized:
             break
         case .notDetermined:
-            guard await AVCaptureDevice.requestAccess(for: .video) else {
+            let granted = await AVCaptureDevice.requestAccess(for: .video)
+            DebugTrace.event("camera", "requestAccess", ["granted": granted])
+            guard granted else {
                 status = .denied
                 return
             }
         default:
+            DebugTrace.event("camera", "authorizationDenied", [
+                "status": String(describing: AVCaptureDevice.authorizationStatus(for: .video)),
+            ])
             status = .denied
             return
         }
 
         guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) != nil
         else {
+            DebugTrace.event("camera", "noBackCamera")
             status = .unavailable
             return
         }
@@ -59,11 +66,13 @@ final class CameraController: NSObject {
         if !configured {
             configureSession()
             guard configured else {
+                DebugTrace.event("camera", "configureSessionFailed")
                 status = .unavailable
                 return
             }
         }
         status = .running
+        DebugTrace.event("camera", "running")
         sessionQueue.async { [session] in
             if !session.isRunning { session.startRunning() }
         }
@@ -124,13 +133,18 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
         let continuation = captureContinuation
         captureContinuation = nil
         if let error {
+            DebugTrace.event("camera", "captureFailed", ["error": String(describing: error)])
             continuation?.resume(throwing: error)
             return
         }
         guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else {
+            DebugTrace.event("camera", "captureFailed", ["error": "noImageData"])
             continuation?.resume(throwing: CameraCaptureError.noImageData)
             return
         }
+        DebugTrace.event("camera", "captured", [
+            "width": Int(image.size.width), "height": Int(image.size.height),
+        ])
         continuation?.resume(returning: image)
     }
 }

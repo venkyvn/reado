@@ -67,6 +67,8 @@
 
 
 		5C0100000900000000000000 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000900000000000000 /* CameraController.swift */; };
+
+		5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000E00000000000000 /* DebugTraceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -130,6 +132,8 @@
 
 
 		5B0100000900000000000000 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
+
+		5B0200000E00000000000000 /* DebugTraceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugTraceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -218,7 +222,8 @@
 				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
 				5B0200000B00000000000000 /* StreakCalendarTests.swift */,
 				5B0200000C00000000000000 /* PageOCRTests.swift */,
-				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,);
+				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,
+				5B0200000E00000000000000 /* DebugTraceTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -364,7 +369,8 @@
 				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
 				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,
 				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,
-				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,);
+				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,
+				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

@@ -47,6 +47,80 @@ final class PageOCRTests: XCTestCase {
         XCTAssertEqual(PageOCR.readingOrder(items), "A\nB\n\nC\nD")
     }
 
+    // MARK: - Ngắt đoạn trong một cột (ADR-037) — cột phải >= 3 hàng mới tính.
+
+    /// Trục X cố định: minX=0.1, width=0.5 (maxX=0.6) trừ khi khác đi nói riêng.
+    private func line(_ text: String, yTop: CGFloat, minX: CGFloat = 0.1, maxX: CGFloat = 0.6, height: CGFloat = 0.05) -> PageOCR.Observation {
+        PageOCR.Observation(
+            text: text,
+            boundingBox: CGRect(x: minX, y: 1 - height - yTop, width: maxX - minX, height: height))
+    }
+
+    func testParagraphBreakByVerticalGap() {
+        let items = [
+            line("Line one of paragraph one", yTop: 0.10),
+            line("continues here", yTop: 0.18),
+            line("and ends this para", yTop: 0.26),
+            // Khoảng cách gấp gần 2 lần (0.14 so với median 0.08) → đoạn mới.
+            line("New paragraph starts", yTop: 0.40),
+            line("and continues", yTop: 0.48),
+        ]
+        let result = PageOCR.detailedReadingOrder(items)
+        XCTAssertEqual(result.lines.map(\.breakBefore), [false, false, false, true, false])
+        XCTAssertEqual(result.lines[3].breakReason, "gap")
+        XCTAssertEqual(
+            result.text,
+            "Line one of paragraph one\ncontinues here\nand ends this para\n\nNew paragraph starts\nand continues")
+    }
+
+    func testParagraphBreakByIndent() {
+        let items = [
+            line("First paragraph line one", yTop: 0.10),
+            line("line two of first paragraph", yTop: 0.18),
+            // Thụt vào so với lề trái, rồi hàng sau quay lại đúng lề → đầu đoạn mới.
+            line("New paragraph indented start", yTop: 0.26, minX: 0.16, maxX: 0.66),
+            line("continues normally", yTop: 0.34),
+        ]
+        let result = PageOCR.detailedReadingOrder(items)
+        XCTAssertEqual(result.lines.map(\.breakBefore), [false, false, true, false])
+        XCTAssertEqual(result.lines[2].breakReason, "indent")
+    }
+
+    func testParagraphBreakByShortEndingLine() {
+        let items = [
+            line("This is the first full line", yTop: 0.10),
+            line("of the paragraph continuing", yTop: 0.18),
+            // Hàng ngắn + kết câu → hàng SAU nó là đoạn mới.
+            line("and it ends now.", yTop: 0.26, maxX: 0.30),
+            line("A brand new paragraph begins", yTop: 0.34),
+        ]
+        let result = PageOCR.detailedReadingOrder(items)
+        XCTAssertEqual(result.lines.map(\.breakBefore), [false, false, false, true])
+        XCTAssertEqual(result.lines[3].breakReason, "shortEnding")
+    }
+
+    func testEvenlySpacedLinesDoNotBreak() {
+        let items = [
+            line("Line one of one long paragraph", yTop: 0.10),
+            line("line two of the same paragraph", yTop: 0.18),
+            line("line three still going strong", yTop: 0.26),
+            line("and a fourth line here too", yTop: 0.34),
+        ]
+        let result = PageOCR.detailedReadingOrder(items)
+        XCTAssertTrue(result.lines.allSatisfy { !$0.breakBefore })
+        XCTAssertFalse(result.text.contains("\n\n"))
+    }
+
+    func testShortColumnNeverBreaks() {
+        // Dưới 3 hàng — không đủ dữ liệu tính median/percentile, giữ nguyên `\n`.
+        let items = [
+            line("Heading", yTop: 0.10, maxX: 0.20),
+            line("Very short caption line", yTop: 0.60),
+        ]
+        let result = PageOCR.detailedReadingOrder(items)
+        XCTAssertTrue(result.lines.allSatisfy { !$0.breakBefore })
+    }
+
     func testGarbageBytesYieldEmpty() async throws {
         let text = try await PageOCR.recognize(imageData: Data([0x00, 0x01, 0x02]))
         XCTAssertEqual(text, "")

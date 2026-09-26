@@ -5,17 +5,18 @@
 
 ---
 
-## 1. Tình trạng hiện tại (cập nhật 2026-09-26, verify máy thật)
+## 1. Tình trạng hiện tại (cập nhật 2026-09-26, log chẩn đoán + OCR ngắt đoạn — ADR-037)
 
-- **Git:** `git log -1 --oneline` là HEAD thật — "HEAD xem git" (capture: camera AVFoundation + PhotosPicker + crop full màn, ADR-036). 3 commit liền trong session này: shutter/agent-lag → AI-Box stream → camera rewrite. Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
+- **Git:** `git log -1 --oneline` là HEAD thật — "HEAD xem git" (log chẩn đoán `DebugTrace` DEBUG-only + OCR tự ngắt đoạn theo hình học + prompt v5, ADR-037). Hash trong journal từ T2 trở về có thể không resolve sau reword — đừng checkout hash cũ.
+- **Log chẩn đoán / OCR ngắt đoạn sai (ADR-037):** Owner báo bản dịch chia sai đoạn — nguyên nhân: OCR chỉ chèn `\n\n` giữa hai cột, trang 1 cột toàn `\n` đơn nên model tự đoán ranh giới đoạn (không ổn định). Sửa: `PageOCR.linesWithBreaks` tự dò ranh giới bằng hình học (khoảng trống dọc > 1.5× median, thụt đầu dòng, hàng ngắn kết câu — cột ≥ 3 hàng); `Prompt.version` lên **5** (tin `\n\n` của OCR thay vì tự đoán). Thêm `DebugTrace` (ReadoKit, chỉ bản DEBUG): mỗi lần phân tích một thư mục ở `Documents/Diagnostics/analyses/` (ảnh đã crop, OCR từng hàng kèm lý do ngắt đoạn, response, lỗi — giữ 30 lần gần nhất), sự kiện rời (camera/DB/save) ở `events.jsonl`. Ngoại lệ NFR-04 (ảnh gốc không lưu) chỉ áp cho log DEBUG này. Kéo về: `scripts/pull_diagnostics.sh [sim|device]` + `scripts/diag_summary.py <dir>`. **Ngưỡng hình học (gap/indent/shortEnding factor) chưa tinh chỉnh bằng dữ liệu thật** — owner dùng ~1 tuần rồi kéo log, tôi chỉnh lại theo `docs/decisions-log.md` ADR-037.
 - **Tooling (ADR-035):** Chỉ dùng Claude Code. Build/test **chỉ** qua `scripts/test.sh`. Hooks `.claude/hooks/` (`guard.py`, `session-context.sh`). Chi tiết: `docs/journal/2026-09-26.md`.
 - **Analysis / AI-Box (đo thật 2026-09-26):** `deepseek-v4.1-flash` không stream + không tắt suy nghĩ → byte đầu **63s** (quá idle-timeout cũ 60s → luôn timeout). `enable_thinking: false` (chỉ host `ai-box.vn`, `OpenAICompatClient.extraBodyParams`) + `stream: true` (SSE, fallback đọc JSON thường nếu server lờ stream) → byte đầu ~1s, tổng **15–18s** (đo lại qua `LiveAIBoxTests`: OCR thật + AI-Box thật = 24s, 15 từ, 2 đoạn). `AgentURLRule.storedBase` tự thêm `/v1` cho `api.ai-box.vn` thiếu path (thiếu `/v1` → server trả 301, không phải lỗi rõ). `AnalysisAgentStore` có preset `aiboxBaseURL`/`aiboxModel`; `AgentFormSheet` có Picker mẫu AI-Box/Gemini/Tuỳ chỉnh (mặc định AI-Box). `AnalysisProgress` (readingPage/waitingAgent/thinking/writing) hiện trong `AnalysisView` khi đang gọi. Lỗi agent → nút "Mở Cài đặt" (`AppModel.pendingSettingsNavigation`). `reado_proxy` vẫn multipart ảnh, không đổi; `proxy.reado.app` **chưa deploy** (không resolve DNS) nên agent mặc định luôn lỗi tới khi user tự thêm agent BYOK — thông điệp lỗi giờ gợi ý đúng việc đó. Test mạng thật opt-in: `ReadoTests/LiveAIBoxTests.swift` (`READO_LIVE_AIBOX_KEY`), seed dev trên simulator: `scripts/sim_aibox.sh` (đọc `.env`, không in key, cần biến `READO_DEV_AIBOX_KEY` lúc launch — chỉ hoạt động trong `#if DEBUG`).
 - **Capture (ADR-036) — owner đã test máy thật 2026-09-26:** `UIImagePickerController` bị bỏ hẳn (nguyên nhân màn đen + mất nút thoát: `addChild(hosting)` đẩy overlay SwiftUI đè lên preview + nút hệ thống). `CameraController.swift` (mới) tự vẽ bằng AVFoundation, `CaptureView` viết lại toàn bộ với chrome SwiftUI thật (X/chip đích/+/thư viện/shutter/flash), thư viện qua `PhotosPicker`, crop hiện ngay trong `ZStack` (không `.sheet`) nên full màn. `RootView`/`StreakCalendarView` mở bằng `.fullScreenCover`. **Happy case đã xác nhận trên máy thật:** chụp → crop → gọi AI-Box thật → dịch → lưu từ, cả chuỗi thành công. **Còn chưa test:** từ chối quyền camera → có bật đúng nút "Mở Cài đặt" không (không chặn, việc phụ).
 - **Shutter nổi:** vị trí đúng đo bằng screenshot — overlay đứng **trước** `.safeAreaInset(ShellTabBar)`, chỉ cộng khe `shutterGap`; bản đầu (trước session này) cộng trùng cả chiều cao tab bar nên nút chụp cao hẳn lên. Chọn agent trong Cài đặt cập nhật lạc quan (`AnalysisAgentStore.setActive(knownHasKey:)`), không còn khựng.
 - **IA hiện tại:** 3 tab (Home / Ôn / Kho) qua capsule `ShellTabBar` 64pt; Cài đặt + Dữ liệu sheet → push. Pin Home tối đa 5, CEFR nhiều level, migration v3.
 - **Ôn tập:** vuốt Tinder trên **cả hai mặt thẻ** (ADR-033); mapping ADR-025 giữ (trái=Again / phải=Good).
-- **Test gần nhất đã ghi:** **211/212** trên iPhone 18 Pro (1 skip = `LiveAIBoxTests` không có key mạng thật), `** TEST SUCCEEDED **`. Chạy riêng có `READO_LIVE_AIBOX_KEY`: `LiveAIBoxTests` 1/1 (24s, OCR thật → AI-Box thật). Máy không build iOS thì không chạy lại, không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
-- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy chưa deploy (agent AI-Box đã chạy được, không còn chặn walking skeleton) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước) · camera ADR-036 permission-denied flow chưa test trên máy (happy case đã OK, xem trên).
+- **Test gần nhất đã ghi:** **220/221** trên iPhone 18 Pro (1 skip = `LiveAIBoxTests` không có key mạng thật), `** TEST SUCCEEDED **`. +9 test so với lần trước (5 `PageOCRTests` ca hình học ngắt đoạn + 4 `DebugTraceTests` ghi file/redact/xoay vòng). Chạy riêng có `READO_LIVE_AIBOX_KEY`: `LiveAIBoxTests` 1/1 (24s, OCR thật → AI-Box thật). Máy không build iOS thì không chạy lại, không ghi "xong" khi thiếu `** TEST SUCCEEDED **`.
+- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy chưa deploy (agent AI-Box đã chạy được, không còn chặn walking skeleton) · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" (chưa chọn: thêm `session_id` / để R2 / bỏ bước) · camera ADR-036 permission-denied flow chưa test trên máy (happy case đã OK, xem trên) · ngưỡng ngắt đoạn OCR (ADR-037) chưa tinh chỉnh bằng log thật.
 - **Leech:** owner chốt 2026-09-24 = 6 lần Again. Không gộp với Q-08.
 
 ## 2. Chờ owner (không tự bắt đầu)
@@ -24,12 +25,13 @@
 2. Ngưỡng leech FR-19 đã chốt = 6 (2026-09-24). Không hỏi lại.
 3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4).
 4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn, happy case đã xong.
+5. Log chẩn đoán OCR (ADR-037): fen dùng app thật ~1 tuần (build Xcode Run = Debug đã tự ghi log), rồi cắm điện thoại → `scripts/pull_diagnostics.sh device` + `scripts/diag_summary.py <dir>`, gửi lại bản tóm tắt (hoặc cả thư mục) để tôi chỉnh ngưỡng ngắt đoạn OCR theo dữ liệu thật thay vì đoán tiếp bằng mắt.
 
 ## 3. Bẫy máy này
 
 Bẫy cố định đã chuyển vào `CLAUDE.md` §7. Mục này chỉ ghi bẫy **mới** phát hiện ở session gần nhất, chưa kịp đưa vào CLAUDE.md.
 
-- (trống)
+- ReadoKit build tools 6.0 (strict concurrency) chặn `static var` thường ở top-level: "not concurrency-safe because it is nonisolated global shared mutable state". Test-only override (`DebugTrace.documentsDirectoryOverride`) phải khai `nonisolated(unsafe) static var` — chấp nhận được khi biết chắc không ghi đồng thời từ nhiều thread (test set 1 lần ở `setUp`/`tearDown`).
 
 ## 4. Nhật ký
 

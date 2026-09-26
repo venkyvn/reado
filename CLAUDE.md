@@ -84,6 +84,10 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - Bản đồ Swift: `python3 scripts/repo_map.py` (`--root app/ReadoKit/Sources --limit 40` để hẹp). Không in ra file docs.
 - Index "đụng X → grep Y": `docs/agent/agent-rulebook.md`.
 
+**Log chẩn đoán** (ADR-037, `DebugTrace` — chỉ bản DEBUG, fen build Xcode Run là Debug)
+- Fen cắm điện thoại/mở simulator → `scripts/pull_diagnostics.sh device` (hoặc `sim`) rồi `python3 scripts/diag_summary.py <thư mục in ra>`. Đọc bản tóm tắt này trước, không mở thẳng `events.jsonl`/`analysis.json`.
+- Mỗi lần phân tích một thư mục ở `Documents/Diagnostics/analyses/` (ảnh + OCR + từng hàng kèm lý do ngắt đoạn + response + lỗi), giữ 30 lần gần nhất. Ngoại lệ NFR-04 chỉ áp cho log DEBUG này.
+
 **pbxproj** — cấm edit tay/đọc nguyên `project.pbxproj`:
 - Thêm: `python3 scripts/pbxproj_tool.py add --file app/Reado/X.swift --group Reado --target Reado` (test: `--group ReadoTests --target ReadoTests`).
 - Gỡ: `python3 scripts/pbxproj_tool.py remove --file app/Reado/X.swift --group Reado --target Reado`.

@@ -86,9 +86,13 @@ struct CaptureView: View {
                 guard let data = try? await newItem.loadTransferable(type: Data.self),
                       let image = UIImage(data: data)
                 else {
+                    DebugTrace.event("capture", "libraryLoadFailed")
                     showProcessingError = true
                     return
                 }
+                DebugTrace.event("capture", "librarySelected", [
+                    "width": Int(image.size.width), "height": Int(image.size.height),
+                ])
                 camera.stop()
                 step = .crop(image)
             }
@@ -397,6 +401,7 @@ struct CaptureView: View {
                 camera.stop()
                 step = .crop(image)
             } catch {
+                DebugTrace.event("capture", "captureTappedFailed", ["error": String(describing: error)])
                 Haptics.error()
                 showProcessingError = true
             }
@@ -409,10 +414,12 @@ struct CaptureView: View {
             let data = ImageCompressor.compress(image)
             await MainActor.run {
                 if let data {
+                    DebugTrace.event("capture", "processed", ["bytes": data.count])
                     let captured = CapturedImage(imageData: data)
                     model.handleCapturedImage(captured)
                     dismiss()
                 } else {
+                    DebugTrace.event("capture", "compressFailed")
                     isProcessing = false
                     showProcessingError = true
                     Haptics.error()
