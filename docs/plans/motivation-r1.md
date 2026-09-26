@@ -83,7 +83,7 @@ Thứ tự khuyên: **T1 → T3 → T2**.
   - Qua giờ chuyển ngày (`dayStart` đổi) → `AppModel` reset về 0 (test ở tầng ReadoKit bằng hàm thuần `effectiveExtra(stored:dayStart:)`).
 - **DoD:** test xanh; PRD/journeys/ADR đồng bộ; Home số new khớp hàng đợi sau khi bấm.
 
-### T3 — `book-progress` + `streak-nudge` (ý 4 + 7)
+### T3 — `book-progress` + `streak-nudge` (ý 4 + 7) — ✅ 2026-09-26, commit `edcbf18`, 233/234 test xanh (+6, skip `LiveAIBoxTests` không đổi). `TestSupport.Fixtures.insertLog` thêm param `mode` optional (default `srs`) để test nhánh cram — ngoài phạm vi HLD ban đầu nhưng không đổi API cũ. Chưa xem UI thật trên simulator.
 
 - **Files:** `VocabRepository.allCollectionSummaries` (`mastered_count`), `DailyProgressService` (`reviewedToday`), `CollectionDetailView` header, `KhoTabView.collectionRow`, `HomeTabView` dòng nhắc.
 - **Test:**
