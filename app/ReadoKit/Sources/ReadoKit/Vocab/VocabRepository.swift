@@ -84,7 +84,9 @@ public enum VocabRepository {
 
     /// Q-08: stability từ mức này trở lên, state `review`, là "đã thuộc".
     /// `known_stability` NULL trong settings cũng dùng số này — NULL không tắt lọc.
-    public static let defaultMatureStability = 21.0
+    /// Cùng hằng số với `Mastery.stabilityThreshold` (toast ăn mừng ADR-038) —
+    /// không chép số 21 hai nơi.
+    public static let defaultMatureStability = Mastery.stabilityThreshold
 
     /// Khoá so khớp FR-10: form từ (không lemmatize) + loại từ, trong một collection.
     public static func matureKey(term: String, pos: String) -> String {

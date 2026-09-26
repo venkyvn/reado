@@ -10,6 +10,13 @@ enum ReviewError: Error, LocalizedError {
     }
 }
 
+/// Kết quả một lần `AppModel.grade` — `logID` cho undo (FR-12), `crossedMastery`
+/// cho toast "Thuộc rồi!" (ADR-038).
+struct GradeResult: Equatable {
+    let logID: String
+    let crossedMastery: Bool
+}
+
 /// Model mở SQLite, migration, seed và chịu trách nhiệm đọc overview.
 /// Scaffold (ROADMAP task 1.2): đồng bộ trên main, dữ liệu nhỏ — màn hình
 /// thật (FR-01..03…) sẽ chuyển qua actor/URLSession khi có proxy.
@@ -316,12 +323,13 @@ final class AppModel {
 
     /// Chấm thẻ hiện tại (FR-11): snapshot TRƯỚC + strict rating → outcome;
     /// UPDATE cards + INSERT review_logs cùng transaction (FR-12 undo cần
-    /// logID). Trả logID để view giữ cho undo nổi 1 bước.
+    /// logID). Trả `GradeResult` để view giữ logID cho undo nổi 1 bước, và
+    /// biết thẻ vừa vượt ngưỡng "đã thuộc" (ADR-038) để bật toast.
     func grade(
         cardID: String,
         snapshot: CardSnapshot,
         rating: ReadoRating
-    ) throws -> String {
+    ) throws -> GradeResult {
         guard let database else { throw ReviewError.modelUnavailable }
         let settings = try ReadoFSRS.readSettings(on: database)
         let scheduler = try ReviewScheduler(settings: settings)
@@ -332,7 +340,10 @@ final class AppModel {
         // FR-19: kiểm tra leech SAU khi đã ghi log + update cards.
         // Nếu lapses >= ngưỡng → suspend card (ra khỏi hàng đợi).
         _ = try LeechService.evaluateAfterGrade(on: database, cardID: cardID)
-        return logID
+        // ADR-038: tính từ before/after đã có sẵn — không query DB thêm.
+        let crossedMastery = Mastery.crossed(
+            before: snapshot.stability, after: outcome.stability, stateAfter: outcome.state)
+        return GradeResult(logID: logID, crossedMastery: crossedMastery)
     }
 
     /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa

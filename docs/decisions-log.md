@@ -534,3 +534,33 @@
   bằng mắt). Test: `PageOCRTests` (5 ca hình học mới) + `DebugTraceTests`
   (ghi file, redact, xoay vòng 30 thư mục) — 220/221 xanh (1 skip
   `LiveAIBoxTests` không có key mạng thật).
+
+## ADR-038 — Đảo "chống gamification" thành ăn mừng tiến bộ đo được (J4/T1)
+
+- **Ngày:** 2026-09-26
+- **Bối cảnh:** `docs/ux/visual-redesign-plan.md` §3 và comment cũ ở
+  `ReviewQueueView` ("Hết thẻ hôm nay không nảy vào — chống gamification")
+  diễn giải vision #6 (Journey Over Summary) thành "chống gamification" nói
+  chung — kéo theo màn "Hết thẻ hôm nay" chỉ hiện một dòng trung tính, không
+  phản chiếu gì về buổi vừa ôn. Đọc lại vision #6: nguyên lý này chống *tóm
+  tắt thay đọc* (ép người dùng nhìn số liệu thay vì đọc sách thật), không cấm
+  ghi nhận tiến bộ đã đo được. Owner xác nhận 2026-09-26 muốn khuyến khích ôn
+  hằng ngày (M-02/FR-14) bằng cách ăn mừng đúng những gì đã xảy ra.
+- **Quyết định:** Đảo phần diễn giải UX — màn xong buổi (`SessionDoneView`,
+  motivation-r1 T1) và toast lúc chấm chỉ ăn mừng **tiến bộ đo được**: số thẻ
+  đã ôn, % không-Again, từ vừa "đã thuộc" (Q-08: `stability >= 21` VÀ
+  `state == 'review'`, hằng số gom về `Mastery.stabilityThreshold`), streak
+  hiện tại (FR-14). KHÔNG điểm/XP ảo, KHÔNG leaderboard (NG-04 giữ nguyên),
+  KHÔNG đổi màu nút grade (giữ §3 — Again/Hard/Good/Easy vẫn trung tính, không
+  tô kiểu game). Vào hàng đợi đã hết sẵn từ đầu (chưa chấm gì phiên này) vẫn
+  giữ màn trung tính cũ — không ăn mừng cái mình không làm.
+- **Lý do:** Ghi nhận đúng việc đã làm không phải là tóm tắt thay đọc; tách
+  rõ "ăn mừng số đo có thật" khỏi "điểm ảo" giữ đúng cả vision #6 và M-02 mà
+  không cần đổi schema/transaction.
+- **Hệ quả:** `ReadoKit` thêm `Mastery` (ngưỡng + `crossed(before:after:
+  stateAfter:)`) và `SessionTally` (đếm dồn phiên, undo đúng 1 bước qua stack
+  entry — FR-12). `AppModel.grade` trả `GradeResult { logID, crossedMastery }`
+  thay vì `String` trần — tính từ snapshot trước/sau đã có, không query DB
+  thêm. `docs/ux/visual-redesign-plan.md` §3 giữ nguyên cho nút grade; chỉ
+  màn xong buổi đổi diễn giải. Test: `SessionTallyTests` (mới) + suite cũ
+  228 test, 227 xanh/1 skip (`LiveAIBoxTests`, không có key mạng thật).

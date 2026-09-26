@@ -262,7 +262,7 @@ Leech (FR-19) không đếm vào số Home và không vào queue — badge, khô
 1. Home → Ôn.
 2. Cùng card UI với J3 (một component; khác nhánh queue).
 3. Grade + undo như J3.
-4. Hết due → summary buổi: đã xong, streak theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống (FR-14).
+4. Hết due → summary buổi: đã xong, streak theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống (FR-14). Vừa chấm hết ≥1 thẻ → `SessionDoneView` (ADR-038): số thẻ đã ôn, % không-Again, từ vừa "đã thuộc" Q-08 (≤5, "+N khác"), streak; vào due đã hết sẵn từ đầu thì giữ màn trung tính cũ, không ăn mừng.
 5. **Không** tự đẩy card chưa due để lấp chỗ (FR-11).
 
 Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muốn hẹp → J5.

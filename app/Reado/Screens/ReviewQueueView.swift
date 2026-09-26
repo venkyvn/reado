@@ -31,6 +31,13 @@ struct ReviewQueueView: View {
     @State private var showUndoToast: Bool = false
     @State private var isLoading = true
 
+    // Ăn mừng đo được (ADR-038): đếm dồn phiên + toast "Thuộc rồi!" khi vừa
+    // vượt ngưỡng Q-08. Sống trong @State, mất khi rời màn — không persist.
+    @State private var tally = SessionTally()
+    @State private var showMasteredToast = false
+    @State private var masteredToastTerm = ""
+    @State private var masteredToastTask: Task<Void, Never>?
+
     // FR-18: phạm vi ôn (nil = tất cả) + popover picker.
     @State private var scope: Set<String>? = nil
     @State private var showScopePicker = false
@@ -56,8 +63,15 @@ struct ReviewQueueView: View {
             } else if currentIndex < items.count {
                 cardView
                     .transition(.opacity)
+            } else if tally.reviewed > 0 {
+                // ADR-038: vừa chấm hết phiên → màn ăn mừng tiến bộ đo được.
+                SessionDoneView(tally: tally, streak: model.dailyProgress?.streak ?? 0) {
+                    dismiss()
+                }
+                .transition(.opacity)
             } else {
-                // Opacity thuần: "Hết thẻ hôm nay" không nảy vào (chống gamification).
+                // Vào hàng đợi mà đã hết sẵn từ đầu (chưa chấm gì phiên này) —
+                // giữ màn trung tính cũ, không ăn mừng cái mình không làm.
                 doneView
                     .transition(.opacity)
             }
@@ -169,6 +183,27 @@ struct ReviewQueueView: View {
         }
     }
 
+    /// ADR-038: ăn mừng tiến bộ đo được — vừa vượt ngưỡng "đã thuộc" (Q-08).
+    /// Cùng cơ chế toggle với `debtBanner`/undo, tự ẩn qua `showMasteredToast(term:)`.
+    @ViewBuilder
+    private var masteredToastBanner: some View {
+        if showMasteredToast {
+            HStack(spacing: 10) {
+                Text("🎉")
+                Text("'\(masteredToastTerm)' — nhớ được 21+ ngày")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                Theme.ok.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: 8))
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
     private func errorView(_ message: String) -> some View {
         ContentUnavailableView {
             Label("Lỗi khi tải hàng đợi", systemImage: "exclamationmark.triangle")
@@ -186,6 +221,7 @@ struct ReviewQueueView: View {
         let item = items[currentIndex]
         return VStack(spacing: 24) {
             debtBanner
+            masteredToastBanner
 
             // Progress.
             HStack {
@@ -493,13 +529,17 @@ struct ReviewQueueView: View {
         guard let snapshot = lastSnapshot else { return }
         let gradedSnapshot = snapshot
         do {
-            let logID = try model.grade(
+            let result = try model.grade(
                 cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
             // Lưu snapshot/log của thẻ vừa chấm để undo (FR-12) — tách khỏi lastSnapshot.
-            lastLogID = logID
+            lastLogID = result.logID
             undoSnapshot = gradedSnapshot
+            tally.record(rating: rating, crossed: result.crossedMastery, term: item.term)
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = true
+            }
+            if result.crossedMastery {
+                showMasteredToast(term: item.term)
             }
             withAnimation(.spring(response: 0.3)) {
                 currentIndex += 1
@@ -509,9 +549,31 @@ struct ReviewQueueView: View {
             if currentIndex < items.count,
                let nextSnap = model.reviewSnapshots[items[currentIndex].cardID] {
                 lastSnapshot = nextSnap
+            } else {
+                // Vừa chấm hết hàng đợi — nạp lại streak/tiến độ trước khi
+                // SessionDoneView hiện, nếu không streak vẫn là số lúc mở màn
+                // (chưa tính lượt ôn vừa xong).
+                model.reloadOverview()
             }
         } catch {
             // AppModel đã set reviewError.
+        }
+    }
+
+    /// Toast "Thuộc rồi!" (ADR-038) — cùng cơ chế `Motion.run`/transition với
+    /// `showUndoToast`, tự ẩn sau 2s (huỷ tác vụ cũ nếu chấm liên tiếp mastered).
+    private func showMasteredToast(term: String) {
+        masteredToastTerm = term
+        masteredToastTask?.cancel()
+        Motion.run(reduceMotion: reduceMotion) {
+            showMasteredToast = true
+        }
+        masteredToastTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            Motion.run(reduceMotion: reduceMotion) {
+                showMasteredToast = false
+            }
         }
     }
 
@@ -530,9 +592,12 @@ struct ReviewQueueView: View {
                 dragOffset = .zero
                 didPassThreshold = false
             }
+            tally.undoLast()
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = false
+                showMasteredToast = false
             }
+            masteredToastTask?.cancel()
             lastLogID = nil
             // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
         } catch {
@@ -554,6 +619,9 @@ struct ReviewQueueView: View {
             self.didPassThreshold = false
             self.showUndoToast = false
             self.lastLogID = nil
+            self.tally = SessionTally()
+            self.masteredToastTask?.cancel()
+            self.showMasteredToast = false
             if let first = items.first,
                let snap = model.reviewSnapshots[first.cardID] {
                 lastSnapshot = snap

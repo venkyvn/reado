@@ -69,6 +69,11 @@
 		5C0100000900000000000000 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000900000000000000 /* CameraController.swift */; };
 
 		5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000E00000000000000 /* DebugTraceTests.swift */; };
+
+
+		5C0100000A00000000000000 /* SessionDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000A00000000000000 /* SessionDoneView.swift */; };
+
+		5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000F00000000000000 /* SessionTallyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -134,6 +139,11 @@
 		5B0100000900000000000000 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
 
 		5B0200000E00000000000000 /* DebugTraceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugTraceTests.swift; sourceTree = "<group>"; };
+
+
+		5B0100000A00000000000000 /* SessionDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDoneView.swift; sourceTree = "<group>"; };
+
+		5B0200000F00000000000000 /* SessionTallyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTallyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,7 +205,8 @@
 				5B0100000600000000000000 /* ReadingSessionView.swift */,
 				5B0100000700000000000000 /* StreakCalendarView.swift */,
 				5B0100000800000000000000 /* ShellTabBar.swift */,
-				5B0100000900000000000000 /* CameraController.swift */,);
+				5B0100000900000000000000 /* CameraController.swift */,
+				5B0100000A00000000000000 /* SessionDoneView.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -223,7 +234,8 @@
 				5B0200000B00000000000000 /* StreakCalendarTests.swift */,
 				5B0200000C00000000000000 /* PageOCRTests.swift */,
 				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,
-				5B0200000E00000000000000 /* DebugTraceTests.swift */,);
+				5B0200000E00000000000000 /* DebugTraceTests.swift */,
+				5B0200000F00000000000000 /* SessionTallyTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -342,7 +354,8 @@
 				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
 				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,
 				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,
-				5C0100000900000000000000 /* CameraController.swift in Sources */,);
+				5C0100000900000000000000 /* CameraController.swift in Sources */,
+				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
@@ -370,7 +383,8 @@
 				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,
 				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,
 				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,
-				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,);
+				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,
+				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
