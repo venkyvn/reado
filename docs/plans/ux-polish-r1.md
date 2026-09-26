@@ -4,6 +4,27 @@
 > Người code (Sonnet) làm **đúng 1 task / session** theo thứ tự T1→T5, mỗi task đóng bằng `/rhandoff`.
 > Việc đầu tiên của session T1: chép file này thành `docs/plans/ux-polish-r1.md` (commit cùng T1).
 
+## Trạng thái — 2026-09-26, cùng session, code xong cả 5 task
+
+| Task | Commit | Test |
+|---|---|---|
+| T1 U1 khoảng ôn trên nút | `45b2bc4` | 244/245 xanh (1 skip LiveAIBoxTests) |
+| T2 U3 phát âm + U9 vòng đã thuộc (ADR-040) | `f2f2a5f` | 244/245 xanh |
+| T3 U7 skeleton + U8 duyệt nhanh | `5f029c1` | 244/245 xanh |
+| T4 Liquid Glass iOS 26 | `07864d7` | 244/245 xanh |
+| T5 Onboarding checklist (ADR-041) | `101494e` | build sạch; `OnboardingChecklistTests` 5/5 xanh riêng (xem dưới) — **chưa chạy lại full suite cho đúng HEAD `101494e`** |
+
+**Vướng khi làm T5:** có phiên/khác đang sửa `docs/plans/ocr-line-drop.md` song song
+trong cùng repo (`OpenAICompatClient.swift`, `PageOCR.swift`, `PageOCRTests.swift`,
+`OCRProbeTests.swift` mới — dùng `RecognizeDocumentsRequest` iOS 26, hiện **lỗi biên
+dịch**) + 3 script chẩn đoán đổi bundle ID. Không đụng các file đó (không stage,
+không commit). `scripts/test.sh test` (full suite) hiện **không chạy được** tới khi
+file đó hết lỗi biên dịch — target test build chung cho cả hai bên. Đã tách sạch
+5 commit trên bằng `git commit -- <pathspec>` nên không lẫn code của nhau.
+**Việc còn lại:** owner/session kia sửa xong `OCRProbeTests.swift` rồi chạy lại
+`scripts/test.sh test` một lần để có con số xanh thật cho HEAD hiện tại, trước khi
+`/rhandoff` khép T5.
+
 ## Context
 
 Fen muốn nâng UX/UI. Research (Anki, Duolingo, LingQ, Things/Linear, Apple Liquid Glass) → fen chọn:
