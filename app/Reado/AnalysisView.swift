@@ -60,6 +60,21 @@ struct AnalysisView: View {
         for index in drafts.indices { drafts[index].isSelected = selected }
     }
 
+    /// U8 ux-polish-r1: còn card đã kiểm (verified) mà chưa chọn — nút "Chọn
+    /// tất cả đã kiểm" chỉ hiện khi có việc để làm.
+    private var hasUnselectedVerified: Bool {
+        drafts.contains { $0.verification == .verified && !$0.isSelected }
+    }
+
+    /// Chỉ bật card verified — unverified/suspect giữ nguyên lựa chọn hiện tại
+    /// (ADR-008: không tự chọn thứ chưa xác minh).
+    private func selectAllVerified() {
+        for index in drafts.indices where drafts[index].verification == .verified {
+            drafts[index].isSelected = true
+        }
+        Haptics.selection()
+    }
+
     var body: some View {
         Group {
             if model.analysisFailure != nil {
@@ -68,17 +83,22 @@ struct AnalysisView: View {
             } else if model.isAnalyzing {
                 // FR-02: progress rõ theo AnalysisProgress (stream) — trang dài
                 // với agent tắt suy nghĩ mất ~15-30s, không để màn đứng im.
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text(progressTitle)
-                        .font(.headline)
-                        .contentTransition(.opacity)
-                    Text("Thường mất 15–30 giây.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                // U7 ux-polish-r1: skeleton bên dưới gợi hình dạng kết quả sắp về.
+                VStack(spacing: 24) {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text(progressTitle)
+                            .font(.headline)
+                            .contentTransition(.opacity)
+                        Text("Thường mất 15–30 giây.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    AnalysisSkeleton()
+                        .padding(.horizontal)
                 }
-                .padding()
+                .padding(.top, 32)
                 .frame(maxWidth: .infinity)
                 .transition(.opacity)
             } else if let result = model.analysisResult {
@@ -307,14 +327,36 @@ struct AnalysisView: View {
             if !drafts.isEmpty {
                 Section {
                     // Chọn/bỏ tất cả — để trong Section (header List nuốt tap).
-                    Button(allSelected ? "Bỏ chọn" : "Chọn tất cả") {
-                        setAllSelected(!allSelected)
+                    // U8: "Chọn tất cả đã kiểm" chỉ bật verified, giữ nguyên
+                    // lựa chọn của unverified/suspect (ADR-008).
+                    HStack {
+                        Button(allSelected ? "Bỏ chọn" : "Chọn tất cả") {
+                            setAllSelected(!allSelected)
+                        }
+                        Spacer()
+                        if hasUnselectedVerified {
+                            Button("Chọn tất cả đã kiểm", action: selectAllVerified)
+                        }
                     }
+                    .buttonStyle(.borderless)
                     ForEach(Array(drafts.enumerated()), id: \.element.id) { index, _ in
                         ReviewCardRow(
                             draft: $drafts[index],
                             isExpanded: expandedIDs.contains(drafts[index].id),
                             onToggleExpand: { toggleExpand(drafts[index].id) })
+                            // U8: vuốt phải để bấm chọn nhanh, không cần mở card.
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                Button {
+                                    drafts[index].isSelected.toggle()
+                                    Haptics.selection()
+                                } label: {
+                                    Label(
+                                        drafts[index].isSelected ? "Bỏ chọn" : "Chọn",
+                                        systemImage: drafts[index].isSelected
+                                            ? "circle" : "checkmark.circle")
+                                }
+                                .tint(drafts[index].isSelected ? .gray : Color.accentColor)
+                            }
                     }
                 } header: {
                     HStack {
@@ -322,6 +364,8 @@ struct AnalysisView: View {
                         Spacer()
                         Text("Đã chọn \(selectedCount)/\(drafts.count)")
                             .foregroundStyle(.secondary)
+                            .contentTransition(.numericText())
+                            .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
                     }
                 }
             }
@@ -597,5 +641,44 @@ private struct VerificationBadge: View {
             }
         }
         .font(.caption2)
+    }
+}
+
+/// U7 ux-polish-r1: placeholder hình dạng card duyệt trong lúc chờ agent —
+/// đỡ màn trắng đứng im, không đoán trước nội dung thật. Nhấp nháy nhẹ, tôn
+/// Reduce Motion (đứng yên).
+private struct AnalysisSkeleton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dim = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(0..<4, id: \.self) { _ in row }
+        }
+        .opacity(dim ? 0.45 : 1)
+        .accessibilityHidden(true)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                dim = true
+            }
+        }
+    }
+
+    private var row: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Theme.surfaceStrong)
+                .frame(width: 24, height: 24)
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Theme.surfaceStrong)
+                    .frame(width: 120, height: 14)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Theme.surfaceStrong)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 10)
+            }
+        }
     }
 }
