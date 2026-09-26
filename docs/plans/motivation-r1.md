@@ -72,7 +72,7 @@ Thứ tự khuyên: **T1 → T3 → T2**.
   - Test cũ `matureKeys` (FR-10) vẫn xanh sau khi đổi sang hằng số.
 - **DoD:** `scripts/test.sh` `** TEST SUCCEEDED **`, không test cũ đỏ; screenshot simulator màn xong + toast; journeys J4 bước 4 mô tả summary; ADR-038 + `ROADMAP.md` §4 dòng mâu thuẫn gamification; bỏ comment "chống gamification" trong `ReviewQueueView`.
 
-### T2 — `learn-more` (ý 3)
+### T2 — `learn-more` (ý 3) — ✅ 2026-09-26, commit `950c45f`, 240/241 test xanh (+7 `LearnMoreTests`, skip `LiveAIBoxTests` không đổi). Không deviation. **Plan `motivation-r1` hoàn tất cả 3 task (T1 `4acdd93` · T3 `edcbf18` · T2 `950c45f`).** Chưa xem UI thật trên simulator (cả 3 task) — cần fen tự test tay khi thuận tiện.
 
 - **Files:** `ReviewQueue.loadFullQueue` (`extraNew`), `DailyProgress.load` (`extraNew`), `AppModel` (`extraNewQuota: (dayStart: String, count: Int)?`, `learnMore()` cộng 10), `SessionDoneView` (CTA "Học thêm 10 từ"), `ReadoTests/LearnMoreTests.swift` (mới).
 - **Docs:** `prd.md` FR-11 thêm GWT: *Given hàng đợi hôm nay đã hết, when user chủ động bấm "Học thêm 10 từ", then hạn mức new riêng ngày học hiện tại tăng 10, vẫn áp toàn cục trước lọc phạm vi; hệ thống không bao giờ tự nới.* · `journeys.md` J3 thêm nhánh · ADR-039.
