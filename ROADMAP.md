@@ -166,6 +166,12 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 - Chế độ **cram** của FR-18 · lọc từ vựng nâng cao FR-08 · cảnh báo trang trôi FR-05
 - Thống kê tiến bộ theo thời gian · chốt ngưỡng NFR-01/NFR-02 bằng số liệu thật
 - Chỉnh prompt/schema theo M-03 (calibrate A-02) · optimizer FSRS (py-fsrs, job ngoài request) nếu cần
+- **Động lực học (brainstorm 2026-09-26, chưa chốt)** — xem `docs/plans/motivation-r1.md` cho phần đã chốt (ý 1+2+3+4+7):
+  - Mốc đọc lại: ≥80% từ của một phiên đọc đã thuộc (Q-08) → gợi ý đọc lại trang đó qua `ReadingSessionView` (ẩn dịch, ADR-030)
+  - Huy hiệu mốc streak 7/30/100 ngày trên heatmap `StreakCalendarView` — **không** streak freeze (đã cấm, J-R1-P)
+  - Nhắc thông minh: nội dung `NotificationScheduler` cụ thể hoá ("N thẻ đến hạn, M thẻ sắp quên") thay câu chung
+  - Dự báo 7 ngày: biểu đồ nhỏ số thẻ đến hạn các ngày tới, dựng từ `due_at` đã có
+  - Bản đồ trí nhớ: mỗi từ một chấm màu theo retrievability suy từ `stability`/`fsrs_params`, không thêm cột
 
 ### Later — chưa mở, không thiết kế trước
 
@@ -195,6 +201,7 @@ Thứ tự code trong các phase trên **bám theo journeys**: vòng skeleton s�
 
 | Ngày | Ghi nhận | Hướng xử lý |
 |---|---|---|
+| 2026-09-26 | `docs/ux/visual-redesign-plan.md` §3 + comment `ReviewQueueView` ("Hết thẻ hôm nay không nảy vào — chống gamification") diễn giải vision #6 (Journey Over Summary) thành "chống gamification" nói chung. Vision #6 thật ra chống *tóm tắt thay đọc*, không cấm ghi nhận tiến bộ | Owner 2026-09-26 chủ động muốn khuyến khích (animation streak/mastery) → ADR-038 đảo phần diễn giải UX; rào giữ: chỉ ăn mừng **tiến bộ đo được** (thẻ ôn, từ thuộc Q-08, streak FR-14) — không điểm ảo, không đổi màu nút grade (§3 giữ nguyên). Chi tiết `docs/plans/motivation-r1.md` |
 | 2026-09-18 | ⚠️→✅ **Chuẩn vuốt chấm (đã chốt):** ADR-009/024 (PWA) ghi *trái = Easy(4)*; [docs/journeys.md](docs/specs/journeys.md) mục 4 "Gesture" (v2) ghi *trái = Again, Hard/Easy là nút* | **Owner chốt 2026-09-18 theo journeys** → ghi ADR-025 (đảo ADR-009); task 2.5 theo chốt mới; ADR-024 "cả hai mặt" giữ tới khi owner đổi |
 | 2026-09-18 | `PROJECT.md` miêu tả `web/` + `app/Reado.xcodeproj` như đã tồn tại — **máy này** chưa có (`app/` còn là PWA; không có `web/`). PROJECT.md đi theo gói docs v2 từ máy kia | Đã ghi session-brief mục 2; task 0.1. Chưa sửa PROJECT.md vì nó đúng với máy nguồn |
 | 2026-09-18 | `README.md` vẫn miêu tả thế hệ PWA (v0.6, walking skeleton PWA) | Đã cắm banner lỗi thời trên đầu README trỏ sang PROJECT.md + ROADMAP này |
