@@ -1,0 +1,198 @@
+{
+  "droppedLowConfidence" : [
+
+  ],
+  "lines" : [
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.0091261060237884384,
+      "maxX" : 0.78781700229091134,
+      "minX" : 0.025145067834499213,
+      "text" : "Tab Window Help (VI Telex",
+      "yTop" : 0.076565394077790838
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "indent",
+      "height" : 0.010257093811035145,
+      "maxX" : 0.94007309894776137,
+      "minX" : 0.032513792706816633,
+      "text" : "Faceb: X • Gợi Ý : × © ban ni x • Các g: x • The P Detec Claude × V Motior w. Awww X ® Webs",
+      "yTop" : 0.10012606147898884
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.012435334682464605,
+      "maxX" : 0.67698259114087656,
+      "minX" : -0.00013014674736097051,
+      "text" : "gy-of-money-by-morgan-housel.pdf 9 *",
+      "yTop" : 0.13082834085802619
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.0092966178747324012,
+      "maxX" : 0.998065764588148,
+      "minX" : 2.1578412357731974e-09,
+      "text" : "- tech devops - english • news D trivia D ai • dsh • gemini ~ NotebookLM * LeetCode english central * Claude API AI • tradingvi",
+      "yTop" : 0.15697674424870878
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.010658914566040067,
+      "maxX" : 0.34235976766586562,
+      "minX" : 3.4602447257555238e-10,
+      "text" : "reed, and Happiness 34 \/ 253 90%",
+      "yTop" : 0.19186046515654331
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.014703488349914529,
+      "maxX" : 0.75048355676140821,
+      "minX" : 0.26305609570774757,
+      "text" : "If you are rich and tall, your brother is more likely to also be among brothers are more correlated than height or weight.",
+      "yTop" : 0.26149999979494321
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "shortEnding",
+      "height" : 0.017193186283111561,
+      "maxX" : 0.75259287165074762,
+      "minX" : 0.26481900178452755,
+      "text" : "rich than he is tall. I think most of us intuitively know this is true-the quality of your education and the doors that open",
+      "yTop" : 0.28805549721559032
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.016719266414642331,
+      "maxX" : 0.74081236993397082,
+      "minX" : 0.26294773018921647,
+      "text" : "for you are heavily linked to your parents' socioeconomic status. But find me two rich brothers and I'll show you two",
+      "yTop" : 0.3197249928914796
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.014832387208938591,
+      "maxX" : 0.71384665190279384,
+      "minX" : 0.26679257751759905,
+      "text" : "Failure-which can be anything from bankruptcy to not meeting a personal goal-is equally abused.",
+      "yTop" : 0.37599246168288913
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "shortEnding",
+      "height" : 0.015196079254150452,
+      "maxX" : 0.69251796603244664,
+      "minX" : 0.26877533901430412,
+      "text" : "Did failed businesses not try hard enough? Were bad",
+      "yTop" : 0.41838167589345754
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.017388721466064516,
+      "maxX" : 0.68293796340669577,
+      "minX" : 0.26871462642371474,
+      "text" : "careers due to laziness? Sometimes, yes. Of course.",
+      "yTop" : 0.44597933455335259
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "shortEnding",
+      "height" : 0.016750987529754624,
+      "maxX" : 0.75061994279715682,
+      "minX" : 0.26874240354940859,
+      "text" : "But how much? It's so hard to know. Everything worth pursuing has less than 100% odds of succeeding, and risk is",
+      "yTop" : 0.47268865328177323
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.016012489318847689,
+      "maxX" : 0.73320506838777244,
+      "minX" : 0.26874459641290566,
+      "text" : "of that equation. Just as with luck, the story gets too hard,",
+      "yTop" : 0.51601300476629985
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.011639534950256381,
+      "maxX" : 0.67698259806604577,
+      "minX" : 0.26885879438761706,
+      "text" : "an outcome was a conscious decision versus a risk.",
+      "yTop" : 0.54649999984192843
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "shortEnding",
+      "height" : 0.01412714552879335,
+      "maxX" : 0.74476988746138706,
+      "minX" : 0.27069633774122237,
+      "text" : "Say I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first",
+      "yTop" : 0.56998688481050452
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.015278135299682694,
+      "maxX" : 0.72350797870740391,
+      "minX" : 0.27070327105198611,
+      "text" : "an 80% chance of making money, and I just happened to",
+      "yTop" : 0.61232446703979004
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.014616042375564575,
+      "maxX" : 0.66551687492452882,
+      "minX" : 0.27066894917708789,
+      "text" : "which is which? Did I make a mistake, or did I just experience the reality of risk?",
+      "yTop" : 0.63964418675745671
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.016597067832946788,
+      "maxX" : 0.75059557404242594,
+      "minX" : 0.27060361145668044,
+      "text" : "It's too hard. We prefer simple stories, which are easy but were wise. But in the real world, day to day, we simply don't.",
+      "yTop" : 0.69414603741368375
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "shortEnding",
+      "height" : 0.016071365356445377,
+      "maxX" : 0.48965006365417113,
+      "minX" : 0.27052982976030049,
+      "text" : "often devilishly misleading.",
+      "yTop" : 0.7211288159274114
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.013444767236709593,
+      "maxX" : 0.53965183763863156,
+      "minX" : 0.040618956004895998,
+      "text" : "80 a K DII",
+      "yTop" : 0.95058139540781927
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "indent",
+      "height" : 0.011264534711837776,
+      "maxX" : 0.92649903261213329,
+      "minX" : 0.22243713715298685,
+      "text" : "FS F6 F7 F8 F9 F10 F11 F12",
+      "yTop" : 0.97965116276313247
+    }
+  ],
+  "observationCount" : 66,
+  "rawObservationCount" : 66
+}

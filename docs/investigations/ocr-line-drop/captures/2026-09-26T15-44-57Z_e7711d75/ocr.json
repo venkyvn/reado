@@ -1,0 +1,239 @@
+{
+  "lines" : [
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.030498112678527867,
+      "maxX" : 0.85991611541382895,
+      "minX" : 0.14899855759359382,
+      "text" : "among brothers are more correlated than height or weight.",
+      "yTop" : 0.12431835282672599
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.03079999923706056,
+      "maxX" : 0.86180907970523313,
+      "minX" : 0.14721037679294952,
+      "text" : "If you are rich and tall, your brother is more likely to also be",
+      "yTop" : 0.14730501764077542
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.027506902694702129,
+      "maxX" : 0.86352196427925998,
+      "minX" : 0.14906285662533056,
+      "text" : "rich than he is tall. I think most of us intuitively know this is",
+      "yTop" : 0.17209979901390793
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.028729828834533677,
+      "maxX" : 0.86174116578281756,
+      "minX" : 0.14908085785138969,
+      "text" : "true-the quality of your education and the doors that open",
+      "yTop" : 0.19600203162310414
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.032782020568847714,
+      "maxX" : 0.82945496803949625,
+      "minX" : 0.14898156486421774,
+      "text" : "for you are heavily linked to your parents' socioeconomic",
+      "yTop" : 0.21659054854226134
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.025345061302185057,
+      "maxX" : 0.84363538750171152,
+      "minX" : 0.15274045801242464,
+      "text" : "men who do not think this study's findings apply to them.",
+      "yTop" : 0.2670816233475668
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.024659871101379349,
+      "maxX" : 0.81130537291098204,
+      "minX" : 0.15094146741032455,
+      "text" : "Failure-which can be anything from bankruptcy to not",
+      "yTop" : 0.311341254327408
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.022664542198181037,
+      "maxX" : 0.68531060075891326,
+      "minX" : 0.15279498996016252,
+      "text" : "meeting a personal goal-is equally abused.",
+      "yTop" : 0.33543681823069127
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.025672922134399423,
+      "maxX" : 0.7789992356638038,
+      "minX" : 0.15632378376192424,
+      "text" : "Did failed businesses not try hard enough? Were bad",
+      "yTop" : 0.37614120995337297
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025645933151245193,
+      "maxX" : 0.87608475348207748,
+      "minX" : 0.15452554998482337,
+      "text" : "investments not thought through well enough? Are wayward",
+      "yTop" : 0.39817843217035898
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.02203488445281987,
+      "maxX" : 0.76798560439028918,
+      "minX" : 0.15647482715289743,
+      "text" : "careers due to laziness? Sometimes, yes. Of course.",
+      "yTop" : 0.42296511596219621
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.023473234176635716,
+      "maxX" : 0.79508180537347239,
+      "minX" : 0.15814580647573109,
+      "text" : "But how much? It's so hard to know. Everything worth",
+      "yTop" : 0.4644521572737943
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.026822341918945281,
+      "maxX" : 0.86889790268622535,
+      "minX" : 0.15805799850537766,
+      "text" : "pursuing has less than 100% odds of succeeding, and risk is",
+      "yTop" : 0.4849015846877428
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.028084534645080539,
+      "maxX" : 0.87252397509269597,
+      "minX" : 0.15445057397206621,
+      "text" : "just what happens when you end up on the unfortunate side",
+      "yTop" : 0.50690277921391913
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024916889190673808,
+      "maxX" : 0.84541881869141755,
+      "minX" : 0.15991719128868706,
+      "text" : "of that equation. Just as with luck, the story gets too hard,",
+      "yTop" : 0.53158791898151481
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.022762084960937456,
+      "maxX" : 0.76263018854635967,
+      "minX" : 0.15998355913732501,
+      "text" : "an outcome was a conscious decision versus a risk.",
+      "yTop" : 0.57643304813025953
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.02778833007812509,
+      "maxX" : 0.86531778078766519,
+      "minX" : 0.15989844811343099,
+      "text" : "Say I buy a stock, and five years later it's gone nowhere. It's",
+      "yTop" : 0.61754368151863215
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025720746994018606,
+      "maxX" : 0.85622431546642486,
+      "minX" : 0.16168684108910431,
+      "text" : "possible that I made a bad decision by buying it in the first",
+      "yTop" : 0.64005220982906252
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.029216169357299759,
+      "maxX" : 0.87254822709563917,
+      "minX" : 0.1615694830420347,
+      "text" : "place. It's also possible that I made a good decision that had",
+      "yTop" : 0.66035958691308183
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024901918411254886,
+      "maxX" : 0.83465750420543672,
+      "minX" : 0.16172005436304038,
+      "text" : "an 80% chance of making money, and I just happened to",
+      "yTop" : 0.68666685552611373
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.023897155761718691,
+      "maxX" : 0.84903006316523344,
+      "minX" : 0.16174051359260039,
+      "text" : "end up on the side of the unfortunate 20%. How do I know",
+      "yTop" : 0.7098689026681807
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025979566574096724,
+      "maxX" : 0.75015286356537092,
+      "minX" : 0.16354159738198976,
+      "text" : "which is which? Did I make a mistake, or did I just",
+      "yTop" : 0.73210120099825993
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.021112167358398382,
+      "maxX" : 0.50916931163910217,
+      "minX" : 0.16350599546007216,
+      "text" : "experience the reality of risk?",
+      "yTop" : 0.75679950744890723
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.025195644378662063,
+      "maxX" : 0.8813621575923356,
+      "minX" : 0.16538057026734337,
+      "text" : "were wise. But in the real world, day to day, we simply don't.",
+      "yTop" : 0.81922760966635655
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.023499999999999965,
+      "maxX" : 0.8399280467409217,
+      "minX" : 0.16187051778245939,
+      "text" : "It's too hard. We prefer simple stories, which are easy but",
+      "yTop" : 0.84150000033029959
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.023325754165649415,
+      "maxX" : 0.48934333177960643,
+      "minX" : 0.1652525440997642,
+      "text" : "often devilishly misleading.",
+      "yTop" : 0.86509988303441954
+    }
+  ],
+  "observationCount" : 26
+}

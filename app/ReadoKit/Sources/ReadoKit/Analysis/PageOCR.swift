@@ -28,10 +28,13 @@ public enum PageOCR {
     public struct Observation: Equatable, Sendable {
         public let text: String
         public let boundingBox: CGRect
+        /// `topCandidates(1).confidence` — 1.0 cho item dựng tay trong test (không qua Vision).
+        public let confidence: Float
 
-        public init(text: String, boundingBox: CGRect) {
+        public init(text: String, boundingBox: CGRect, confidence: Float = 1.0) {
             self.text = text
             self.boundingBox = boundingBox
+            self.confidence = confidence
         }
     }
 
@@ -53,11 +56,23 @@ public enum PageOCR {
         public let text: String
         public let observations: [Observation]
         public let lines: [Line]
+        /// Tổng số candidate Vision trả về TRƯỚC lọc confidence/rỗng (ocr-line-drop:
+        /// đo xem hàng mất là do Vision không thấy, hay bị lọc sau đó). 0 khi
+        /// dựng bằng `detailedReadingOrder` trong test (không qua Vision thật).
+        public let rawObservationCount: Int
+        /// Observation bị loại vì `confidence < minConfidence` — rỗng khi dựng
+        /// bằng `detailedReadingOrder` (lọc confidence chỉ xảy ra ở đường Vision thật).
+        public let droppedLowConfidence: [Observation]
 
-        public init(text: String, observations: [Observation], lines: [Line]) {
+        public init(
+            text: String, observations: [Observation], lines: [Line],
+            rawObservationCount: Int = 0, droppedLowConfidence: [Observation] = []
+        ) {
             self.text = text
             self.observations = observations
             self.lines = lines
+            self.rawObservationCount = rawObservationCount
+            self.droppedLowConfidence = droppedLowConfidence
         }
     }
 
@@ -74,6 +89,23 @@ public enum PageOCR {
     /// Testable: không gọi Vision.
     public static func readingOrder(_ items: [Observation]) -> String {
         detailedReadingOrder(items).text
+    }
+
+    /// Testable: không gọi Vision. Tách observation confidence thấp ra khỏi phần
+    /// dùng để ghép hàng — ocr-line-drop: hàng mất trong `page_ocr.txt` có thể là
+    /// do bước này lọc bỏ, không phải do Vision không thấy (`rawObservationCount`
+    /// ở `OCRResult` phân biệt hai khả năng đó).
+    public static func partitionByConfidence(_ items: [Observation]) -> (kept: [Observation], dropped: [Observation]) {
+        var kept: [Observation] = []
+        var dropped: [Observation] = []
+        for item in items {
+            if item.confidence >= minConfidence {
+                kept.append(item)
+            } else {
+                dropped.append(item)
+            }
+        }
+        return (kept, dropped)
     }
 
     /// Testable: không gọi Vision. Trả cả text lẫn từng hàng kèm lý do ngắt đoạn.
@@ -141,15 +173,17 @@ public enum PageOCR {
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])
         let observations = request.results ?? []
-        let items: [Observation] = observations.compactMap { obs in
-            guard let candidate = obs.topCandidates(1).first,
-                  candidate.confidence >= minConfidence
-            else { return nil }
+        let candidates: [Observation] = observations.compactMap { obs in
+            guard let candidate = obs.topCandidates(1).first else { return nil }
             let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return nil }
-            return Observation(text: text, boundingBox: obs.boundingBox)
+            return Observation(text: text, boundingBox: obs.boundingBox, confidence: candidate.confidence)
         }
-        return detailedReadingOrder(items)
+        let (items, dropped) = partitionByConfidence(candidates)
+        let result = detailedReadingOrder(items)
+        return OCRResult(
+            text: result.text, observations: result.observations, lines: result.lines,
+            rawObservationCount: observations.count, droppedLowConfidence: dropped)
     }
 
     private static func cgImage(from data: Data) -> CGImage? {

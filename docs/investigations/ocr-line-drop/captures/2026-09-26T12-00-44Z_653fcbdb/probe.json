@@ -1,0 +1,31 @@
+{
+  "fullRes_documents" : {
+    "droppedLowConfidenceCount" : 0,
+    "keptObservationCount" : 0,
+    "lineCount" : 0,
+    "missingGroundtruthLineCount" : 0,
+    "rawObservationCount" : 9
+  },
+  "fullRes_legacy" : {
+    "droppedLowConfidenceCount" : 0,
+    "keptObservationCount" : 29,
+    "lineCount" : 29,
+    "missingGroundtruthLineCount" : 0,
+    "rawObservationCount" : 29
+  },
+  "scaled1600_documents" : {
+    "droppedLowConfidenceCount" : 0,
+    "keptObservationCount" : 0,
+    "lineCount" : 0,
+    "missingGroundtruthLineCount" : 0,
+    "rawObservationCount" : 9
+  },
+  "scaled1600_legacy" : {
+    "droppedLowConfidenceCount" : 0,
+    "keptObservationCount" : 29,
+    "lineCount" : 29,
+    "missingGroundtruthLineCount" : 0,
+    "rawObservationCount" : 29
+  },
+  "sourcePixels" : "4800x4311"
+}

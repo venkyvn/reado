@@ -10,7 +10,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUNDLE_ID="com.reado.app"
+# com.reado.app đã bị trùng khi ký máy thật → fen đổi sang com.readoluca.app.
+BUNDLE_ID="${READO_BUNDLE_ID:-com.readoluca.app}"
 MODE="${1:-}"
 OUT="$ROOT/.tmp/diagnostics/$(date -u +%Y%m%dT%H%M%SZ)"
 

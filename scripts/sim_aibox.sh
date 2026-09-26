@@ -14,7 +14,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIM_NAME="iPhone 18 Pro"
-BUNDLE_ID="com.reado.app"
+# com.reado.app đã bị trùng khi ký máy thật → fen đổi sang com.readoluca.app.
+BUNDLE_ID="${READO_BUNDLE_ID:-com.readoluca.app}"
 
 if [[ "${1:-}" != "--no-build" ]]; then
   "$ROOT/scripts/test.sh" build

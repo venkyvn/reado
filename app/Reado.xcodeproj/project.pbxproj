@@ -84,6 +84,8 @@
 		5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000200000000000000 /* OnboardingChecklistTests.swift */; };
 
 		5C0201000300000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000300000000000000 /* OCRProbeTests.swift */; };
+
+		5C0201000400000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000400000000000000 /* OCRProbeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -164,6 +166,8 @@
 		5B0201000200000000000000 /* OnboardingChecklistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistTests.swift; sourceTree = "<group>"; };
 
 		5B0201000300000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
+
+		5B0201000400000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -260,7 +264,8 @@
 				5B0200000F00000000000000 /* SessionTallyTests.swift */,
 				5B0201000100000000000000 /* LearnMoreTests.swift */,
 				5B0201000200000000000000 /* OnboardingChecklistTests.swift */,
-				5B0201000300000000000000 /* OCRProbeTests.swift */,);
+				5B0201000300000000000000 /* OCRProbeTests.swift */,
+				5B0201000400000000000000 /* OCRProbeTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -414,7 +419,8 @@
 				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,
 				5C0201000100000000000000 /* LearnMoreTests.swift in Sources */,
 				5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */,
-				5C0201000300000000000000 /* OCRProbeTests.swift in Sources */,);
+				5C0201000300000000000000 /* OCRProbeTests.swift in Sources */,
+				5C0201000400000000000000 /* OCRProbeTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

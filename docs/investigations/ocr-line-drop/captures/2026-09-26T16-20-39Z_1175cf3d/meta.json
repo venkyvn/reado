@@ -1,0 +1,12 @@
+{
+  "baseURL" : "https:\/\/api.ai-box.vn\/v1",
+  "cefr" : "B2",
+  "httpStatus" : 200,
+  "imageHash" : "17ce61a1dea151a140d2de6a1028cd8118b1a7ad9ab1e2ca9d9112e240186ce3",
+  "includeResponseFormat" : true,
+  "model" : "deepseek-v4.1-flash",
+  "ocrChars" : 1572,
+  "ocrLines" : 21,
+  "ocrMs" : 415,
+  "totalMs" : 45745
+}

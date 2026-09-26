@@ -121,6 +121,20 @@ final class PageOCRTests: XCTestCase {
         XCTAssertTrue(result.lines.allSatisfy { !$0.breakBefore })
     }
 
+    // MARK: - ocr-line-drop: lọc confidence tách riêng khỏi ghép hàng.
+
+    func testPartitionByConfidenceKeepsHighDropsLow() {
+        let high = PageOCR.Observation(
+            text: "clear text", boundingBox: CGRect(x: 0.1, y: 0.5, width: 0.4, height: 0.1),
+            confidence: 0.9)
+        let low = PageOCR.Observation(
+            text: "blurry text", boundingBox: CGRect(x: 0.1, y: 0.3, width: 0.4, height: 0.1),
+            confidence: 0.1)
+        let (kept, dropped) = PageOCR.partitionByConfidence([high, low])
+        XCTAssertEqual(kept, [high])
+        XCTAssertEqual(dropped, [low])
+    }
+
     func testGarbageBytesYieldEmpty() async throws {
         let text = try await PageOCR.recognize(imageData: Data([0x00, 0x01, 0x02]))
         XCTAssertEqual(text, "")

@@ -1,0 +1,230 @@
+{
+  "lines" : [
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.026662174224853508,
+      "maxX" : 0.7936642423096506,
+      "minX" : 0.22522317662924773,
+      "text" : "$412 a year on lotto tickets, four times the amount of those in",
+      "yTop" : 0.097773346843961884
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.028995813369750989,
+      "maxX" : 0.79809204180546034,
+      "minX" : 0.22513223778419686,
+      "text" : "the highest income groups. Forty percent of Americans cannot",
+      "yTop" : 0.12188513276246693
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024271844863891556,
+      "maxX" : 0.77180233059761516,
+      "minX" : 0.22529069249730099,
+      "text" : "come up with $400 in an emergency. Which is to say: Those",
+      "yTop" : 0.14886731380836427
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.02411045837402348,
+      "maxX" : 0.76895274570374927,
+      "minX" : 0.22669992603294037,
+      "text" : "who say they couldn't come up with $400 in an emergency.",
+      "yTop" : 0.19778365009888943
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.021108414649963381,
+      "maxX" : 0.51744185793448461,
+      "minX" : 0.22819767698464172,
+      "text" : "millions chance of hitting it big.",
+      "yTop" : 0.247499999600725
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.029181665420532132,
+      "maxX" : 0.77780692835960108,
+      "minX" : 0.2280280465674949,
+      "text" : "That seems crazy to me. It probably seems crazy to you, too.",
+      "yTop" : 0.2886133757850653
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024500000000000077,
+      "maxX" : 0.803779077976854,
+      "minX" : 0.22819766606384348,
+      "text" : "But I'm not in the lowest income group. You're likely not, either.",
+      "yTop" : 0.317000000030359
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025168575286865114,
+      "maxX" : 0.80237220410600552,
+      "minX" : 0.2267045540099272,
+      "text" : "So it's hard for many of us to intuitively grasp the subconscious",
+      "yTop" : 0.33964930333646204
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.02300000000000002,
+      "maxX" : 0.64389535320854685,
+      "minX" : 0.22819766987077195,
+      "text" : "reasoning of low-income lottery ticket buyers.",
+      "yTop" : 0.36550000013522876
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.022656957626342678,
+      "maxX" : 0.79360465805713809,
+      "minX" : 0.22965115566920608,
+      "text" : "But strain a little, and you can imagine it going something like",
+      "yTop" : 0.41099999988430658
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.019859619140625062,
+      "maxX" : 0.26897965841032961,
+      "minX" : 0.22811336476854924,
+      "text" : "this:",
+      "yTop" : 0.43343588598025651
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.024057769775390647,
+      "maxX" : 0.78639281492162794,
+      "minX" : 0.22959708172832122,
+      "text" : "We live paycheck-to-paycheck and saving seems out of reach.",
+      "yTop" : 0.51926091808984554
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.023653600692749022,
+      "maxX" : 0.77329651820118583,
+      "minX" : 0.2296081122071609,
+      "text" : "Our prospects for much higher wages seem out of reach. We",
+      "yTop" : 0.54365299643590059
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.027120288848876961,
+      "maxX" : 0.74720163608236589,
+      "minX" : 0.22955031272621679,
+      "text" : "can't afford nice vacations, new cars, health insurance, or",
+      "yTop" : 0.5659954541008676
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025330299377441468,
+      "maxX" : 0.77042840958020598,
+      "minX" : 0.23100862928046964,
+      "text" : "homes in safe neighborhoods. We can't put our kids through",
+      "yTop" : 0.59019319877783227
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025655899047851594,
+      "maxX" : 0.76462044836071885,
+      "minX" : 0.23102240288832204,
+      "text" : "college without crippling debt. Much of the stuff you people",
+      "yTop" : 0.61386210071053504
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.025556726455688517,
+      "maxX" : 0.73262542800389419,
+      "minX" : 0.23103637716303352,
+      "text" : "who read finance books either have now, or have a good",
+      "yTop" : 0.63863226515120686
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024271844863891556,
+      "maxX" : 0.78052323963731929,
+      "minX" : 0.23255815393826187,
+      "text" : "chance of getting, we don't. Buying a lottery ticket is the only",
+      "yTop" : 0.66181229739006064
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.025457254409790075,
+      "maxX" : 0.7791513351994992,
+      "minX" : 0.23247675405188917,
+      "text" : "good stuff that you already have and take for granted. We are",
+      "yTop" : 0.70812505822694194
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.026030608177185055,
+      "maxX" : 0.78786653543505991,
+      "minX" : 0.23249855371098002,
+      "text" : "paying for a dream, and you may not understand that because",
+      "yTop" : 0.73117609523033045
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.024970603942871095,
+      "maxX" : 0.79221136791581126,
+      "minX" : 0.23251745100602669,
+      "text" : "you are already living a dream. That's why we buy more tickets",
+      "yTop" : 0.75421377076439955
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.021500387191772496,
+      "maxX" : 0.34746663928246901,
+      "minX" : 0.23243390219430837,
+      "text" : "than you do.",
+      "yTop" : 0.77996381632554901
+    },
+    {
+      "breakBefore" : true,
+      "breakReason" : "gap",
+      "height" : 0.024951383590698262,
+      "maxX" : 0.73122364864491185,
+      "minX" : 0.23247223946697765,
+      "text" : "You don't have to agree with this reasoning. Buying lotto",
+      "yTop" : 0.85795734735362272
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.022653720855712933,
+      "maxX" : 0.77034881824687329,
+      "minX" : 0.23401164207289438,
+      "text" : "tickets when you're broke is still a bad idea. But I can kind of",
+      "yTop" : 0.88187702284075198
+    },
+    {
+      "breakBefore" : false,
+      "breakReason" : null,
+      "height" : 0.021184466361999554,
+      "maxX" : 0.59593023091296737,
+      "minX" : 0.23546511781931556,
+      "text" : "understand why lotto ticket sales persist.",
+      "yTop" : 0.90599999967588496
+    }
+  ],
+  "observationCount" : 25
+}

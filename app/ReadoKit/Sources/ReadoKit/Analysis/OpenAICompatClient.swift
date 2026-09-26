@@ -120,6 +120,17 @@ public struct OpenAICompatClient: PageAnalyzer {
     private static func ocrDebugJSON(_ result: PageOCR.OCRResult) -> [String: Any] {
         [
             "observationCount": result.observations.count,
+            // ocr-line-drop: rawObservationCount là tổng Vision trả về TRƯỚC lọc
+            // confidence — chênh với observationCount + droppedLowConfidence.count
+            // là phần Vision không hề thấy (không phải bị code mình lọc).
+            "rawObservationCount": result.rawObservationCount,
+            "droppedLowConfidence": result.droppedLowConfidence.map { obs in
+                [
+                    "text": String(obs.text.prefix(200)),
+                    "confidence": Double(obs.confidence),
+                    "yTop": Double(1 - obs.boundingBox.origin.y - obs.boundingBox.height),
+                ] as [String: Any]
+            },
             "lines": result.lines.map { line in
                 [
                     "text": String(line.text.prefix(200)),
