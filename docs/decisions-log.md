@@ -598,3 +598,28 @@
   view (`ReviewQueueView`) tự gọi lại `loadQueue()` để nạp đúng hàng đợi mới
   — tránh hai tác vụ async cùng ghi `reviewItems`. Test: `LearnMoreTests`
   (mới, 7 test) + suite cũ, 240 xanh/241 (1 skip `LiveAIBoxTests`).
+
+## ADR-040 — Nút loa đọc từ (TTS on-device) không thuộc NG-01/NG-02 (T2 ux-polish-r1)
+
+- **Ngày:** 2026-09-26
+- **Bối cảnh:** Research UX (Anki/Duolingo/LingQ) cho thấy nút phát âm một từ
+  là kỳ vọng cơ bản của app từ vựng. PRD liệt NG-01 "Pronunciation practice,
+  speech recognition, shadowing" và NG-02 "Listening/audio content" — cần
+  phân định trước khi code để không vô tình mở scope.
+- **Quyết định:** Cho phép nút loa đọc **một từ** bằng `AVSpeechSynthesizer`
+  on-device (offline, không lưu audio, không network) trên mặt trước thẻ ôn,
+  mặt sau thẻ ôn, và card duyệt (`AnalysisView`). Ranh giới cấm giữ nguyên:
+  KHÔNG ghi âm người dùng, KHÔNG nhận diện giọng nói, KHÔNG chấm điểm phát
+  âm, KHÔNG luyện nói/shadowing, KHÔNG nội dung nghe (audiobook, podcast).
+- **Lý do:** NG-01/02 chặn Reado biến thành app *luyện* phát âm/nghe — một
+  nút TTS chỉ giúp *biết cách đọc* một từ đã trích, không luyện tập gì, không
+  mở ra bề mặt sản phẩm mới (không recording UI, không so khớp âm thanh,
+  không nội dung phải duy trì). Đọc từ là một phần nghĩa của từ (cùng nhóm
+  với IPA đã có), không phải một job riêng.
+- **Hệ quả:** `app/Reado/Pronunciation.swift` (mới) — `Pronunciation.speak(_:)`
+  dùng chung `AVSpeechSynthesizer`; `SpeakButton` (44×44, icon
+  `speaker.wave.2`, outline theo `visual-redesign-plan.md` §1). Gắn ở
+  `ReviewQueueView.cardFace` (hai mặt) và `AnalysisView.ReviewCardRow.editor`.
+  `docs/specs/prd.md` mục 3 thêm 1 dòng ghi ranh giới, không sửa dòng NG-01/02
+  gốc (CLAUDE.md §4 "FR-07/FR-13 là bia mộ" — áp dụng tương tự cho các dòng
+  NG đã chốt: không xoá, chỉ chú thích thêm).

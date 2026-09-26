@@ -76,6 +76,8 @@
 		5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000F00000000000000 /* SessionTallyTests.swift */; };
 
 		5C0201000100000000000000 /* LearnMoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000100000000000000 /* LearnMoreTests.swift */; };
+
+		5C0100000B00000000000000 /* Pronunciation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000B00000000000000 /* Pronunciation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -148,6 +150,8 @@
 		5B0200000F00000000000000 /* SessionTallyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTallyTests.swift; sourceTree = "<group>"; };
 
 		5B0201000100000000000000 /* LearnMoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnMoreTests.swift; sourceTree = "<group>"; };
+
+		5B0100000B00000000000000 /* Pronunciation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pronunciation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,7 +214,8 @@
 				5B0100000700000000000000 /* StreakCalendarView.swift */,
 				5B0100000800000000000000 /* ShellTabBar.swift */,
 				5B0100000900000000000000 /* CameraController.swift */,
-				5B0100000A00000000000000 /* SessionDoneView.swift */,);
+				5B0100000A00000000000000 /* SessionDoneView.swift */,
+				5B0100000B00000000000000 /* Pronunciation.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -360,7 +365,8 @@
 				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,
 				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,
 				5C0100000900000000000000 /* CameraController.swift in Sources */,
-				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,);
+				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,
+				5C0100000B00000000000000 /* Pronunciation.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {

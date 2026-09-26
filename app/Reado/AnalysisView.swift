@@ -502,8 +502,12 @@ private struct ReviewCardRow: View {
                 }
                 .pickerStyle(.menu)
             }
-            editorField("Phiên âm (IPA)") {
-                TextField("VD: /ˈwɪndɪŋ/", text: $draft.ipa)
+            HStack(alignment: .bottom, spacing: 8) {
+                editorField("Phiên âm (IPA)") {
+                    TextField("VD: /ˈwɪndɪŋ/", text: $draft.ipa)
+                }
+                // ADR-040: nghe cách đọc từ đang sửa — không luyện nói, không chấm.
+                SpeakButton(term: draft.term)
             }
             editorField("Nghĩa tiếng Việt") {
                 TextField("Nghĩa", text: $draft.meaningVI, axis: .vertical)

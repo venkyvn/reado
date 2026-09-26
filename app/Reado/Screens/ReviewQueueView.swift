@@ -456,6 +456,8 @@ struct ReviewQueueView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(Theme.surface))
+                    // ADR-040: nghe cách đọc — không luyện nói, không chấm.
+                    SpeakButton(term: item.term)
                 }
             } else {
                 if dynamicTypeSize.isAccessibilitySize {
@@ -476,8 +478,11 @@ struct ReviewQueueView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(item.meaningVI)
                 .font(.headline)
-            if let ipa = item.ipa {
-                Text(ipa).font(.subheadline).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                if let ipa = item.ipa {
+                    Text(ipa).font(.subheadline).foregroundStyle(.secondary)
+                }
+                SpeakButton(term: item.term)
             }
             Text(item.example)
                 .font(.body)

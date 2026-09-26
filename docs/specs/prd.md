@@ -143,6 +143,11 @@ dù chúng có thể hợp lý về sau.
 | NG-08 | Grammar explanation, bài tập ngữ pháp | Mở rộng scope không phục vụ job hiện tại |
 | NG-09 | Tự viết SRS algorithm | Dùng FSRS đã kiểm chứng; xem [vision.md](docs/specs/vision.md#retention-is-a-solved-problem--use-the-solution) |
 
+**Ranh giới NG-01/NG-02 (ADR-040, 2026-09-26):** nút loa đọc MỘT từ bằng
+`AVSpeechSynthesizer` on-device (biết cách phát âm một từ mới) không thuộc
+NG-01/NG-02 — cấm vẫn là ghi âm, nhận diện giọng nói, chấm phát âm, luyện nói,
+bài nghe/nội dung audio.
+
 ---
 
 ## 4. Target User
