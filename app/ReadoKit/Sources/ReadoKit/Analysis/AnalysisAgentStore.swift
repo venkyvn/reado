@@ -170,9 +170,13 @@ public enum AnalysisAgentStore {
         }
     }
 
+    /// `knownHasKey`: khi gọi đã biết sẵn (ví dụ từ `list()`), bỏ qua
+    /// `secrets.contains` — tránh gọi Keychain hai lần cho cùng một agent
+    /// (list() đã kiểm hết, setActive kiểm lại lần nữa khiến UI khựng khi tap).
     public static func setActive(
         on db: SQLiteDatabase,
         id: String,
+        knownHasKey: Bool? = nil,
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws {
         let rows = try db.rows(
@@ -181,8 +185,9 @@ public enum AnalysisAgentStore {
         guard let kind = rows.first?.first?.textValue else {
             throw StoreError.notFound
         }
-        if kind == "openai_compat", !secrets.contains(agentID: id) {
-            throw StoreError.missingKey
+        if kind == "openai_compat" {
+            let hasKey = knownHasKey ?? secrets.contains(agentID: id)
+            guard hasKey else { throw StoreError.missingKey }
         }
         try db.run(
             "UPDATE settings SET active_agent_id = ? WHERE id = 1;",

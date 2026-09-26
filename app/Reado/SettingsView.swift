@@ -215,6 +215,7 @@ struct SettingsView: View {
                                 .foregroundStyle(Color.accentColor)
                         }
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -287,13 +288,18 @@ struct SettingsView: View {
         }
     }
 
+    /// Cập nhật lạc quan: dấu check đổi ngay lúc tap, không đợi DB/Keychain trả
+    /// về mới vẽ lại (từng thấy khựng vì `setActive` kiểm Keychain lần hai —
+    /// `agent.hasKey` ở đây đã có sẵn từ `list()`). Lỗi thì trả checkmark về chỗ cũ.
     private func select(_ agent: AnalysisAgent) {
         guard let database = model.database else { return }
         agentError = nil
+        let previousActiveID = activeAgentID
+        activeAgentID = agent.id
         do {
-            try AnalysisAgentStore.setActive(on: database, id: agent.id)
-            activeAgentID = agent.id
+            try AnalysisAgentStore.setActive(on: database, id: agent.id, knownHasKey: agent.hasKey)
         } catch {
+            activeAgentID = previousActiveID
             agentError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
     }

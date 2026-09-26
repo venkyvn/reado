@@ -293,6 +293,36 @@ final class AnalysisTests: XCTestCase {
             try AnalysisAgentStore.delete(on: db, id: Seeder.readoProxyAgentID, secrets: secrets))
     }
 
+    /// `setActive(knownHasKey:)` bỏ qua Keychain khi caller đã biết sẵn (từ
+    /// `list()`) — SettingsView.select() dùng đường này để không khựng UI.
+    func testSetActiveKnownHasKeySkipsSecretsLookup() throws {
+        let db = try Fixtures.seededDB()
+        let secrets = MemorySecrets()
+        let id = try AnalysisAgentStore.add(
+            on: db,
+            name: "Qwen",
+            baseURL: "https://example.com/v1",
+            model: "qwen-vl",
+            apiKey: "secret-key",
+            makeActive: false,
+            secrets: secrets)
+
+        // knownHasKey: true — không cần secrets có key thật (giả lập UI đã tin
+        // agent.hasKey từ list() trước đó), vẫn set active thành công.
+        let noKeySecrets = MemorySecrets()
+        try AnalysisAgentStore.setActive(on: db, id: id, knownHasKey: true, secrets: noKeySecrets)
+        XCTAssertEqual(try db.scalarString("SELECT active_agent_id FROM settings WHERE id = 1;"), id)
+
+        // knownHasKey: false — báo thiếu key dù secrets thật có key, vì caller
+        // chủ động khai không có (đường lạc quan khi UI đã biết sai).
+        XCTAssertThrowsError(
+            try AnalysisAgentStore.setActive(on: db, id: id, knownHasKey: false, secrets: secrets))
+
+        // Không truyền knownHasKey — hành vi cũ, tự hỏi Keychain.
+        try AnalysisAgentStore.setActive(on: db, id: id, secrets: secrets)
+        XCTAssertEqual(try db.scalarString("SELECT active_agent_id FROM settings WHERE id = 1;"), id)
+    }
+
     func testOpenAICompatClientPostsChatCompletion() async throws {
         let captured = RequestCapture()
         StubURLProtocol.handler = { request in

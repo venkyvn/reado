@@ -92,10 +92,17 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             // Shutter nổi trên Home / Kho root và Hub; ẩn trên Ôn, lịch streak và
             // phiên đọc (port UI lab §10). Overlay (không inset) để không đẩy list.
-            // Overlay TRƯỚC inset: safeArea = home indicator (native bar đã ẩn).
+            // ĐÃ ĐO BẰNG SCREENSHOT (không phải suy luận): dù overlay đứng TRƯỚC
+            // `safeAreaInset` bên dưới, `.safeAreaPadding(.bottom)` vẫn đọc safe
+            // area MÔI TRƯỜNG — safe area này do `safeAreaInset` gán cho CẢ SUBTREE
+            // (kể cả overlay attach trước nó trong chain), nên đã gồm sẵn toàn bộ
+            // chiều cao ShellTabBar (không chỉ home indicator như comment cũ tưởng).
+            // Cộng thêm `shutterLift` (= height+outerBottomPadding+shutterGap) lên
+            // trên safeAreaPadding là cộng trùng — đo được nút cao hơn capsule tới
+            // ~100pt. Giữ đúng safeAreaPadding, chỉ cộng thêm khe hở nhỏ.
             if showShutter {
                 FloatShutter(action: openShutterCapture)
-                    .padding(.bottom, ShellTabBar.shutterLift)
+                    .padding(.bottom, ShellTabBar.shutterGap)
                     .safeAreaPadding(.bottom)
                     // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt lên như nội dung.
                     .transition(.opacity.combined(with: .scale(scale: 0.88)))

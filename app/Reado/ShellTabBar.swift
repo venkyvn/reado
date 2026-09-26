@@ -7,11 +7,11 @@ struct ShellTabBar: View {
     static let height: CGFloat = 64
     /// Padding dưới capsule, phía trên home indicator.
     static let outerBottomPadding: CGFloat = 8
-    /// Khe giữa mép trên capsule và FloatShutter.
+    /// Khe giữa mép trên capsule và FloatShutter. RootView cộng đúng số này lên
+    /// trên `.safeAreaPadding(.bottom)` — không cộng thêm `height`/
+    /// `outerBottomPadding` (đo bằng screenshot: cộng thêm gây nút cao hơn capsule
+    /// ~100pt, vì safe area môi trường ở đó đã gồm sẵn cả ShellTabBar).
     static let shutterGap: CGFloat = 12
-    /// Overlay shutter: capsule + padding dưới + khe. Home indicator bù bằng
-    /// `safeAreaPadding(.bottom)` trên overlay (trước `safeAreaInset`).
-    static var shutterLift: CGFloat { height + outerBottomPadding + shutterGap }
 
     @Binding var selection: AppTab
     var onReselect: (AppTab) -> Void = { _ in }
