@@ -40,6 +40,11 @@ public struct ReadoProxyClient: PageAnalyzer {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError where urlError.code == .cannotFindHost {
+            // `proxy.reado.app` chưa deploy (brief §1, 2026-09-26) — không resolve
+            // DNS. Gợi ý thêm agent BYOK thay vì để lỗi mạng chung chung.
+            throw AnalysisError.networkError(
+                "Proxy Reado chưa hoạt động — thêm agent (vd AI-Box) trong Cài đặt")
         } catch {
             throw AnalysisError.networkError(error.localizedDescription)
         }

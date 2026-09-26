@@ -47,9 +47,15 @@ final class AppModel {
     private(set) var analysisFailure: AnalysisError?
     /// Chuỗi hiển thị cho lỗi phân tích — chỉ để UI đọc, không lưu.
     var analysisError: String? { analysisFailure?.errorDescription }
+    /// Tiến độ agent đang gọi (đọc trang/chờ/suy nghĩ/viết) — chỉ `openai_compat`
+    /// (stream) phát ra; AnalysisView đổi dòng chữ theo đây thay vì đứng im.
+    private(set) var analysisProgress: AnalysisProgress?
 
     // FR-04: yêu cầu mở lại CaptureView sau khi dọn state (ảnh mờ / sai ngôn ngữ).
     var pendingRecapture = false
+    /// FR-21: lỗi agent (BYOK 401/timeout/...) → nút "Mở Cài đặt" bật cờ này;
+    /// RootView tiêu thụ ở onDismiss của sheet phân tích rồi dọn sạch.
+    var pendingSettingsNavigation = false
 
     // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
     // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
@@ -113,11 +119,37 @@ final class AppModel {
             try Seeder.seed(
                 on: database, timezone: TimeZone.current.identifier)
             self.database = database
+            #if DEBUG
+            Self.seedDevAIBoxAgentIfNeeded(on: database)
+            #endif
             reloadOverview()
         } catch {
             failure = String(describing: error)
         }
     }
+
+    #if DEBUG
+    /// Chỉ debug: máy dev launch với `READO_DEV_AIBOX_KEY` (`scripts/sim_aibox.sh`)
+    /// để test luồng OCR→AI-Box trên simulator mà không phải gõ tay key mỗi lần
+    /// cài lại. Key không bao giờ nằm trong repo/scheme — chỉ qua env lúc launch;
+    /// đã có agent AI-Box (base_url trùng) rồi thì bỏ qua, không thêm trùng.
+    private static func seedDevAIBoxAgentIfNeeded(on database: SQLiteDatabase) {
+        guard let key = ProcessInfo.processInfo.environment["READO_DEV_AIBOX_KEY"],
+              !key.isEmpty
+        else { return }
+        if let existing = try? AnalysisAgentStore.list(on: database).agents,
+           existing.contains(where: { $0.baseURL == AnalysisAgentStore.aiboxBaseURL })
+        {
+            return
+        }
+        try? AnalysisAgentStore.add(
+            on: database,
+            name: "AI-Box (dev)",
+            baseURL: AnalysisAgentStore.aiboxBaseURL,
+            model: AnalysisAgentStore.aiboxModel,
+            apiKey: key)
+    }
+    #endif
 
     func reloadOverview() {
         guard let database else { return }
@@ -154,12 +186,20 @@ final class AppModel {
         isAnalyzing = true
         analysisFailure = nil
         analysisResult = nil
-        defer { isAnalyzing = false }
+        analysisProgress = .readingPage
+        defer {
+            isAnalyzing = false
+            analysisProgress = nil
+        }
 
         do {
             // FR-02: agent seed là reado_proxy → ReadoProxyClient. URL lấy từ
             // READO_PROXY_BASE_URL nếu có, không thì AnalyzerFactory.proxyBaseURL.
-            let (analyzer, cefrLevel) = try AnalyzerFactory.active(db: database)
+            let (analyzer, cefrLevel) = try AnalyzerFactory.active(
+                db: database,
+                onProgress: { [weak self] progress in
+                    Task { @MainActor in self?.analysisProgress = progress }
+                })
             let result = try await analyzer.analyze(
                 image: image.imageData,
                 imageMime: image.mimeType,

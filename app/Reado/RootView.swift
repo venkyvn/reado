@@ -135,6 +135,13 @@ struct RootView: View {
                 model.pendingRecapture = false
                 showCapture = true
             }
+            // FR-21 GWT cuối: lỗi agent → nút "Mở Cài đặt" trong AnalysisView
+            // bật cờ này; đưa thẳng về Home → push Settings.
+            if model.pendingSettingsNavigation {
+                model.pendingSettingsNavigation = false
+                selectedTab = .home
+                homePath = [.settings]
+            }
         }) {
             NavigationStack { AnalysisView() }
         }

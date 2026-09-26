@@ -35,6 +35,21 @@ struct AnalysisView: View {
         drafts.filter(\.isSelected).count
     }
 
+    /// Dòng chữ theo tiến độ agent (FR-02) — model.analysisProgress nil (proxy
+    /// không stream, hoặc chưa kịp báo) rơi về câu chung.
+    private var progressTitle: String {
+        switch model.analysisProgress {
+        case nil, .readingPage:
+            "Đang đọc chữ trên máy…"
+        case .waitingAgent:
+            "Đang gửi cho agent…"
+        case .thinking:
+            "Agent đang suy nghĩ…"
+        case let .writing(chars):
+            "Đang viết kết quả… (\(chars) ký tự)"
+        }
+    }
+
     /// FR-09 (port UI lab §5.6): chọn/bỏ toàn bộ trong một chạm. Không tính
     /// unverified/suspect — chỉ bật/tắt card đang có.
     private var allSelected: Bool {
@@ -51,12 +66,14 @@ struct AnalysisView: View {
                 failureView
                     .transition(.opacity)
             } else if model.isAnalyzing {
-                // FR-02: progress rõ — hai bước: OCR trên máy, rồi gọi agent.
+                // FR-02: progress rõ theo AnalysisProgress (stream) — trang dài
+                // với agent tắt suy nghĩ mất ~15-30s, không để màn đứng im.
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("Đang đọc chữ trên máy…")
+                    Text(progressTitle)
                         .font(.headline)
-                    Text("Rồi dịch trang và lấy từ.")
+                        .contentTransition(.opacity)
+                    Text("Thường mất 15–30 giây.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -177,6 +194,13 @@ struct AnalysisView: View {
                         Task { await model.analyzeCurrentImage() }
                     }
                     .buttonStyle(.borderedProminent)
+                    // FR-21 GWT cuối: lỗi agent (401/timeout/base URL sai…) đưa
+                    // thẳng về Cài đặt thay vì để user tự đoán phải sửa gì.
+                    Button("Mở Cài đặt") {
+                        model.discardAnalysis()
+                        model.pendingSettingsNavigation = true
+                        dismiss()
+                    }
                     Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
                 }
             }

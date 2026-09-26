@@ -80,6 +80,16 @@ public struct PageAnalysis: Equatable, Sendable {
     }
 }
 
+/// Tiến độ một lần gọi `PageAnalyzer.analyze` (FR-02) — UI dùng để thay đổi
+/// thông báo "Đang xử lý ảnh…" thay vì để màn treo im khi model suy nghĩ lâu.
+/// `thinking`/`writing` chỉ `OpenAICompatClient` (stream) phát ra.
+public enum AnalysisProgress: Sendable, Equatable {
+    case readingPage
+    case waitingAgent
+    case thinking(chars: Int)
+    case writing(chars: Int)
+}
+
 /// Lỗi analysis (FR-02 — hiển thị lỗi và cho retry, không lưu bản ghi hỏng).
 public enum AnalysisError: Error, LocalizedError, Sendable {
     case imageUnreadable

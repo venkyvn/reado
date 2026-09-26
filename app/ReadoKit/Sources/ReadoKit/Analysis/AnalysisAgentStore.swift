@@ -40,6 +40,10 @@ public struct KeychainAgentSecrets: AgentSecretStore, Sendable {
 public enum AnalysisAgentStore {
     public static let geminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/openai"
     public static let geminiModel = "gemini-2.5-flash"
+    /// Đo thật 2026-09-26: tắt suy nghĩ (`OpenAICompatClient.extraBodyParams`)
+    /// đưa `deepseek-v4.1-flash` từ 63s xuống 15–18s cho một trang OCR.
+    public static let aiboxBaseURL = "https://api.ai-box.vn/v1"
+    public static let aiboxModel = "deepseek-v4.1-flash"
 
     public enum StoreError: Error, LocalizedError {
         case missingField(String)

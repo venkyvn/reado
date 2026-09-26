@@ -17,7 +17,10 @@ public enum AgentURLRule {
         return false
     }
 
-    /// Bỏ `/chat/completions` nếu user dán cả endpoint.
+    /// Bỏ `/chat/completions` nếu user dán cả endpoint. AI-Box (`api.ai-box.vn`)
+    /// dán thiếu `/v1` thì server trả 301 thay vì lỗi rõ ràng (đo thật
+    /// 2026-09-26) — tự thêm `/v1` cho đúng host này khi path đang rỗng; host
+    /// khác giữ nguyên, không đoán.
     public static func storedBase(_ raw: String) -> String {
         var value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         while value.hasSuffix("/") { value.removeLast() }
@@ -25,6 +28,12 @@ public enum AgentURLRule {
         if value.lowercased().hasSuffix(suffix) {
             value.removeLast(suffix.count)
             while value.hasSuffix("/") { value.removeLast() }
+        }
+        if let url = URL(string: value),
+           url.host?.lowercased() == "api.ai-box.vn",
+           url.path.isEmpty
+        {
+            value += "/v1"
         }
         return value
     }

@@ -389,12 +389,27 @@ struct SettingsView: View {
     }
 }
 
+/// Mẫu điền sẵn khi thêm agent mới — AI-Box mặc định (giá cạnh tranh, đã đo
+/// timeout thật 2026-09-26). Chỉ hiện lúc thêm mới, không hiện lúc sửa.
+private enum AgentPreset: String, CaseIterable, Identifiable {
+    case aibox, gemini, custom
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .aibox: "AI-Box"
+        case .gemini: "Gemini"
+        case .custom: "Tuỳ chỉnh"
+        }
+    }
+}
+
 /// Form dùng chung cho thêm/sửa agent OpenAI-compatible.
 private struct AgentFormSheet: View {
     let agent: AnalysisAgent?
     var onSave: (String, String, String, String?) -> String?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var preset: AgentPreset = .aibox
     @State private var name: String
     @State private var baseURL: String
     @State private var model: String
@@ -409,19 +424,29 @@ private struct AgentFormSheet: View {
     ) {
         self.agent = agent
         self.onSave = onSave
-        _name = State(initialValue: agent?.name ?? "Gemini")
-        _baseURL = State(initialValue: agent?.baseURL ?? AnalysisAgentStore.geminiBaseURL)
-        _model = State(initialValue: agent?.model ?? AnalysisAgentStore.geminiModel)
+        _name = State(initialValue: agent?.name ?? "AI-Box")
+        _baseURL = State(initialValue: agent?.baseURL ?? AnalysisAgentStore.aiboxBaseURL)
+        _model = State(initialValue: agent?.model ?? AnalysisAgentStore.aiboxModel)
         _apiKey = State(initialValue: "")
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                if agent == nil {
+                    Picker("Mẫu", selection: $preset) {
+                        ForEach(AgentPreset.allCases) { p in Text(p.label).tag(p) }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: preset) { applyPreset() }
+                }
                 TextField("Tên", text: $name)
                 TextField("Base URL", text: $baseURL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                Text("Thường kết thúc bằng /v1, không kèm /chat/completions.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 TextField("Model", text: $model)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -498,6 +523,22 @@ private struct AgentFormSheet: View {
             Text(message)
                 .font(.footnote)
                 .foregroundStyle(Theme.danger)
+        }
+    }
+
+    /// Đổi mẫu → điền sẵn tên/base/model; "Tuỳ chỉnh" giữ nguyên giá trị đang gõ.
+    private func applyPreset() {
+        switch preset {
+        case .aibox:
+            name = "AI-Box"
+            baseURL = AnalysisAgentStore.aiboxBaseURL
+            model = AnalysisAgentStore.aiboxModel
+        case .gemini:
+            name = "Gemini"
+            baseURL = AnalysisAgentStore.geminiBaseURL
+            model = AnalysisAgentStore.geminiModel
+        case .custom:
+            break
         }
     }
 

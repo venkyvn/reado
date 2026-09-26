@@ -231,6 +231,12 @@ final class AnalysisTests: XCTestCase {
         XCTAssertEqual(
             AgentURLRule.storedBase("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions/"),
             "https://generativelanguage.googleapis.com/v1beta/openai")
+        // Đo thật 2026-09-26: thiếu /v1 → AI-Box trả 301 thay vì lỗi rõ ràng.
+        // Tự thêm cho đúng host này; host khác không đoán.
+        XCTAssertEqual(AgentURLRule.storedBase("https://api.ai-box.vn"), "https://api.ai-box.vn/v1")
+        XCTAssertEqual(AgentURLRule.storedBase("https://api.ai-box.vn/"), "https://api.ai-box.vn/v1")
+        XCTAssertEqual(AgentURLRule.storedBase("https://api.ai-box.vn/v1"), "https://api.ai-box.vn/v1")
+        XCTAssertEqual(AgentURLRule.storedBase("https://example.com"), "https://example.com")
     }
 
     func testAgentStoreAddEditDeleteFallsBackToProxy() throws {
@@ -358,7 +364,10 @@ final class AnalysisTests: XCTestCase {
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         XCTAssertEqual(json["model"] as? String, "gemini-2.5-flash")
         let messages = try XCTUnwrap(json["messages"] as? [[String: Any]])
-        let content = try XCTUnwrap(messages[0]["content"] as? [[String: Any]])
+        // Tìm theo role "user" — không giả định vị trí, vì client giờ chèn thêm
+        // một message "system" ngắn nhắc chỉ trả JSON (mục 2.1(b) plan AI-Box).
+        let userMessage = try XCTUnwrap(messages.first { ($0["role"] as? String) == "user" })
+        let content = try XCTUnwrap(userMessage["content"] as? [[String: Any]])
         XCTAssertNil(content.first { ($0["type"] as? String) == "image_url" })
         XCTAssertEqual(content.map { $0["type"] as? String }, ["text"])
         let prompt = try XCTUnwrap(content[0]["text"] as? String)
@@ -509,6 +518,193 @@ final class AnalysisTests: XCTestCase {
                 return XCTFail("mong đợi providerError, nhận \(error)")
             }
             XCTAssertTrue(message.contains("bad key"))
+        }
+    }
+
+    // MARK: - Stream + AI-Box (plan "capture UX + OCR→AI-Box", đo thật 2026-09-26)
+
+    /// SSE thật: reasoning_content rồi content chia 3 mảnh rồi [DONE] → ráp lại
+    /// đúng JSON, tiến độ báo cả .thinking lẫn .writing.
+    func testOpenAICompatClientDecodesSSEStreamAndReportsProgress() async throws {
+        let fullJSON = """
+            {"segments":[{"source_en":"Hello world.","translation_vi":"Chào thế giới."}],"vocabulary":[{"term":"world","pos":"noun","meaning_vi":"thế giới","example":"Hello world."}],"summary_vi":"Một lời chào."}
+            """
+        let third = fullJSON.count / 3
+        let i1 = fullJSON.index(fullJSON.startIndex, offsetBy: third)
+        let i2 = fullJSON.index(fullJSON.startIndex, offsetBy: third * 2)
+        let chunks = [
+            String(fullJSON[fullJSON.startIndex..<i1]),
+            String(fullJSON[i1..<i2]),
+            String(fullJSON[i2...]),
+        ]
+        StubURLProtocol.handler = { request in
+            var lines = [try sseLine(reasoning: "đang phân tích trang")]
+            lines += try chunks.map { try sseLine(content: $0) }
+            lines.append("data: [DONE]")
+            let body = lines.joined(separator: "\n\n") + "\n\n"
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil,
+                headerFields: ["Content-Type": "text/event-stream"])!
+            return (response, Data(body.utf8))
+        }
+        let progress = ProgressCapture()
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."),
+            onProgress: { progress.append($0) })
+        let result = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+        XCTAssertEqual(result.vocabulary.first?.term, "world")
+        XCTAssertEqual(result.segments.first?.sourceEN, "Hello world.")
+        let events = progress.all
+        XCTAssertTrue(events.contains(.thinking(chars: "đang phân tích trang".count)))
+        XCTAssertTrue(events.contains { if case .writing = $0 { true } else { false } })
+    }
+
+    /// Request thật gửi `stream: true` + `response_format`, giữ nguyên
+    /// `content: [{type:text}]` (khớp curl AI-Box của owner).
+    func testOpenAICompatClientRequestHasStreamAndResponseFormat() async throws {
+        let captured = RequestCapture()
+        StubURLProtocol.handler = { request in
+            captured.request = request
+            let body = try sseLine(content: #"{"segments":[{"source_en":"Hello.","translation_vi":"Xin chào."}],"vocabulary":[],"summary_vi":""}"#)
+                + "\n\ndata: [DONE]\n\n"
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil,
+                headerFields: ["Content-Type": "text/event-stream"])!
+            return (response, Data(body.utf8))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
+        _ = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+        let body = try XCTUnwrap(bodyData(of: XCTUnwrap(captured.request)))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["stream"] as? Bool, true)
+        XCTAssertNotNil(json["response_format"])
+        let messages = try XCTUnwrap(json["messages"] as? [[String: Any]])
+        XCTAssertTrue(messages.contains { ($0["role"] as? String) == "system" })
+    }
+
+    /// `enable_thinking: false` chỉ cho host `ai-box.vn` (đo thật: đưa
+    /// deepseek-v4.1-flash từ 63s xuống 15–18s) — provider khác không đụng.
+    func testOpenAICompatClientEnableThinkingOnlyForAIBox() async throws {
+        func requestBody(baseURL: String) async throws -> [String: Any] {
+            let captured = RequestCapture()
+            StubURLProtocol.handler = { request in
+                captured.request = request
+                let body = try sseLine(content: #"{"segments":[{"source_en":"Hello.","translation_vi":"Xin chào."}],"vocabulary":[],"summary_vi":""}"#)
+                    + "\n\ndata: [DONE]\n\n"
+                let response = HTTPURLResponse(
+                    url: request.url!, statusCode: 200, httpVersion: nil,
+                    headerFields: ["Content-Type": "text/event-stream"])!
+                return (response, Data(body.utf8))
+            }
+            let client = OpenAICompatClient(
+                session: StubURLProtocol.makeSession(),
+                baseURL: baseURL,
+                model: "m",
+                agentID: "a",
+                apiKey: "k",
+                ocr: FixedPageOCR(text: "Hello world."))
+            _ = try await client.analyze(
+                image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            let body = try XCTUnwrap(bodyData(of: XCTUnwrap(captured.request)))
+            return try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        }
+        let aibox = try await requestBody(baseURL: AnalysisAgentStore.aiboxBaseURL)
+        XCTAssertEqual(aibox["enable_thinking"] as? Bool, false)
+        let gemini = try await requestBody(baseURL: AnalysisAgentStore.geminiBaseURL)
+        XCTAssertNil(gemini["enable_thinking"])
+    }
+
+    /// HTTP 400 nhắc `response_format` → thử lại đúng 1 lần không kèm field;
+    /// lần 2 thành công.
+    func testOpenAICompatClientRetriesWithoutResponseFormatOn400() async throws {
+        let attempts = AttemptCounter()
+        StubURLProtocol.handler = { request in
+            let attempt = attempts.increment()
+            if attempt == 1 {
+                let response = HTTPURLResponse(
+                    url: request.url!, statusCode: 400, httpVersion: nil, headerFields: nil)!
+                let data = Data(
+                    #"{"error":{"message":"Unrecognized request argument supplied: response_format"}}"#
+                        .utf8)
+                return (response, data)
+            }
+            let body = try sseLine(content: #"{"segments":[{"source_en":"Hello.","translation_vi":"Xin chào."}],"vocabulary":[],"summary_vi":""}"#)
+                + "\n\ndata: [DONE]\n\n"
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil,
+                headerFields: ["Content-Type": "text/event-stream"])!
+            return (response, Data(body.utf8))
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
+        _ = try await client.analyze(
+            image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+        XCTAssertEqual(attempts.value, 2)
+    }
+
+    /// Timeout → thông điệp gợi ý thử lại/đổi model, không phải lỗi mạng chung chung.
+    func testOpenAICompatClientMapsTimeout() async throws {
+        StubURLProtocol.handler = { _ in throw URLError(.timedOut) }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
+        do {
+            _ = try await client.analyze(
+                image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi timeout")
+        } catch {
+            guard case let AnalysisError.networkError(message) = error else {
+                return XCTFail("mong đợi networkError, nhận \(error)")
+            }
+            XCTAssertTrue(message.contains("quá lâu"))
+        }
+    }
+
+    /// 404 (model/endpoint sai) → providerError gợi ý kiểm tra Cài đặt.
+    func testOpenAICompatClientMaps404() async throws {
+        StubURLProtocol.handler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!
+            return (response, Data())
+        }
+        let client = OpenAICompatClient(
+            session: StubURLProtocol.makeSession(),
+            baseURL: "https://example.com/v1",
+            model: "m",
+            agentID: "a",
+            apiKey: "k",
+            ocr: FixedPageOCR(text: "Hello world."))
+        do {
+            _ = try await client.analyze(
+                image: Data([0x01]), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi")
+        } catch {
+            guard case let AnalysisError.providerError(message) = error else {
+                return XCTFail("mong đợi providerError, nhận \(error)")
+            }
+            XCTAssertTrue(message.contains("Cài đặt"))
         }
     }
 
@@ -866,6 +1062,57 @@ private func bodyData(of request: URLRequest) -> Data? {
 
 final class RequestCapture: @unchecked Sendable {
     var request: URLRequest?
+}
+
+/// Đếm số lần handler được gọi — `StubURLProtocol.handler` chạy trên thread
+/// loading của URLProtocol nên cần khoá, không bắt `var` thường trực tiếp.
+final class AttemptCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    @discardableResult
+    func increment() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        count += 1
+        return count
+    }
+
+    var value: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return count
+    }
+}
+
+/// Gom `AnalysisProgress` phát ra qua `onProgress` — closure là `@Sendable`
+/// nên không thể bắt biến `var` thường (test AnalysisTests §2.7 kế hoạch AI-Box).
+final class ProgressCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var events: [AnalysisProgress] = []
+
+    func append(_ event: AnalysisProgress) {
+        lock.lock()
+        defer { lock.unlock() }
+        events.append(event)
+    }
+
+    var all: [AnalysisProgress] {
+        lock.lock()
+        defer { lock.unlock() }
+        return events
+    }
+}
+
+/// Một dòng SSE `data: {...}` cho `choices[0].delta` — escaping đúng qua
+/// JSONSerialization thay vì nối chuỗi tay.
+private func sseLine(content: String? = nil, reasoning: String? = nil) throws -> String {
+    var delta: [String: Any] = [:]
+    if let content { delta["content"] = content }
+    if let reasoning { delta["reasoning_content"] = reasoning }
+    let object: [String: Any] = ["choices": [["delta": delta]]]
+    let data = try JSONSerialization.data(withJSONObject: object)
+    return "data: " + String(decoding: data, as: UTF8.self)
 }
 
 final class StubURLProtocol: URLProtocol {

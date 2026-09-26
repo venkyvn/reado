@@ -44,6 +44,9 @@ struct StreakCalendarView: View {
                 model.pendingRecapture = false
                 showCapture = true
             }
+            // FR-21: màn này không có đường push Settings riêng — chỉ dọn cờ,
+            // RootView (nơi mở lại từ Home/Kho) mới thật sự đưa đi Cài đặt.
+            model.pendingSettingsNavigation = false
             reload()
         }) {
             NavigationStack { AnalysisView() }

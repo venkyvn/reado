@@ -26,12 +26,14 @@ public enum AnalyzerFactory {
 
     /// Tạo analyzer cho agent. `openai_compat` thiếu id/url/model thì mock (cấu hình hỏng).
     /// `session` injectable cho test (default URLSession.shared ở production).
+    /// `onProgress`: chỉ `openai_compat` (stream) phát ra `.thinking`/`.writing`.
     public static func analyzer(
         for kind: String,
         baseURL: String?,
         model: String?,
         agentID: String? = nil,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
     ) -> PageAnalyzer {
         switch kind {
         case "openai_compat":
@@ -42,7 +44,8 @@ public enum AnalyzerFactory {
                 session: session,
                 baseURL: baseURL,
                 model: model,
-                agentID: agentID)
+                agentID: agentID,
+                onProgress: onProgress)
         case "reado_proxy":
             return ReadoProxyClient(session: session, baseURL: baseURL ?? resolvedProxyBaseURL)
         default:
@@ -55,7 +58,8 @@ public enum AnalyzerFactory {
     /// prompt FR-02 (cài cũ chỉ có `cefr_level` đơn → fallback).
     public static func active(
         db: SQLiteDatabase,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
     ) throws -> (analyzer: PageAnalyzer, cefrLevel: String) {
         let rows = try db.rows(
             "SELECT cefr_levels, cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
@@ -72,7 +76,8 @@ public enum AnalyzerFactory {
                         baseURL: row[2].textValue,
                         model: row[3].textValue,
                         agentID: row[0].textValue,
-                        session: session),
+                        session: session,
+                        onProgress: onProgress),
                     cefrLevel)
             }
         }

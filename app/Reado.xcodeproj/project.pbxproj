@@ -62,6 +62,8 @@
 		5C0200000C00000000000000 /* PageOCRTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000C00000000000000 /* PageOCRTests.swift */; };
 
 		5C0100000800000000000000 /* ShellTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000800000000000000 /* ShellTabBar.swift */; };
+
+		5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000D00000000000000 /* LiveAIBoxTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -120,6 +122,8 @@
 		5B0200000C00000000000000 /* PageOCRTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageOCRTests.swift; sourceTree = "<group>"; };
 
 		5B0100000800000000000000 /* ShellTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellTabBar.swift; sourceTree = "<group>"; };
+
+		5B0200000D00000000000000 /* LiveAIBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAIBoxTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,7 +210,8 @@
 				5B0200000900000000000000 /* HomePinTests.swift */,
 				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
 				5B0200000B00000000000000 /* StreakCalendarTests.swift */,
-				5B0200000C00000000000000 /* PageOCRTests.swift */,);
+				5B0200000C00000000000000 /* PageOCRTests.swift */,
+				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -350,7 +355,8 @@
 				5C0200000900000000000000 /* HomePinTests.swift in Sources */,
 				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
 				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,
-				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,);
+				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,
+				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
