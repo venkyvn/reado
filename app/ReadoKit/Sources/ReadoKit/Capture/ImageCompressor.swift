@@ -1,4 +1,7 @@
 import Foundation
+
+// UIKit-only: bọc để package build/test được trên macOS (`scripts/test.sh kit`).
+#if canImport(UIKit)
 import UIKit
 
 /// FR-01: Nén ảnh JPEG — cạnh dài ≤ 1600px, quality 0.80.
@@ -39,3 +42,4 @@ public enum ImageCompressor {
         }
     }
 }
+#endif

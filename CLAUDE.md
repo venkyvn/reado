@@ -18,8 +18,9 @@
   scripts/test.sh                                            # build + toàn bộ test
   scripts/test.sh build                                      # chỉ build
   scripts/test.sh test -only-testing:ReadoTests/<Class>       # 1 lớp test khi đang sửa; full trước /rhandoff
+  scripts/test.sh kit                                        # chỉ ReadoKit trên macOS (~10s, không simulator) — logic thuần
   ```
-  Log đầy đủ ở `/tmp/build.log`, kết quả ở `.tmp/results/last.xcresult` — cần chi tiết thì đọc 2 chỗ đó, không đọc nguyên.
+  Log đầy đủ ở `/tmp/build.log`, kết quả ở `.tmp/results/last.xcresult` (lane `kit`: `/tmp/build-kit.log`, `.tmp/results/kit.xcresult`) — cần chi tiết thì đọc các file đó, không đọc nguyên.
 - Proxy: `cd proxy && python3 -m unittest -q`.
 - **Cấm `swift build`** (đụng cache `~/Library`).
 - Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — không ghi vào file này.

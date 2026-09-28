@@ -1,7 +1,7 @@
 import ReadoKit
 import XCTest
 
-/// Smoke test của package — chạy nhanh bằng `swift test` trên macOS
+/// Smoke test của package — chạy nhanh bằng `scripts/test.sh kit` trên macOS
 /// (không cần Simulator). Bộ test đầy đủ hành vi nằm trong dự án app
 /// (ReadoTests) chạy qua xcodebuild.
 final class PrimitivesTests: XCTestCase {

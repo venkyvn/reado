@@ -5,7 +5,7 @@ let package = Package(
     name: "ReadoKit",
     platforms: [
         // iOS 17 cho @Observable + Observation (skill swiftui stack: "Observation APIs iOS 17+").
-        // macOS 13 để chạy được `swift test` ngay trên máy (Command Line Tools) không cần Simulator.
+        // macOS 13 để chạy được lane `scripts/test.sh kit` ngay trên máy, không cần Simulator.
         .iOS(.v17),
         .macOS(.v13),
     ],

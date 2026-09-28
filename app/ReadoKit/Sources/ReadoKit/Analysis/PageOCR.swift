@@ -89,7 +89,7 @@ public enum PageOCR {
         // ADR-042: iOS 26+ dùng `RecognizeDocumentsRequest` (đoạn có sẵn từ Vision,
         // không rơi/gộp hàng như legacy). Lỗi hoặc rỗng → rơi về legacy chứ không
         // làm hỏng luồng phân tích.
-        if #available(iOS 26.0, *),
+        if #available(iOS 26.0, macOS 26.0, *),
            let result = try? await recognizeDocuments(imageData: imageData),
            !result.text.isEmpty {
             return result
@@ -99,7 +99,7 @@ public enum PageOCR {
         }.value
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.0, macOS 26.0, *)
     private static func recognizeDocuments(imageData: Data) async throws -> OCRResult {
         guard let image = cgImage(from: imageData) else {
             return OCRResult(text: "", observations: [], lines: [], engine: "documents")

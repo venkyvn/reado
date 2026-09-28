@@ -29,7 +29,7 @@ app/
       Database/           — SQLiteDatabase (wrapping C API), Migration, Seeder
       Review/             — ReviewScheduler (FSRS), CardSnapshot, ReviewService,
                             ReviewQueue
-    Tests/ReadoKitTests/  — smoke nhanh cho `swift test` macOS
+    Tests/ReadoKitTests/  — smoke nhanh, chạy bằng `scripts/test.sh kit` (macOS)
   ReadoTests/            — bộ test hành vi chính, chạy iOS Simulator qua xcodebuild
 ```
 
