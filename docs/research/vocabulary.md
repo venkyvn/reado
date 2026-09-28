@@ -1,5 +1,22 @@
 > Gộp từ vocabulary-structure.md + vocabulary-card-design.md + vocab-import-plan.md — nội dung không đổi, chỉ nhập làm một. 
 
+## TL;DR — đã chốt (đọc trước; chi tiết ở các mục được trỏ tới)
+
+> Tóm tắt 2026-09-28 (repo-hygiene-r1, ADR-044). **Nguồn sự thật vẫn là các bảng "Đã chốt" bên dưới, `CLAUDE.md` §4–5 và code.** Ba phần dưới viết thời PWA — tên `ts-fsrs`, đường dẫn `app/src/domain/...` đã lỗi thời (nay là `swift-fsrs`, `app/ReadoKit/`); mâu thuẫn với code → code thắng.
+
+- **Collection thay `book`.** Luôn có collection mặc định làm kho tạm; `collection_id` không bao giờ null; đổi collection không đụng lịch FSRS (Phần 1 mục 3, FR-17).
+- **Không topic tag do AI sinh** (mục 3.3) — nhưng cột `tags` TEXT JSON do AI sinh kèm lúc capture được owner duyệt sau đó (`review.md` Phần 3, D-2).
+- **Không lưu ảnh trang.** Segments + summary chỉ ở `reading_sessions`, 10 phiên gần nhất mỗi collection có tên, kho tạm không lưu (mục 6.2; Q-10, ADR-029).
+- **Không `unique` trên `vocab_items`**; chống trùng ở tầng trích xuất — bộ lọc "từ đã thuộc" là cơ chế chống trùng duy nhất (mục 6.3, Phần 2 mục 5).
+- **`example` phải là câu thật trên trang**, không phải câu AI tự nghĩ; `pos` nuốt luôn `type`, `not null` (mục 6.4).
+- **Ba chế độ ôn = một mệnh đề `where`** (mục 4.1). Chế độ có phạm vi vẫn cập nhật FSRS state; ôn thẻ chưa đến hạn là chế độ riêng không đụng state (mục 4.2). `daily_new_limit` áp toàn cục trước khi lọc phạm vi (mục 4.4). Phải hiển thị số thẻ đến hạn nằm ngoài phạm vi chọn.
+- **`cards` tách khỏi bảng từ.** `cards.state` 4 giá trị (không gộp `learning`/`relearning`); `review_logs` snapshot **trước** khi chấm; `elapsed_days` có trên `review_logs`, không có trên `cards` (mục 6.1).
+- **R2, không làm ở R1:** `word_relations` (cạnh từng cặp, `item_a < item_b`), hai chế độ Phân biệt / Gợi nhớ theo nhóm — không đụng FSRS state, Phân biệt chỉ áp cho từ đã thuộc (mục 5).
+- **Đã bỏ:** GP3 (`collocations`/`register`/`word_parts`), cloze deletion, `vocab_occurrences`, mọi bảng "đã chết" ở mục 6.2.
+- **Import (Phần 3, FR-20):** đầu vào = đúng 2 định dạng export (JSON `reado-export` v1 + TSV 7 cột); một transaction; merge + remap id; không ghi secret (IMP-01..04 chốt 2026-09-09).
+- **Chưa chốt / mở:** xem "Chưa chốt" mục 8 và Phần 2 mục 5; câu mở của owner ở `CLAUDE.md` §5 (hiện chỉ Q-11).
+
+
 ## Phần 1 — Cấu trúc từ vựng — collection và các chế độ ôn tập
 
 | Field | Value |
@@ -1501,7 +1518,7 @@ Mirror từng criterion của FR-16 (PRD mục 6):
 ## 10. Checklist triển khai — task 3.16 (chỉ chạy sau GO)
 
 1. ✅ 2026-09-09 — Owner trả lời IMP-01 → IMP-04 (bảng chốt mục 3, đã phản ánh
-   vào doc này + archive/mvp-plan-pwa-gen).
+   vào doc này + mvp-plan-pwa-gen (ADR-044)).
 2. `domain/import.ts` + unit test (gương `export.test.ts`): parse 2 định dạng,
    validate + lỗi theo dòng, remap, map collection (JSON) / đích do user chọn (TSV).
 3. `storage/repos/importer.ts` + integration test trên SQLite thật (mimic
@@ -1512,5 +1529,5 @@ Mirror từng criterion của FR-16 (PRD mục 6):
 6. e2e `app/e2e/import-flow.mjs` (upload file thật qua `input[type=file]` hoặc
    paste textarea; mirror `export-flow.mjs`) + `npm run e2e:import`.
 7. Gates: lint 0/0, typecheck sạch, test xanh, build sạch → commit chỉ `app/`.
-8. Cập nhật archive/mvp-plan-pwa-gen (3.16 ✅ + mục 4 chốt IMP-xx) + PRD **FR-20** + pointer
+8. Cập nhật mvp-plan-pwa-gen (ADR-044) (3.16 ✅ + mục 4 chốt IMP-xx) + PRD **FR-20** + pointer
    AGENTS/README theo convention.

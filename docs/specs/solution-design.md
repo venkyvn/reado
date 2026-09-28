@@ -7,7 +7,7 @@
 | Last updated | 2026-09-18 |
 | Related | [prd.md](docs/specs/prd.md) (FR/NFR/M/A) · [prompt-spec.md](docs/agent/prompt-spec.md) (hợp đồng AI) · [db.md](docs/specs/db.md) (DDL tầng A) · [research/tech-stack.md](docs/research/tech-stack.md) (vì sao chọn stack) · [research/vocabulary.md](docs/research/vocabulary.md) (schema logic) · [research/review.md](docs/research/review.md) (FSRS) · [journeys.md](docs/specs/journeys.md) (J1–J6) · [coding-conventions.md](docs/agent/coding-conventions.md) (bản Swift) · [decisions-log.md](docs/decisions-log.md) (ADR) · [ROADMAP.md](ROADMAP.md) (tracker) |
 | Phạm vi | Trả lời "thế nào" cho **R1**: module iOS, hợp đồng proxy API, DDL & ranh giới transaction, adapter AI (Keychain/URLSession), capture. Không lặp lại spec — mỗi quyết định trỏ về FR/NFR nguồn |
-| Tiền nhiệm | Bản PWA-gen (2026-09-08) → [archive/solution-design-pwa-gen.md](docs/archive/solution-design-pwa-gen.md) — bia mộ, không làm nền cho work mới |
+| Tiền nhiệm | Bản PWA-gen (2026-09-08) → solution-design-pwa-gen.md (đã xoá, ADR-044) — bia mộ, không làm nền cho work mới |
 
 **Tài liệu này tự chứa.** Nó giả định đã đọc nhóm docs ở bảng trên. Thứ gì docs kia đã
 chốt thì doc này chỉ trỏ tới, không tranh luận lại; thứ gì còn mở thì ghi rõ **"MỞ"**

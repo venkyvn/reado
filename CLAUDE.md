@@ -85,7 +85,8 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - Xong task → `/rhandoff`. 1 task tầng 2 / session; context dài → `/rhandoff` rồi `/clear`.
 
 **Đọc file**
-- File lớn — Grep trước, Read có offset/limit, không đọc nguyên: `ROADMAP.md`, `docs/specs/{prd,journeys,db,solution-design,sync-server-ddl}.md`, `docs/research/{vocabulary,review,tech-stack}.md`, `docs/agent/prompt-spec.md`, `docs/decisions-log.md`, `docs/archive/*`.
+- `docs/research/{vocabulary,review}.md`: đọc mục **TL;DR** đầu file trước, chỉ nhảy vào mục chi tiết khi cần.
+- File lớn — Grep trước, Read có offset/limit, không đọc nguyên: `ROADMAP.md`, `docs/specs/{prd,journeys,db,solution-design,sync-server-ddl}.md`, `docs/research/{vocabulary,review,tech-stack}.md`, `docs/agent/prompt-spec.md`, `docs/decisions-log.md`.
 - Bản đồ Swift: `python3 scripts/repo_map.py` (`--root app/ReadoKit/Sources --limit 40` để hẹp). Không in ra file docs.
 - Index "đụng X → grep Y": `docs/agent/agent-rulebook.md`.
 

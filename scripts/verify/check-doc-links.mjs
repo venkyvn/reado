@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 // Kiểm tra link markdown + anchor trong FILE SỐNG (root *.md + docs/ trừ
-// journal/ archive/). Quy ước v2 (2026-09-19): link nội bộ viết gốc-repo
+// journal/). Quy ước v2 (2026-09-19): link nội bộ viết gốc-repo
 // `docs/...` — resolve gốc-repo trước, fallback file-relative.
 // Loại khỏi quét (snapshots đóng băng theo plan tái cấu trúc):
-// docs/journal/ docs/archive/ qr/ ref/ design-system/ .agents/
+// docs/journal/ ref/ design-system/ .agents/
 // Cách chạy: node scripts/verify/check-doc-links.mjs
 // Exit 1 nếu có link/anchor hỏng. Reference-style link chỉ cảnh báo.
 import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(process.argv[2] || '.');
-const FROZEN = new Set(['journal', 'archive', 'qr', 'ref', 'design-system']);
+const FROZEN = new Set(['journal', 'ref', 'design-system']);
 
 function frozenParts(relParts) {
   return relParts.some((p) => FROZEN.has(p));

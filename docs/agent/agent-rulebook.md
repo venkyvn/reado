@@ -1,6 +1,6 @@
 # Agent rulebook — index luật (không phải kho 100KB)
 
-Bản PWA đầy đủ đã archive: `docs/archive/agents-pwa-gen.md` — **đừng dùng làm luật hiện hành**.
+Bản PWA đầy đủ đã archive: `agents-pwa-gen.md` (đã xoá, ADR-044) — **đừng dùng làm luật hiện hành**.
 
 Luật cứng sống ở `CLAUDE.md` §4–5. Protocol session / đọc file / pbxproj / bẫy build sống ở `CLAUDE.md` §7. File này chỉ **định tuyến**: đụng chủ đề nào thì grep file đó, không `read` nguyên file lớn.
 

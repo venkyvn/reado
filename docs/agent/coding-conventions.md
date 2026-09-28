@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Created | 2026-09-18 (bản này thay bản TS PWA-gen — đã archive: [coding-conventions-pwa-gen.md](docs/archive/coding-conventions-pwa-gen.md)) |
+| Created | 2026-09-18 (bản này thay bản TS PWA-gen — đã archive: coding-conventions-pwa-gen.md (đã xoá, ADR-044)) |
 | Phạm vi | Code Swift R1: `app/Reado` (SwiftUI) + `app/ReadoKit` (package). Nguồn luật: bộ docs sản phẩm (PRD, db.md, tech-stack, rulebook). Mâu thuẫn với docs sản phẩm → docs thắng, ghi lại vào ROADMAP mục 4 |
 
 ## 1. Ngôn ngữ & tên gọi

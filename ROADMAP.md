@@ -2,7 +2,7 @@
 > File này là nguồn duy nhất về *"đang tới đâu, làm gì tiếp, kiểm gì thì xong"*.
 > Nguồn về *"xây cái gì, vì sao"* vẫn là bộ docs sản phẩm (`CLAUDE.md` → `docs/`).
 > Tracker thế hệ PWA (09-08..09-09) đã chuyển vào
-> [docs/archive/mvp-plan-pwa-gen.md](docs/archive/mvp-plan-pwa-gen.md) — mọi tham chiếu
+> `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) — mọi tham chiếu
 > "MVP_PLAN mục N" trong tài liệu cũ trỏ về đó, KHÔNG theo task trong đó nữa.
 
 # ROADMAP — Reado: tracker tiến độ & checklist (v2)
@@ -12,7 +12,7 @@
 | Created | 2026-09-18 |
 | Last updated | 2026-09-24 |
 | Thế hệ | v2 — native iOS + local-first SQLite + proxy hybrid (chốt 2026-09-17) |
-| Tiền nhiệm | `MVP_PLAN.md` (PWA-gen) → [docs/archive/mvp-plan-pwa-gen.md](docs/archive/mvp-plan-pwa-gen.md) |
+| Tiền nhiệm | `MVP_PLAN.md` (PWA-gen) → `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) |
 | Phase hiện tại | **Phase 3 — đang chạy.** Đã xong 3.1 FR-16 Export (`d23e19a`) + 3.2 FR-19 Leech (`7ea032e`) + 3.3 FR-04 Capture failure (`fb7f53a`, 91/91 test) + 3.6 FR-14 Daily Progress (`7263fb1`, 98/98) + 3.7 FR-15 Settings (`e1f5d5a`, 107/107) + 3.5 FR-08 + FR-17 (`0a5de27`, 122/122) + 3.9 FR-18 (`5060ada`, 129/129) + **3.10 FR-20 (`602ded5`, 141/141)** + **3.12 Reminder (`caa958f`, 148/148)** + **shortcut Home FR-17 (`a48b1e6`, 158/158)** + **T0 cửa Dữ liệu (`2907666`)** + **T1 J2 hub + FR-05/06 (`a7a2e15`, 165/165)** + **T2 J-R1-P heatmap (`55c2685`, 171/171)**. Toàn bộ task không-gate-Q-*/proxy đã cạn. **Q-06/08/09 đã chốt 2026-09-22 (ADR-032).** Còn chặn: 3.8 (chỉ còn dữ liệu thật) · ngưỡng leech FR-19 (số lapse) · 3.11 (0.7 proxy + 1.5 adapter) · 3.13 (dữ liệu thật) · cram FR-18 (R2) · "Từ session collect thêm" (xem §4) |
 | Nguồn nội dung | [docs/prd.md](docs/specs/prd.md) (FR-01..FR-21) · [docs/research/tech-stack.md](docs/research/tech-stack.md) · [docs/agent-rulebook.md](docs/agent/agent-rulebook.md) (mục 6: walking skeleton) · [docs/journeys.md](docs/specs/journeys.md) (J1–J6 + J-R1-*, thứ tự prompt UI) · [docs/session-brief.md](docs/session-brief.md) |
 
@@ -85,7 +85,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | Thứ | Trạng thái | Ghi chú |
 |---|---|---|
 | Bộ docs sản phẩm v2 (vision, PRD v0.9 → FR-21, tech-stack, db, journeys, prompt-spec) | ✅ Đồng bộ 2026-09-17/18 | PRD nghỉ ở v0.9; chờ bổ sung khi code (chủ yếu FR-20/FR-21 chi tiết) |
-| Tracker: thay MVP_PLAN bằng ROADMAP (file này) | ✅ 2026-09-18 | Bản PWA-gen đã vào [archive](docs/archive/mvp-plan-pwa-gen.md) |
+| Tracker: thay MVP_PLAN bằng ROADMAP (file này) | ✅ 2026-09-18 | Bản PWA-gen đã vào `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) |
 | ADR cho pivot Q-01/Q-02/Q-03 | ✅ 2026-09-18 — owner duyệt OK hết (task 0.2 đóng) | `docs/decisions-log.md` cuối file có **ADR-026..028** (ghi bổ sung sau 029..031) — bản ghi pivot v2 hoàn chỉnh |
 | Solution design v2 (proxy contract, DDL, transaction, adapter) | ✅ 2026-09-18 — owner duyệt **6/6 đề xuất 12.1** (task 0.6) | File v2 tại chỗ `docs/specs/solution-design.md` (status v1.0); bản PWA → `docs/archive/solution-design-pwa-gen.md`; mọi chỗ MỞ gắn nhãn kèm mốc chốt (mục 12.2) |
 | Proxy Reado (Python hosted) | ⬜ Chưa có | Task 0.7; chưa chốt hosting vendor + model |
@@ -238,7 +238,7 @@ Thứ tự code trong các phase trên **bám theo journeys**: vòng skeleton s�
 - **Timestamp:** ISO-8601 **UTC hậu tố `Z`** — giờ địa phương là loại lỗi chỉ nổ khi owner đi công tác; `settings.timezone` phải có từ SD.
 - **Proxy:** phải hosted + HTTPS (không laptop-local); key sản phẩm chỉ `.env` server; `image_hash` chống gọi lặp tính phí đôi.
 - **Key user:** Keychain, ghi-only — không bao giờ hiển thị, không lọt log/DOM.
-- **Ảnh trang:** cấm lưu (NFR-04) — chỉ segments JSON; kỹ thuật PWA xưa (SQLite-WASM/OPFS…) KHÔNG kế thừa, bài học PWA đọc ở [archive](docs/archive/mvp-plan-pwa-gen.md) mục 5.
+- **Ảnh trang:** cấm lưu (NFR-04) — chỉ segments JSON; kỹ thuật PWA xưa (SQLite-WASM/OPFS…) KHÔNG kế thừa, bài học PWA đọc ở `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) mục 5.
 - **Docs là luật, tracker là tiến độ:** thấy bảng "Đã chốt" nghi sai → báo lại, không sửa.
 
 ---

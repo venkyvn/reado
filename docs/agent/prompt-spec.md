@@ -236,7 +236,7 @@ chữ thì IPA của nó là gì? Cho phép chuỗi rỗng thay vì bắt AI b�
 bổ trợ hiển thị, **không** đưa vào `required` — output cũ vẫn hợp lệ, không phá
 `additionalProperties: false`. `maxItems` chặn AI chảy văn: đề xuất ban đầu 5/6 đã được
 owner chốt lại **2026-09-09 là 4 tags / 3 synonyms / 3 antonyms (RV-1)** và đã đo với
-prompt v2 (kết quả ở [archive/mvp-plan-pwa-gen.md](docs/archive/mvp-plan-pwa-gen.md) mục 7 — 100% item có field, 0 lần vượt hạn mức). Con số
+prompt v2 (kết quả ở mvp-plan-pwa-gen.md (đã xoá, ADR-044) mục 7 — 100% item có field, 0 lần vượt hạn mức). Con số
 khớp `RICH_LIMITS` trong `app/src/domain/verify.ts`.
 
 ---

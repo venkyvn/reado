@@ -682,3 +682,31 @@
   gộp nhầm hàng ở ảnh không crop — chưa sửa vì fen dùng iOS 26. Câu hỏi mở:
   chênh lệch device/simulator (26 vs 30 obs) chưa giải thích; đóng bằng cách
   chụp lại trên máy thật và đọc `engine=documents` trong `diag_summary`.
+
+## ADR-044 — Dọn repo: xoá docs/archive PWA-gen, script Phase 0, AGENTS/PROJECT.md (repo-hygiene-r1)
+
+- **Ngày:** 2026-09-28
+- **Bối cảnh:** Repo sau pivot iOS (ADR-026..028) còn mang nhiều thứ thế hệ PWA
+  và 5 file kiểu "mục lục" (`README`, `PROJECT.md`, `AGENTS.md` stub,
+  `CLAUDE.md`, `agent-rulebook`). `docs/archive/*-pwa-gen.md` (~2.000 dòng)
+  làm nhiễu grep của agent; `PROJECT.md` lỗi thời (còn nói MockAnalyzer, lệnh
+  `xcodebuild` trần mà hook `guard.py` chặn); `scripts/verify/{verify,ab-compress}.mjs`
+  là Node thời PWA; `qr/restore.py` là tool giải gói QR transport (cùng loại
+  `qr/v2/restore.py` đã xoá 09-18).
+- **Quyết định:** Xoá `docs/archive/` (6 file), `AGENTS.md`, `PROJECT.md`,
+  `qr/`, `scripts/verify/{verify,ab-compress}.mjs`. Pointer trong docs sống
+  đổi thành "(đã xoá, ADR-044)". Ảnh trang sách `ref/sample/*.png|jpg|jpeg`
+  (bản quyền) gỡ khỏi git, giữ file local. `.env.example` chỉ còn placeholder.
+  `idea.md` → `docs/idea.md`, `ui-lab/` → `ref/ui-lab/`.
+- **Lý do:** Lịch sử vẫn nằm trong git; giữ file chết chỉ tốn context và sinh
+  link lệch. Một entry point (`CLAUDE.md`) thay vì năm.
+- **Hệ quả:** Khôi phục bằng git (hash có thể đổi nếu reword/rebase — tìm theo
+  message `repo-hygiene-r1`):
+  - `git show 7db1510:docs/archive/<file>` (agents / coding-conventions / mvp-plan /
+    prd / session-brief / solution-design, mỗi file hậu tố `-pwa-gen.md`)
+  - `git show 7db1510:PROJECT.md`, `git show 7db1510:AGENTS.md`
+  - `git show 107bca0^:qr/restore.py`, `git show 107bca0^:scripts/verify/verify.mjs`
+  Ảnh `ref/sample` vẫn còn trong lịch sử commit cũ — cần viết lại history
+  (`git filter-repo`) nếu repo `venkyvn/reado` là public.
+  ROADMAP.md còn pointer tới archive (dòng lịch sử) — sửa ở B5 vì file đang bị
+  session khác sửa.

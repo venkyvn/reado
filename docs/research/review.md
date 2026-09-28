@@ -1,5 +1,22 @@
 Gộp từ review-scheduling.md + multi-client-sync.md + rich-vocab-cram-ddl.md — nội dung không đổi, chỉ nhập làm một. 
 
+## TL;DR — đã chốt (đọc trước; chi tiết ở các mục được trỏ tới)
+
+> Tóm tắt 2026-09-28 (repo-hygiene-r1, ADR-044). **Nguồn sự thật vẫn là bảng "Đã chốt" ở Phần 1 mục 9, `CLAUDE.md` §4–5 và code.** Phần 2–3 viết thời PWA (đường dẫn `domain/verify.ts`, `listAllTags()` không còn) — mâu thuẫn với code → code thắng.
+
+- **Thư viện tính, Reado lưu.** Dùng `swift-fsrs` (pin `4fbaf20`, `defaultWv6` 21 trọng số) — không tự viết; DB lưu lịch, không suy ra: `due_at` ghi nguyên giá trị thư viện trả (mục 1, 2.1).
+- **"Đã thuộc" = `stability`** (Q-08, `>= 21`), không dùng `reps`/`lapses` (mục 2).
+- **`state` 4 giá trị**, không gộp; **không** lưu `elapsed_days` trên `cards`, nhưng lưu trên `review_logs`; lệch thì `reviewed_at` thắng (mục 3.2–4.1).
+- **`review_logs` = snapshot TRƯỚC khi chấm**; update `cards` + insert `review_logs` cùng 1 transaction (mục 4).
+- **`mode` là trục chế độ, `state_before` là trục pha.** Chỉ `srs` cập nhật FSRS state; `cram` được kéo vào cuối R1 và không đụng state (mục 5; Phần 3 D-3). Phân biệt/gợi nhớ để R2.
+- **Hàng đợi hai nhánh**; số thẻ mới trong ngày đếm từ `review_logs` (không counter); hạn mức thẻ mới áp trước khi lọc phạm vi; ranh giới ngày cấu hình được (mục 6.1–6.3).
+- **Fuzz bật** ⇒ không được tính lại `due_at` on the fly. Tham số FSRS lưu kèm version (19 vs 21 tham số); R1 dùng tham số mặc định, optimizer để R2 (mục 9).
+- **Leech:** phải đưa được thẻ ra khỏi hàng đợi, hành động mặc định là đề nghị sinh lại thẻ (mục 6.4). Ngưỡng = 6 lần Again (chốt 2026-09-24, không gộp Q-08).
+- **Sync (Phần 2) = Later, chưa chốt:** server là source of truth nhưng client vẫn ghi offline; xung đột LWW theo `modified_at`; schema R1 đóng băng, sync là envelope cộng thêm; `settings` chứa secret ⇒ NFR-07 là ranh giới cứng (mục 4.5, 9.1–9.4). Không làm ở R1.
+- **Rich vocab (Phần 3):** synonyms/antonyms/tags do AI sinh kèm lúc capture, giới hạn 3/3/4 (RV-1); cram chỉ chọn tag ở v1 (RV-3).
+- **Mở:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4) — phải hỏi owner.
+
+
 ## Phần 1 — Lịch ôn tập — FSRS cần giữ những gì, và Anki dạy được gì
 
 | Field | Value |
@@ -587,7 +604,7 @@ nhưng **độ lớn** của sai lệch thì hoàn toàn chưa biết. Có thể
 | Created | 2026-09-08 |
 | Nguồn | Owner mô tả sơ đồ kiến trúc trong phiên làm việc 2026-09-08 |
 | Trạng thái | NOTE — Later, chưa chốt bất cứ gì; không ảnh hưởng R1/R2 |
-| Liên quan | [prd.md](docs/specs/prd.md) mục 10 (Later) + mục 12; NG-05, NFR-03, NFR-07; [solution-design.md](docs/specs/solution-design.md) mục 2 (câu "server chỉ là relay"); [ROADMAP.md](ROADMAP.md) (Later) + tracker cũ [mvp-plan-pwa-gen.md](docs/archive/mvp-plan-pwa-gen.md) mục 3 + 6 |
+| Liên quan | [prd.md](docs/specs/prd.md) mục 10 (Later) + mục 12; NG-05, NFR-03, NFR-07; [solution-design.md](docs/specs/solution-design.md) mục 2 (câu "server chỉ là relay"); [ROADMAP.md](ROADMAP.md) (Later) + tracker cũ mvp-plan-pwa-gen.md (đã xoá, ADR-044) mục 3 + 6 |
 
 ---
 
@@ -919,7 +936,7 @@ Bản vẽ DDL đầy đủ (Postgres/Supabase + triggers + RLS + contract push/
 > **Trạng thái: ĐÃ CODE 2026-09-09** (task 3.12 + 3.13, commit `3e6b951`). Bản design
 > dưới đây giữ nguyên để truy vết vì sao; các chỗ sai khác so với code được ghi ngay
 > tại mục tương ứng. Bốn câu mở RV-1..RV-4 đã được owner chốt khi code — xem mục 8.
-> Nhánh file này **không** nằm trong git (quy ước mục 1 của archive/mvp-plan-pwa-gen: docs ở root
+> Nhánh file này **không** nằm trong git (quy ước mục 1 của mvp-plan-pwa-gen (ADR-044): docs ở root
 > ngoài git).
 >
 > *Đánh số lại mới 2026-09-08:* tên "v2" trước đây giờ là **v3** — migration v2 đã được
@@ -929,7 +946,7 @@ Bản vẽ DDL đầy đủ (Postgres/Supabase + triggers + RLS + contract push/
 | Field | Value |
 |---|---|
 | Created | 2026-09-08 |
-| Trạng thái | Design v0.1 — chờ đóng 2.8 để code (task 3.12 + 3.13 trong archive/mvp-plan-pwa-gen) |
+| Trạng thái | Design v0.1 — chờ đóng 2.8 để code (task 3.12 + 3.13 trong mvp-plan-pwa-gen (ADR-044)) |
 | Nền | Brief owner 2026-09-08 (Rich Vocabulary & Dynamic Tagging + Targeted Review) + đề xuất agent ngoài (3 cột TEXT JSON) + review agent Reado |
 | Đụng chốt đã xử lý | Mở lại 2 dòng "KHÔNG hỏi AI" ở prompt-spec mục 7 + chốt một phần Q-11 — chi tiết mục 1 |
 
@@ -1044,7 +1061,7 @@ thiết kế sync.
 > ngoặc đơn: giới hạn 3/3/4 theo RV-1; `countIntroducedNew` chỉ đếm `mode='srs'`
 > (nếu không, chấm cram thẻ new sẽ ăn hạn mức FR-11 — phát hiện khi viết test);
 > e2e smoke `app/e2e/cram-flow.mjs` đã viết nhưng CHƯA chạy được trên máy này
-> (Chrome headless bị sandbox chặn — cùng lý do e2e:swipe, nhật ký archive/mvp-plan-pwa-gen).
+> (Chrome headless bị sandbox chặn — cùng lý do e2e:swipe, nhật ký mvp-plan-pwa-gen (ADR-044)).
 
 1. **3.12 Rich vocab:** migration **v3** (`app/src/storage/migrate.ts` — gắn sau v1)
    → parser AI nhận 3 field (guard `json_valid`, default `'[]'`) +
@@ -1057,7 +1074,7 @@ thiết kế sync.
    test: **card không đổi trước/sau cram**, log snapshot đúng, undo xoá log, không vi
    phạm `daily_new_limit` → e2e smoke → commit `app/`.
 3. **Verify A-02** lại với output mới (latency p50 + tokens + tỷ lệ 3 field hợp lệ),
-   ghi kết quả vào archive/mvp-plan-pwa-gen mục 7.
+   ghi kết quả vào mvp-plan-pwa-gen (ADR-044) mục 7.
 
 ## 8. Đã chốt với owner lúc code (2026-09-09)
 

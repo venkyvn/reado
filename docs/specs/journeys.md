@@ -561,8 +561,8 @@ Journey file này **không huỷ** vòng đó. Nó nói vòng đó sống **tron
 | Created | 2026-09-08 |
 | Nguồn DDL **thật** | `app/src/storage/schema.sql` (migration v1); các migration sau ở `app/src/storage/migrate.ts`: v2 `analyses` · v3 rich vocab (tags/synonyms/antonyms) · v4 `reading_sessions` |
 | Nơi PRAGMA + migrate + seed chạy | `app/src/storage/syncDb.ts` |
-| Phạm vi | Chỉ R1. `word_relations` không nằm ở đây (R2 — archive/mvp-plan-pwa-gen task 4.1) |
-| Quy tắc nguồn | File này **chỉ giải thích**, không phải nguồn DDL. Mâu thuẫn với code → code thắng, ghi vào archive/mvp-plan-pwa-gen mục 4 (không im lặng sửa) |
+| Phạm vi | Chỉ R1. `word_relations` không nằm ở đây (R2 — mvp-plan-pwa-gen (ADR-044) task 4.1) |
+| Quy tắc nguồn | File này **chỉ giải thích**, không phải nguồn DDL. Mâu thuẫn với code → code thắng, ghi vào mvp-plan-pwa-gen (ADR-044) mục 4 (không im lặng sửa) |
 
 ## 1. Đọc khi nào
 
@@ -606,7 +606,7 @@ PRAGMA journal_mode = WAL;     -- thử; VFS không hỗ trợ (OPFS) thì rơi 
 ```
 
 Cảnh báo này là cột vận hành của `SyncDb` ("journal_mode/WAL") — phải được hiển thị,
-không nuốt im lặng (bài học archive/mvp-plan-pwa-gen mục 5: OPFS thực tế là `journal_mode = delete`,
+không nuốt im lặng (bài học mvp-plan-pwa-gen (ADR-044) mục 5: OPFS thực tế là `journal_mode = delete`,
 an toàn nhờ transaction chứ không nhờ WAL).
 
 ## 4. Bảng sản phẩm — DDL + vì sao
@@ -772,7 +772,7 @@ create table settings (
 - Hệ quả trực tiếp của **Q-03 (BYOK)**: 4 cột `ai_*` là bổ sung DUY NHẤT so với research
   schema. `ai_api_key` là secret (điều cấm #9) — export/commit/whitelist đều phải chặn nó.
 - `cefr_level` mặc định **'B1'** — owner chốt ở task 0.5. Bản nháp solution-design mục 5
-  ghi `'B2'` là typo — mâu thuẫn đã ghi archive/mvp-plan-pwa-gen mục 4, code đúng theo chốt (mục 8).
+  ghi `'B2'` là typo — mâu thuẫn đã ghi mvp-plan-pwa-gen (ADR-044) mục 4, code đúng theo chốt (mục 8).
 
 ### 4.6 `analyses` — migration v2 (2026-09-08, task 3.5)
 
@@ -822,7 +822,7 @@ create index idx_rsessions_time on reading_sessions (created_at desc);
 - Nhà của **Q-10-reopen (owner 2026-09-09)**: A-08 của PRD ("người dùng không cần
   đọc lại trang đã đọc") bị bác bỏ bằng thực tế — lưu lại text + dịch của trang đã
   phân tích, 10 phiên mới nhất **mỗi collection**. Phần ảnh của NFR-04 VẪN giữ
-  (không cột ảnh nào), chỉ nới phần text (archive/mvp-plan-pwa-gen mục 1/4). Một dòng = một lần gọi
+  (không cột ảnh nào), chỉ nới phần text (mvp-plan-pwa-gen (ADR-044) mục 1/4). Một dòng = một lần gọi
   AI thành công.
 - `id` trùng `analyses.id` — hai bảng ghi cùng lúc sau runId-guard, provenance 1:1
   không cần cột FK riêng.
@@ -867,7 +867,7 @@ create index idx_rsessions_time on reading_sessions (created_at desc);
 
 Chạy chung nơi DB sống (Worker / in-process) ngay sau migrate — không đi qua RPC.
 
-### 6.3 DB sống ở đâu (kiến trúc storage — tóm tắt bài học archive/mvp-plan-pwa-gen mục 5)
+### 6.3 DB sống ở đâu (kiến trúc storage — tóm tắt bài học mvp-plan-pwa-gen (ADR-044) mục 5)
 
 - SQLite-WASM **bắt buộc mở trong Web Worker** (`storage/dbWorker.ts`): VFS `opfs` cần
   `Atomics.wait()` (main thread bị lib từ chối *trong im lặng*), `opfs-sahpool` cần
@@ -891,7 +891,7 @@ Chạy chung nơi DB sống (Worker / in-process) ngay sau migrate — không đ
 
 ## 8. Khác biệt so với bản NHÁP solution-design mục 5
 
-`docs/archive/solution-design-pwa-gen.md` mục 5 là DDL thiết kế (Postgres → SQLite), **không phải nguồn
+`solution-design-pwa-gen.md` (đã xoá, ADR-044) mục 5 là DDL thiết kế (Postgres → SQLite), **không phải nguồn
 áp dụng**. `schema.sql` (migration v1) mới là thứ chạy. Hai khác biệt đã biết:
 
 | Chỗ | solution-design (nháp) | `schema.sql` (thật) |
@@ -901,20 +901,20 @@ Chạy chung nơi DB sống (Worker / in-process) ngay sau migrate — không đ
 | bảng `analyses` | không có trong nháp | **migration v2 (2026-09-08)** — bảng sự kiện FR-14/NFR-02, xem mục 4.6. Ra đời sau khi bản nháp đã được duyệt |
 | bảng `reading_sessions` | không có trong nháp (nháp chọn buffer in-memory, Q-10 cũ) | **migration v4 (2026-09-09)** — Q-10-reopen, xem mục 4.7. Bia mộ của Q-10 cũ ở solution-design mục 11 |
 
-Ngoài hai chỗ đó, cột/constraint hai bên khớp nhau. Thấy khác thêm → ghi archive/mvp-plan-pwa-gen mục 4.
+Ngoài hai chỗ đó, cột/constraint hai bên khớp nhau. Thấy khác thêm → ghi mvp-plan-pwa-gen (ADR-044) mục 4.
 
 ## 9. Chưa có trong schema này (đừng tìm)
 
-- **`word_relations`** — bảng liên kết từ vựng (PVO) thuộc R2, archive/mvp-plan-pwa-gen task 4.1. Chưa
+- **`word_relations`** — bảng liên kết từ vựng (PVO) thuộc R2, mvp-plan-pwa-gen (ADR-044) task 4.1. Chưa
   có DDL.
 - **Nhãn verification / status của vocab item** — R1 không lưu cột trạng thái verify;
-  nhãn verified/suspect/unverified chỉ sống trong phiên phân tích FR-02 (xem archive/mvp-plan-pwa-gen
+  nhãn verified/suspect/unverified chỉ sống trong phiên phân tích FR-02 (xem mvp-plan-pwa-gen (ADR-044)
   mục 4: chip chỉ là hiển thị, save không đọc verification).
 - ~~**Bảng nào cho buffer cuộn** — buffer 10 trang sống trong bộ nhớ phiên, không
   persist (Q-10), nên không có bảng.~~ **BIA MỘ (Q-10-reopen, owner 2026-09-09):**
   buffer in-memory đã BỎ — giờ có bảng `reading_sessions` (migration v4, mục 4.7):
   10 phiên mới nhất **mỗi collection**, chỉ text + dịch. Chi tiết quyết định:
-  archive/mvp-plan-pwa-gen mục 1/4.
+  mvp-plan-pwa-gen (ADR-044) mục 1/4.
 - **Ngưỡng leech (FR-19)** — cột `suspended_at` đã có nhưng ngưỡng `lapses` chưa chốt
   (chốt cùng lượt Q-08/Q-09 khi có dữ liệu thật). Code R1 không viết cột này.
 - **Starred/priority, note, audio** — không tồn tại ở R1. `tags`/`synonyms`/`antonyms`
@@ -927,7 +927,7 @@ Ngoài hai chỗ đó, cột/constraint hai bên khớp nhau. Thấy khác thêm
 
 | Việc | Trạng thái |
 |---|---|
-| 7 bảng sản phẩm + cột như trong file này | ✅ Đã chốt + đã triển khai (5 bảng gốc 2026-09-08; `analyses` migration v2 cùng ngày; `reading_sessions` migration v4 2026-09-09, archive/mvp-plan-pwa-gen task 3.15) |
+| 7 bảng sản phẩm + cột như trong file này | ✅ Đã chốt + đã triển khai (5 bảng gốc 2026-09-08; `analyses` migration v2 cùng ngày; `reading_sessions` migration v4 2026-09-09, mvp-plan-pwa-gen (ADR-044) task 3.15) |
 | Dạng lưu uuid / timestamp / fsrs_params | ✅ Đã chốt (AGENTS mục 5) |
 | Không có `unique` trên `vocab_items` | ✅ Đã chốt (structure mục 6.3) |
 | Ngưỡng "đã thuộc" (Q-08) + phạm vi lọc (Q-09) | 📌 Để sau — chốt cùng lúc ngưỡng leech FR-19, khi có vài tuần review log |
