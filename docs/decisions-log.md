@@ -710,3 +710,25 @@
   (`git filter-repo`) nếu repo `venkyvn/reado` là public.
   ROADMAP.md còn pointer tới archive (dòng lịch sử) — sửa ở B5 vì file đang bị
   session khác sửa.
+
+## ADR-043 — Cram kéo về R1: nút "Ôn thêm" ở màn hết thẻ (cram-collection-r1)
+
+- **Ngày:** 2026-09-28
+- **Bối cảnh:** Owner rảnh, mở "Ôn bộ này" mà hết thẻ đến hạn → "Không có gì cần
+  ôn", ngõ cụt. `journeys.md` chỉ ghi "chưa có journey Cram cho tới khi owner nói
+  'học' = ôn chưa due" — owner đã nói. ADR-011 đã chốt cơ chế (log `mode='cram'`,
+  không đụng `cards`); cột + CHECK đã có từ v1 nên **không migration**.
+- **Quyết định:**
+  - Cram chỉ vào từ màn hết thẻ của `ReviewQueueView`, qua nút "Ôn thêm N thẻ" khi
+    phạm vi còn thẻ **đã học** (`state != new`), chưa suspend, `due_at > now`.
+  - Lấy sắp due trước, tối đa **20** thẻ/lượt (`ReviewQueue.cramBatchSize`).
+    Thẻ `new` vẫn đi đường "Học thêm 10 từ" (ADR-039), không lẫn vào Cram.
+  - Chấm = INSERT `review_logs` `mode='cram'` (`ReviewService.recordCram`), snapshot
+    trước = trạng thái hiện tại, **không `UPDATE cards`**, không gọi `LeechService`,
+    không toast "Thuộc rồi", ẩn nhãn nhịp ôn (không còn đúng). Undo = xoá đúng log
+    cram (`undoCram`, WHERE `mode='cram'`).
+  - `newIntroducedCount` chỉ đếm log `mode='srs'` — log cram không ăn hạn mức FR-11.
+  - Log cram vẫn tính vào streak (ADR-011).
+- **Hệ quả:** Q-11 (phần distinguish/recall của R2) không đổi — cram ở R1 đi đường
+  "chấp nhận" đã chốt 2026-09-08. Sau khi cram xong không có "ôn thêm nữa": một
+  lượt 20 thẻ gần due nhất, cram lại sẽ ra đúng tập cũ (lịch không đổi).

@@ -5,6 +5,10 @@ import SwiftUI
 /// Lật card: `term` + `pos` → `meaning_vi` + IPA + câu gốc + tên collection.
 typealias ReviewItem = ReviewQueue.ReviewItem
 
+/// `.srs` = hàng đợi đến hạn (đổi lịch FSRS). `.cram` = ôn thêm thẻ đã học mà
+/// CHƯA đến hạn (ADR-011/043) — chấm + log `mode='cram'`, không đổi lịch.
+enum ReviewMode { case srs, cram }
+
 struct ReviewQueueView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -38,6 +42,9 @@ struct ReviewQueueView: View {
     @State private var masteredToastTerm = ""
     @State private var masteredToastTask: Task<Void, Never>?
 
+    /// ADR-043: Cram chỉ vào từ màn hết thẻ; đổi phạm vi thì về `.srs`.
+    @State private var mode: ReviewMode = .srs
+
     // FR-18: phạm vi ôn (nil = tất cả) + popover picker.
     @State private var scope: Set<String>? = nil
     @State private var showScopePicker = false
@@ -67,6 +74,10 @@ struct ReviewQueueView: View {
             } else if currentIndex < items.count {
                 cardView
                     .transition(.opacity)
+            } else if mode == .cram {
+                // Cram không có ăn mừng tiến bộ (không đổi lịch) — màn kết thúc riêng.
+                doneView
+                    .transition(.opacity)
             } else if tally.reviewed > 0 {
                 // ADR-038: vừa chấm hết phiên → màn ăn mừng tiến bộ đo được.
                 SessionDoneView(
@@ -92,7 +103,7 @@ struct ReviewQueueView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: isLoading)
-        .navigationTitle("Ôn tập")
+        .navigationTitle(mode == .cram ? "Ôn thêm" : "Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if showsCloseButton {
@@ -112,10 +123,13 @@ struct ReviewQueueView: View {
         }
         .sheet(isPresented: $showScopePicker) {
             ScopePickerSheet(scope: $scope) {
+                mode = .srs
                 Task { await loadQueue() }
             }
         }
         .onAppear {
+            // Vào lại màn (đổi tab) luôn về hàng đợi đến hạn — Cram chỉ đi từ màn hết thẻ.
+            mode = .srs
             // Tab Ôn đọc scope mặc định đã lưu (Ôn nhanh ở Kho). Sheet "Ôn bộ này"
             // (showsCloseButton) giữ scope truyền vào thay vì ghi đè.
             if !showsCloseButton {
@@ -129,7 +143,13 @@ struct ReviewQueueView: View {
 
     @ViewBuilder
     private var emptyView: some View {
-        if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
+        if mode == .cram {
+            ContentUnavailableView {
+                Label("Không còn thẻ để ôn thêm", systemImage: "checkmark.circle")
+            } description: {
+                Text("Chưa có thẻ nào đã học mà chưa đến hạn trong phạm vi này.")
+            }
+        } else if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
             // J5: hết due trong phạm vi nhưng ngoài vẫn còn — nợ phải hiện rõ.
             ContentUnavailableView {
                 Label("Không còn thẻ trong phạm vi này", systemImage: "checkmark.circle")
@@ -143,12 +163,30 @@ struct ReviewQueueView: View {
                 .buttonStyle(.borderedProminent)
                 Button("Đổi phạm vi") { showScopePicker = true }
                     .buttonStyle(.bordered)
+                cramButton
             }
         } else {
             ContentUnavailableView {
                 Label("Không có gì cần ôn", systemImage: "checkmark.circle")
             } description: {
-                Text("Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới.")
+                Text(model.crammableCount > 0
+                    ? "Chưa có thẻ nào đến hạn. Bạn vẫn có thể ôn thêm — lịch ôn không bị thay đổi."
+                    : "Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới.")
+            } actions: {
+                cramButton
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+    }
+
+    /// ADR-043: vào Cram khi hết thẻ đến hạn mà phạm vi còn thẻ đã học. Không có
+    /// thẻ để cram → không hiện gì (nút vô nghĩa).
+    @ViewBuilder
+    private var cramButton: some View {
+        if model.crammableCount > 0 {
+            Button("Ôn thêm \(min(model.crammableCount, ReviewQueue.cramBatchSize)) thẻ") {
+                mode = .cram
+                Task { await loadQueue() }
             }
         }
     }
@@ -158,9 +196,11 @@ struct ReviewQueueView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(Theme.ok)
-            Text("Hết thẻ hôm nay")
+            Text(mode == .cram ? "Đã ôn thêm xong" : "Hết thẻ hôm nay")
                 .font(.title2.bold())
-            Text("Bạn đã ôn hết \(items.count) thẻ hôm nay.")
+            Text(mode == .cram
+                ? "Bạn đã ôn thêm \(items.count) thẻ. Lịch ôn không bị thay đổi."
+                : "Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
             debtBanner
             if showsCloseButton {
@@ -245,6 +285,14 @@ struct ReviewQueueView: View {
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
                 Spacer()
+                if mode == .cram {
+                    Text("Ôn thêm")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                        .accessibilityLabel("Chế độ ôn thêm, không đổi lịch")
+                }
                 // FR-12: undo nút nổi 1 bước.
                 if showUndoToast {
                     Button("Hoàn tác") {
@@ -312,6 +360,8 @@ struct ReviewQueueView: View {
 
     /// U1: nạp lại nhãn nhịp ôn cho thẻ đang đứng ở `lastSnapshot`.
     private func refreshIntervals() {
+        // Cram không đổi lịch → nhãn "ôn lại sau …" sẽ sai, ẩn hẳn.
+        guard mode == .srs else { intervalLabels = [:]; return }
         intervalLabels = lastSnapshot.map { model.intervalLabels(for: $0) } ?? [:]
     }
 
@@ -571,12 +621,17 @@ struct ReviewQueueView: View {
         guard let snapshot = lastSnapshot else { return }
         let gradedSnapshot = snapshot
         do {
-            let result = try model.grade(
-                cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
+            let result = mode == .cram
+                ? try model.gradeCram(
+                    cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
+                : try model.grade(
+                    cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
             // Lưu snapshot/log của thẻ vừa chấm để undo (FR-12) — tách khỏi lastSnapshot.
             lastLogID = result.logID
             undoSnapshot = gradedSnapshot
-            tally.record(rating: rating, crossed: result.crossedMastery, term: item.term)
+            if mode == .srs {
+                tally.record(rating: rating, crossed: result.crossedMastery, term: item.term)
+            }
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = true
             }
@@ -627,7 +682,11 @@ struct ReviewQueueView: View {
         guard prevIndex >= 0, prevIndex < items.count else { return }
         let item = items[prevIndex]
         do {
-            try model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
+            if mode == .cram {
+                try model.undoCram(cardID: item.cardID, logID: logID)
+            } else {
+                try model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
+            }
             // Quay lại thẻ trước.
             withAnimation(.spring(response: 0.3)) {
                 currentIndex = prevIndex
@@ -635,7 +694,7 @@ struct ReviewQueueView: View {
                 dragOffset = .zero
                 didPassThreshold = false
             }
-            tally.undoLast()
+            if mode == .srs { tally.undoLast() }
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = false
                 showMasteredToast = false
@@ -653,7 +712,11 @@ struct ReviewQueueView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await model.loadReviewQueue(scope: scope)
+            if mode == .cram {
+                try await model.loadCramQueue(scope: scope)
+            } else {
+                try await model.loadReviewQueue(scope: scope)
+            }
             self.items = model.reviewItems
             // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.
             self.currentIndex = 0

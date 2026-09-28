@@ -49,8 +49,59 @@ public enum ReviewQueue {
         ).compactMap { $0.first?.textValue }
     }
 
+    /// Số thẻ tối đa mỗi lượt Cram (owner chốt 2026-09-28, ADR-043).
+    public static let cramBatchSize = 20
+
+    /// Cram (FR-18 tiêu chí 4, ADR-011/043) — thẻ ĐÃ HỌC (state ≠ new), chưa
+    /// suspend, CHƯA đến hạn (`due_at > now`; thẻ đến hạn đi đường srs), sắp đến
+    /// hạn trước. `scope` nil = tất cả. Thẻ new KHÔNG vào đây — đường "Học thêm".
+    public static func cramCardIDs(
+        on db: SQLiteDatabase,
+        now: Date,
+        scope: Set<String>? = nil,
+        limit: Int = cramBatchSize
+    ) throws -> [String] {
+        guard limit > 0 else { return [] }
+        let (clause, binds) = inScopeClause(scope)
+        var params: [SQLValue] = [.text(ISOTimestamp.string(from: now))]
+        params.append(contentsOf: binds)
+        params.append(.int(Int64(limit)))
+        return try db.rows(
+            """
+            SELECT c.id FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state != 'new'
+              AND c.suspended_at IS NULL
+              AND c.due_at > ?
+              AND \(clause)
+            ORDER BY c.due_at, c.id
+            LIMIT ?;
+            """, params
+        ).compactMap { $0.first?.textValue }
+    }
+
+    /// Số thẻ Cram được trong phạm vi (không bị `limit`) — quyết định hiện nút
+    /// "Ôn thêm" hay không.
+    public static func crammableCount(
+        on db: SQLiteDatabase, now: Date, scope: Set<String>? = nil
+    ) throws -> Int64 {
+        let (clause, binds) = inScopeClause(scope)
+        var params: [SQLValue] = [.text(ISOTimestamp.string(from: now))]
+        params.append(contentsOf: binds)
+        return try db.scalarInt64(
+            """
+            SELECT COUNT(*) FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state != 'new'
+              AND c.suspended_at IS NULL
+              AND c.due_at > ?
+              AND \(clause);
+            """, params) ?? 0
+    }
+
     /// Số thẻ có review ĐẦU TIÊN nằm trong ngày hôm nay (thẻ "mới giới thiệu
-    /// hôm nay") — dùng để trừ vào quota nhánh 1.
+    /// hôm nay") — dùng để trừ vào quota nhánh 1. Chỉ đếm log `mode='srs'`:
+    /// log cram không ăn hạn mức FR-11 (ADR-011).
     public static func newIntroducedCount(
         on db: SQLiteDatabase, dayStartIso: String
     ) throws -> Int64 {
@@ -59,11 +110,11 @@ public enum ReviewQueue {
             SELECT COUNT(*) FROM cards c
             WHERE EXISTS (
                     SELECT 1 FROM review_logs l
-                    WHERE l.card_id = c.id AND l.reviewed_at >= ?
+                    WHERE l.card_id = c.id AND l.mode = 'srs' AND l.reviewed_at >= ?
                   )
               AND NOT EXISTS (
                     SELECT 1 FROM review_logs l2
-                    WHERE l2.card_id = c.id AND l2.reviewed_at < ?
+                    WHERE l2.card_id = c.id AND l2.mode = 'srs' AND l2.reviewed_at < ?
                   );
             """,
             [.text(dayStartIso), .text(dayStartIso)])
@@ -205,8 +256,28 @@ public enum ReviewQueue {
         let allCardIDs = newIDs + dueIDs
         guard !allCardIDs.isEmpty else { return ([], [:]) }
 
-        let placeholders = allCardIDs.map { _ in "?" }.joined(separator: ",")
-        let params: [SQLValue] = allCardIDs.map { .text($0) }
+        return try hydrate(on: db, cardIDs: allCardIDs)
+    }
+
+    /// Cram: hàng đợi ôn thêm (không đụng lịch) — cùng shape với `loadFullQueue`.
+    public static func loadCramQueue(
+        on db: SQLiteDatabase,
+        now: Date,
+        scope: Set<String>? = nil,
+        limit: Int = cramBatchSize
+    ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
+        let ids = try cramCardIDs(on: db, now: now, scope: scope, limit: limit)
+        guard !ids.isEmpty else { return ([], [:]) }
+        return try hydrate(on: db, cardIDs: ids)
+    }
+
+    /// cardIDs → `ReviewItem` (kèm vocab + collection) + snapshot TRƯỚC, sắp theo
+    /// `due_at` — dùng chung cho hàng đợi srs và Cram.
+    private static func hydrate(
+        on db: SQLiteDatabase, cardIDs: [String]
+    ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
+        let placeholders = cardIDs.map { _ in "?" }.joined(separator: ",")
+        let params: [SQLValue] = cardIDs.map { .text($0) }
         let rows = try db.rows(
             """
             SELECT c.id AS card_id,

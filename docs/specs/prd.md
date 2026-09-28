@@ -810,7 +810,7 @@ không kéo theo cả FR-01 và FR-08.
 - **Feature B — Expand:** bảng `word_relations`, cùng hai chế độ ôn **Phân biệt** và
   **Gợi nhớ theo nhóm**. Xem
   [research/vocabulary.md mục 5](docs/research/vocabulary.md#5-feature-b--expand-quan-hệ-ngữ-nghĩa-r2)
-- Chế độ cram — ôn card chưa đến hạn, không đụng FSRS state (phần còn lại của FR-18)
+- ~~Chế độ cram~~ — **đã kéo về R1 (2026-09-28, ADR-043):** ôn card chưa đến hạn từ màn hết thẻ, không đụng FSRS state
 - Lọc vocabulary nâng cao (phần còn lại của FR-08)
 - Cảnh báo trước khi trang trôi khỏi buffer (phần còn lại của FR-05)
 - Thống kê tiến bộ theo thời gian

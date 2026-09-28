@@ -88,6 +88,7 @@
 		5C0201000400000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000400000000000000 /* OCRProbeTests.swift */; };
 
 		5C0201000500000000000000 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000500000000000000 /* ImageCompressorTests.swift */; };
+		5C0201000600000000000000 /* CramReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000600000000000000 /* CramReviewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -172,6 +173,7 @@
 		5B0201000400000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
 
 		5B0201000500000000000000 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
+		5B0201000600000000000000 /* CramReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CramReviewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -270,7 +272,8 @@
 				5B0201000200000000000000 /* OnboardingChecklistTests.swift */,
 				5B0201000300000000000000 /* OCRProbeTests.swift */,
 				5B0201000400000000000000 /* OCRProbeTests.swift */,
-				5B0201000500000000000000 /* ImageCompressorTests.swift */,);
+				5B0201000500000000000000 /* ImageCompressorTests.swift */,
+				5B0201000600000000000000 /* CramReviewTests.swift */,);
 			path = ReadoTests;
 			sourceTree = "<group>";
 		};
@@ -426,7 +429,8 @@
 				5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */,
 				5C0201000300000000000000 /* OCRProbeTests.swift in Sources */,
 				5C0201000400000000000000 /* OCRProbeTests.swift in Sources */,
-				5C0201000500000000000000 /* ImageCompressorTests.swift in Sources */,);
+				5C0201000500000000000000 /* ImageCompressorTests.swift in Sources */,
+				5C0201000600000000000000 /* CramReviewTests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

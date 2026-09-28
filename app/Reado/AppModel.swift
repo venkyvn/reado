@@ -100,6 +100,9 @@ final class AppModel {
     // vi (phải nhìn thấy — research/vocabulary.md 4.2).
     private(set) var reviewScope: Set<String>? = nil
     private(set) var dueOutsideScope = 0
+    /// Số thẻ Cram được trong phạm vi hiện tại (đã học, chưa đến hạn) — quyết
+    /// định nút "Ôn thêm" ở màn hết thẻ (ADR-043).
+    private(set) var crammableCount = 0
 
     /// Ý 3 motivation-r1 ("Học thêm 10 từ", Q-A/Q-B đã chốt): phần nới hạn mức
     /// new RIÊNG ngày học hiện tại — chỉ bộ nhớ app, KHÔNG lưu DB/migration.
@@ -351,6 +354,8 @@ final class AppModel {
                     on: database,
                     dueBeforeIso: ISOTimestamp.string(from: now),
                     scope: scope))
+            crammableCount = try Int(
+                ReviewQueue.crammableCount(on: database, now: now, scope: scope))
         } catch {
             reviewError = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
@@ -411,6 +416,51 @@ final class AppModel {
         } catch {
             return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
+    }
+
+    /// Cram (ADR-043): nạp tối đa 20 thẻ đã học nhưng chưa đến hạn trong phạm vi.
+    /// Ghi đè `reviewItems`/`reviewSnapshots` như `loadReviewQueue`; `dueOutsideScope`
+    /// về 0 vì banner nợ chỉ thuộc đường srs.
+    func loadCramQueue(scope: Set<String>? = nil) async throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        reviewScope = scope
+        isLoadingReview = true
+        reviewError = nil
+        defer { isLoadingReview = false }
+        do {
+            let now = SystemClock().now
+            let (items, snapshots) = try ReviewQueue.loadCramQueue(
+                on: database, now: now, scope: scope)
+            reviewItems = items
+            reviewSnapshots = snapshots
+            currentReviewSnapshot = items.first.flatMap { snapshots[$0.cardID] }
+            dueOutsideScope = 0
+            crammableCount = try Int(
+                ReviewQueue.crammableCount(on: database, now: now, scope: scope))
+        } catch {
+            reviewError = (error as? LocalizedError)?.errorDescription
+                ?? String(describing: error)
+            DebugTrace.event("review", "loadCramQueueFailed", ["error": String(describing: error)])
+            throw error
+        }
+    }
+
+    /// Chấm một thẻ ở chế độ Cram: chỉ ghi `review_logs mode='cram'`, KHÔNG đổi
+    /// `cards`, KHÔNG kiểm leech (lapses không đổi). `crossedMastery` luôn false.
+    func gradeCram(
+        cardID: String, snapshot: CardSnapshot, rating: ReadoRating
+    ) throws -> GradeResult {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let logID = try ReviewService.recordCram(
+            on: database, cardID: cardID, before: snapshot,
+            rating: rating, now: SystemClock().now)
+        return GradeResult(logID: logID, crossedMastery: false)
+    }
+
+    /// Undo Cram: xoá đúng log cram vừa ghi (`cards` chưa từng đổi).
+    func undoCram(cardID: String, logID: String) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try ReviewService.undoCram(on: database, cardID: cardID, logID: logID)
     }
 
     /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa

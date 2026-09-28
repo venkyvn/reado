@@ -68,7 +68,7 @@ Mọi journey **R1** dưới đây phải truy được về một trong hai. J1
 
 ## 2. Ánh xạ "học / ôn / trộn"
 
-Đây là hợp đồng ngôn ngữ với UI. **Không** đồng nghĩa với Cram.
+Đây là hợp đồng ngôn ngữ với UI. "Ôn" **không** tự biến thành Cram — Cram chỉ vào bằng nút riêng ở màn hết thẻ (ADR-043).
 
 | Câu owner | Nghĩa trong Reado | Không phải |
 |---|---|---|
@@ -76,7 +76,7 @@ Mọi journey **R1** dưới đây phải truy được về một trong hai. J1
 | **Ôn** | Thẻ đến hạn FSRS; một collection hoặc tất cả | Tự đẩy thẻ chưa due để "lấp chỗ" |
 | **Trộn** | FR-18: chọn **vài** collection; queue = due ∩ phạm vi; **vẫn** ghi FSRS | Trộn semantic set (R2); Cram |
 
-Cram (`mode = cram`, không đụng FSRS state) đã có trong FR-18 và [structure §4.2](docs/research/vocabulary.md#42-lọc-hàng-đợi-có-thể-phá-vỡ-hợp-đồng-của-scheduler). **Không** có journey R1 cho Cram cho tới khi owner nói "học" = ôn chưa due.
+Cram (`mode = cram`, không đụng FSRS state) có trong FR-18 và [structure §4.2](docs/research/vocabulary.md#42-lọc-hàng-đợi-có-thể-phá-vỡ-hợp-đồng-của-scheduler). **Owner chốt 2026-09-28 (ADR-043):** kéo về R1, chỉ vào từ màn hết thẻ (J4/J5): thẻ đã học, chưa due, sắp due trước, tối đa 20/lượt.
 
 ---
 
@@ -272,7 +272,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 | State | Hành vi |
 |---|---|
-| 0 due | Home nói rõ đã xong ôn hôm nay. CTA J1/J2, **không** CTA Cram |
+| 0 due | Home nói rõ đã xong ôn hôm nay. CTA J1/J2, **không** CTA Cram ở Home. Màn ôn hiện "Không có gì cần ôn" + nút **"Ôn thêm N thẻ"** (Cram, ADR-043) khi còn thẻ đã học chưa due |
 | Due > 0 nhưng user đang ở J5 hẹp | Không phải empty J4 — xem J5 "nợ ngoài phạm vi" |
 
 ---
@@ -281,7 +281,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 **Trigger:** "Chỉ ôn cuốn đang đọc" hoặc "trộn collection công việc + sách".  
 **Job:** JTBD-02.  
-**FR:** FR-18. Vẫn filtered study, **không** Cram.
+**FR:** FR-18. Vẫn filtered study; Cram chỉ là nhánh riêng ở màn hết thẻ (ADR-043).
 
 ### Happy path
 
@@ -297,7 +297,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 |---|---|
 | Phạm vi không có due, ngoài phạm vi vẫn còn due | "Không còn trong phạm vi này" + số nợ ngoài + CTA nới phạm vi hoặc ôn tất cả |
 | Chỉ còn kho tạm / một collection | Trộn vài collection disable hoặc ẩn — đừng hiện picker 2-slot rỗng |
-| User muốn ôn chưa due | **Ngoài journey R1.** FR-18 gọi đó Cram; không nhánh UI ở đây |
+| User muốn ôn chưa due | Nút "Ôn thêm N thẻ" ở màn hết thẻ (cả nhánh "Không còn trong phạm vi này") → Cram theo phạm vi đang chọn: chấm + log `mode='cram'`, **không đổi lịch**, không ăn `daily_new_limit`, không ăn mừng/leech; đổi phạm vi thì về hàng đợi đến hạn |
 
 ---
 

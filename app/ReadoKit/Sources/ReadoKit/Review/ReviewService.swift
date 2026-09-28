@@ -144,4 +144,54 @@ public enum ReviewService {
                 ])
         }
     }
+
+    /// Cram (ADR-011/043): chấm thẻ CHƯA đến hạn mà KHÔNG đổi lịch — chỉ INSERT
+    /// một dòng `review_logs` `mode='cram'` (snapshot TRƯỚC = trạng thái hiện tại
+    /// của thẻ, `scheduled_days` không đổi). KHÔNG `UPDATE cards`. Trả id log.
+    @discardableResult
+    public static func recordCram(
+        on db: SQLiteDatabase,
+        cardID: String,
+        before: CardSnapshot,
+        rating: ReadoRating,
+        now: Date
+    ) throws -> String {
+        let logID = Identifier.uuid()
+        let elapsed = max(
+            0,
+            Int(((now.timeIntervalSince(before.lastReview ?? now)) / 86_400).rounded()))
+        try db.run(
+            """
+            INSERT INTO review_logs (
+              id, card_id, mode, rating,
+              state_before, stability_before, difficulty_before,
+              learning_steps_before, due_before,
+              elapsed_days, scheduled_days, reviewed_at
+            ) VALUES (?, ?, 'cram', ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            [
+                .text(logID),
+                .text(cardID),
+                .int(Int64(rating.rawValue)),
+                .text(before.state),
+                .double(before.stability),
+                .double(before.difficulty),
+                .int(Int64(before.learningSteps)),
+                .text(ISOTimestamp.string(from: before.due)),
+                .int(Int64(elapsed)),
+                .int(Int64(before.scheduledDays)),
+                .text(ISOTimestamp.string(from: now)),
+            ])
+        return logID
+    }
+
+    /// Undo Cram: chỉ xoá đúng dòng log cram vừa ghi — `cards` chưa từng bị đổi
+    /// nên không cần khôi phục gì. Không xoá được log srs qua đường này.
+    public static func undoCram(
+        on db: SQLiteDatabase, cardID: String, logID: String
+    ) throws {
+        try db.run(
+            "DELETE FROM review_logs WHERE id = ? AND card_id = ? AND mode = 'cram';",
+            [.text(logID), .text(cardID)])
+    }
 }

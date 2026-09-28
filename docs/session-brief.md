@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Tình trạng hiện tại (cập nhật 2026-09-28, repo-hygiene-r1 Phase A xong — ADR-044)
+## 1. Tình trạng hiện tại (cập nhật 2026-09-28, Cram \"Ôn thêm\" — ADR-043, cram-collection-r1 Phiên A)
 
 - **Git:** `git log -1 --oneline` là HEAD thật — "HEAD xem git". Hash trong journal cũ có thể không resolve sau reword.
 - **OCR (ADR-042, 2026-09-28):** iOS 26+ dùng `RecognizeDocumentsRequest` (đoạn có sẵn từ Vision, `PageOCR.joinParagraphs`), lỗi/rỗng rơi về legacy `VNRecognizeTextRequest` + ngắt đoạn hình học ADR-037 (chỉ còn chạy trên iOS 17–25). `Prompt.version` giữ 5. `ImageCompressor` áp `scale = 1` → FR-01 (≤1600px) thật (trước ra ~4800px). `ocr.json`/`diag_summary.py` ghi `engine`. Probe simulator: ảnh không crop legacy thiếu 11 câu → documents 2 (nhiễu 1 ký tự); đủ 8 đoạn khớp Live Text. Bundle điều tra + số đo: `docs/investigations/ocr-line-drop/` (README §11). **Đã kiểm trên máy thật 2026-09-28 (iPhone Air):** `engine=documents`, đủ 8 đoạn, không `gap` giả; ảnh không crop kéo theo chrome trình duyệt vào OCR nhưng 12 từ vựng đều từ thân bài (điều tra `ocr-line-drop` đóng, README §12). `sameLine` legacy vẫn gộp nhầm hàng ở ảnh không crop (nợ biết trước, chỉ ảnh hưởng iOS 17–25). `captures/*/page.jpg` đã xoá (bản quyền).
@@ -14,8 +14,9 @@
 - **Analysis / AI-Box:** agent mặc định `proxy.reado.app` **chưa deploy** nên luôn lỗi tới khi user thêm agent BYOK (mẫu AI-Box: `deepseek-v4.1-flash`, `enable_thinking: false` + `stream: true`, ~15–18s). `AnalysisProgress` hiện khi đang gọi; lỗi agent → nút "Mở Cài đặt". Test mạng thật opt-in: `LiveAIBoxTests` (`READO_LIVE_AIBOX_KEY`); seed dev simulator: `scripts/sim_aibox.sh`.
 - **Capture (ADR-036):** camera AVFoundation tự vẽ (`CameraController`, `CaptureView`), thư viện qua `PhotosPicker`, crop full màn. Happy case xác nhận trên máy thật 2026-09-26.
 - **IA / UX:** 3 tab (Home / Ôn / Kho) qua `ShellTabBar`; onboarding checklist 3 bước trên Home (ADR-041); ăn mừng tiến bộ đo được (`SessionTally`/`SessionDoneView`, ADR-038); "Học thêm 10 từ" (ADR-039); TTS on-device (ADR-040). Ôn tập vuốt Tinder hai mặt (ADR-033), trái=Again / phải=Good (ADR-025).
-- **Test gần nhất đã ghi:** **256/258** trên iPhone 18 Pro (2 skip = `LiveAIBoxTests` + `OCRProbeTests`, opt-in theo env), `** TEST SUCCEEDED **`, 2026-09-28. Không build iOS được thì không ghi "xong".
-- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy chưa deploy · 3.13 đo NFR · cram FR-18 (R2) · "Từ session collect thêm" · camera permission-denied chưa test máy · T2/T3 motivation-r1 theo `docs/plans/motivation-r1.md`.
+- **Cram (ADR-043, 2026-09-28, `cram-collection-r1` Phiên A ✅):** hết thẻ đến hạn → màn Ôn hiện nút "Ôn thêm N thẻ" (thẻ đã học chưa due, sắp due trước, ≤20/lượt; `ReviewQueue.cramCardIDs`/`loadCramQueue`, `ReviewService.recordCram`/`undoCram`, `AppModel.loadCramQueue`/`gradeCram`). Chấm = log `mode='cram'`: không đổi `cards`, không leech, không ăn hạn mức new. Chưa có nút Cram ở `SessionDoneView`. **Phiên B chưa làm:** header collection (T3+T4) — `docs/plans/cram-collection-r1.md`. UI Cram chưa xem tay trên simulator.
+- **Test gần nhất đã ghi:** **263/265** trên iPhone 18 Pro (2 skip = `LiveAIBoxTests` + `OCRProbeTests`, opt-in theo env), `** TEST SUCCEEDED **`, 2026-09-28. Không build iOS được thì không ghi "xong".
+- **Cổng chưa code:** 3.8 FR-10 (Q đã chốt, chờ dữ liệu thật) · proxy chưa deploy · 3.13 đo NFR · header collection cram-collection-r1 Phiên B (T3+T4) · "Từ session collect thêm" · camera permission-denied chưa test máy · T2/T3 motivation-r1 theo `docs/plans/motivation-r1.md`.
 - **Leech:** owner chốt 2026-09-24 = 6 lần Again. Không gộp với Q-08.
 
 ## 2. Chờ owner (không tự bắt đầu)
