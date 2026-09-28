@@ -51,11 +51,15 @@ def summarize_analysis(folder: Path, full: bool) -> None:
         kept = ocr.get("observationCount")
         dropped = ocr.get("droppedLowConfidence", [])
         if raw is not None:
-            # ocr-line-drop: raw > kept + len(dropped) nghĩa Vision không hề thấy
-            # phần chênh lệch đó — không phải do code mình lọc confidence.
-            unseen = raw - kept - len(dropped) if kept is not None else None
-            extra = f" unseen(Vision không thấy)={unseen}" if unseen else ""
-            print(f"OCR observations: raw={raw} kept={kept} droppedLowConfidence={len(dropped)}{extra}")
+            if ocr.get("engine") == "documents":
+                # documents: raw = số đoạn, kept = số hàng — khác đơn vị, không có "unseen".
+                print(f"OCR documents: paragraphs={raw} lines={kept}")
+            else:
+                # ocr-line-drop: raw > kept + len(dropped) nghĩa Vision không hề thấy
+                # phần chênh lệch đó — không phải do code mình lọc confidence.
+                unseen = raw - kept - len(dropped) if kept is not None else None
+                extra = f" unseen(Vision không thấy)={unseen}" if unseen else ""
+                print(f"OCR observations: raw={raw} kept={kept} droppedLowConfidence={len(dropped)}{extra}")
             for d in dropped:
                 conf = d.get("confidence", 0)
                 preview = d.get("text", "")[:60]

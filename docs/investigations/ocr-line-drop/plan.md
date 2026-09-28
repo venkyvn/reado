@@ -1,5 +1,7 @@
 # Plan: ocr-line-drop
 
+> **Trạng thái: ĐÓNG 2026-09-28.** T1–T4 xong (ADR-042), kiểm trên máy thật đạt — xem `README.md` §11–12. Giữ file làm hồ sơ điều tra.
+
 ## Context
 
 Fen báo: bản phân tích chia sai đoạn và thiếu từ so với ảnh gốc, trong khi Live Text đọc đúng hết.

@@ -90,7 +90,7 @@ Muốn thêm ground truth cho capture mới: mở ảnh trên iPhone, dùng Live
 
 | File | Nội dung |
 |---|---|
-| `page.jpg` | Đúng ảnh Vision nhận trong app (sau crop, sau `ImageCompressor`) |
+| `page.jpg` | Đúng ảnh Vision nhận trong app (sau crop, sau `ImageCompressor`). **Đã xoá khỏi repo 2026-09-28** (bản quyền) |
 | `page_ocr.txt` | Text OCR app gửi cho agent (có `\n\n` ngắt đoạn) |
 | `ocr.json` | Từng hàng: `minX/maxX/yTop/height/breakReason`; capture 3 có thêm `rawObservationCount`, `droppedLowConfidence` |
 | `meta.json` | model, baseURL, cefr, httpStatus, ocrMs, totalMs |
@@ -123,3 +123,12 @@ Probe cũ có hai lỗi làm số đo lệch: `scaledTo1600` vẫn @3x (ra ~4800
 - 1600px thật không làm rơi hàng so với full-res → `ImageCompressor` đã áp `scale = 1` (FR-01 thật).
 - Fix: `PageOCR.recognizeDetailed` iOS 26+ dùng `RecognizeDocumentsRequest`, lỗi/rỗng rơi về legacy; `joinParagraphs` (thuần, có test); `ocr.json` + `diag_summary.py` ghi `engine`.
 - **Còn mở:** device vs simulator (26 vs 30 obs, §6.1) chưa giải thích — cần chụp lại trên máy thật, `diag_summary` phải in `engine=documents`. `sameLine` legacy (§3a) chưa sửa (chỉ ảnh hưởng iOS 17–25).
+
+## 12. Đóng điều tra — 2026-09-28
+
+Kiểm trên iPhone Air (máy thật), ảnh không crop (còn tab bar trình duyệt): `engine=documents`, 17 đoạn / 39 hàng, đủ 8 đoạn thân bài, không `gap` giả, `ocrMs=652`. 12 từ vựng đều nằm trong thân bài, không có từ từ UI/tên file. Dấu gạch dài đọc thành gạch nối ("true-the"), AI vẫn hiểu đúng.
+
+- Chênh 26 vs 30 observation giữa device và simulator (§6.1) không còn ảnh hưởng: documents ra đủ nên không truy tiếp.
+- `diag_summary.py`: engine `documents` in `paragraphs=… lines=…` thay vì `unseen` (trước đó ra số âm vì `raw` là số đoạn, `kept` là số hàng).
+- Nợ còn lại: `sameLine` legacy (§3a), chỉ ảnh hưởng iOS 17–25.
+- Không lọc chrome/UI ở tầng OCR: ranh giới "nội dung" phụ thuộc ý người chụp (quảng cáo, quote cũng là UI). Người dùng chọn từ ở bước lưu; nếu cần giảm nhiễu thì gợi ý khung crop tự động (qua `/rplan`, chạm ADR-036).
