@@ -653,3 +653,32 @@
   `OnboardingChecklistSection.swift` (mới) — Section đầu `HomeTabView`.
   `journeys.md` J-R1-S không sửa dòng cũ (bia mộ tương tự FR-07/13), thêm ghi
   chú trỏ ADR-041.
+
+## ADR-042 — OCR đổi sang `RecognizeDocumentsRequest` (iOS 26+), legacy làm fallback (ocr-line-drop)
+
+- **Ngày:** 2026-09-28
+- **Bối cảnh:** Owner báo bản phân tích chia sai đoạn + thiếu từ trong khi Live
+  Text cùng ảnh đọc đúng. Điều tra (`docs/investigations/ocr-line-drop/`) loại
+  trừ: nén ảnh, lọc confidence (`dropped = 0`), DeepSeek (chỉ nhận text OCR đã
+  thiếu). Gốc lỗi ở tầng OCR app: `PageOCR.sameLine` sàn `0.018` gộp hai hàng
+  in liền nhau (ảnh không crop), rồi sort theo `minX` đảo chữ; và trên máy thật
+  Vision legacy trả thiếu vài hàng (26 vs 30 obs trên simulator). Hàng mất/gộp
+  tạo khoảng trống giả nên heuristic ngắt đoạn ADR-037 chèn `\n\n` sai — thiếu
+  từ và sai đoạn là **cùng một gốc**.
+- **Số đo (probe simulator, 2026-09-28, sau khi sửa probe: 1600px thật
+  scale=1, `normalize` gập dash/quote):** ảnh không crop legacy thiếu 11
+  câu, documents 2; ảnh crop legacy thiếu 2, documents 1. Phần thiếu còn lại
+  của documents đều là nhiễu 1 ký tự ("did I" → "did |", mất dấu chấm cuối
+  đoạn); documents ra đủ 8 đoạn khớp `groundtruth.txt`. 1600px thật không làm
+  rơi hàng so với full-res (chênh lệch chỉ 1 ký tự).
+- **Quyết định:** iOS 26+ dùng `RecognizeDocumentsRequest` (đoạn/hàng có sẵn
+  từ Vision, bỏ qua `splitColumns`/`linesWithBreaks`); lỗi hoặc rỗng thì rơi
+  về đường legacy. `Prompt.version` giữ 5 (hợp đồng `\n` giữa hàng, `\n\n` giữa
+  đoạn không đổi). `ImageCompressor` áp `format.scale = 1` để FR-01 (≤1600px)
+  được áp thật (trước đó @3x ra ~4800px, 3–5MB).
+- **Hệ quả:** `PageOCR.joinParagraphs` (hàm thuần, testable),
+  `OCRResult.engine` ghi vào `ocr.json` + `diag_summary.py`. Ngắt đoạn hình học
+  ADR-037 chỉ còn chạy trên iOS 17–25. **Nợ biết trước:** `sameLine` legacy vẫn
+  gộp nhầm hàng ở ảnh không crop — chưa sửa vì fen dùng iOS 26. Câu hỏi mở:
+  chênh lệch device/simulator (26 vs 30 obs) chưa giải thích; đóng bằng cách
+  chụp lại trên máy thật và đọc `engine=documents` trong `diag_summary`.

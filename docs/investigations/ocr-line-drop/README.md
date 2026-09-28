@@ -109,3 +109,17 @@ Muốn thêm ground truth cho capture mới: mở ảnh trên iPhone, dùng Live
 
 - Ảnh chụp **màn hình máy tính** hiển thị PDF (không phải sách in), nên có moiré, loá và UI trình duyệt nếu không crop. Live Text vẫn đọc đúng trên chính ảnh này, nên đây vẫn là phép so công bằng.
 - Ảnh là trang sách có bản quyền ("The Psychology of Money"). NFR-04 chỉ miễn cho log DEBUG trên máy. Bundle này chỉ nên nằm trong repo riêng tư; xoá `captures/*/page.jpg` khi xong điều tra.
+
+## 11. Cập nhật 2026-09-28 — probe đo lại + fix (ADR-042)
+
+Probe cũ có hai lỗi làm số đo lệch: `scaledTo1600` vẫn @3x (ra ~4800px, không phải 1600) và `normalize` không gập dash/quote. Đã sửa (scale = 1, gập `— – ’ “ ”`, bỏ gạch nối cuối hàng); `probe.json` giờ ghi thêm `text` + `missingSentences` từng cấu hình.
+
+| Capture | legacy full | legacy 1600 (thật) | documents full | documents 1600 (thật) | app (`PageOCR.recognizeDetailed`) |
+|---|---|---|---|---|---|
+| `e7711d75` (crop) | missing 2 | 1 | 1 | 1 | `engine=documents`, missing 1 |
+| `1175cf3d` (không crop) | missing 11 | 10 | 2 | 1 | `engine=documents`, missing 2 |
+
+- Phần "missing" còn lại của documents là nhiễu 1 ký tự (`did I` → `did |`, mất dấu chấm cuối đoạn, em-dash cuối hàng). Documents ra đủ 8 đoạn khớp groundtruth.
+- 1600px thật không làm rơi hàng so với full-res → `ImageCompressor` đã áp `scale = 1` (FR-01 thật).
+- Fix: `PageOCR.recognizeDetailed` iOS 26+ dùng `RecognizeDocumentsRequest`, lỗi/rỗng rơi về legacy; `joinParagraphs` (thuần, có test); `ocr.json` + `diag_summary.py` ghi `engine`.
+- **Còn mở:** device vs simulator (26 vs 30 obs, §6.1) chưa giải thích — cần chụp lại trên máy thật, `diag_summary` phải in `engine=documents`. `sameLine` legacy (§3a) chưa sửa (chỉ ảnh hưởng iOS 17–25).
