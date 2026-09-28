@@ -35,9 +35,11 @@ scripts/verify/output/
 # Permission config cục bộ từng máy (không phải nội dung phân tích)
 .claude/settings.local.json
 
-# .env.example đang chứa key Gemini thật của owner — giữ ngoài git
-# (đảo lại dòng `!.env.example` phía trên).
-.env.example
 
 # Rác bytecode Python
 **/__pycache__/
+
+# Ảnh trang sách thật (bản quyền) — chỉ giữ local, không track
+ref/sample/*.png
+ref/sample/*.jpg
+ref/sample/*.jpeg
