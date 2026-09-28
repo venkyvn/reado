@@ -6,7 +6,7 @@
 
 ## Trạng thái (cập nhật 2026-09-28)
 
-**Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B chưa bắt đầu** — chờ `visual-polish-r1` khép + `git status` sạch ở `app/`.
+**Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B: B1+B2+B3 đã có plan chi tiết bên dưới (điều kiện `app/` sạch đã đạt 2026-09-28: `2ffe8ee`, `03267f5`); B4/B5 hoãn.** Chưa bắt đầu code.
 
 Lệch so với plan ban đầu:
 - **A1:** `.env` đã có sẵn (cùng key với `.env.example`, so bằng hash) nên không gộp; `.env.example` mới lấy biến từ `proxy/main.py` + biến dev (`READO_*`) thay vì biến Phase 0. `ref/sample/page-37` là file text → giữ track.
@@ -115,65 +115,220 @@ Một session khác đang chạy `visual-polish-r1` (`docs/plans/visual-polish-r
 
 ---
 
-## Phase B — sau khi visual-polish-r1 khép
+## Phase B — chi tiết (chốt 2026-09-28)
 
-### B1 — pbxproj sang synchronized folders (objectVersion 77)
+> **Phạm vi:** chỉ **B1** (Session 1) và **B2+B3** (Session 2). **B4** (tách `AppModel`) và **B5** (chuyển test sang `ReadoKitTests`) **hoãn** — làm khi thấy vướng (thêm FR mới / hai task cùng sửa `AppModel`; hoặc chờ `scripts/test.sh` thành nút thắt hằng ngày). Đo: 258 test chỉ ~8s, phần chậm là build + boot simulator.
+> **Bỏ khỏi scope:** chuyển `design-system/` → `docs/design-system/` (không ai cần; còn phải sửa luật FROZEN trong `check-doc-links.mjs`).
+> Mỗi session 1 lượt `/rstart` … `/rhandoff`. Fen làm bước Xcode ở S1.1.
 
-- **Bước fen làm tay trong Xcode (~5 phút)** — Sonnet hướng dẫn, không tự sửa pbxproj:
-  1. Mở `app/Reado.xcodeproj`. Chuột phải group `Reado` → **Convert to Folder**. Lặp với `ReadoTests`.
-  2. Project → File inspector → Project Format = **Xcode 16.0** (hoặc mới nhất). Đóng Xcode.
-- Sonnet sau đó:
-  - Kiểm pbxproj: `grep -c 'PBXFileSystemSynchronizedRootGroup'` = 2; `grep -c '\.swift \*/ = {isa = PBXFileReference'` = 0; `objectVersion = 77`; `XCSwiftPackageProductDependency`/local package ReadoKit + TOCropViewController vẫn còn.
-  - `scripts/pbxproj_tool.py`: xoá `add`/`remove` và các hàm chỉ chúng dùng; viết lại `check` = kiểm 2 group `Reado`, `ReadoTests` là `PBXFileSystemSynchronizedRootGroup` và không còn `PBXFileReference` `.swift` rời (dấu hiệu ai đó thêm file kiểu cũ). Giữ `list` nếu còn ích. `scripts/test.sh` giữ gọi `check`.
-  - `guard.py`: giữ chặn edit tay pbxproj, sửa message (bỏ gợi ý `add|remove`, thay "thêm file = tạo file trong thư mục, Xcode tự nhận").
-  - Docs: `CLAUDE.md` §7 mục pbxproj (viết lại 3–4 dòng), bẫy build "objectVersion 60" → 77; `.claude/agents/reado-dev.md:18`; `docs/agent/coding-conventions.md:93,138`; `docs/agent/plan-template.md` nếu có bước `pbxproj_tool add`. ADR mới.
-- Kiểm: tạo thử `app/ReadoTests/ZzSyncProbeTests.swift` (1 test `XCTAssertTrue(true)`), `scripts/test.sh test -only-testing:ReadoTests/ZzSyncProbeTests` chạy được 1 test → xoá file. Full `scripts/test.sh` = cùng tổng số như trước B1.
+## Điều kiện tiên quyết (cả hai session, kiểm TRƯỚC khi làm gì khác)
 
-### B2 — Tổ chức `app/Reado/` theo feature (chỉ `git mv`)
+1. `git status --porcelain app/` không được còn thay đổi code thật. **Đã kiểm 2026-09-28:** visual-polish-r1 đã commit (`2ffe8ee`, ADR-045) và cram Phiên A đã commit (`03267f5`, ADR-043). `app/` chỉ còn `project.pbxproj` bị xcodebuild re-sort (nhiễu, không phải thay đổi thật; Xcode convert ở S1.1 sẽ ghi đè). Ngoài `app/` còn `ROADMAP.md`, `docs/plans/ux-polish-r1.md`, `docs/session-brief.md` sửa dở của session trước: **không** kéo vào commit của B1/B2/B3, dùng `git add -p` (xem memory git-add-p-split-commits) hoặc chỉ `git add` file mình sửa.
+2. `docs/plans/visual-polish-r1.md`: code đã commit, plan còn "mở" chỉ vì chờ fen xem tay UI. Không chặn B1/B2/B3 (chỉ di chuyển file). Cram Phiên B (header collection) chưa làm, sẽ sửa `CollectionDetailView`; nếu làm sau B2 thì file đã ở `Library/`, git theo rename được.
+3. Ghi lại mốc test: lấy số pass/total/skip trong `docs/session-brief.md` §1 (hiện là 263/265, 2 skip). Mọi bước kiểm đều so với mốc này.
+
+---
+
+# SESSION 1 — B1: pbxproj sang synchronized folders
+
+## S1.0 Cập nhật plan trong repo
+- **Đã xong (2026-09-28):** phần Phase B trong file này chính là bản chi tiết. Không cần làm gì thêm ở bước này.
+
+## S1.1 Bước fen làm tay trong Xcode (~5 phút). Sonnet in hướng dẫn này ra rồi DỪNG chờ fen
+
+Sonnet in đúng khối sau cho fen, rồi chờ fen báo "xong":
 
 ```
-app/Reado/
-  App/       ReadoApp, RootView, ShellTabBar, AppModel(+ các file B4), NotificationScheduler
-  Home/      OnboardingChecklistSection, StreakCalendarView, HomePinToggle
-  Capture/   CaptureView, CameraController
-  Analysis/  AnalysisView
-  Review/    ReviewQueueView, SessionDoneView
-  Library/   CollectionDetailView, ReadingSessionView, ImportView, ExportView
-  Settings/  SettingsView
-  Shared/    DesignSystem (từ visual-polish), Pronunciation
+1. Đóng mọi Xcode đang mở. Mở app/Reado.xcodeproj.
+2. Project navigator: chuột phải group "Reado" → Convert to Folder → Convert.
+   - Nếu Xcode từ chối (thường do OCRProbeTests.swift bị tham chiếu 2 lần):
+     mở group ReadoTests, chọn MỘT trong hai dòng OCRProbeTests.swift → Delete →
+     "Remove Reference" (KHÔNG Move to Trash), rồi thử lại.
+3. Lặp lại với group "ReadoTests".
+4. Bấm vào project "Reado" (dòng trên cùng) → File inspector (⌥⌘1) →
+   Project Format = "Xcode 16.0" (hoặc mới hơn).
+5. ⌘B một lần cho chắc (không bắt buộc). Đóng Xcode.
 ```
-- Xoá `Screens/`. File mới do visual-polish thêm mà bảng trên chưa có → xếp theo màn dùng nó, ghi vào handoff.
-- Cùng task: `git mv design-system docs/design-system`; sửa ref (`app/Reado/.../ReadoApp.swift` comment, `docs/plans/visual-polish-r1.md`, `docs/research/wellness-quiz-reference.md`, `docs/ux/visual-redesign-plan.md`, chính `MASTER.md`/`pages/*.md` nếu có path tuyệt đối, `CLAUDE.md` §3). Sửa comment Swift nhắc `ui-lab` → `ref/ui-lab`.
-- `repo_map.py` / `CLAUDE.md` §7: kiểm vẫn chạy với cấu trúc mới.
-- Kiểm: `scripts/test.sh` full cùng tổng số; `git log --follow` một file vẫn ra lịch sử.
 
-### B3 — Tách 3 file view lớn (di chuyển thuần, ≤ ~400 dòng/file)
+Sonnet **không** mở Xcode, **không** sửa pbxproj bằng script hay sed. Hook `guard.py` sẽ chặn Edit/Write, nhưng sed/python ghi thẳng vào pbxproj cũng bị cấm.
 
-- `App/RootView.swift` → tách `HomeTabView` + `MasteryRing` → `Home/HomeTabView.swift`; `KhoTabView` → `Library/KhoTabView.swift`; `FloatShutter` + `ShutterPressStyle` → `App/FloatShutter.swift`. Giữ `AppTab`, `ShellRoute`, `RootView` ở chỗ cũ.
-- `Analysis/AnalysisView.swift` → `ReviewCardRow` → `Analysis/ReviewCardRow.swift`; `SegmentBlock`, `VerificationBadge`, `AnalysisSkeleton` → `Analysis/AnalysisComponents.swift`.
-- `Review/ReviewQueueView.swift` → `ScopePickerSheet` → `Review/ScopePickerSheet.swift`; `SwipeMotion`, `extension ReadoRating`, `private extension View` → `Review/ReviewQueueSupport.swift`. Nếu thân `ReviewQueueView` còn > 500 dòng: tách các `// MARK:` (Empty/Done, Card, Grade buttons) thành `extension ReviewQueueView` ở `ReviewQueueView+Card.swift`, `+Grade.swift`.
-- Quy tắc: `private struct` → bỏ `private` (internal) khi sang file khác; `@State`/`private var` bị extension khác file cần → đổi thành internal, **không** đổi kiểu hay logic. Không đổi tên type.
-- Kiểm: build + full test; `grep -c` số dòng mỗi file; so screenshot không cần (không đổi UI).
+## S1.2 Kiểm pbxproj sau khi fen convert (chỉ grep, không Read nguyên file)
 
-### B4 — Tách `AppModel` theo extension (không đổi API)
+```bash
+P=app/Reado.xcodeproj/project.pbxproj
+grep -n "objectVersion" $P                                   # ≥ 77
+grep -c "isa = PBXFileSystemSynchronizedRootGroup" $P        # = 2
+grep -n  "fileSystemSynchronizedGroups" $P                   # xuất hiện ở cả 2 target
+grep -c "sourcecode.swift" $P                                # = 0 (không còn fileRef .swift rời)
+grep -c "in Sources \*/ = {isa = PBXBuildFile" $P            # = 0
+grep -c "PBXFileSystemSynchronizedBuildFileExceptionSet" $P  # = 0 (có >0 thì xem S1.3 mục exception)
+grep -n "XCLocalSwiftPackageReference \"ReadoKit\"\|TOCropViewController\|XCSwiftPackageProductDependency" $P | head   # vẫn còn
+grep -n "DEVELOPMENT_TEAM\|PRODUCT_BUNDLE_IDENTIFIER\|INFOPLIST_KEY_NSCamera" $P    # build settings giữ nguyên
+git diff --stat $P
+```
+Có số nào lệch thì dừng, báo fen kèm output, không tự sửa.
 
-- Giữ `App/AppModel.swift`: khai báo class, **toàn bộ stored property**, `init`, `reloadOverview`, `CollectionOverview`, `ReviewError`, `GradeResult`, seed DEBUG.
-- Di chuyển method theo `// MARK:` sẵn có sang `extension AppModel` (Swift cho phép extension khác file, chỉ không có stored property):
-  - `App/AppModel+Analysis.swift` — FR-01 Capture, FR-02 Analysis, chốt phiên duyệt (`handleCapturedImage` … `prepareRecapture`)
-  - `App/AppModel+Review.swift` — FR-11/12 ôn, `grade`, `undoReview`, `intervalLabels`, `learnMore`, `loadStreakHeatmap`, Ôn nhanh (`toggleReviewPriority`, `setReviewAll`)
-  - `App/AppModel+Library.swift` — Overview, FR-08, FR-17 collection + Home pin, FR-20 CSV import
-  - `App/AppModel+Settings.swift` — FR-15, `addAgent`, `syncReminderSchedule`, `matureKeysForCapture`
-- `private` method/property bị file khác gọi → `internal` (ghi danh sách vào handoff). Không tạo sub-model `@Observable` mới (đổi injection = hợp đồng, để plan sau nếu cần).
-- Kiểm: `AppModel.swift` ≤ ~250 dòng; build + full test cùng tổng số.
+## S1.3 Viết lại `scripts/pbxproj_tool.py` (bỏ add/remove, `check` kiểu mới)
 
-### B5 — Chuyển test logic thuần sang `ReadoKitTests` + khép
+Viết lại cả file cho gọn (~120 dòng). Giữ docstring tiếng Việt kiểu cũ và quy ước chạy từ gốc repo (`Path.cwd()`).
 
-- Chọn test file chỉ `import XCTest` + `@testable import ReadoKit` (+ Foundation), không `UIKit`/`Vision`/`ImageIO`, không dùng `AppModel` hay type của target app. Loại sẵn: `CaptureFailureTests`, `LiveAIBoxTests`, `OCRProbeTests`, `ImageCompressorTests`, `PageOCRTests`. Kiểm từng file bằng grep.
-- `TestSupport.swift`: helper nào các file chuyển đi cần → chép sang `app/ReadoKit/Tests/ReadoKitTests/TestSupport.swift` (bản ReadoTests giữ lại phần app còn dùng).
-- `git mv` từng file. Nhờ B1 không cần đụng pbxproj; package test target tự nhận.
-- `scripts/test.sh` mặc định (không tham số) = chạy `kit` rồi lane simulator, cộng tổng; exit ≠ 0 nếu lane nào đỏ. Giữ `test -only-testing:...` như cũ.
-- **Tổng pass kit + simulator phải = tổng trước B5** (ghi hai con số trong handoff). Test nào hỏng trên macOS vì khác nền tảng → trả về `ReadoTests`, không sửa logic.
-- Khép: `ROADMAP.md` pointer archive (dòng 5,15,88,241 → dạng ADR) + dòng tiến độ; `docs/session-brief.md` §1 (tooling: `kit` lane, synchronized folders, cấu trúc feature); `CLAUDE.md` §2/§7; chạy `/raudit`; đánh dấu plan khép.
+- **Giữ:** `find_pbxproj`, `read_pbxproj`, argparse với `--pbxproj`.
+- **Xoá:** `add`, `remove`, toàn bộ helper chỉ chúng dùng (`next_id`, `existing_hex_ids`, `group_hex_for`, `get_group_id`, `add_to_children`, `add_build_file`, `add_file_reference`, `_file_ref_type`, `add_to_sources_build_phase`, `remove_file_from_content`, `write_pbxproj`). Nếu có ai gọi `add`/`remove` thì argparse báo lỗi choices. Thêm dòng in: "Không cần nữa: tạo file trong app/Reado hoặc app/ReadoTests là Xcode tự nhận (synchronized folders, ADR-0xx)."
+- **Actions:** `check` (mặc định) và `list`.
+- **`check_project(pbxproj) -> int`**, mỗi điều kiện hỏng in một dòng `LỖI: …`, trả 1 nếu có lỗi:
+  1. `objectVersion = (\d+);` phải ≥ 77.
+  2. Tìm mọi block `isa = PBXFileSystemSynchronizedRootGroup;` và lấy `path = X;`. Tập path phải chứa `Reado` và `ReadoTests`.
+  3. Mỗi PBXNativeTarget `Reado` / `ReadoTests` có `fileSystemSynchronizedGroups = ( <id> … )`, và id đó trỏ đúng root group có path trùng tên target. Parse block target bằng regex `(\w{24}) /\* (Reado|ReadoTests) \*/ = \{\s*isa = PBXNativeTarget;(.*?)\n\t\t\};` với cờ `re.S`.
+  4. Không còn dòng `lastKnownFileType = sourcecode.swift` và không còn `in Sources */ = {isa = PBXBuildFile`. Gặp thì in "file Swift thêm kiểu cũ (group thường) — xoá reference trong Xcode, để thư mục tự nhận".
+  5. **Exception set:** nếu có `PBXFileSystemSynchronizedBuildFileExceptionSet`, in các file nằm trong `membershipExceptions = ( … );`, kèm cảnh báo "file này bị LOẠI khỏi target, dễ thành skip ngầm". Coi đây là lỗi (exit 1). Hiện Reado không cần exception nào.
+  6. Nếu đạt hết: `OK: synchronized folders Reado + ReadoTests (objectVersion N), K file Swift đang track sẽ được Xcode tự nhận`, trong đó K = số dòng từ `git ls-files app/Reado app/ReadoTests` có đuôi `.swift`.
+- **`list`:** in objectVersion, các root group đồng bộ (id, path), target nào gắn với group nào, và số exception set.
+- Tự kiểm tool: `python3 scripts/pbxproj_tool.py check` phải ra OK. Kiểm thêm nhánh lỗi: `cp $P "$SCRATCH/p.pbxproj"`, dùng `sed` sửa **bản copy** (vd `objectVersion = 60`), chạy `python3 scripts/pbxproj_tool.py check --pbxproj "$SCRATCH/p.pbxproj"` → phải ra `LỖI` và exit 1. Không bao giờ sed file thật.
+
+## S1.4 `scripts/test.sh`
+- Chỉ sửa comment dòng 62–63 thành: `# Tiền kiểm: pbxproj phải là synchronized folders (objectVersion ≥77, không exception set, không fileRef .swift kiểu cũ) — CLAUDE.md §7.` Lệnh `(cd "$ROOT" && python3 scripts/pbxproj_tool.py check)` giữ nguyên.
+
+## S1.5 `.claude/hooks/guard.py`
+- Vẫn chặn Edit/Write/MultiEdit vào `project.pbxproj`. Đổi message thành:
+  `"Cấm edit tay project.pbxproj. Thêm/xoá file Swift = tạo/xoá file trong app/Reado hoặc app/ReadoTests (synchronized folders, Xcode tự nhận). Đổi cấu hình project → nhờ fen làm trong Xcode (CLAUDE.md §7)."`
+- Thêm một chặn Bash: lệnh có `project.pbxproj` đi kèm `sed -i`, `perl -i`, `>`/`>>` redirect, hoặc `python3 -c` có `write` thì chặn, dùng cùng message. Regex gợi ý: `re.search(r"project\.pbxproj", cmd) and re.search(r"sed\s+-i|perl\s+-[a-z]*i|>\s*\S*project\.pbxproj|\.write", cmd)`. Không chặn `grep`/`git diff`/`git add` trên pbxproj.
+- Kiểm hook bằng stdin giả:
+  ```bash
+  echo '{"tool_name":"Edit","tool_input":{"file_path":"app/Reado.xcodeproj/project.pbxproj"}}' | python3 .claude/hooks/guard.py; echo $?   # 2
+  echo '{"tool_name":"Bash","tool_input":{"command":"sed -i \"\" s/a/b/ app/Reado.xcodeproj/project.pbxproj"}}' | python3 .claude/hooks/guard.py; echo $?  # 2
+  echo '{"tool_name":"Bash","tool_input":{"command":"grep -c objectVersion app/Reado.xcodeproj/project.pbxproj"}}' | python3 .claude/hooks/guard.py; echo $?  # 0
+  ```
+
+## S1.6 `.claude/settings.json`
+- Xoá 2 dòng allow `pbxproj_tool.py add *` và `remove *`. Giữ `check` và `list`.
+
+## S1.7 Probe: chứng minh Xcode tự nhận file mới
+1. **Target test:** tạo `app/ReadoTests/ZzSyncProbeTests.swift`:
+   ```swift
+   import XCTest
+   final class ZzSyncProbeTests: XCTestCase {
+       func testSynchronizedFolderPicksUpNewFile() { XCTAssertTrue(true) }
+   }
+   ```
+   Chạy `scripts/test.sh test -only-testing:ReadoTests/ZzSyncProbeTests` → phải ra `RESULT: … passed 1/1`. Nếu ra 0/0 thì file bị skip và B1 **hỏng**: dừng, báo fen.
+2. **Target app (probe âm):** tạo `app/Reado/ZzSyncProbe.swift` có `let zzSyncProbe: Int = "not an int"`. Chạy `scripts/test.sh build` → **phải FAIL**, và `grep ZzSyncProbe /tmp/build.log` ra lỗi type ở đúng file đó (chứng minh file được compile). Build pass nghĩa là file không được compile: dừng, báo fen.
+3. **Thư mục con:** tạo `app/Reado/Zz/ZzNested.swift` có lỗi type y như trên, `scripts/test.sh build` phải FAIL ở file đó. Bước này chứng minh B2 dùng thư mục con được.
+4. Xoá cả 3 file probe (`rm`, và `rmdir app/Reado/Zz`). `git status app/` chỉ còn diff pbxproj.
+5. Full `scripts/test.sh` → pass/total/skip **bằng mốc**. Ghi số vào handoff.
+   - Nếu lỗi lạ kiểu "Build input file cannot be found" hoặc stale: `rm -rf DerivedData/Build DerivedData/Index.noindex` rồi chạy lại một lần. Vẫn lỗi thì báo fen.
+   - Tổng số test phải **bằng** mốc. Hết trùng OCRProbeTests không làm đổi số vì XCTest đếm theo class.
+
+## S1.8 Docs
+- `CLAUDE.md` §7, mục **pbxproj**: thay 3 bullet (Thêm/Gỡ/Kiểm) bằng:
+  - `project.pbxproj` dùng synchronized folders (objectVersion 77, ADR-0xx): muốn thêm/xoá/di chuyển file Swift thì chỉ cần tạo/xoá/`git mv` trong `app/Reado/**` hoặc `app/ReadoTests/**`, không đụng pbxproj.
+  - Cấm edit tay pbxproj (hook chặn). Đổi target, build setting hay package thì fen làm trong Xcode.
+  - `python3 scripts/pbxproj_tool.py check`: kiểm vẫn là synchronized folders, không có exception set, không có fileRef `.swift` kiểu cũ. `scripts/test.sh` tự chạy cổng này.
+  - Bẫy: file nằm trong thư mục là được compile, **kể cả file chưa track git**, nên file nháp phải để ngoài `app/`.
+  - Giữ dòng "Chạy xcodebuild tự re-sort pbxproj → trước commit chỉ giữ hunk thật".
+- `CLAUDE.md` §7 **Bẫy build**: đổi `viết tay objectVersion 60` thành `objectVersion 77 (synchronized folders)`.
+- `.claude/agents/reado-dev.md:18`: đổi thành "Thêm file Swift: tạo file trong thư mục là xong (synchronized folders, CLAUDE.md §7)".
+- `docs/agent/coding-conventions.md`:
+  - dòng 21: `Reado.xcodeproj — project Xcode (objectVersion 77, synchronized folders; xem bẫy mục 9)`.
+  - dòng ~91–93 ("Test file mới PHẢI có đủ 4 dòng…"): viết lại thành "Test file mới chỉ cần tạo trong `app/ReadoTests/`, sau đó tin cột `Executed N tests` / `RESULT` của `scripts/test.sh`."
+  - dòng 138–140 (bẫy pbxproj viết tay): đổi thành "pbxproj objectVersion 77 synchronized folders (ADR-0xx); local package vẫn là `XCSwiftPackageProductDependency`; scheme share ở `xcshareddata/xcschemes/`."
+- Grep lần cuối `grep -rn "pbxproj_tool.py add\|pbxproj_tool.py remove\|4 tham chiếu\|4 dấu vết\|objectVersion 60" CLAUDE.md README.md docs/agent docs/specs .claude scripts`. Kết quả phải rỗng, trừ `docs/journal/`, `docs/plans/repo-hygiene-r1.md` và các dòng ADR lịch sử.
+- **ADR mới** trong `docs/decisions-log.md` (số = `grep "^## ADR-" docs/decisions-log.md | tail -1` + 1), ≤ 12 dòng: bối cảnh (4 dấu vết, skip ngầm, OCRProbeTests bị trùng), quyết định (synchronized folders, objectVersion 77, fen convert bằng Xcode), hệ quả (`pbxproj_tool` chỉ còn `check`/`list`; cấm exception set; file trong thư mục là compile).
+- `node scripts/verify/check-doc-links.mjs` phải sạch.
+
+## S1.9 Đóng
+- `/rhandoff`. Commit gồm pbxproj + `scripts/pbxproj_tool.py` + `scripts/test.sh` + `.claude/hooks/guard.py` + `.claude/settings.json` + docs. `git add` theo đường dẫn cụ thể và xem `git diff --cached --stat` trước khi commit. Message gợi ý: `chore(xcode): B1 repo-hygiene-r1 — pbxproj sang synchronized folders (ADR-0xx)`.
+- Handoff ghi: số test so với mốc, output `pbxproj_tool.py check`, kết quả 3 probe.
+
+---
+
+# SESSION 2 — B2 + B3: chia thư mục theo feature và tách 3 view lớn
+
+Điều kiện: B1 đã commit, `python3 scripts/pbxproj_tool.py check` ra OK, `git status --porcelain app/` rỗng.
+Nguyên tắc: **refactor thuần**. Không đổi tên type, không đổi logic, không đổi UI. Chỉ di chuyển code và bỏ `private` ở chỗ nào bắt buộc. Làm hai commit: B2 (chỉ `git mv`) rồi B3 (tách file), để `git log --follow` vẫn chạy được.
+
+## S2.1 — B2: `git mv` sang thư mục feature (commit 1)
+
+Cấu trúc đích (thư mục `Capture/` đã có sẵn; `Screens/` sẽ bị xoá):
+
+| Thư mục | File (`git mv` từ `app/Reado/`) |
+|---|---|
+| `App/` | `ReadoApp.swift`, `RootView.swift`, `ShellTabBar.swift`, `AppModel.swift`, `NotificationScheduler.swift` |
+| `Home/` | `OnboardingChecklistSection.swift`, `StreakCalendarView.swift`, `HomePinToggle.swift` |
+| `Capture/` | `Capture/CaptureView.swift` (giữ nguyên), `CameraController.swift` |
+| `Analysis/` | `AnalysisView.swift` |
+| `Review/` | `Screens/ReviewQueueView.swift`, `SessionDoneView.swift` |
+| `Library/` | `CollectionDetailView.swift`, `ReadingSessionView.swift`, `ImportView.swift`, `ExportView.swift` |
+| `Settings/` | `SettingsView.swift` |
+| `Shared/` | `DesignSystem.swift`, `Pronunciation.swift` |
+
+- Chạy `mkdir -p` cho các thư mục trên, rồi `git mv` từng file. Sau đó `rmdir app/Reado/Screens`.
+- Nếu `ls app/Reado/*.swift` còn file nào không có trong bảng (vd file visual-polish hay cram thêm sau khi viết plan) → xếp vào thư mục của màn dùng nó (`grep -rln "<TypeName>" app/Reado`), ghi vào handoff.
+- `app/ReadoTests/` giữ phẳng, không đụng.
+- Kiểm:
+  - `ls app/Reado/*.swift 2>/dev/null` rỗng (gốc không còn file Swift).
+  - `python3 scripts/pbxproj_tool.py check` ra OK, và `git diff --stat app/Reado.xcodeproj` **rỗng** (synchronized folder không ghi path file vào pbxproj). Nếu pbxproj đổi thì dừng, báo fen.
+  - `scripts/test.sh` full phải bằng mốc.
+  - `git log --follow --oneline app/Reado/Review/ReviewQueueView.swift | head -3` phải ra lịch sử cũ.
+- Docs cho B2:
+  - `docs/agent/coding-conventions.md` §2: dưới dòng `Reado/` thêm cây con 8 thư mục, mỗi thư mục 1 dòng mô tả (App = shell + AppModel; Home; Capture; Analysis; Review; Library = Kho + collection + import/export; Settings; Shared = DesignSystem + tiện ích dùng chung).
+  - Grep đường dẫn cũ trong docs **đang dùng**: `grep -rn "app/Reado/[A-Za-z]*\.swift\|Screens/ReviewQueueView\|Capture/CaptureView" CLAUDE.md README.md docs/agent docs/specs docs/session-brief.md .claude scripts`. Sửa sang path mới. **Không** sửa `docs/journal/`, không sửa ADR cũ, không sửa plan đã khép.
+  - `python3 scripts/repo_map.py --root app/Reado --limit 40` phải chạy được với cấu trúc mới (script quét đệ quy, có lỗi thì sửa script).
+- Commit 1: `refactor(app): B2 repo-hygiene-r1 — chia app/Reado theo feature (git mv thuần)`. Chỉ gồm các rename + docs vừa sửa. Kiểm `git diff --cached -M --stat`: mọi file Swift phải hiện là rename 100%.
+
+## S2.2 — B3: tách 3 file lớn (commit 2)
+
+**Quy tắc chung (Sonnet làm đúng theo thứ tự này cho mỗi file):**
+1. Cắt nguyên khối code (kể cả doc comment `///` và `// MARK:` ngay trên nó) sang file mới. Không sửa nội dung bên trong.
+2. File mới có đúng các `import` mà file gốc đang có (`SwiftUI`, `ReadoKit`, … chép theo đầu file gốc), và thêm một dòng comment đầu file: `// Tách từ <File gốc>.swift (repo-hygiene-r1 B3).`
+3. Type top-level `private struct/enum/func` được chuyển sang file khác mà file gốc còn dùng → bỏ `private` (thành internal). Type chỉ dùng trong file mới thì **giữ `private`**.
+4. Trước khi bỏ `private` của một type: `grep -rn "struct <Tên>\b\|enum <Tên>\b\|func <tên>(" app/Reado`. Chỉ được ra đúng 1 kết quả, trùng tên thì dừng, báo fen.
+5. Sau mỗi file: `scripts/test.sh build`. Gặp lỗi `'X' is inaccessible due to 'private' protection level` thì bỏ `private` đúng ở khai báo `X` rồi build lại. Lỗi khác kiểu này thì dừng, báo fen.
+6. Mục tiêu mỗi file ≤ ~400 dòng (`wc -l`). Không cần đạt con số tuyệt đối.
+
+### B3a — `App/RootView.swift` (626 → ~210)
+| Khối (dòng hiện tại, xác nhận lại bằng grep) | File đích | Visibility |
+|---|---|---|
+| `private enum ShellRoute` (40) | **ở lại** `App/RootView.swift` | bỏ `private` (Home/Kho dùng `ShellRoute.hub`, `.streak`) |
+| `private struct FloatShutter` + `private struct ShutterPressStyle` (208–251) | `App/FloatShutter.swift` | `FloatShutter` internal, `ShutterPressStyle` giữ `private` nếu chỉ FloatShutter dùng |
+| `private struct HomeTabView` (252–439) | `Home/HomeTabView.swift` | internal |
+| `private func masteryLabel` + `private struct MasteryRing` (440–466) | `Shared/MasteryRing.swift` (Home và Kho cùng dùng) | internal cả hai |
+| `private struct KhoTabView` (467–626) | `Library/KhoTabView.swift` | internal |
+`AppTab`, `ShellRoute`, `RootView` ở lại `App/RootView.swift`.
+
+### B3b — `Analysis/AnalysisView.swift` (647 → ~400)
+| Khối | File đích | Visibility |
+|---|---|---|
+| `// MARK: - Card duyệt (ADR-008)` + `private struct ReviewCardRow` (402–563) | `Analysis/ReviewCardRow.swift` | internal |
+| `private struct SegmentBlock`, `VerificationBadge`, `AnalysisSkeleton` (564–647) | `Analysis/AnalysisComponents.swift` | internal những struct `AnalysisView`/`ReviewCardRow` dùng. `VerificationBadge` có thể chỉ `ReviewCardRow` dùng, nhưng vẫn để internal vì hai file khác nhau |
+`private enum SaveAlert` lồng trong `AnalysisView` thì giữ nguyên.
+
+### B3c — `Review/ReviewQueueView.swift` (894 → ~320)
+| Khối | File đích | Visibility |
+|---|---|---|
+| `private struct ScopePickerSheet` (754–838) | `Review/ScopePickerSheet.swift` | internal |
+| `extension ReadoRating { label, buttonBackground, buttonForeground }` (865–894) | `Review/ReadoRating+Display.swift` | đã internal, không đổi |
+| `// MARK: — Card` (277–556: `cardView`, `refreshIntervals`, `flipCard`, `faceStack`, `swipeGesture`, `swipeProgress`, `dragAngle`, `swipeStamp`, `stampText`, `badgeLabel`, `commitSwipe`, `snapBack`, `cardFace`, `backFaceContent`) | `Review/ReviewQueueView+Card.swift` bọc trong `extension ReviewQueueView { … }` | bỏ `private` ở member mà file khác gọi (vd `cardView` được `body` gọi). Member chỉ dùng trong file này thì giữ `private` |
+| `private extension View { frontGradeActions }` (839–856) + `private enum SwipeMotion` (857–863) | cũng đưa vào `ReviewQueueView+Card.swift` (chỉ khối Card dùng) | giữ `private` (cùng file với chỗ dùng). Nếu grep thấy khối Grade cũng dùng thì bỏ `private` |
+| `// MARK: — Grade buttons` (557–717: `gradeButtons`, `gradeButton`, `performGrade`, `gradeNow`, `showMasteredToast(term:)`, `performUndo`) | `Review/ReviewQueueView+Grade.swift`, `extension ReviewQueueView { … }` | như trên |
+| Stored property, `init`, `body`, `// MARK: — Empty / Done` (142–276), `loadQueue` (718–753) | **ở lại** `Review/ReviewQueueView.swift` | — |
+
+Riêng B3c: extension nằm ở file khác thì **không đọc được `@State private var`**. Mọi `@State private var` / `private var` / `private let` (vd `items`, `currentIndex`, `flipDegrees`, `dragOffset`, `isCommitting`, `didPassThreshold`, `isFlipped`, `lastLogID`, `lastSnapshot`, `undoSnapshot`, `showUndoToast`, `tally`, `showMasteredToast`, `masteredToastTerm`, `masteredToastTask`, `mode`, `intervalLabels`, `model`, `reduceMotion`, `dynamicTypeSize`, `showsCloseButton`) mà file `+Card`/`+Grade` dùng thì bỏ `private` (`@State private var x` → `@State var x`; `@Environment(...) private var model` → `@Environment(...) var model`). Không đổi kiểu, không đổi giá trị khởi tạo. Để compiler chỉ ra từng biến theo quy tắc 5, **không** bỏ `private` hàng loạt trước khi build.
+- `showMasteredToast` vừa là `@State var` vừa là tên hàm `showMasteredToast(term:)`. Swift hiện đang chấp nhận vì khác chữ ký. Giữ nguyên, không đổi tên.
+
+### Kiểm B3
+- `wc -l app/Reado/*/*.swift | sort -n | tail -8`: ba file gốc ≤ ~420. Ghi bảng trước/sau vào handoff.
+- `python3 scripts/pbxproj_tool.py check` ra OK, `git diff --stat app/Reado.xcodeproj` rỗng.
+- `scripts/test.sh` full phải bằng mốc.
+- Kiểm không đổi logic (đơn giản, đọc bằng mắt):
+  1. `git diff HEAD --stat -- app/Reado` cho số dòng thêm ≈ số dòng xoá (chênh chỉ do `import`, `extension … {`/`}` và comment header `Tách từ`).
+  2. Xem dòng `+` không nằm trong khối được chuyển: `git diff HEAD -U0 -- app/Reado | grep '^+' | grep -v '^+++'`. Mỗi dòng phải là 1 trong: `import`, comment `Tách từ`, `extension ReviewQueueView {`, `}` đóng extension, dòng trống, hoặc 1 dòng khai báo vừa bỏ `private`. Thấy dòng `+` nào khác (đổi logic, đổi tên) thì dừng, báo fen.
+- UI: fen xem tay trên simulator một lượt (Home, Kho, Ôn có vuốt, lật thẻ, chấm, undo, đổi phạm vi, Analysis). Fen chưa xem thì handoff ghi "UI chưa xem tay". Agent **không** ghi "xong UI".
+- Docs B3: `docs/agent/coding-conventions.md` §2 bổ sung 1 dòng: "View > ~400 dòng thì tách subview/extension theo `// MARK:` (ví dụ `ReviewQueueView+Card.swift`)".
+- Commit 2: `refactor(app): B3 repo-hygiene-r1 — tách RootView/AnalysisView/ReviewQueueView (di chuyển thuần)`.
+
+## S2.3 Đóng Phase B
+- `docs/plans/repo-hygiene-r1.md`: ghi B1–B3 xong, B4/B5 hoãn, plan **khép** (phần còn lại của B5, tức dọn pointer archive trong ROADMAP, làm gộp luôn ở bước này: trong `ROADMAP.md` chạy `grep -n 'archive' ROADMAP.md`, chỉ sửa các dòng còn là **link/pointer sống** tới `docs/archive/` (tình trạng, bảng task 0.6/1.2) sang dạng "(đã xoá, ADR-044)"; dòng nhật ký lịch sử (bảng ngày 2026-09-18) giữ nguyên. Số dòng có thể đã lệch, không tin số cũ).
+- `docs/session-brief.md` §1 mục Repo: cấu trúc feature + synchronized folders. `/raudit` nhanh, rồi `/rhandoff`.
 
 ---
 
