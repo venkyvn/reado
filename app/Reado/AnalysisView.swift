@@ -98,7 +98,7 @@ struct AnalysisView: View {
                     AnalysisSkeleton()
                         .padding(.horizontal)
                 }
-                .padding(.top, 32)
+                .padding(.top, Spacing.xl)
                 .frame(maxWidth: .infinity)
                 .transition(.opacity)
             } else if let result = model.analysisResult {
@@ -355,7 +355,7 @@ struct AnalysisView: View {
                                         systemImage: drafts[index].isSelected
                                             ? "circle" : "checkmark.circle")
                                 }
-                                .tint(drafts[index].isSelected ? .gray : Color.accentColor)
+                                .tint(drafts[index].isSelected ? Color(.systemGray) : Color.accentColor)
                             }
                     }
                 } header: {
@@ -412,8 +412,8 @@ private struct ReviewCardRow: View {
     let onToggleExpand: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .top, spacing: Spacing.row) {
                 selectButton
                 Button {
                     onToggleExpand()
@@ -432,7 +432,7 @@ private struct ReviewCardRow: View {
                     .revealTransition()
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Spacing.xs)
     }
 
     /// FR-09: chọn item thành review card. Unverified/suspect không preselect —
@@ -460,7 +460,7 @@ private struct ReviewCardRow: View {
     @ViewBuilder
     private var summaryLabel: some View {
         if dynamicTypeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 summaryText
                 HStack {
                     VerificationBadge(status: draft.verification)
@@ -469,56 +469,25 @@ private struct ReviewCardRow: View {
                 }
             }
         } else {
-            HStack(alignment: .top, spacing: 6) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
                 summaryText
-                Spacer(minLength: 2)
+                Spacer(minLength: Spacing.xs)
                 VerificationBadge(status: draft.verification)
                 expandChevron
             }
         }
     }
 
+    /// Cùng khối `VocabSummary` với row Kho. Mở card thì IPA + ví dụ ẩn (editor bên dưới
+    /// đã có đủ field), chỉ còn từ + nghĩa.
     private var summaryText: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    Text(draft.term).font(.headline)
-                    posBadge
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(draft.term).font(.headline)
-                    posBadge
-                }
-            }
-            if !draft.meaningVI.isEmpty {
-                Text(draft.meaningVI)
-                    .font(.subheadline)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-            }
-            if !isExpanded {
-                if !draft.ipa.isEmpty {
-                    Text(draft.ipa)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if !draft.example.isEmpty {
-                    Text(draft.example)
-                        .font(.caption)
-                        .italic()
-                        .foregroundStyle(.secondary)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                }
-            }
-        }
-    }
-
-    private var posBadge: some View {
-        Text(draft.pos)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Theme.surfaceStrong))
+        VocabSummary(
+            term: draft.term,
+            pos: draft.pos,
+            cefr: draft.cefr,
+            ipa: isExpanded ? "" : draft.ipa,
+            meaning: draft.meaningVI,
+            example: isExpanded ? "" : draft.example)
     }
 
     private var expandChevron: some View {
@@ -534,7 +503,7 @@ private struct ReviewCardRow: View {
 
     /// FR-03: sửa được mọi field ngay dưới card, không rời danh sách.
     private var editor: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.row) {
             editorField("Từ") {
                 TextField("Từ mới", text: $draft.term)
             }
@@ -546,7 +515,7 @@ private struct ReviewCardRow: View {
                 }
                 .pickerStyle(.menu)
             }
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: Spacing.sm) {
                 editorField("Phiên âm (IPA)") {
                     TextField("VD: /ˈwɪndɪŋ/", text: $draft.ipa)
                 }
@@ -577,16 +546,16 @@ private struct ReviewCardRow: View {
         _ label: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             content()
                 .font(.subheadline)
-                .padding(8)
+                .padding(Spacing.sm)
                 .background(
                     Theme.surface,
-                    in: RoundedRectangle(cornerRadius: 8))
+                    in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
         }
     }
 }
@@ -599,7 +568,7 @@ private struct SegmentBlock: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(segment.sourceEN)
                     .font(.callout)
                     .foregroundStyle(.primary)
@@ -615,7 +584,7 @@ private struct SegmentBlock: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
+            .padding(.vertical, Spacing.tight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -627,20 +596,14 @@ private struct VerificationBadge: View {
     let status: PageAnalysis.VerificationStatus
 
     var body: some View {
-        Group {
-            switch status {
-            case .verified:
-                Label("Đã kiểm", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(Theme.ok)
-            case .suspect:
-                Label("Cần xem", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Theme.warn)
-            case .unverified:
-                Label("Chưa xác minh", systemImage: "questionmark.circle")
-                    .foregroundStyle(Theme.danger)
-            }
+        switch status {
+        case .verified:
+            Pill(text: "Đã kiểm", systemImage: "checkmark.circle.fill", tone: .ok)
+        case .suspect:
+            Pill(text: "Cần xem", systemImage: "exclamationmark.triangle.fill", tone: .warn)
+        case .unverified:
+            Pill(text: "Chưa xác minh", systemImage: "questionmark.circle", tone: .danger)
         }
-        .font(.caption2)
     }
 }
 
@@ -665,6 +628,7 @@ private struct AnalysisSkeleton: View {
         }
     }
 
+    // Hình dạng skeleton (frame/radius/khe) mô phỏng row thật — ngoại lệ của thang Spacing/Radius.
     private var row: some View {
         HStack(spacing: 12) {
             Circle()

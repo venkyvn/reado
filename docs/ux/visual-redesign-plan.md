@@ -206,3 +206,29 @@ cũ (không đổi hành vi iOS 17–25).
 - **Không đụng:** `Haptics` (giữ imperative, đổi sang `.sensoryFeedback` là
   churn không cần thiết), glass trên nội dung đọc (card ôn, list, editor —
   MASTER.md: nội dung đọc phải đặc), màn Capture (đã tự vẽ, ADR-036).
+
+## 8. Token Spacing / Radius / Typo (visual-polish-r1, ADR-045)
+
+Định nghĩa ở `app/Reado/DesignSystem.swift`. View không viết số lẻ — đi qua token.
+
+| Đang có | Thay bằng |
+|---|---|
+| spacing 2, 3 trong VStack chữ | `Spacing.tight` (2) |
+| 4, 6 trong VStack chữ | `Spacing.xs` (4) |
+| 6, 8 giữa icon ↔ label | `Spacing.sm` (8) |
+| 10, 12, 14 khe row / nút | `Spacing.row` (12) |
+| 16, `.padding()` mặc định | `Spacing.md` (16, ghi rõ số) |
+| 20, 24 giữa khối | `Spacing.lg` (24) |
+| 28, 32, 36 | `Spacing.xl` (32) |
+| radius 8 / 10 | `Radius.sm` (8) |
+| radius 12 | `Radius.md` (12) — mặc định `card()` |
+| radius 16 (card lớn) | `Radius.lg` (20) |
+| `.caption` + `.secondary` cho chữ đọc | `Typo.meta` + `.secondary` |
+| capsule copy tay | `Pill(text:systemImage:tone:)` |
+
+Vai trò chữ: `rowTitle` (headline), `rowSubtitle` (subheadline, kèm `.secondary`), `meta`
+(footnote), `pill` (caption semibold), `cardTerm`/`cardAnswer` (card Ôn), `metric`
+(số đo), `heroSymbol` (symbol trang trí lớn). Component: `Pill` (chữ luôn `.primary`,
+nền tint 0.15 — đạt contrast cả 2 mode), `IconTile` (32pt, symbol đổi màu theo
+appearance vì accent dark là bản nhạt), `VocabSummary` (term+POS+CEFR → nghĩa → IPA →
+ví dụ; dùng chung row Kho và row duyệt Analysis).

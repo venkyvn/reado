@@ -20,12 +20,12 @@ struct StreakCalendarView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
                 header
                 gridSection
                 detailLine
             }
-            .padding()
+            .padding(Spacing.md)
         }
         .navigationTitle("Lịch ôn")
         .navigationBarTitleDisplayMode(.inline)
@@ -60,12 +60,12 @@ struct StreakCalendarView: View {
     @ViewBuilder
     private var header: some View {
         if dynamicTypeSize.isAccessibilitySize {
-            VStack(spacing: 12) {
+            VStack(spacing: Spacing.row) {
                 currentStreak
                 longestStreak
             }
         } else {
-            HStack(spacing: 16) {
+            HStack(spacing: Spacing.md) {
                 currentStreak
                 longestStreak
             }
@@ -89,26 +89,26 @@ struct StreakCalendarView: View {
     }
 
     private func stat(title: String, value: String, icon: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             Label(title, systemImage: icon)
-                .font(.caption)
+                .font(Typo.meta)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.title2.weight(.bold))
+                .font(Typo.metric)
                 .monospacedDigit()
                 .foregroundStyle(tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+        .padding(Spacing.md)
         .card()
     }
 
     // MARK: — Heatmap (7 hàng × 18 cột)
 
     private var gridSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("18 tuần qua")
-                .font(.caption)
+                .font(Typo.meta)
                 .foregroundStyle(.secondary)
             GeometryReader { geo in
                 grid(width: geo.size.width)
@@ -127,7 +127,7 @@ struct StreakCalendarView: View {
                     }
             }
             .aspectRatio(18.0 / 7.0, contentMode: .fit)
-            HStack(spacing: 4) {
+            HStack(spacing: Spacing.xs) {
                 Text("Ít")
                 ForEach(1...5, id: \.self) { level in
                     RoundedRectangle(cornerRadius: 2)
@@ -147,6 +147,7 @@ struct StreakCalendarView: View {
 
     @ViewBuilder
     private func grid(width: CGFloat) -> some View {
+        // Hình học lưới heatmap (radius 2, khe 3, ô tối thiểu 6) — ngoại lệ của thang Spacing/Radius.
         let spacing: CGFloat = 3
         let size = max(6, (width - spacing * CGFloat(StreakCalendarService.weekCount - 1))
             / CGFloat(StreakCalendarService.weekCount))
@@ -251,20 +252,20 @@ struct StreakCalendarView: View {
     @ViewBuilder
     private var detailLine: some View {
         if let day = selectedDay {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(day.date.formatted(date: .abbreviated, time: .omitted))
                     .font(.subheadline.weight(.semibold))
                 Text("\(day.reviewCount) thẻ ôn")
-                    .font(.caption)
+                    .font(Typo.meta)
                     .foregroundStyle(.secondary)
                 if day.pageCount > 0 {
                     Text("\(day.pageCount) trang chụp")
-                        .font(.caption)
+                        .font(Typo.meta)
                         .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .padding(Spacing.md)
             .card()
             .revealTransition()
         }
@@ -281,12 +282,12 @@ struct StreakCalendarView: View {
                 systemImage: hasDue ? "brain.head.profile" : "camera.fill")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.row)
         }
         .buttonStyle(.borderedProminent)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.sm)
         .background(.background)
         .overlay(alignment: .top) { Divider() }
     }

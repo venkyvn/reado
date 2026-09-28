@@ -61,17 +61,17 @@ struct ImportView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.row) {
             Image(systemName: "doc.badge.plus")
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
             Text("Chọn file CSV từ vựng để nhập")
                 .foregroundStyle(.secondary)
             Text("Cùng 7 cột với Xuất CSV: term, pos, ipa, meaning_vi, cefr, example, collection")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(Typo.meta)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .padding(.horizontal, Spacing.md)
             Button("Chọn file…") { showFilePicker = true }
                 .buttonStyle(.borderedProminent)
         }
@@ -79,14 +79,14 @@ struct ImportView: View {
     }
 
     private func errorState(_ message: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.row) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.largeTitle)
                 .foregroundStyle(Theme.warn)
             Text(message)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .padding(.horizontal, Spacing.md)
             Button("Chọn file khác") { showFilePicker = true }
                 .buttonStyle(.bordered)
         }
@@ -151,8 +151,8 @@ private struct ImportRowView: View {
     @Binding var row: CSVImport.CSVRow
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
                 Button {
                     row.isSelected.toggle()
                     Haptics.selection()
@@ -180,13 +180,13 @@ private struct ImportRowView: View {
                 .font(.subheadline)
             metadataFields
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Spacing.tight)
     }
 
     @ViewBuilder
     private var metadataFields: some View {
         if dynamicTypeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 TextField("Từ loại", text: $row.pos)
                 TextField("IPA", text: $row.ipa)
                 TextField("CEFR", text: $row.cefr)
@@ -195,17 +195,17 @@ private struct ImportRowView: View {
             }
             .font(.body)
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 TextField("pos", text: $row.pos)
                 TextField("ipa", text: $row.ipa)
                 TextField("cefr", text: $row.cefr)
             }
-            .font(.caption)
-            HStack(spacing: 8) {
+            .font(Typo.meta)
+            HStack(spacing: Spacing.sm) {
                 TextField("example", text: $row.example)
                 TextField("collection", text: $row.collection)
             }
-            .font(.caption)
+            .font(Typo.meta)
             .foregroundStyle(.secondary)
         }
     }

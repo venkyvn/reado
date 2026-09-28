@@ -732,3 +732,23 @@
 - **Hệ quả:** Q-11 (phần distinguish/recall của R2) không đổi — cram ở R1 đi đường
   "chấp nhận" đã chốt 2026-09-08. Sau khi cram xong không có "ôn thêm nữa": một
   lượt 20 thẻ gần due nhất, cram lại sẽ ra đúng tập cũ (lịch không đổi).
+
+## ADR-045 — Visual polish: hướng "native tinh chỉnh" + token Spacing/Radius/Typo (visual-polish-r1)
+
+- **Ngày:** 2026-09-28
+- **Bối cảnh:** Owner thấy app "chưa chỉn chu". Soát code: spacing dùng 12 giá trị
+  lệch thang (2/3/4/6/8/10/12/14/16/20/24), bo góc 6 cỡ, `.caption`+`.secondary`
+  chồng 3–4 dòng mỗi row, pill/badge copy tay ≥7 chỗ (opacity 0.12/0.15/0.18),
+  Home có 4 row nằm ngoài Section, emoji 🎉/🔥 làm icon.
+- **Quyết định:** Giữ `List`/`Form`/`NavigationStack` native (không serif, không
+  nền giấy, không màu nổi kiểu gamification — khớp "Journey Over Summary").
+  Thêm `app/Reado/DesignSystem.swift`: `Spacing` (2/4/8/12/16/24/32), `Radius`
+  (8/12/20, luôn `.continuous`), `Typo` (vai trò chữ → text style hệ thống, giữ
+  Dynamic Type) + 3 component dùng chung `Pill`, `IconTile`, `VocabSummary`.
+  Màu semantic vẫn ở `Theme`. `design-system/reado/MASTER.md` (FROZEN) không sửa;
+  token Swift là bản native của nó.
+- **Hệ quả:** View không viết số lẻ 3/6/7/10/14/20/28/36. Ngoại lệ có comment:
+  hình học heatmap `StreakCalendarView`, skeleton `AnalysisView`, hằng số
+  `ShellTabBar`, peek/xoay stamp của card Ôn, và `CaptureView` (tự vẽ, ADR-036).
+  Không đụng gesture vuốt, màu nút chấm, vị trí tab bar/nút chụp. Chi tiết bảng
+  đổi số: `docs/ux/visual-redesign-plan.md` §8; task: `docs/plans/visual-polish-r1.md`.

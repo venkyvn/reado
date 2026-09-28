@@ -145,6 +145,7 @@ final class AppModel {
             self.database = database
             #if DEBUG
             Self.seedDevAIBoxAgentIfNeeded(on: database)
+            Self.seedDevDemoCSVIfNeeded(on: database)
             #endif
             reloadOverview()
         } catch {
@@ -173,6 +174,20 @@ final class AppModel {
             baseURL: AnalysisAgentStore.aiboxBaseURL,
             model: AnalysisAgentStore.aiboxModel,
             apiKey: key)
+    }
+
+    /// Chỉ debug: launch với `READO_DEV_DEMO_CSV=<đường dẫn CSV 7 cột>`
+    /// (`scripts/sim_screens.sh`) để có dữ liệu mẫu chụp màn hình. Chỉ nạp khi kho
+    /// còn trống (không có từ nào) — cài lại app mới seed lại, không nhân đôi.
+    private static func seedDevDemoCSVIfNeeded(on database: SQLiteDatabase) {
+        guard let path = ProcessInfo.processInfo.environment["READO_DEV_DEMO_CSV"],
+              !path.isEmpty,
+              let text = try? String(contentsOfFile: path, encoding: .utf8),
+              let existing = try? CSVImport.existingTermNormalizedSet(on: database),
+              existing.isEmpty,
+              let rows = try? CSVImport.parse(text)
+        else { return }
+        _ = try? CSVImport.importRows(on: database, rows: rows, now: SystemClock().now)
     }
     #endif
 

@@ -7,6 +7,7 @@ import SwiftUI
 struct OnboardingChecklistSection: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("reado.onboarding.cefrConfirmed") private var cefrConfirmed = false
     @AppStorage("reado.onboarding.dismissed") private var dismissed = false
     @State private var showAgentForm = false
@@ -35,7 +36,7 @@ struct OnboardingChecklistSection: View {
                 Button("Ẩn hướng dẫn") {
                     Motion.run(reduceMotion: reduceMotion) { dismissed = true }
                 }
-                .font(.caption)
+                .font(Typo.meta)
             }
             .onAppear { loadCefrSubtitle() }
             .sheet(isPresented: $showAgentForm) {
@@ -61,7 +62,7 @@ struct OnboardingChecklistSection: View {
             subtitle: cefrSubtitle
         ) {
             if !checklist.isDone(.cefr) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.sm) {
                     Button("Đổi") {
                         cefrConfirmed = true
                         onOpenSettings()
@@ -120,26 +121,39 @@ struct OnboardingChecklistSection: View {
         subtitle: String,
         @ViewBuilder actions: () -> Actions
     ) -> some View {
-        HStack(spacing: 12) {
-            // Icon + tiêu đề gộp lại một phần tử VoiceOver — nút hành động
-            // GIỮ riêng bên ngoài, gộp chung sẽ làm VoiceOver không bấm được.
-            HStack(spacing: 12) {
-                Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
-                    .font(.title3)
-                    .foregroundStyle(done ? Theme.ok : Color.accentColor)
-                    .contentTransition(.symbolEffect(.replace))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        // Icon + tiêu đề gộp lại một phần tử VoiceOver — nút hành động
+        // GIỮ riêng bên ngoài, gộp chung sẽ làm VoiceOver không bấm được.
+        let label = HStack(spacing: Spacing.row) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                .font(.title3)
+                .foregroundStyle(done ? Theme.ok : Color.accentColor)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: IconTile.size)
+            VStack(alignment: .leading, spacing: Spacing.tight) {
+                Text(title)
+                    .font(Typo.rowTitle)
+                Text(subtitle)
+                    .font(Typo.rowSubtitle)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(done ? "Đã xong" : "Chưa xong")
+
+        // Chữ cỡ lớn + tiếng Việt dài: nút xuống dưới thay vì bóp cột chữ.
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    label
+                    actions()
+                }
+            } else {
+                HStack(spacing: Spacing.row) {
+                    label
+                    Spacer()
+                    actions()
                 }
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityValue(done ? "Đã xong" : "Chưa xong")
-            Spacer()
-            actions()
         }
         .buttonStyle(.borderless)
         .animation(reduceMotion ? nil : Motion.reveal, value: done)

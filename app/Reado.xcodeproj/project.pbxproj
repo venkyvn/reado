@@ -80,6 +80,7 @@
 		5C0100000B00000000000000 /* Pronunciation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000B00000000000000 /* Pronunciation.swift */; };
 
 		5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000C00000000000000 /* OnboardingChecklistSection.swift */; };
+		5C0100000D00000000000000 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000D00000000000000 /* DesignSystem.swift */; };
 
 		5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000200000000000000 /* OnboardingChecklistTests.swift */; };
 
@@ -165,6 +166,7 @@
 		5B0100000B00000000000000 /* Pronunciation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pronunciation.swift; sourceTree = "<group>"; };
 
 		5B0100000C00000000000000 /* OnboardingChecklistSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistSection.swift; sourceTree = "<group>"; };
+		5B0100000D00000000000000 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 
 		5B0201000200000000000000 /* OnboardingChecklistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistTests.swift; sourceTree = "<group>"; };
 
@@ -238,7 +240,8 @@
 				5B0100000900000000000000 /* CameraController.swift */,
 				5B0100000A00000000000000 /* SessionDoneView.swift */,
 				5B0100000B00000000000000 /* Pronunciation.swift */,
-				5B0100000C00000000000000 /* OnboardingChecklistSection.swift */,);
+				5B0100000C00000000000000 /* OnboardingChecklistSection.swift */,
+				5B0100000D00000000000000 /* DesignSystem.swift */,);
 			path = Reado;
 			sourceTree = "<group>";
 		};
@@ -395,7 +398,8 @@
 				5C0100000900000000000000 /* CameraController.swift in Sources */,
 				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,
 				5C0100000B00000000000000 /* Pronunciation.swift in Sources */,
-				5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */,);
+				5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */,
+				5C0100000D00000000000000 /* DesignSystem.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {

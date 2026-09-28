@@ -21,17 +21,17 @@ struct ShellTabBar: View {
     @Namespace private var pillNamespace
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Spacing.xs) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 tabButton(tab)
             }
         }
-        .padding(4)
+        .padding(Spacing.xs)
         .frame(height: Self.height)
         // ux-polish-r1 T4: Liquid Glass (iOS 26+), fallback material dưới đó.
         .chromeGlass(in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
         .padding(.bottom, Self.outerBottomPadding)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Điều hướng")
@@ -55,7 +55,7 @@ struct ShellTabBar: View {
                         .font(.title2)
                         .symbolEffect(.bounce, value: reduceMotion ? false : selected)
                 } else {
-                    VStack(spacing: 2) {
+                    VStack(spacing: Spacing.tight) {
                         Image(systemName: selected ? tab.selectedIcon : tab.icon)
                             .font(.title2)
                             .symbolEffect(.bounce, value: reduceMotion ? false : selected)

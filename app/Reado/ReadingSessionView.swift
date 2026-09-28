@@ -18,13 +18,13 @@ struct ReadingSessionView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
                 segmentsSection
                 if let summary = session.summary, !summary.isEmpty {
                     summarySection(summary)
                 }
             }
-            .padding()
+            .padding(Spacing.md)
         }
         .navigationTitle("Phiên đọc")
         .navigationBarTitleDisplayMode(.inline)
@@ -38,7 +38,7 @@ struct ReadingSessionView: View {
     // MARK: — Ý chính (FR-06, thu gọn mặc định)
 
     private func summarySection(_ summary: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Button {
                 Motion.run(reduceMotion: reduceMotion) {
                     summaryExpanded.toggle()
@@ -61,19 +61,19 @@ struct ReadingSessionView: View {
                     .revealTransition()
             }
         }
-        .padding()
+        .padding(Spacing.md)
         .card()
     }
 
     // MARK: — Song ngữ (ADR-007)
 
     private var segmentsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             ForEach(Array(session.segments.enumerated()), id: \.offset) { index, seg in
                 Button {
                     toggleSegment(index)
                 } label: {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(seg.sourceEN)
                             .font(.title3)
                         if isRevealed(index) {
@@ -124,12 +124,12 @@ struct ReadingSessionView: View {
                 .contentTransition(.symbolEffect(.replace))
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.row)
         }
         .buttonStyle(.bordered)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.sm)
         .background(.background)
         .overlay(alignment: .top) { Divider() }
     }

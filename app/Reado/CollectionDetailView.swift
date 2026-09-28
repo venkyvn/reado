@@ -40,12 +40,12 @@ struct CollectionDetailView: View {
                     // Ý 4 motivation-r1: "Đã thuộc X/Y" (Q-08). Bộ rỗng ẩn hẳn
                     // thanh này — 0/0 trông như lỗi, không phải tiến bộ.
                     if overview.totalItems > 0 {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             ProgressView(
                                 value: Double(overview.masteredCount),
                                 total: Double(overview.totalItems))
                             Text("Đã thuộc \(overview.masteredCount)/\(overview.totalItems)")
-                                .font(.caption)
+                                .font(Typo.meta)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -84,8 +84,12 @@ struct CollectionDetailView: View {
                             : "Từ chưa phân loại nằm trong kho tạm; chụp nhanh (không chọn bộ) để dồn về đó."))
                     .listRowSeparator(.hidden)
             } else {
-                ForEach(model.vocabulary) { entry in
-                    vocabRow(entry)
+                Section {
+                    ForEach(model.vocabulary) { entry in
+                        vocabRow(entry)
+                    }
+                } header: {
+                    Text("Từ vựng · \(model.vocabulary.count)")
                 }
             }
         }
@@ -161,21 +165,21 @@ struct CollectionDetailView: View {
             Section {
                 if model.sessions.isEmpty {
                     Text("Chưa có phiên đọc. Chụp trang vào bộ này để lưu bản song ngữ (giữ tối đa 10 phiên).")
-                        .font(.footnote)
+                        .font(Typo.meta)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(model.sessions) { session in
                         NavigationLink {
                             ReadingSessionView(session: session)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spacing.xs) {
                                 Text(
                                     session.createdAt.formatted(
                                         date: .abbreviated, time: .shortened))
                                     .font(.subheadline.weight(.semibold))
                                 if let summary = session.summary, !summary.isEmpty {
                                     Text(summary)
-                                        .font(.caption)
+                                        .font(Typo.meta)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(2)
                                 }
@@ -238,7 +242,7 @@ struct CollectionDetailView: View {
 
     @ViewBuilder
     private func vocabRow(_ entry: VocabRepository.VocabularyListEntry) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Spacing.row) {
             if isSelecting {
                 Image(systemName: selectedIDs.contains(entry.id) ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
@@ -248,31 +252,16 @@ struct CollectionDetailView: View {
                     .contentTransition(.symbolEffect(.replace))
                     .transition(.opacity.combined(with: .offset(x: -12)))
             }
-            VStack(alignment: .leading, spacing: 4) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) {
-                        Text(entry.term).font(.headline)
-                        vocabBadges(entry)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.term).font(.headline)
-                        vocabBadges(entry)
-                    }
-                }
-                if let ipa = entry.ipa, !ipa.isEmpty {
-                    Text("/\(ipa)/")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text(entry.meaningVI)
-                    .font(.subheadline)
-                Text(entry.example)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-            }
+            VocabSummary(
+                term: entry.term,
+                pos: entry.pos,
+                cefr: entry.cefr ?? "",
+                ipa: entry.ipa ?? "",
+                meaning: entry.meaningVI,
+                example: entry.example)
             Spacer(minLength: 0)
         }
+        .padding(.vertical, Spacing.xs)
         .contentShape(Rectangle())
         .onTapGesture {
             guard isSelecting else { return }
@@ -292,21 +281,6 @@ struct CollectionDetailView: View {
         .accessibilityAction {
             guard isSelecting else { return }
             toggleSelection(entry.id)
-        }
-    }
-
-    private func vocabBadges(_ entry: VocabRepository.VocabularyListEntry) -> some View {
-        HStack(spacing: 6) {
-            Text(entry.pos)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if let cefr = entry.cefr, !cefr.isEmpty {
-                Text(cefr.uppercased())
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Theme.level.opacity(0.12)))
-            }
         }
     }
 
@@ -394,7 +368,7 @@ private struct CollectionMoveSheet: View {
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 Text("\(collection.totalItems) từ")
-                                    .font(.caption)
+                                    .font(Typo.meta)
                                     .foregroundStyle(.secondary)
                             }
                         }

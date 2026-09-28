@@ -141,14 +141,16 @@ extension View {
 
 /// Nền card mờ đồng nhất (`Theme.surface`) — thay chuỗi `.background(opacity)`.
 private struct SurfaceCardModifier: ViewModifier {
-    var cornerRadius: CGFloat = 12
+    var cornerRadius: CGFloat = Radius.md
     func body(content: Content) -> some View {
-        content.background(Theme.surface, in: RoundedRectangle(cornerRadius: cornerRadius))
+        content.background(
+            Theme.surface,
+            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 extension View {
-    func card(cornerRadius: CGFloat = 12) -> some View {
+    func card(cornerRadius: CGFloat = Radius.md) -> some View {
         modifier(SurfaceCardModifier(cornerRadius: cornerRadius))
     }
 

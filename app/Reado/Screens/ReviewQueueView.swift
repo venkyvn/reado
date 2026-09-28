@@ -192,9 +192,9 @@ struct ReviewQueueView: View {
     }
 
     private var doneView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
+                .font(Typo.heroSymbol)
                 .foregroundStyle(Theme.ok)
             Text(mode == .cram ? "Đã ôn thêm xong" : "Hết thẻ hôm nay")
                 .font(.title2.bold())
@@ -206,7 +206,7 @@ struct ReviewQueueView: View {
             if showsCloseButton {
                 Button("Đóng") { dismiss() }
                     .buttonStyle(.borderedProminent)
-                    .padding(.top, 8)
+                    .padding(.top, Spacing.sm)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -217,24 +217,25 @@ struct ReviewQueueView: View {
     @ViewBuilder
     private var debtBanner: some View {
         if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.row) {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(Theme.due)
                 Text("Còn \(model.dueOutsideScope) thẻ đến hạn ngoài phạm vi")
-                    .font(.caption)
+                    .font(Typo.meta)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Ôn tất cả") {
                     self.scope = nil
                     Task { await loadQueue() }
                 }
-                .font(.caption.weight(.semibold))
+                .font(Typo.meta.weight(.semibold))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
             .background(
-                Theme.due.opacity(0.08),
-                in: RoundedRectangle(cornerRadius: 8))
+                Theme.due.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .padding(.horizontal, Spacing.md)
         }
     }
 
@@ -243,18 +244,21 @@ struct ReviewQueueView: View {
     @ViewBuilder
     private var masteredToastBanner: some View {
         if showMasteredToast {
-            HStack(spacing: 10) {
-                Text("🎉")
+            HStack(spacing: Spacing.row) {
+                Image(systemName: "party.popper.fill")
+                    .foregroundStyle(Theme.ok)
+                    .accessibilityHidden(true)
                 Text("'\(masteredToastTerm)' — nhớ được 21+ ngày")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
             .background(
                 Theme.ok.opacity(0.12),
-                in: RoundedRectangle(cornerRadius: 8))
+                in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .padding(.horizontal, Spacing.md)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -274,17 +278,19 @@ struct ReviewQueueView: View {
 
     private var cardView: some View {
         let item = items[currentIndex]
-        return VStack(spacing: 24) {
+        return VStack(spacing: Spacing.lg) {
             debtBanner
             masteredToastBanner
 
-            // Progress.
-            HStack {
+            // Progress: thanh + "n/N" (thanh ẩn khỏi VoiceOver — chữ đã đọc đủ).
+            HStack(spacing: Spacing.row) {
+                ProgressView(value: Double(currentIndex), total: Double(max(items.count, 1)))
+                    .accessibilityHidden(true)
                 Text("\(currentIndex + 1)/\(items.count)")
+                    .font(Typo.meta)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                Spacer()
                 if mode == .cram {
                     Text("Ôn thêm")
                         .font(.caption.weight(.semibold))
@@ -302,7 +308,7 @@ struct ReviewQueueView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, Spacing.md)
 
             Spacer(minLength: 0)
 
@@ -320,7 +326,7 @@ struct ReviewQueueView: View {
                     faceStack(item: item, size: geo.size)
                         .id(item.cardID)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
                         .overlay(swipeStamp)
                         // Xoay trước, kéo sau. Ngược lại rotationEffect xoay quanh tâm
                         // gốc (chưa offset) và thẻ đi theo cung tròn, lệch khỏi tay.
@@ -329,8 +335,8 @@ struct ReviewQueueView: View {
                         .offset(dragOffset)
                 }
             }
-            .padding(.horizontal, 16)
-            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, Spacing.md)
+            .contentShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
             .gesture(swipeGesture)
             // Tap chỉ thuộc vùng thẻ. Đặt trên VStack cha sẽ khiến nút chấm/
             // Hoàn tác có thể đồng thời kích hoạt flip.
@@ -351,8 +357,8 @@ struct ReviewQueueView: View {
                     .revealTransition()
             } else {
                 Text("Chạm để lật · trái Quên · phải Được")
-                    .foregroundStyle(.tertiary)
-                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .font(Typo.meta)
                     .revealTransition()
             }
         }
@@ -445,7 +451,7 @@ struct ReviewQueueView: View {
                         .rotationEffect(.degrees(10))
                 }
             }
-            .padding(24)
+            .padding(Spacing.lg)
             .opacity(swipeProgress)
         }
     }
@@ -460,11 +466,11 @@ struct ReviewQueueView: View {
         Text(text)
             .font(.title2.bold())
             .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(color, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            .background(color, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: Radius.sm, style: .continuous)
                     .strokeBorder(.white.opacity(0.7), lineWidth: 2))
     }
 
@@ -491,25 +497,21 @@ struct ReviewQueueView: View {
 
     private func cardFace(item: ReviewQueue.ReviewItem, back: Bool, size: CGSize) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+                .cardShadow()
             if !back {
                 // FR-12: mặt trước = term + pos.
-                VStack(spacing: 12) {
+                VStack(spacing: Spacing.row) {
                     Text(item.term)
-                        .font(.title.bold())
-                        .minimumScaleFactor(0.8)
+                        .font(Typo.cardTerm)
+                        .minimumScaleFactor(0.6)
                         .multilineTextAlignment(.center)
-                    Text(item.pos)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Theme.surface))
+                    Pill(text: item.pos, tone: .neutral)
                     // ADR-040: nghe cách đọc — không luyện nói, không chấm.
                     SpeakButton(term: item.term)
                 }
+                .padding(Spacing.lg)
             } else {
                 if dynamicTypeSize.isAccessibilitySize {
                     ScrollView {
@@ -526,12 +528,16 @@ struct ReviewQueueView: View {
 
     /// FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection.
     private func backFaceContent(_ item: ReviewQueue.ReviewItem) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.row) {
+            // Nhắc lại từ: đáp án (nghĩa) là dòng to nhất, từ chỉ là ngữ cảnh.
+            Text(item.term)
+                .font(Typo.rowTitle)
+                .foregroundStyle(.secondary)
             Text(item.meaningVI)
-                .font(.headline)
-            HStack(spacing: 8) {
-                if let ipa = item.ipa {
-                    Text(ipa).font(.subheadline).foregroundStyle(.secondary)
+                .font(Typo.cardAnswer)
+            HStack(spacing: Spacing.sm) {
+                if let ipa = item.ipa, !ipa.isEmpty {
+                    Text("/\(ipa)/").font(Typo.rowSubtitle).foregroundStyle(.secondary)
                 }
                 SpeakButton(term: item.term)
             }
@@ -540,11 +546,12 @@ struct ReviewQueueView: View {
                 .italic()
             Divider()
             Text(item.collectionName)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(Typo.meta)
+                .foregroundStyle(.secondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.lg)
+        // Cùng khung với mặt trước, neo trên-trái thay vì trôi giữa thẻ.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: — Grade buttons (ADR-025: TRÁI=Again(1), PHẢI=Good(3); Hard/Easy nút)
@@ -554,10 +561,10 @@ struct ReviewQueueView: View {
             if dynamicTypeSize.isAccessibilitySize {
                 LazyVGrid(
                     columns: [
-                        GridItem(.flexible(), spacing: 12),
-                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: Spacing.row),
+                        GridItem(.flexible(), spacing: Spacing.row),
                     ],
-                    spacing: 12
+                    spacing: Spacing.row
                 ) {
                     gradeButton(.again)
                     gradeButton(.hard)
@@ -565,7 +572,7 @@ struct ReviewQueueView: View {
                     gradeButton(.easy)
                 }
             } else {
-                HStack(spacing: 12) {
+                HStack(spacing: Spacing.row) {
                     gradeButton(.again)
                     gradeButton(.hard)
                     gradeButton(.good)
@@ -573,8 +580,8 @@ struct ReviewQueueView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 20)
+        .padding(.horizontal, Spacing.md)
+        .padding(.bottom, Spacing.lg)
     }
 
     private func gradeButton(_ rating: ReadoRating) -> some View {
@@ -582,7 +589,7 @@ struct ReviewQueueView: View {
         return Button {
             performGrade(rating)
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: Spacing.tight) {
                 Text(rating.label)
                     .font(.subheadline.weight(.semibold))
                 if let hint {
@@ -593,10 +600,10 @@ struct ReviewQueueView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
+            .frame(minHeight: 56)
             .background(rating.buttonBackground)
             .foregroundStyle(rating.buttonForeground)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         }
         .accessibilityLabel(hint.map { "\(rating.label), ôn lại sau \($0)" } ?? rating.label)
     }

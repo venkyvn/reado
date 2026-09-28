@@ -81,10 +81,10 @@ struct ExportView: View {
                     toggle(c.id)
                 } label: {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Spacing.tight) {
                             Text(c.name)
                             Text("\(c.totalItems) từ")
-                                .font(.caption)
+                                .font(Typo.meta)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()

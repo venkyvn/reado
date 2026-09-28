@@ -90,15 +90,15 @@ struct SettingsView: View {
         Section {
             // CEFR đa level (port UI lab §8) — target cho lần phân tích trang KẾ
             // TIẾP (FR-15). Tối thiểu 1 level (không bỏ chip cuối cùng).
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: Spacing.row) {
                 HStack {
                     Text("Trình độ")
                     Spacer()
                     Text("\(cefrLevels.count)/4")
-                        .font(.caption)
+                        .font(Typo.meta)
                         .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.sm) {
                     ForEach(CEFRLevel.allCases) { level in
                         levelChip(level)
                     }
@@ -129,7 +129,7 @@ struct SettingsView: View {
         } header: {
             Label("Học tập", systemImage: "book.closed")
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("Streak và hạn mức thẻ mới tính từ giờ này, không phải nửa đêm.")
                 if saved {
                     Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
@@ -150,7 +150,7 @@ struct SettingsView: View {
             Text(level.rawValue)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, Spacing.row)
                 .frame(minHeight: 44)
                 .background(
                     Capsule().fill(
@@ -203,10 +203,10 @@ struct SettingsView: View {
                     select(agent)
                 } label: {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Spacing.tight) {
                             Text(agent.name)
                             Text(agent.isBuiltinProxy ? "Proxy Reado" : (agent.model ?? ""))
-                                .font(.caption)
+                                .font(Typo.meta)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()

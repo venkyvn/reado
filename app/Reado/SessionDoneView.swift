@@ -25,7 +25,7 @@ struct SessionDoneView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.lg) {
                 header
                     .opacity(appeared ? 1 : 0)
                     .animation(reduceMotion ? nil : Motion.reveal, value: appeared)
@@ -33,17 +33,21 @@ struct SessionDoneView: View {
                 masteredSection
                     .opacity(appeared ? 1 : 0)
                     .animation(reduceMotion ? nil : Motion.reveal.delay(0.16), value: appeared)
-                Spacer(minLength: 12)
+                Spacer(minLength: Spacing.row)
                 if canLearnMore {
-                    Button("Học thêm 10 từ", action: onLearnMore)
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
+                    Button(action: onLearnMore) {
+                        Text("Học thêm 10 từ").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
                 }
-                Button("Về Home", action: onHome)
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                Button(action: onHome) {
+                    Text("Về Home").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
-            .padding()
+            .padding(Spacing.md)
         }
         .background { doneBackground.ignoresSafeArea() }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -66,28 +70,28 @@ struct SessionDoneView: View {
                 ])
         } else {
             LinearGradient(
-                colors: [Color.accentColor.opacity(0.15), Color(.systemBackground)],
+                colors: [Color.accentColor.opacity(0.18), Color(.systemBackground)],
                 startPoint: .top, endPoint: .center)
         }
     }
 
     private var header: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Spacing.sm) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
+                .font(Typo.heroSymbol)
                 .foregroundStyle(Theme.ok)
                 .symbolEffect(.bounce, value: reduceMotion ? false : appeared)
             Text("Xong hôm nay")
                 .font(.title2.bold())
         }
-        .padding(.top, 24)
+        .padding(.top, Spacing.lg)
     }
 
     // MARK: — 3 số đo (FR-14/Q-08) — không phải điểm ảo, chỉ đếm lại việc đã làm.
 
     @ViewBuilder
     private var statsGrid: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.row) {
             stat(value: "\(tally.reviewed)", label: "thẻ đã ôn", icon: "rectangle.stack.fill", tint: Color.accentColor, index: 0)
             if let accuracy = tally.accuracy {
                 stat(
@@ -98,24 +102,25 @@ struct SessionDoneView: View {
             }
             stat(value: "\(streak)", label: "ngày liên tục", icon: "flame.fill", tint: Theme.due, index: 2)
         }
+        // Các ô cao bằng nhau dù nhãn xuống dòng hay thiếu ô "không Quên".
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// `index`: thứ tự hiện lần lượt (0.08s mỗi ô) — không phải bảng thành tích,
     /// chỉ giúp mắt bắt kịp 3 số đo cùng lúc đổ ra.
     private func stat(value: String, label: String, icon: String, tint: Color, index: Int) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.xs) {
             Image(systemName: icon)
                 .foregroundStyle(tint)
             Text(value)
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
+                .font(Typo.metric)
             Text(label)
-                .font(.caption2)
+                .font(Typo.meta)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, Spacing.row)
         .card()
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 10)
@@ -127,23 +132,23 @@ struct SessionDoneView: View {
     @ViewBuilder
     private var masteredSection: some View {
         if !tally.newlyMastered.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Vừa thuộc")
                     .font(.subheadline.weight(.semibold))
                 ForEach(tally.newlyMastered.prefix(Self.maxMasteredShown), id: \.self) { term in
                     Label(term, systemImage: "star.fill")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                 }
                 let remaining = tally.newlyMastered.count - Self.maxMasteredShown
                 if remaining > 0 {
                     Text("+\(remaining) khác")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .padding(Spacing.md)
             .card()
         }
     }

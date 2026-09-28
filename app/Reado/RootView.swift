@@ -283,7 +283,7 @@ private struct HomeTabView: View {
             // J-R1-D: cửa Dữ liệu giữ icon tray trên Home (không tab thứ 4).
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onData) {
-                    Label("Dữ liệu", systemImage: "archivebox")
+                    Label("Dữ liệu", systemImage: "externaldrive")
                 }
                 .accessibilityLabel("Dữ liệu")
             }
@@ -293,10 +293,11 @@ private struct HomeTabView: View {
     private var homeList: some View {
         List {
             OnboardingChecklistSection(onOpenSettings: onSettings, onCapture: onCapture)
-            dailyProgressRows
-            inboxRow
-            streakRow
-            streakNudgeRow
+            Section("Hôm nay") {
+                dailyProgressRows
+                inboxRow
+                streakRow
+            }
             homePinRows
         }
         .refreshable { model.reloadOverview() }
@@ -311,35 +312,35 @@ private struct HomeTabView: View {
                 Button {
                     onReview()
                 } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "brain.head.profile")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10))
-                        VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.row) {
+                        IconTile(systemImage: "brain.head.profile")
+                        VStack(alignment: .leading, spacing: Spacing.tight) {
                             Text("Ôn tập hôm nay")
-                                .font(.headline)
+                                .font(Typo.rowTitle)
+                                .foregroundStyle(.primary)
                             Text("\(progress.dueToday) thẻ sẽ ôn")
-                                .font(.caption)
+                                .font(Typo.rowSubtitle)
                                 .foregroundStyle(.secondary)
                                 .contentTransition(.numericText())
                         }
                         Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
+                        // Nút hành động (đổi tab), không phải push → không vẽ chevron điều hướng.
+                        Image(systemName: "play.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
                     }
                     .animation(reduceMotion ? nil : Motion.reveal, value: progress.dueToday)
                 }
-                .listRowSeparator(.hidden)
+                // Plain: Button trong List tô cả label theo tint → chữ mờ xanh, lệch các row khác.
+                .buttonStyle(.plain)
             } else if progress.backlog > 0 {
                 // FR-14: hết hạn mức hôm nay — tồn đọng hiện RIÊNG, không CTA giả.
                 Label(
                     "Đã hết hạn mức hôm nay · \(progress.backlog) thẻ mới đang chờ",
                     systemImage: "hourglass")
-                    .font(.subheadline)
+                    .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)
-                    .listRowSeparator(.hidden)
             }
         }
     }
@@ -350,74 +351,50 @@ private struct HomeTabView: View {
     private var inboxRow: some View {
         if let inbox = model.collections.first(where: \.isDefault) {
             NavigationLink(value: ShellRoute.hub(inbox.id)) {
-                HStack(spacing: 12) {
-                    Image(systemName: "tray.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10))
-                    VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.row) {
+                    IconTile(systemImage: "tray.fill")
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
                         Text(inbox.name)
-                            .font(.headline)
+                            .font(Typo.rowTitle)
                         Text("\(inbox.totalItems) từ · trang chưa phân loại")
-                            .font(.caption)
+                            .font(Typo.rowSubtitle)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     if inbox.dueNow > 0 {
-                        Text("\(inbox.dueNow)")
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Theme.due.opacity(0.18)))
+                        Pill(text: "\(inbox.dueNow)", tone: .due)
                     }
                 }
             }
-            .listRowSeparator(.hidden)
         }
     }
 
     /// Ô Streak bấm được → Lịch streak (heatmap 18 tuần). Tách khỏi
     /// `dailyProgressRows` để đứng sau hàng kho tạm; vẫn cần `dailyProgress`
-    /// nên ẩn khi nil.
+    /// nên ẩn khi nil. Ý 7 motivation-r1: khi streak > 0 và hôm nay CHƯA ôn thẻ
+    /// nào, dòng phụ đổi thành lời nhắc giữ streak (gộp từ row nhắc riêng cũ);
+    /// đã ôn hoặc streak = 0 thì hiện số trang đã phân tích (không nhắc người mới).
     @ViewBuilder
     private var streakRow: some View {
         if let progress = model.dailyProgress {
             NavigationLink(value: ShellRoute.streak) {
-                HStack(spacing: 12) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "flame.fill")
-                            .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
+                HStack(spacing: Spacing.row) {
+                    IconTile(systemImage: "flame.fill", tint: Theme.due)
+                        .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
                         Text("\(progress.streak) ngày ôn liên tục")
+                            .font(Typo.rowTitle)
                             .contentTransition(.numericText())
+                        Text(
+                            progress.streak > 0 && !progress.reviewedToday
+                                ? "Hôm nay chưa ôn — 1 thẻ là giữ streak"
+                                : "\(progress.pagesAnalyzed) trang đã phân tích")
+                            .font(Typo.rowSubtitle)
+                            .foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(Theme.due)
-                    Spacer()
-                    Text("\(progress.pagesAnalyzed) trang đã phân tích")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
                 .animation(reduceMotion ? nil : Motion.reveal, value: progress.streak)
             }
-            .listRowSeparator(.hidden)
-        }
-    }
-
-    /// Ý 7 motivation-r1: nhắc giữ streak khi streak > 0 và hôm nay CHƯA ôn thẻ
-    /// nào — ẩn hoàn toàn khi đã ôn hoặc streak = 0 (không nhắc người mới bắt đầu).
-    @ViewBuilder
-    private var streakNudgeRow: some View {
-        if let progress = model.dailyProgress,
-           progress.streak > 0, !progress.reviewedToday {
-            Button(action: onReview) {
-                Label(
-                    "Hôm nay chưa ôn — 1 thẻ là giữ lửa 🔥 \(progress.streak) ngày",
-                    systemImage: "flame")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.due)
-            }
-            .listRowSeparator(.hidden)
         }
     }
 
@@ -428,14 +405,18 @@ private struct HomeTabView: View {
             Section("Đang đọc · \(model.homePins.count)/5") {
                 ForEach(model.homePins) { collection in
                     NavigationLink(value: ShellRoute.hub(collection.id)) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "pin")
+                        HStack(spacing: Spacing.row) {
+                            // Cùng bề rộng IconTile để mép trái các row thẳng hàng.
+                            Image(systemName: "pin.fill")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.accentColor)
-                            VStack(alignment: .leading, spacing: 2) {
+                                .frame(width: IconTile.size)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: Spacing.tight) {
                                 Text(collection.name)
+                                    .font(Typo.rowTitle)
                                 Text(masteryLabel(collection))
-                                    .font(.caption)
+                                    .font(Typo.rowSubtitle)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -443,14 +424,7 @@ private struct HomeTabView: View {
                                 MasteryRing(mastered: collection.masteredCount, total: collection.totalItems)
                             }
                             if collection.dueNow > 0 {
-                                Text("\(collection.dueNow)")
-                                    .font(.subheadline.weight(.semibold))
-                                    .monospacedDigit()
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule().fill(
-                                            Theme.due.opacity(0.18)))
+                                Pill(text: "\(collection.dueNow)", tone: .due)
                             }
                         }
                     }
@@ -591,40 +565,31 @@ private struct KhoTabView: View {
 
     @ViewBuilder
     private func collectionRow(_ collection: AppModel.CollectionOverview) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+        // Tối đa 2 phụ kiện phải (vòng thuộc + số due) — thứ tự ưu tiên nằm ở dòng phụ.
+        let priorityOrder = model.reviewScopeDefault.priorityIDs.firstIndex(of: collection.id)
+        HStack(spacing: Spacing.row) {
+            VStack(alignment: .leading, spacing: Spacing.tight) {
+                HStack(spacing: Spacing.sm) {
                     Text(collection.name)
+                        .font(Typo.rowTitle)
                     if model.homePinIDs.contains(collection.id) {
                         Image(systemName: "pin.fill")
                             .font(.caption)
                             .foregroundStyle(Color.accentColor)
+                            .accessibilityLabel("Đã ghim")
                     }
                 }
-                Text(masteryLabel(collection))
-                    .font(.caption)
+                Text(priorityOrder.map { "Ưu tiên \($0 + 1) · " + masteryLabel(collection) }
+                    ?? masteryLabel(collection))
+                    .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)
             }
             Spacer()
             if collection.totalItems > 0 {
                 MasteryRing(mastered: collection.masteredCount, total: collection.totalItems)
             }
-            if let order = model.reviewScopeDefault.priorityIDs.firstIndex(of: collection.id) {
-                Text("\(order + 1)")
-                    .font(.caption2.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-            }
             if collection.dueNow > 0 {
-                Text("\(collection.dueNow)")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Theme.due.opacity(0.18)))
+                Pill(text: "\(collection.dueNow)", tone: .due)
             }
         }
     }
@@ -638,7 +603,7 @@ private struct KhoTabView: View {
         } label: {
             Label(isPriority ? "Bỏ ưu tiên" : "Ưu tiên", systemImage: isPriority ? "bolt.slash" : "bolt")
         }
-        .tint(isPriority ? .gray : .indigo)
+        .tint(isPriority ? Color(.systemGray) : Theme.level)
         .disabled(
             !isPriority
                 && model.reviewScopeDefault.priorityIDs.count >= ReviewScopeService.maxPriority)
@@ -654,7 +619,7 @@ private struct KhoTabView: View {
             } label: {
                 Label(isPinned ? "Bỏ ghim" : "Ghim", systemImage: isPinned ? "pin.slash" : "pin")
             }
-            .tint(isPinned ? .gray : .accentColor)
+            .tint(isPinned ? Color(.systemGray) : Color.accentColor)
             .disabled(
                 !isPinned && model.homePinIDs.count >= HomePinService.maxPins)
         }
