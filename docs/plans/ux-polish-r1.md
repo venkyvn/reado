@@ -12,18 +12,11 @@
 | T2 U3 phát âm + U9 vòng đã thuộc (ADR-040) | `f2f2a5f` | 244/245 xanh |
 | T3 U7 skeleton + U8 duyệt nhanh | `5f029c1` | 244/245 xanh |
 | T4 Liquid Glass iOS 26 | `07864d7` | 244/245 xanh |
-| T5 Onboarding checklist (ADR-041) | `101494e` | build sạch; `OnboardingChecklistTests` 5/5 xanh riêng (xem dưới) — **chưa chạy lại full suite cho đúng HEAD `101494e`** |
+| T5 Onboarding checklist (ADR-041) | `101494e` | `OnboardingChecklistTests` 5/5 xanh riêng; full suite **256/258 xanh** (2026-09-28, sau ADR-042) |
 
-**Vướng khi làm T5:** có phiên/khác đang sửa `docs/plans/ocr-line-drop.md` song song
-trong cùng repo (`OpenAICompatClient.swift`, `PageOCR.swift`, `PageOCRTests.swift`,
-`OCRProbeTests.swift` mới — dùng `RecognizeDocumentsRequest` iOS 26, hiện **lỗi biên
-dịch**) + 3 script chẩn đoán đổi bundle ID. Không đụng các file đó (không stage,
-không commit). `scripts/test.sh test` (full suite) hiện **không chạy được** tới khi
-file đó hết lỗi biên dịch — target test build chung cho cả hai bên. Đã tách sạch
-5 commit trên bằng `git commit -- <pathspec>` nên không lẫn code của nhau.
-**Việc còn lại:** owner/session kia sửa xong `OCRProbeTests.swift` rồi chạy lại
-`scripts/test.sh test` một lần để có con số xanh thật cho HEAD hiện tại, trước khi
-`/rhandoff` khép T5.
+**Đã giải quyết (2026-09-28):** lúc làm T5 (09-26) `OCRProbeTests.swift` của phiên
+`ocr-line-drop` lỗi biên dịch nên full suite chạy không nổi; ADR-042 (`e0cb9da`) sửa
+xong, full suite xanh lại — T5 khép, không còn việc treo.
 
 ## Context
 
