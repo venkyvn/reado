@@ -95,10 +95,10 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - Fen cắm điện thoại/mở simulator → `scripts/pull_diagnostics.sh device` (hoặc `sim`) rồi `python3 scripts/diag_summary.py <thư mục in ra>`. Đọc bản tóm tắt này trước, không mở thẳng `events.jsonl`/`analysis.json`.
 - Mỗi lần phân tích một thư mục ở `Documents/Diagnostics/analyses/` (ảnh + OCR + từng hàng kèm lý do ngắt đoạn + response + lỗi), giữ 30 lần gần nhất. Ngoại lệ NFR-04 chỉ áp cho log DEBUG này.
 
-**pbxproj** — cấm edit tay/đọc nguyên `project.pbxproj`:
-- Thêm: `python3 scripts/pbxproj_tool.py add --file app/Reado/X.swift --group Reado --target Reado` (test: `--group ReadoTests --target ReadoTests`).
-- Gỡ: `python3 scripts/pbxproj_tool.py remove --file app/Reado/X.swift --group Reado --target Reado`.
-- Kiểm đủ 4 tham chiếu (PBXFileReference, PBXBuildFile, group child, Sources phase) cho mọi file Swift track trong git: `python3 scripts/pbxproj_tool.py check` — `scripts/test.sh` tự chạy cổng này trước khi build, thiếu 1 dòng thì Xcode skip file **ngầm** (test "thừa xanh").
+**pbxproj** — synchronized folders (objectVersion 70, ADR-046), cấm edit tay/đọc nguyên `project.pbxproj` (hook chặn):
+- Thêm/xoá/di chuyển file Swift = tạo/xoá/`git mv` trong `app/Reado/**` hoặc `app/ReadoTests/**`; Xcode tự nhận, không đụng pbxproj. Đổi target/build setting/package → nhờ fen làm trong Xcode.
+- Cổng `python3 scripts/pbxproj_tool.py check` (`scripts/test.sh` tự chạy): còn synchronized folders, không exception set, không fileRef `.swift` kiểu cũ. `list` xem cấu trúc.
+- Bẫy: file nằm trong thư mục là được compile, **kể cả file chưa track git** — file nháp để ngoài `app/`.
 - Chạy xcodebuild tự re-sort pbxproj → trước commit chỉ giữ hunk thật.
 
 **Hooks** (`.claude/hooks/`)
@@ -106,7 +106,7 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - `session-context.sh` (SessionStart) tự nạp HEAD + thay đổi chưa commit + `docs/session-brief.md` §1–2 vào context khi mở/`/clear`/`/compact` — đỡ phải tự đọc lại.
 
 **Bẫy build**
-- Simulator: **iPhone 18 Pro**. `Reado.xcodeproj` viết tay objectVersion 60; local package dùng `XCSwiftPackageProductDependency`.
+- Simulator: **iPhone 18 Pro**. `Reado.xcodeproj` objectVersion 70 (synchronized folders); local package dùng `XCSwiftPackageProductDependency`.
 - `ISO8601FormatStyle()` trần không parse nổi — compose đủ field (`ISOTimestamp.swift`).
 - SQLite `COLLATE NOCASE` chỉ gập ASCII — gập tiếng Việt ở tầng app (FR-20).
 - TOCropViewController từ SPM từ xa — build đầu cần mạng.

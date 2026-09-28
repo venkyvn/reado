@@ -59,7 +59,7 @@ fi
 
 rm -rf "$RESULT"
 
-# Tiền kiểm: test file thiếu 1 trong 4 dấu vết pbxproj sẽ bị Xcode skip ngầm (CLAUDE.md §7).
+# Tiền kiểm: pbxproj phải là synchronized folders (không exception set, không fileRef .swift kiểu cũ) — CLAUDE.md §7.
 # pbxproj_tool.py quy ước chạy từ gốc repo (Path.cwd() cho git ls-files + tìm pbxproj).
 (cd "$ROOT" && python3 scripts/pbxproj_tool.py check)
 

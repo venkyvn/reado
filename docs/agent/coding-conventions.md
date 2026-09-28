@@ -18,7 +18,7 @@
 
 ```
 app/
-  Reado.xcodeproj        — project Xcode (viết tay objectVersion 60; xem bẫy mục 6)
+  Reado.xcodeproj        — project Xcode (objectVersion 70, synchronized folders; xem bẫy mục 9)
   Reado/                 — app SwiftUI. UI + bootstrap; KHÔNG chạy SQL trực tiếp?
                           (chỉ qua ReadoKit public API)
   ReadoKit/              — package nền; toàn bộ logic sản phẩm
@@ -90,9 +90,8 @@ app/
   AppModel/view verify bằng owner e2e, không bằng unit test.
 - DB trong test dùng `SQLiteDatabase(inMemory:)`; fixtures qua enum `Fixtures`
   (time + timezone cố định, không phụ thuộc đồng hồ thật).
-- Test file mới PHẢI có đủ 4 dòng trong pbxproj (PBXBuildFile + PBXFileReference
-  + group child + sources phase) — thiếu `PBXFileReference` là file bị skip **ngầm**
-  không báo lỗi build. Tin cột `Executed N tests`, không tin số trong commit cũ.
+- Test file mới chỉ cần tạo trong `app/ReadoTests/` (synchronized folders, ADR-046). Tin cột
+  `Executed N tests` / dòng `RESULT` của `scripts/test.sh`, không tin số trong commit cũ.
 - "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào ROADMAP.
 
 ## 7b. Commit message — bắt buộc (owner chốt 2026-09-19)
@@ -135,9 +134,8 @@ feat(kit): FR-02 analysis — protocol PageAnalyzer + proxy client, mock cho wal
 ## 9. Bẫy đã biết (thêm khi đụng)
 
 - **Bẫy `find` trong Swift Package:** Thư mục `.build/` của SPM chứa hàng ngàn file header hệ thống. Tuyệt đối không chạy `find` trần trên toàn bộ workspace, việc này sẽ làm tràn context window và tiêu tốn hàng chục ngàn token vô ích.
-- **pbxproj viết tay:** objectVersion 60 + `XCSwiftPackageProductDependency` cho
-  local package (class `PBXSwiftPackageProductDependency` parse fail ở objectVersion
-  này; bump lên 77 mới dùng được). Scheme share nằm ở `xcshareddata/xcschemes/`.
+- **pbxproj synchronized folders:** objectVersion 70 (ADR-046); local package vẫn là
+  `XCSwiftPackageProductDependency`. Scheme share nằm ở `xcshareddata/xcschemes/`.
 - **`swift-fsrs` buildLog:** `log.scheduledDays` là nhịp CŨ — nhịp mới ở
   `item.card.scheduledDays` (mục 4).
 - **SQLite `COLLATE NOCASE` chỉ gập ASCII** — gập hoa thường tiếng Việt là việc

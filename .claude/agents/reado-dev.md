@@ -15,7 +15,7 @@ Implement **một** task Reado đã confirm. Luật + cách làm việc: `CLAUDE
 
 ## Làm
 - Tìm task: `grep -n "<task>" ROADMAP.md`. Bản đồ code: `python3 scripts/repo_map.py`.
-- Thêm file Swift: `python3 scripts/pbxproj_tool.py add …` (CLAUDE.md §7).
+- Thêm file Swift: tạo file trong thư mục là xong, Xcode tự nhận (synchronized folders, CLAUDE.md §7).
 - Test: `scripts/test.sh`. Không chạy được → không bịa số test.
 
 ## Đóng

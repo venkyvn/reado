@@ -752,3 +752,11 @@
   `ShellTabBar`, peek/xoay stamp của card Ôn, và `CaptureView` (tự vẽ, ADR-036).
   Không đụng gesture vuốt, màu nút chấm, vị trí tab bar/nút chụp. Chi tiết bảng
   đổi số: `docs/ux/visual-redesign-plan.md` §8; task: `docs/plans/visual-polish-r1.md`.
+
+## ADR-046 — pbxproj sang synchronized folders (repo-hygiene-r1 B1)
+
+- **Ngày:** 2026-09-28
+- **Bối cảnh:** pbxproj viết tay (objectVersion 60) đòi 4 dấu vết/file Swift; thiếu 1 là Xcode skip **ngầm** (test "thừa xanh"). Đã có 1 file bị trùng (`OCRProbeTests.swift` 2 fileRef) mà không ai thấy.
+- **Quyết định:** `Reado` + `ReadoTests` thành `PBXFileSystemSynchronizedRootGroup`. Fen convert bằng Xcode 27 (Xcode ghi objectVersion **70**, không phải 77 như plan). Trước khi convert phải gỡ reference trùng và 2 file có path nhiều cấp (`Capture/CaptureView.swift`, `Screens/ReviewQueueView.swift`) — Xcode từ chối nếu còn.
+- **Hệ quả:** `pbxproj_tool.py` chỉ còn `check`/`list` (`add`/`remove` bỏ). `check` bắt objectVersion < 70, mất root group, fileRef `.swift` rời, exception set. Cấm exception set (file trong `membershipExceptions` bị loại khỏi target ngầm). File trong thư mục là được compile, kể cả chưa track git. Kiểm: probe test 1/1, hai probe build lỗi (thư mục gốc + thư mục con) đều FAIL đúng file, full 263/265 bằng mốc.
+

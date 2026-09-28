@@ -5,8 +5,6 @@
       "Bash(scripts/test.sh *)",
       "Bash(python3 scripts/repo_map.py)",
       "Bash(python3 scripts/repo_map.py *)",
-      "Bash(python3 scripts/pbxproj_tool.py add *)",
-      "Bash(python3 scripts/pbxproj_tool.py remove *)",
       "Bash(python3 scripts/pbxproj_tool.py check)",
       "Bash(python3 scripts/pbxproj_tool.py list)",
       "Bash(node scripts/verify/check-doc-links.mjs)",

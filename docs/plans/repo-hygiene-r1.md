@@ -6,7 +6,7 @@
 
 ## Trạng thái (cập nhật 2026-09-28)
 
-**Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B: B1+B2+B3 đã có plan chi tiết bên dưới (điều kiện `app/` sạch đã đạt 2026-09-28: `2ffe8ee`, `03267f5`); B4/B5 hoãn.** Chưa bắt đầu code.
+**Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B: B1+B2+B3 đã có plan chi tiết bên dưới (điều kiện `app/` sạch đã đạt 2026-09-28: `2ffe8ee`, `03267f5`); B4/B5 hoãn.** **B1 xong 2026-09-28 (ADR-046)** — lệch plan: Xcode ghi objectVersion **70** (không phải 77), `check` chấp nhận ≥ 70; phải gỡ 2 file path nhiều cấp + reference trùng `OCRProbeTests.swift` trước khi Convert; full test 263/265 bằng mốc. **B2+B3 chưa làm.**
 
 Lệch so với plan ban đầu:
 - **A1:** `.env` đã có sẵn (cùng key với `.env.example`, so bằng hash) nên không gộp; `.env.example` mới lấy biến từ `proxy/main.py` + biến dev (`READO_*`) thay vì biến Phase 0. `ref/sample/page-37` là file text → giữ track.

@@ -3,180 +3,25 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5C0100000000000000000001 /* ReadoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000001 /* ReadoApp.swift */; };
-		5C0100000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000002 /* AppModel.swift */; };
-		5C0100000000000000000003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000003 /* RootView.swift */; };
 		5C0100000000000000000004 /* ReadoKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5A0000000000000000000031 /* ReadoKit */; };
 		5C0100000000000000000005 /* ReadoKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5A0000000000000000000031 /* ReadoKit */; };
-		5C0200000000000000000001 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000001 /* TestSupport.swift */; };
-		5C0200000000000000000002 /* MigrationAndSeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000002 /* MigrationAndSeedTests.swift */; };
-		5C0200000000000000000003 /* ReviewSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000003 /* ReviewSchedulerTests.swift */; };
-		5C0200000000000000000004 /* ReviewQueueAndServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */; };
-		5C0200000000000000000005 /* FoundationPrimitivesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000005 /* FoundationPrimitivesTests.swift */; };
-		5C0100000000000000000006 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000010 /* CaptureView.swift */; };
-		5C010000000000000000000A /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000013 /* ExportView.swift */; };
-		5C0200000000000000000007 /* ExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000007 /* ExportTests.swift */; };
 		5C0100000000000000000007 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 5A0000000000000000000033 /* TOCropViewController */; };
-		5C0100000000000000000008 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000011 /* AnalysisView.swift */; };
-		5C0100000000000000000009 /* ReviewQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000000000000000012 /* ReviewQueueView.swift */; };
-		5C0200000000000000000006 /* AnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000000000000000006 /* AnalysisTests.swift */; };
-
-		5C0200000100000000000000 /* LeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000100000000000000 /* LeechTests.swift */; };
-
-		5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000200000000000000 /* CaptureFailureTests.swift */; };
-
-		5C0200000300000000000000 /* DailyProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000300000000000000 /* DailyProgressTests.swift */; };
-
-		5C0100000100000000000000 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000100000000000000 /* SettingsView.swift */; };
-
-		5C0200000400000000000000 /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000400000000000000 /* SettingsTests.swift */; };
-
-		5C0100000200000000000000 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000200000000000000 /* CollectionDetailView.swift */; };
-
-		5C0200000500000000000000 /* VocabularyListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000500000000000000 /* VocabularyListTests.swift */; };
-
-		5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000600000000000000 /* ScopedReviewTests.swift */; };
-
-		5C0100000300000000000000 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000300000000000000 /* ImportView.swift */; };
-
-		5C0200000700000000000000 /* CSVImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000700000000000000 /* CSVImportTests.swift */; };
-
-		5C0100000400000000000000 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000400000000000000 /* NotificationScheduler.swift */; };
-
-		5C0200000800000000000000 /* ReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000800000000000000 /* ReminderTests.swift */; };
-
-		5C0200000900000000000000 /* HomePinTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000900000000000000 /* HomePinTests.swift */; };
-
-		5C0100000500000000000000 /* HomePinToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000500000000000000 /* HomePinToggle.swift */; };
-		5C0100000600000000000000 /* ReadingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000600000000000000 /* ReadingSessionView.swift */; };
-		5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000A00000000000000 /* ReadingSessionTests.swift */; };
-
-		5C0100000700000000000000 /* StreakCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000700000000000000 /* StreakCalendarView.swift */; };
-
-		5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000B00000000000000 /* StreakCalendarTests.swift */; };
-
-		5C0200000C00000000000000 /* PageOCRTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000C00000000000000 /* PageOCRTests.swift */; };
-
-		5C0100000800000000000000 /* ShellTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000800000000000000 /* ShellTabBar.swift */; };
-
-		5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000D00000000000000 /* LiveAIBoxTests.swift */; };
-
-
-		5C0100000900000000000000 /* CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000900000000000000 /* CameraController.swift */; };
-
-		5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000E00000000000000 /* DebugTraceTests.swift */; };
-
-
-		5C0100000A00000000000000 /* SessionDoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000A00000000000000 /* SessionDoneView.swift */; };
-
-		5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0200000F00000000000000 /* SessionTallyTests.swift */; };
-
-		5C0201000100000000000000 /* LearnMoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000100000000000000 /* LearnMoreTests.swift */; };
-
-		5C0100000B00000000000000 /* Pronunciation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000B00000000000000 /* Pronunciation.swift */; };
-
-		5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000C00000000000000 /* OnboardingChecklistSection.swift */; };
-		5C0100000D00000000000000 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0100000D00000000000000 /* DesignSystem.swift */; };
-
-		5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000200000000000000 /* OnboardingChecklistTests.swift */; };
-
-		5C0201000300000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000300000000000000 /* OCRProbeTests.swift */; };
-
-		5C0201000400000000000000 /* OCRProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000400000000000000 /* OCRProbeTests.swift */; };
-
-		5C0201000500000000000000 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000500000000000000 /* ImageCompressorTests.swift */; };
-		5C0201000600000000000000 /* CramReviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0201000600000000000000 /* CramReviewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5A0000000000000000000005 /* ReadoKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = ReadoKit; path = ReadoKit; sourceTree = "<group>"; };
+		5A0000000000000000000005 /* ReadoKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ReadoKit; sourceTree = "<group>"; };
 		5A0000000000000000000020 /* Reado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reado.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A0000000000000000000021 /* ReadoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReadoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		5B0100000000000000000001 /* ReadoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadoApp.swift; sourceTree = "<group>"; };
-		5B0100000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
-		5B0100000000000000000003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		5B0200000000000000000001 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
-		5B0200000000000000000002 /* MigrationAndSeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationAndSeedTests.swift; sourceTree = "<group>"; };
-		5B0200000000000000000003 /* ReviewSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewSchedulerTests.swift; sourceTree = "<group>"; };
-		5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewQueueAndServiceTests.swift; sourceTree = "<group>"; };
-		5B0200000000000000000005 /* FoundationPrimitivesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationPrimitivesTests.swift; sourceTree = "<group>"; };
-		5B0200000000000000000006 /* AnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisTests.swift; sourceTree = "<group>"; };
-		5B0100000000000000000010 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CaptureView.swift; path = Capture/CaptureView.swift; sourceTree = "<group>"; };
-		5B0100000000000000000011 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
-		5B0100000000000000000012 /* ReviewQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReviewQueueView.swift; path = Screens/ReviewQueueView.swift; sourceTree = "<group>"; };
-		5B0100000000000000000013 /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
-		5B0200000000000000000007 /* ExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportTests.swift; sourceTree = "<group>"; };
-
-		5B0200000100000000000000 /* LeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeechTests.swift; sourceTree = "<group>"; };
-
-		5B0200000200000000000000 /* CaptureFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFailureTests.swift; sourceTree = "<group>"; };
-
-		5B0200000300000000000000 /* DailyProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyProgressTests.swift; sourceTree = "<group>"; };
-
-		5B0100000100000000000000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-
-		5B0200000400000000000000 /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
-
-		5B0100000200000000000000 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
-
-		5B0200000500000000000000 /* VocabularyListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListTests.swift; sourceTree = "<group>"; };
-
-		5B0200000600000000000000 /* ScopedReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopedReviewTests.swift; sourceTree = "<group>"; };
-
-		5B0100000300000000000000 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
-
-		5B0200000700000000000000 /* CSVImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVImportTests.swift; sourceTree = "<group>"; };
-
-		5B0100000400000000000000 /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
-
-		5B0200000800000000000000 /* ReminderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderTests.swift; sourceTree = "<group>"; };
-
-		5B0200000900000000000000 /* HomePinTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePinTests.swift; sourceTree = "<group>"; };
-
-		5B0100000500000000000000 /* HomePinToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePinToggle.swift; sourceTree = "<group>"; };
-		5B0100000600000000000000 /* ReadingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionView.swift; sourceTree = "<group>"; };
-		5B0200000A00000000000000 /* ReadingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionTests.swift; sourceTree = "<group>"; };
-
-		5B0100000700000000000000 /* StreakCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarView.swift; sourceTree = "<group>"; };
-
-		5B0200000B00000000000000 /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
-
-		5B0200000C00000000000000 /* PageOCRTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageOCRTests.swift; sourceTree = "<group>"; };
-
-		5B0100000800000000000000 /* ShellTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellTabBar.swift; sourceTree = "<group>"; };
-
-		5B0200000D00000000000000 /* LiveAIBoxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAIBoxTests.swift; sourceTree = "<group>"; };
-
-
-		5B0100000900000000000000 /* CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraController.swift; sourceTree = "<group>"; };
-
-		5B0200000E00000000000000 /* DebugTraceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugTraceTests.swift; sourceTree = "<group>"; };
-
-
-		5B0100000A00000000000000 /* SessionDoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDoneView.swift; sourceTree = "<group>"; };
-
-		5B0200000F00000000000000 /* SessionTallyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTallyTests.swift; sourceTree = "<group>"; };
-
-		5B0201000100000000000000 /* LearnMoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnMoreTests.swift; sourceTree = "<group>"; };
-
-		5B0100000B00000000000000 /* Pronunciation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pronunciation.swift; sourceTree = "<group>"; };
-
-		5B0100000C00000000000000 /* OnboardingChecklistSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistSection.swift; sourceTree = "<group>"; };
-		5B0100000D00000000000000 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
-
-		5B0201000200000000000000 /* OnboardingChecklistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistTests.swift; sourceTree = "<group>"; };
-
-		5B0201000300000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
-
-		5B0201000400000000000000 /* OCRProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRProbeTests.swift; sourceTree = "<group>"; };
-
-		5B0201000500000000000000 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
-		5B0201000600000000000000 /* CramReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CramReviewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		493AC29C306AB33400C79FEF /* ReadoTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ReadoTests; sourceTree = "<group>"; };
+		493AC313306AB33B00C79FEF /* Reado */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Reado; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		5D0100000000000000000002 /* Frameworks */ = {
@@ -203,8 +48,8 @@
 			isa = PBXGroup;
 			children = (
 				5A0000000000000000000005 /* ReadoKit */,
-				5A0000000000000000000003 /* Reado */,
-				5A0000000000000000000004 /* ReadoTests */,
+				493AC313306AB33B00C79FEF /* Reado */,
+				493AC29C306AB33400C79FEF /* ReadoTests */,
 				5A0000000000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -216,68 +61,6 @@
 				5A0000000000000000000021 /* ReadoTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		5A0000000000000000000003 /* Reado */ = {
-			isa = PBXGroup;
-			children = (
-				5B0100000000000000000001 /* ReadoApp.swift */,
-				5B0100000000000000000002 /* AppModel.swift */,
-				5B0100000000000000000003 /* RootView.swift */,
-				5B0100000000000000000010 /* CaptureView.swift */,
-				5B0100000000000000000011 /* AnalysisView.swift */,
-				5B0100000000000000000012 /* ReviewQueueView.swift */,
-				5B0100000000000000000013 /* ExportView.swift */,
-			
-				5B0100000100000000000000 /* SettingsView.swift */,
-				5B0100000200000000000000 /* CollectionDetailView.swift */,
-				5B0100000300000000000000 /* ImportView.swift */,
-				5B0100000400000000000000 /* NotificationScheduler.swift */,
-				5B0100000500000000000000 /* HomePinToggle.swift */,
-				5B0100000600000000000000 /* ReadingSessionView.swift */,
-				5B0100000700000000000000 /* StreakCalendarView.swift */,
-				5B0100000800000000000000 /* ShellTabBar.swift */,
-				5B0100000900000000000000 /* CameraController.swift */,
-				5B0100000A00000000000000 /* SessionDoneView.swift */,
-				5B0100000B00000000000000 /* Pronunciation.swift */,
-				5B0100000C00000000000000 /* OnboardingChecklistSection.swift */,
-				5B0100000D00000000000000 /* DesignSystem.swift */,);
-			path = Reado;
-			sourceTree = "<group>";
-		};
-		5A0000000000000000000004 /* ReadoTests */ = {
-			isa = PBXGroup;
-			children = (
-				5B0200000000000000000001 /* TestSupport.swift */,
-				5B0200000000000000000002 /* MigrationAndSeedTests.swift */,
-				5B0200000000000000000003 /* ReviewSchedulerTests.swift */,
-				5B0200000000000000000004 /* ReviewQueueAndServiceTests.swift */,
-				5B0200000000000000000005 /* FoundationPrimitivesTests.swift */,
-				5B0200000000000000000006 /* AnalysisTests.swift */,
-				5B0200000000000000000007 /* ExportTests.swift */,
-			
-				5B0200000100000000000000 /* LeechTests.swift */,
-				5B0200000200000000000000 /* CaptureFailureTests.swift */,
-				5B0200000300000000000000 /* DailyProgressTests.swift */,
-				5B0200000400000000000000 /* SettingsTests.swift */,
-				5B0200000500000000000000 /* VocabularyListTests.swift */,
-				5B0200000600000000000000 /* ScopedReviewTests.swift */,
-				5B0200000700000000000000 /* CSVImportTests.swift */,
-				5B0200000800000000000000 /* ReminderTests.swift */,
-				5B0200000900000000000000 /* HomePinTests.swift */,
-				5B0200000A00000000000000 /* ReadingSessionTests.swift */,
-				5B0200000B00000000000000 /* StreakCalendarTests.swift */,
-				5B0200000C00000000000000 /* PageOCRTests.swift */,
-				5B0200000D00000000000000 /* LiveAIBoxTests.swift */,
-				5B0200000E00000000000000 /* DebugTraceTests.swift */,
-				5B0200000F00000000000000 /* SessionTallyTests.swift */,
-				5B0201000100000000000000 /* LearnMoreTests.swift */,
-				5B0201000200000000000000 /* OnboardingChecklistTests.swift */,
-				5B0201000300000000000000 /* OCRProbeTests.swift */,
-				5B0201000400000000000000 /* OCRProbeTests.swift */,
-				5B0201000500000000000000 /* ImageCompressorTests.swift */,
-				5B0201000600000000000000 /* CramReviewTests.swift */,);
-			path = ReadoTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -294,6 +77,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				493AC313306AB33B00C79FEF /* Reado */,
 			);
 			name = Reado;
 			packageProductDependencies = (
@@ -315,6 +101,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				493AC29C306AB33400C79FEF /* ReadoTests */,
 			);
 			name = ReadoTests;
 			packageProductDependencies = (
@@ -379,78 +168,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C0100000000000000000001 /* ReadoApp.swift in Sources */,
-				5C0100000000000000000002 /* AppModel.swift in Sources */,
-				5C0100000000000000000003 /* RootView.swift in Sources */,
-				5C0100000000000000000006 /* CaptureView.swift in Sources */,
-				5C010000000000000000000A /* ExportView.swift in Sources */,
-				5C0100000000000000000008 /* AnalysisView.swift in Sources */,
-				5C0100000000000000000009 /* ReviewQueueView.swift in Sources */,
-			
-				5C0100000100000000000000 /* SettingsView.swift in Sources */,
-				5C0100000200000000000000 /* CollectionDetailView.swift in Sources */,
-				5C0100000300000000000000 /* ImportView.swift in Sources */,
-				5C0100000400000000000000 /* NotificationScheduler.swift in Sources */,
-				5C0100000500000000000000 /* HomePinToggle.swift in Sources */,
-				5C0100000600000000000000 /* ReadingSessionView.swift in Sources */,
-				5C0100000700000000000000 /* StreakCalendarView.swift in Sources */,
-				5C0100000800000000000000 /* ShellTabBar.swift in Sources */,
-				5C0100000900000000000000 /* CameraController.swift in Sources */,
-				5C0100000A00000000000000 /* SessionDoneView.swift in Sources */,
-				5C0100000B00000000000000 /* Pronunciation.swift in Sources */,
-				5C0100000C00000000000000 /* OnboardingChecklistSection.swift in Sources */,
-				5C0100000D00000000000000 /* DesignSystem.swift in Sources */,);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5D0200000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C0200000000000000000001 /* TestSupport.swift in Sources */,
-				5C0200000000000000000002 /* MigrationAndSeedTests.swift in Sources */,
-				5C0200000000000000000003 /* ReviewSchedulerTests.swift in Sources */,
-				5C0200000000000000000004 /* ReviewQueueAndServiceTests.swift in Sources */,
-				5C0200000000000000000005 /* FoundationPrimitivesTests.swift in Sources */,
-				5C0200000000000000000006 /* AnalysisTests.swift in Sources */,
-				5C0200000000000000000007 /* ExportTests.swift in Sources */,
-			
-				5C0200000100000000000000 /* LeechTests.swift in Sources */,
-				5C0200000200000000000000 /* CaptureFailureTests.swift in Sources */,
-				5C0200000300000000000000 /* DailyProgressTests.swift in Sources */,
-				5C0200000400000000000000 /* SettingsTests.swift in Sources */,
-				5C0200000500000000000000 /* VocabularyListTests.swift in Sources */,
-				5C0200000600000000000000 /* ScopedReviewTests.swift in Sources */,
-				5C0200000700000000000000 /* CSVImportTests.swift in Sources */,
-				5C0200000800000000000000 /* ReminderTests.swift in Sources */,
-				5C0200000900000000000000 /* HomePinTests.swift in Sources */,
-				5C0200000A00000000000000 /* ReadingSessionTests.swift in Sources */,
-				5C0200000B00000000000000 /* StreakCalendarTests.swift in Sources */,
-				5C0200000C00000000000000 /* PageOCRTests.swift in Sources */,
-				5C0200000D00000000000000 /* LiveAIBoxTests.swift in Sources */,
-				5C0200000E00000000000000 /* DebugTraceTests.swift in Sources */,
-				5C0200000F00000000000000 /* SessionTallyTests.swift in Sources */,
-				5C0201000100000000000000 /* LearnMoreTests.swift in Sources */,
-				5C0201000200000000000000 /* OnboardingChecklistTests.swift in Sources */,
-				5C0201000300000000000000 /* OCRProbeTests.swift in Sources */,
-				5C0201000400000000000000 /* OCRProbeTests.swift in Sources */,
-				5C0201000500000000000000 /* ImageCompressorTests.swift in Sources */,
-				5C0201000600000000000000 /* CramReviewTests.swift in Sources */,);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		5A0000000000000000000031 /* ReadoKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5A0000000000000000000030 /* XCLocalSwiftPackageReference "ReadoKit" */;
-			productName = ReadoKit;
-		};
-		5A0000000000000000000033 /* TOCropViewController */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5A0000000000000000000032 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
-			productName = TOCropViewController;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5F0000000000000000000001 /* Debug */ = {
@@ -503,6 +231,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G6MDJBWMTK;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Reado;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reado dùng camera để chụp trang sách cần dịch.";
@@ -519,7 +248,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.reado.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.readoluca.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -532,6 +261,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G6MDJBWMTK;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Reado;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reado dùng camera để chụp trang sách cần dịch.";
@@ -548,7 +278,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.reado.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.readoluca.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -632,6 +362,7 @@
 			relativePath = ReadoKit;
 		};
 /* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		5A0000000000000000000032 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -643,6 +374,18 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCSwiftPackageProductDependency section */
+		5A0000000000000000000031 /* ReadoKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5A0000000000000000000030 /* XCLocalSwiftPackageReference "ReadoKit" */;
+			productName = ReadoKit;
+		};
+		5A0000000000000000000033 /* TOCropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5A0000000000000000000032 /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = TOCropViewController;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5A0000000000000000000010 /* Project object */;
 }

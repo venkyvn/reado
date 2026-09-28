@@ -9,6 +9,13 @@ import re
 import sys
 
 
+PBXPROJ_MSG = (
+    "Cấm edit tay project.pbxproj. Thêm/xoá file Swift = tạo/xoá file trong app/Reado hoặc "
+    "app/ReadoTests (synchronized folders, Xcode tự nhận). Đổi cấu hình project → nhờ fen làm trong "
+    "Xcode (CLAUDE.md §7)."
+)
+
+
 def block(msg: str) -> None:
     print(msg, file=sys.stderr)
     sys.exit(2)
@@ -26,14 +33,14 @@ def main() -> None:
     if tool in ("Edit", "Write", "MultiEdit"):
         path = inp.get("file_path", "") or ""
         if path.endswith("project.pbxproj"):
-            block(
-                "Cấm edit tay project.pbxproj — dùng "
-                "`python3 scripts/pbxproj_tool.py add|remove --file ... --group ... --target ...` "
-                "(CLAUDE.md §7)."
-            )
+            block(PBXPROJ_MSG)
 
     if tool == "Bash":
         cmd = inp.get("command", "") or ""
+        if "project.pbxproj" in cmd and re.search(
+            r"sed\s+-i|perl\s+-[a-z]*i|>\s*\S*project\.pbxproj", cmd
+        ):
+            block(PBXPROJ_MSG)
         if re.search(r"(^|[;&|]\s*)swift\s+(build|test)\b", cmd):
             block(
                 "Cấm `swift build`/`swift test` (đụng cache ~/Library) — "
