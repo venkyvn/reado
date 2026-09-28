@@ -4,7 +4,7 @@
 > Người implement: Sonnet, **mỗi task 1 session**, mở bằng `/rstart`, đóng bằng `/rhandoff`.
 > CI: để sau, không nằm trong plan này.
 
-## Trạng thái (cập nhật 2026-09-28)
+## Trạng thái (cập nhật 2026-09-28) — **PLAN KHÉP** (Phase A + B1–B3 xong; B4/B5 hoãn, làm khi vướng)
 
 **Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B: B1+B2+B3 đã có plan chi tiết bên dưới (điều kiện `app/` sạch đã đạt 2026-09-28: `2ffe8ee`, `03267f5`); B4/B5 hoãn.** **B1 xong 2026-09-28 (ADR-046)** — lệch plan: Xcode ghi objectVersion **70** (không phải 77), `check` chấp nhận ≥ 70; phải gỡ 2 file path nhiều cấp + reference trùng `OCRProbeTests.swift` trước khi Convert; full test 263/265 bằng mốc. **B2+B3 xong 2026-09-28** (`ea46f05` + commit tách file): `app/Reado` chia 8 thư mục feature, `RootView` 626→204, `AnalysisView` 647→400, `ReviewQueueView` 894→309 dòng; full test 263/265 bằng mốc; diff chỉ còn di chuyển + bỏ `private` (kiểm bằng so tập dòng +/-). **Phase B khép** (B4/B5 hoãn). Fen đã xem tay UI 2026-09-28 (app chạy đúng như trước).
 
