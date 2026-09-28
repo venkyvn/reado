@@ -20,17 +20,8 @@ proxy/.venv/
 # OS noise
 .DS_Store
 
-# Phase 0: ảnh mẫu owner (bản quyền) + output verify
-scripts/verify/samples/*
-!scripts/verify/samples/.gitkeep
-scripts/verify/output/
-
 # 2026-09-24 (owner): bỏ whitelist "chỉ app/" — track toàn bộ source + docs.
 # Các khối bí mật + build cache phía trên vẫn áp dụng.
-
-# qr/ = mock GRDB — chỉ commit source, bỏ cache build của nó
-.build-qr/
-.xcode-packages-qr/
 
 # Permission config cục bộ từng máy (không phải nội dung phân tích)
 .claude/settings.local.json

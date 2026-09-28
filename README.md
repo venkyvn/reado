@@ -28,7 +28,7 @@ cùng từ vựng đã trích xuất, rồi ôn lại số từ đó bằng spac
 | [docs/specs/journeys.md](docs/specs/journeys.md) | Các lối đi UI (J1–J6) và schema tham chiếu |
 | [docs/specs/sync-server-ddl.md](docs/specs/sync-server-ddl.md) | Bản nháp DDL server cho sync tương lai (Postgres/Supabase, USN, RLS) — Later, chờ owner |
 | [ref/pvo/pvo-2022-model.md](ref/pvo/pvo-2022-model.md) | Mô hình PVO của thầy Vũ — nguồn tham khảo cho tầng liên kết từ vựng, thuộc R2 |
-| [idea.md](idea.md) | Ý tưởng gốc, giữ lại làm provenance |
+| [docs/idea.md](docs/idea.md) | Ý tưởng gốc, giữ lại làm provenance |
 
 ## Tiến độ & nhật ký
 

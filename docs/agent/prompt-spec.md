@@ -15,7 +15,7 @@ cuộc thảo luận sinh ra nó, vẫn đọc và tiếp tục được.
 > **Đọc cảnh báo ở mục 2 trước khi dùng doc này để implement.** Prompt baseline —
 > artefact mà A-02 lấy làm chuẩn chất lượng — **đã được owner cung cấp và dán nguyên
 > văn ở mục 2** (2026-09-08; bản tạm thời, tinh chỉnh theo M-03). Phần prompt ở mục 3
-> vẫn là bản **dựng lại** từ [idea.md](idea.md) và FR-02, không phải bản gốc.
+> vẫn là bản **dựng lại** từ [docs/idea.md](docs/idea.md) và FR-02, không phải bản gốc.
 
 ## Điều hướng
 
@@ -96,7 +96,7 @@ A-02** — bằng chứng phải đến từ việc so với output của chính
 
 ### Cái đã giữ được
 
-[idea.md](idea.md) có ghi lại *yêu cầu* của prompt, dù không phải prompt text. Năm
+[docs/idea.md](docs/idea.md) có ghi lại *yêu cầu* của prompt, dù không phải prompt text. Năm
 điểm, và mục 3 dựng lại từ đây:
 
 - Đóng vai **một dịch giả chuyên nghiệp có kiến thức sư phạm**

@@ -10,7 +10,7 @@
 | Owner | fen |
 | Created | 2026-09-07 |
 | Last updated | 2026-09-18 |
-| Source | [idea.md](idea.md) |
+| Source | [docs/idea.md](docs/idea.md) |
 | Related | [vision.md](docs/specs/vision.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [research/tech-stack.md](docs/research/tech-stack.md) |
 
 **Quy ước:** phần diễn giải bằng tiếng Việt; heading, requirement ID và technical
