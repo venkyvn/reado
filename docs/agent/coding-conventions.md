@@ -29,6 +29,8 @@ app/
     Library/             — Kho, CollectionDetailView, ReadingSessionView, Import/Export
     Settings/            — SettingsView
     Shared/              — DesignSystem (token + Pill/IconTile/VocabSummary), Pronunciation
+  View > ~400 dòng thì tách theo `// MARK:` (subview thành file riêng; phần thân struct thành
+  `extension X` ở `X+Card.swift`…, chỗ đó `private` → internal — vd `ReviewQueueView+Card/+Grade`).
   ReadoKit/              — package nền; toàn bộ logic sản phẩm
     Sources/CSQLite/     — system library SQLite C (shim.h + module.modulemap)
     Sources/ReadoKit/

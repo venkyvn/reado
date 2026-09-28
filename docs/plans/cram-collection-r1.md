@@ -16,7 +16,7 @@
 `ReviewQueue.newIntroducedCount` ([ReviewQueue.swift:54-70](app/ReadoKit/Sources/ReadoKit/Review/ReviewQueue.swift#L54-L70)) đếm mọi log, **không lọc `mode='srs'`** — trái ADR-011. Khi có log cram, cả hai subquery `EXISTS`/`NOT EXISTS` phải thêm `AND mode = 'srs'`. (`DailyProgress.swift:91` đã lọc đúng; `StreakCalendar` đếm mọi log — đúng ADR-011 "cram vẫn tính streak".)
 
 ## Đã kiểm trong code (để khỏi đoán)
-- **Leech** ([LeechService.swift](app/ReadoKit/Sources/ReadoKit/Leech/LeechService.swift)) đọc `cards.lapses`, gọi trong `AppModel.grade` ([AppModel.swift:381](app/Reado/AppModel.swift#L381)). Cram không update `cards` → **không gọi `LeechService` ở đường cram**, không cần sửa leech.
+- **Leech** ([LeechService.swift](app/ReadoKit/Sources/ReadoKit/Leech/LeechService.swift)) đọc `cards.lapses`, gọi trong `AppModel.grade` ([AppModel.swift:381](app/Reado/App/AppModel.swift#L381)). Cram không update `cards` → **không gọi `LeechService` ở đường cram**, không cần sửa leech.
 - `newIntroducedCount`: vì cram chỉ lấy thẻ `state != 'new'` (luôn có log srs trước), bug không thực sự nổ — vẫn sửa cho đúng ADR-011, 1 test khoá.
 - `ReviewQueue.loadFullQueue` ([ReviewQueue.swift:189](app/ReadoKit/Sources/ReadoKit/Review/ReviewQueue.swift#L189)): phần "ids → `ReviewItem` + snapshot" (SELECT join vocab/collections + `fetchSnapshot`) → **tách thành `private static func hydrate(on:cardIDs:)`**, dùng chung cho srs và cram. Lưu ý hydrate `ORDER BY c.due_at` — cram cũng muốn due gần trước nên dùng chung được.
 - `ReviewService.undo` update lại `cards` → cram cần hàm riêng `undoCram(on:logID:cardID:)` chỉ `DELETE FROM review_logs WHERE id=? AND card_id=? AND mode='cram'`.
@@ -46,7 +46,7 @@
 - Map sang `AppModel.CollectionOverview`. Test: thêm case vào test summary hiện có (grep `collectionSummaries` trong `ReadoTests`).
 
 ### T4 — UI header `CollectionDetailView`
-Thay Section đầu ([CollectionDetailView.swift:38-72](app/Reado/CollectionDetailView.swift#L38-L72)) bằng view mới `CollectionStatsHeader` (file mới `app/Reado/CollectionStatsHeader.swift`, thêm bằng `pbxproj_tool.py add`):
+Thay Section đầu ([CollectionDetailView.swift:38-72](app/Reado/Library/CollectionDetailView.swift#L38-L72)) bằng view mới `CollectionStatsHeader` (file mới `app/Reado/Library/CollectionStatsHeader.swift`, thêm bằng `pbxproj_tool.py add`):
 - **Thẻ tiến độ:** "Đã thuộc X/Y" + thanh chồng 4 đoạn (Đã thuộc `Theme.ok` · Đang nhớ · Đang học `Theme.due` · Chưa học xám) + legend kèm số. Bộ rỗng: ẩn thanh (giữ quy ước motivation-r1).
 - **3 ô số:** Đến hạn hôm nay (`dueNow`) · "+N từ / 7 ngày" (phụ: "thêm lần cuối 3 ngày trước" — `RelativeDateTimeFormatter`) · Lần ôn tiếp ("mai · 5 thẻ", nếu dueNow>0 thì "ngay bây giờ").
 - **CTA chính theo ngữ cảnh** (thay nút "Ôn bộ này"): `dueNow>0` → "Ôn N thẻ đến hạn" · else `crammableCount>0` → "Ôn thêm (không đổi lịch)" mở cram · else → "Chụp trang để thêm từ" (gợi FloatShutter, hoặc ẩn CTA).
@@ -64,8 +64,8 @@ Hai phiên (CLAUDE.md §7: 1 task tầng 2 / session): **Phiên A = T1+T2 (Cram)
 ## File chính
 - `app/ReadoKit/Sources/ReadoKit/Review/ReviewQueue.swift`, `ReviewService.swift`
 - `app/ReadoKit/Sources/ReadoKit/Vocab/VocabRepository.swift`
-- `app/Reado/AppModel.swift` (`CollectionOverview`, `gradeCram`)
-- `app/Reado/Screens/ReviewQueueView.swift`, `app/Reado/CollectionDetailView.swift`, mới `app/Reado/CollectionStatsHeader.swift`
+- `app/Reado/App/AppModel.swift` (`CollectionOverview`, `gradeCram`)
+- `app/Reado/Review/ReviewQueueView.swift`, `app/Reado/Library/CollectionDetailView.swift`, mới `app/Reado/Library/CollectionStatsHeader.swift`
 - Test mới `app/ReadoTests/CramReviewTests.swift` (+ `pbxproj_tool.py add --group ReadoTests --target ReadoTests`)
 
 ## Verification
