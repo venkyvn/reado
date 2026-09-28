@@ -20,7 +20,15 @@
 app/
   Reado.xcodeproj        — project Xcode (objectVersion 70, synchronized folders; xem bẫy mục 9)
   Reado/                 — app SwiftUI. UI + bootstrap; KHÔNG chạy SQL trực tiếp?
-                          (chỉ qua ReadoKit public API)
+                          (chỉ qua ReadoKit public API). Chia theo feature (B2 repo-hygiene-r1):
+    App/                 — ReadoApp, RootView (shell + route), ShellTabBar, AppModel, NotificationScheduler
+    Home/                — checklist onboarding, streak calendar, pin bộ lên Home
+    Capture/             — CaptureView, CameraController (FR-01)
+    Analysis/            — AnalysisView + card duyệt (FR-02..04)
+    Review/              — ReviewQueueView, SessionDoneView (FR-11/12)
+    Library/             — Kho, CollectionDetailView, ReadingSessionView, Import/Export
+    Settings/            — SettingsView
+    Shared/              — DesignSystem (token + Pill/IconTile/VocabSummary), Pronunciation
   ReadoKit/              — package nền; toàn bộ logic sản phẩm
     Sources/CSQLite/     — system library SQLite C (shim.h + module.modulemap)
     Sources/ReadoKit/

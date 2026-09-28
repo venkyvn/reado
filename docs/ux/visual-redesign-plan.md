@@ -209,7 +209,7 @@ cũ (không đổi hành vi iOS 17–25).
 
 ## 8. Token Spacing / Radius / Typo (visual-polish-r1, ADR-045)
 
-Định nghĩa ở `app/Reado/DesignSystem.swift`. View không viết số lẻ — đi qua token.
+Định nghĩa ở `app/Reado/Shared/DesignSystem.swift`. View không viết số lẻ — đi qua token.
 
 | Đang có | Thay bằng |
 |---|---|
