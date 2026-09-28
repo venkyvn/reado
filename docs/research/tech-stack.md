@@ -6,7 +6,7 @@
 | Created | 2026-09-08 |
 | Last updated | 2026-09-17 |
 | Revision | v2.1 — Q-03 hybrid BYOK (proxy mặc định + agent OpenAI-compat trên máy). v2 = native iOS + local-first + proxy-only. v1 (PWA + BE đầy) nằm dưới dạng bia mộ ở mục 2.1 |
-| Related | [prd.md](docs/specs/prd.md), [AGENTS.md](AGENTS.md), [prompt-spec.md](docs/agent/prompt-spec.md), [vocabulary.md](docs/research/vocabulary.md), [review.md](docs/research/review.md) |
+| Related | [prd.md](docs/specs/prd.md), [CLAUDE.md](CLAUDE.md), [prompt-spec.md](docs/agent/prompt-spec.md), [vocabulary.md](docs/research/vocabulary.md), [review.md](docs/research/review.md) |
 | Phạm vi | Trả lời câu hỏi: R1 dựng bằng ngôn ngữ nào, DB nào, chạy ở đâu — và những ràng buộc nào **buộc** ra lựa chọn đó thay vì để nó thành sở thích |
 
 **Tài liệu này tự chứa.** Nó được viết để một session mới, không có bối cảnh gì về cuộc
@@ -39,7 +39,7 @@ thảo luận sinh ra nó, vẫn đọc và tiếp tục được.
 
 ## 1. Vì sao doc này tồn tại
 
-[AGENTS.md mục 3](AGENTS.md) từng liệt Q-01, Q-02 và Q-03 là ba câu **chặn mọi
+`AGENTS.md` mục 3 (nay gộp vào [CLAUDE.md](CLAUDE.md) §5, ADR-035) từng liệt Q-01, Q-02 và Q-03 là ba câu **chặn mọi
 dòng code**. Chúng được trả lời lần đầu ngày 2026-09-08 (PWA + BE đầy + key sau BE),
 rồi **đảo** ngày 2026-09-17 khi fen chọn native iOS.
 
@@ -460,10 +460,10 @@ proxy-only. Bảng này là việc sync **v2.1** (Q-03 hybrid, cùng ngày).
 | `prd.md` FR-11 | Nhắc ôn qua local notification / APNs, không Web Push |
 | `vocabulary.md` | Mục dialect SQLite; uuid phục vụ local-first + cửa sync Later |
 | `review.md` | Binding R1 = `swift-fsrs`; `ts-fsrs` vẫn tham chiếu field |
-| `AGENTS.md` mục 3 | Q-01–03 rời danh sách "phải hỏi / chặn code" |
-| `AGENTS.md` mục 5 | Dialect SQLite đã chốt |
-| `AGENTS.md` mục 8 | `swift-fsrs` v6 opt-in; solution design vẫn chưa có file |
-| `PROJECT.md`, `README.md` | Stack R1; `web/` = prototype |
+| `AGENTS.md` mục 3 (đã gộp `CLAUDE.md`) | Q-01–03 rời danh sách "phải hỏi / chặn code" |
+| `AGENTS.md` mục 5 (đã gộp `CLAUDE.md`) | Dialect SQLite đã chốt |
+| `AGENTS.md` mục 8 (đã gộp `CLAUDE.md`) | `swift-fsrs` v6 opt-in; solution design vẫn chưa có file |
+| `PROJECT.md` (đã xoá), `README.md` | Stack R1; `web/` = prototype |
 | `journeys.md` | Analysis cần mạng; ôn không; giờ nhắc không còn "tuỳ Q-01" |
 | `vocabulary.md` | NG-09 = thư viện có sẵn; R1 = `swift-fsrs` |
 
@@ -482,7 +482,7 @@ proxy-only. Bảng này là việc sync **v2.1** (Q-03 hybrid, cùng ngày).
 | awesome-fsrs — implementation theo ngôn ngữ | https://open-spaced-repetition.github.io/awesome-fsrs/ |
 | awesome-fsrs wiki, *The Algorithm* — FSRS-6, 21 tham số | https://github.com/open-spaced-repetition/awesome-fsrs/wiki/The-Algorithm |
 | Google — JSON Schema structured output | https://blog.google/innovation-and-ai/technology/developers-tools/gemini-api-structured-outputs/ |
-| Tài liệu nội bộ Reado | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [prompt-spec.md](docs/agent/prompt-spec.md), [vocabulary.md](docs/research/vocabulary.md), [review.md](docs/research/review.md), [AGENTS.md](AGENTS.md) |
+| Tài liệu nội bộ Reado | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [prompt-spec.md](docs/agent/prompt-spec.md), [vocabulary.md](docs/research/vocabulary.md), [review.md](docs/research/review.md), [CLAUDE.md](CLAUDE.md) |
 
 ### Nhắc lại từ trí nhớ hoặc suy luận — CHƯA kiểm chứng
 

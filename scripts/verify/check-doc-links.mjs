@@ -134,8 +134,8 @@ for (const abs of files) {
 const allText = files.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
 const orphans = files
   .map((f) => path.relative(ROOT, f))
-  .filter((rel) => rel === 'AGENTS.md' || rel === 'ROADMAP.md' || rel === 'README.md' || !allText.includes(path.basename(rel)))
-  .filter((rel) => !['AGENTS.md', 'ROADMAP.md', 'README.md'].includes(rel));
+  .filter((rel) => rel === 'ROADMAP.md' || rel === 'README.md' || !allText.includes(path.basename(rel)))
+  .filter((rel) => !['ROADMAP.md', 'README.md'].includes(rel));
 
 console.log('== Số file md kiểm tra:', files.length, '==');
 if (problems.length) {

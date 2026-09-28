@@ -18,7 +18,7 @@ cùng từ vựng đã trích xuất, rồi ôn lại số từ đó bằng spac
 
 | Doc | Trả lời câu hỏi |
 |---|---|
-| [PROJECT.md](PROJECT.md) | Mục lục nội dung repo — file & vì sao |
+| [CLAUDE.md](CLAUDE.md) | Entry point cho agent — sơ đồ docs (§3), luật cứng, cách làm việc |
 | [docs/specs/vision.md](docs/specs/vision.md) | Tại sao Reado đáng tồn tại — design principles và ranh giới sản phẩm |
 | [docs/specs/prd.md](docs/specs/prd.md) | Thế nào là "xong" — functional/non-functional requirements, scope, metrics |
 | [docs/agent/prompt-spec.md](docs/agent/prompt-spec.md) | Prompt gửi cho AI ở FR-02 và **structured output schema** — hợp đồng giữa AI và data model |
