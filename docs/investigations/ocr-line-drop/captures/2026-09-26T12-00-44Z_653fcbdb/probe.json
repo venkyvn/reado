@@ -1,31 +1,58 @@
 {
+  "app_recognizeDetailed" : {
+    "engine" : "documents",
+    "lineCount" : 29,
+    "missingGroundtruthLineCount" : 0,
+    "missingSentences" : [
+
+    ],
+    "paragraphCount" : 9,
+    "text" : "The lowest-income households in the U.S. on average spend\n$412 a year on lotto tickets, four times the amount of those in\nthe highest income groups. Forty percent of Americans cannot\ncome up with $400 in an emergency. Which is to say: Those\nbuying $400 in lottery tickets are by and large the same people\nwho say they couldn't come up with $400 in an emergency.\n\nThey are blowing their safety nets on something with a one-in-\nmillions chance of hitting it big.\n\nThat seems crazy to me. It probably seems crazy to you, too.\n\nBut I'm not in the lowest income group. You're likely not, either.\n\nSo it's hard for many of us to intuitively grasp the subconscious\nreasoning of low-income lottery ticket buyers.\n\nBut strain a little, and you can imagine it going something like\nthis:\n\nWe live paycheck-to-paycheck and saving seems out of reach.\n\nOur prospects for much higher wages seem out of reach. We\ncan't afford nice vacations, new cars, health insurance, or\nhomes in safe neighborhoods. We can't put our kids through\ncollege without crippling debt. Much of the stuff you people\nwho read finance books either have now, or have a good\nchance of getting, we don't. Buying a lottery ticket is the only\ntime in our lives we can hold a tangible dream of getting the\ngood stuff that you already have and take for granted. We are\npaying for a dream, and you may not understand that because\nyou are already living a dream. That's why we buy more tickets\nthan you do.\n\nYou don't have to agree with this reasoning. Buying lotto\ntickets when you're broke is still a bad idea. But I can kind of\nunderstand why lotto ticket sales persist."
+  },
   "fullRes_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
     "missingGroundtruthLineCount" : 0,
-    "rawObservationCount" : 9
+    "missingSentences" : [
+
+    ],
+    "rawObservationCount" : 9,
+    "text" : "The lowest-income households in the U.S. on average spend $412 a year on lotto tickets, four times the amount of those in the highest income groups. Forty percent of Americans cannot come up with $400 in an emergency. Which is to say: Those buying $400 in lottery tickets are by and large the same people who say they couldn't come up with $400 in an emergency.\n\nThey are blowing their safety nets on something with a one-in-millions chance of hitting it big.\n\nThat seems crazy to me. It probably seems crazy to you, too.\n\nBut I'm not in the lowest income group. You're likely not, either.\n\nSo it's hard for many of us to intuitively grasp the subconscious reasoning of low-income lottery ticket buyers.\n\nBut strain a little, and you can imagine it going something like this:\n\nWe live paycheck-to-paycheck and saving seems out of reach.\n\nOur prospects for much higher wages seem out of reach. We can't afford nice vacations, new cars, health insurance, or homes in safe neighborhoods. We can't put our kids through college without crippling debt. Much of the stuff you people who read finance books either have now, or have a good chance of getting, we don't. Buying a lottery ticket is the only time in our lives we can hold a tangible dream of getting the good stuff that you already have and take for granted. We are paying for a dream, and you may not understand that because you are already living a dream. That's why we buy more tickets than you do.\n\nYou don't have to agree with this reasoning. Buying lotto tickets when you're broke is still a bad idea. But I can kind of understand why lotto ticket sales persist."
   },
   "fullRes_legacy" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 29,
     "lineCount" : 29,
     "missingGroundtruthLineCount" : 0,
-    "rawObservationCount" : 29
+    "missingSentences" : [
+
+    ],
+    "rawObservationCount" : 29,
+    "text" : "The lowest-income households in the U.S. on average spend\n$412 a year on lotto tickets, four times the amount of those in\nthe highest income groups. Forty percent of Americans cannot\ncome up with $400 in an emergency. Which is to say: Those\nbuying $400 in lottery tickets are by and large the same people\nwho say they couldn't come up with $400 in an emergency.\nThey are blowing their safety nets on something with a one-in-\nmillions chance of hitting it big.\n\nThat seems crazy to me. It probably seems crazy to you, too.\nBut I'm not in the lowest income group. You're likely not, either.\nSo it's hard for many of us to intuitively grasp the subconscious\nreasoning of low-income lottery ticket buyers.\n\nBut strain a little, and you can imagine it going something like\nthis:\n\nWe live paycheck-to-paycheck and saving seems out of reach.\nOur prospects for much higher wages seem out of reach. We\ncan't afford nice vacations, new cars, health insurance, or\nhomes in safe neighborhoods. We can't put our kids through\ncollege without crippling debt. Much of the stuff you people\nwho read finance books either have now, or have a good\nchance of getting, we don't. Buying a lottery ticket is the only\ntime in our lives we can hold a tangible dream of getting the\ngood stuff that you already have and take for granted. We are\npaying for a dream, and you may not understand that because\nyou are already living a dream. That's why we buy more tickets\nthan you do.\n\nYou don't have to agree with this reasoning. Buying lotto\ntickets when you're broke is still a bad idea. But I can kind of\nunderstand why lotto ticket sales persist."
   },
   "scaled1600_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
     "missingGroundtruthLineCount" : 0,
-    "rawObservationCount" : 9
+    "missingSentences" : [
+
+    ],
+    "rawObservationCount" : 9,
+    "text" : "The lowest-income households in the U.S. on average spend $412 a year on lotto tickets, four times the amount of those in the highest income groups. Forty percent of Americans cannot come up with $400 in an emergency. Which is to say: Those buying $400 in lottery tickets are by and large the same people who say they couldn't come up with $400 in an emergency.\n\nThey are blowing their safety nets on something with a one-in-millions chance of hitting it big.\n\nThat seems crazy to me. It probably seems crazy to you, too.\n\nBut I'm not in the lowest income group. You're likely not, either.\n\nSo it's hard for many of us to intuitively grasp the subconscious reasoning of low-income lottery ticket buyers.\n\nBut strain a little, and you can imagine it going something like this:\n\nWe live paycheck-to-paycheck and saving seems out of reach.\n\nOur prospects for much higher wages seem out of reach. We can't afford nice vacations, new cars, health insurance, or homes in safe neighborhoods. We can't put our kids through college without crippling debt. Much of the stuff you people who read finance books either have now, or have a good chance of getting, we don't. Buying a lottery ticket is the only time in our lives we can hold a tangible dream of getting the good stuff that you already have and take for granted. We are paying for a dream, and you may not understand that because you are already living a dream. That's why we buy more tickets than you do.\n\nYou don't have to agree with this reasoning. Buying lotto tickets when you're broke is still a bad idea. But I can kind of understand why lotto ticket sales persist."
   },
   "scaled1600_legacy" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 29,
     "lineCount" : 29,
     "missingGroundtruthLineCount" : 0,
-    "rawObservationCount" : 29
+    "missingSentences" : [
+
+    ],
+    "rawObservationCount" : 29,
+    "text" : "The lowest-income households in the U.S. on average spend\n$412 a year on lotto tickets, four times the amount of those in\nthe highest income groups. Forty percent of Americans cannot\ncome up with $400 in an emergency. Which is to say: Those\nbuying $400 in lottery tickets are by and large the same people\nwho say they couldn't come up with $400 in an emergency.\nThey are blowing their safety nets on something with a one-in-\nmillions chance of hitting it big.\n\nThat seems crazy to me. It probably seems crazy to you, too.\nBut I'm not in the lowest income group. You're likely not, either.\nSo it's hard for many of us to intuitively grasp the subconscious\nreasoning of low-income lottery ticket buyers.\n\nBut strain a little, and you can imagine it going something like\nthis:\n\nWe live paycheck-to-paycheck and saving seems out of reach.\nOur prospects for much higher wages seem out of reach. We\ncan't afford nice vacations, new cars, health insurance, or\nhomes in safe neighborhoods. We can't put our kids through\ncollege without crippling debt. Much of the stuff you people\nwho read finance books either have now, or have a good\nchance of getting, we don't. Buying a lottery ticket is the only\ntime in our lives we can hold a tangible dream of getting the\ngood stuff that you already have and take for granted. We are\npaying for a dream, and you may not understand that because\nyou are already living a dream. That's why we buy more tickets\nthan you do.\n\nYou don't have to agree with this reasoning. Buying lotto\ntickets when you're broke is still a bad idea. But I can kind of\nunderstand why lotto ticket sales persist."
   },
+  "scaled1600Pixels" : "1600x1437",
   "sourcePixels" : "4800x4311"
 }

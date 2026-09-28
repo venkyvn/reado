@@ -55,6 +55,10 @@ final class OCRProbeTests: XCTestCase {
 
             var report: [String: Any] = [
                 "sourcePixels": "\(cgImage.width)x\(cgImage.height)",
+                "scaled1600Pixels": {
+                    let s = scaledTo1600(cgImage)
+                    return "\(s.width)x\(s.height)"
+                }(),
             ]
             var lines = ["=== \(folder.lastPathComponent) — \(cgImage.width)x\(cgImage.height) ==="]
 
@@ -72,6 +76,8 @@ final class OCRProbeTests: XCTestCase {
                         "droppedLowConfidenceCount": result.droppedLowConfidence.count,
                         "lineCount": result.lines.count,
                         "missingGroundtruthLineCount": missing.count,
+                        "missingSentences": missing,
+                        "text": result.text,
                     ]
                     let missingPreview = missing.prefix(3).map { String($0.prefix(60)) }
                     lines.append(
@@ -80,6 +86,21 @@ final class OCRProbeTests: XCTestCase {
                             + "missingVsGroundtruth=\(missing.count) \(missingPreview)")
                 }
             }
+            // Đường app thật (`PageOCR.recognizeDetailed` trên đúng bytes page.jpg) —
+            // xác nhận iOS 26 đi engine documents chứ không rơi về legacy.
+            let appResult = try await PageOCR.recognizeDetailed(imageData: data)
+            let appMissing = groundtruth.map { missingSentences(text: appResult.text, groundtruth: $0) } ?? []
+            report["app_recognizeDetailed"] = [
+                "engine": appResult.engine,
+                "lineCount": appResult.lines.count,
+                "paragraphCount": appResult.text.components(separatedBy: "\n\n").count,
+                "missingGroundtruthLineCount": appMissing.count,
+                "missingSentences": appMissing,
+                "text": appResult.text,
+            ]
+            lines.append(
+                "  app: engine=\(appResult.engine) lines=\(appResult.lines.count) "
+                    + "missingVsGroundtruth=\(appMissing.count)")
             try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
                 .write(to: folder.appendingPathComponent("probe.json"))
             summaryLines.append(contentsOf: lines)
@@ -151,7 +172,12 @@ final class OCRProbeTests: XCTestCase {
         let scale = maxEdge / longest
         let newW = Int(w * scale)
         let newH = Int(h * scale)
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: newW, height: newH))
+        // scale = 1: mặc định của UIGraphicsImageRenderer là @3x → "1600px" thật ra
+        // ra ~4800px (đúng bug của ImageCompressor); probe phải đo pixel thật.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: newW, height: newH), format: format)
         let uiImage = UIImage(cgImage: image)
         let resized = renderer.image { _ in
             uiImage.draw(in: CGRect(x: 0, y: 0, width: newW, height: newH))
@@ -171,8 +197,15 @@ final class OCRProbeTests: XCTestCase {
         return sentences.filter { !normalizedText.contains(normalize($0)) }
     }
 
+    /// Gập ký tự typographic (dash/quote) + gạch nối cuối hàng để so groundtruth
+    /// (Live Text ghi `true-the`, sách in em-dash) không bị nhiễu giả.
     private func normalize(_ text: String) -> String {
-        text.lowercased().components(separatedBy: .whitespacesAndNewlines)
+        var t = text.lowercased()
+        for dash in ["—", "–", "‒", "―"] { t = t.replacingOccurrences(of: dash, with: "-") }
+        for q in ["’", "‘", "ʼ"] { t = t.replacingOccurrences(of: q, with: "'") }
+        for q in ["“", "”"] { t = t.replacingOccurrences(of: q, with: "\"") }
+        t = t.replacingOccurrences(of: "-\n", with: "")
+        return t.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }.joined(separator: " ")
     }
 }

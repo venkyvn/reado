@@ -1,31 +1,79 @@
 {
+  "app_recognizeDetailed" : {
+    "engine" : "documents",
+    "lineCount" : 60,
+    "missingGroundtruthLineCount" : 2,
+    "missingSentences" : [
+      "Failure-which can be anything from bankruptcy to not meeting a personal goal-is equally abused.",
+      "We prefer simple stories, which are easy but often devilishly misleading."
+    ],
+    "paragraphCount" : 37,
+    "text" : "《◆\n\nJD Detec x\n\n&\n\ngy-of-money-by-morgan-housel.pdf\ntech devops L english\n\nG bàn n: X\n\n• news\n\n34 \/ 253\n\n• Các g x\n\n• The P. X\n\n• trivia\n\n• Claudi\n\nQ*\n\n6 LeetCode\n\n© Webs\n\nMai © dsh gemini\n\n90%+日•\n\nenglish central\n\n* API AI\n\n© tradingvi\n\nEconomist Bhashkar Mazumder has shown that incomes\namong brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be\nrich than he is tall. I think most of us intuitively know this is\ntrue-the quality of your education and the doors that open\nfor you are heavily linked to your parents' socioeconomic\nstatus. But find me two rich brothers and I'll show you two\nmen who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not\nmeeting a personal goal—is equally abused\n\nDid failed businesses not try hard enough? Were bad\ninvestments not thought through well enough? Are wayward\ncareers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth\npursuing has less than 100% odds of succeeding, and risk is\njust what happens when you end up on the unfortunate side\nof that equation. Just as with luck, the story gets too hard,\ntoo messy, too complex if we try to pick apart how much of\nan outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's\npossible that I made a bad decision by buying it in the first\nplace. It's also possible that I made a good decision that had\nan 80% chance of making money, and I just happened to\nend up on the side of the unfortunate 20%. How do I know\nwhich is which? Did I make a mistake, or did I just\nexperience the reality of risk?\n\nIt's possible to statistically measure whether some decisions\nwere wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but\noften devilishly misleading\n\n8O\n\nFS\n\nF6\n\nF7\n\nDIl\n\nF8\n\nDD\n\nF10\n\nF11\n\nF1Z"
+  },
   "fullRes_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
     "missingGroundtruthLineCount" : 2,
-    "rawObservationCount" : 37
+    "missingSentences" : [
+      "Failure-which can be anything from bankruptcy to not meeting a personal goal-is equally abused.",
+      "We prefer simple stories, which are easy but often devilishly misleading."
+    ],
+    "rawObservationCount" : 37,
+    "text" : "《◆\n\nJD Detec x\n\n&\n\ngy-of-money-by-morgan-housel.pdf tech devops L english\n\nG bàn n: X\n\n• news\n\n34 \/ 253\n\n• Các g x\n\n• The P. X\n\n• trivia\n\n• Claudi\n\nQ*\n\n6 LeetCode\n\n© Webs\n\nMai © dsh gemini\n\n90%+日•\n\nenglish central\n\n* API AI\n\n© tradingvi\n\nEconomist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be rich than he is tall. I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status. But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused\n\nDid failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward careers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation. Just as with luck, the story gets too hard, too messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first place. It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%. How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?\n\nIt's possible to statistically measure whether some decisions were wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but often devilishly misleading\n\n8O\n\nFS\n\nF6\n\nF7\n\nDIl\n\nF8\n\nDD\n\nF10\n\nF11\n\nF1Z"
   },
   "fullRes_legacy" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 59,
     "lineCount" : 22,
-    "missingGroundtruthLineCount" : 12,
-    "rawObservationCount" : 59
+    "missingGroundtruthLineCount" : 11,
+    "missingSentences" : [
+      "Economist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.",
+      "I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status",
+      "But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.",
+      "Did failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward careers due to laziness? Sometimes, yes",
+      "Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation",
+      "Just as with luck, the story gets too hard, too messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.",
+      "It's possible that I made a bad decision by buying it in the first place",
+      "It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%",
+      "How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?",
+      "It's possible to statistically measure whether some decisions were wise",
+      "We prefer simple stories, which are easy but often devilishly misleading."
+    ],
+    "rawObservationCount" : 59,
+    "text" : "G bàn na • Các g: x 5 The P: X 12 Detec: Claud ® Webs\ngy-or-money-by-m an-housel.pd *\n• devops • english • news • trivia • ai dsh • gemini Al NotebookLM € LeetCode enolish centra • API AI © tradingvi\n34 \/ 253 90%\n\namong brothers are more correlated than height or weight. Economist Bhashkar Mazumder has shown that incomes\nIf you are rich and tall, your brother is more likely to also be rich than he is tall. I think most of us intuitively know this is\nfor you are heavily linked to your parents' socioeconomic true-the quality of your education and the doors that open\nmen who do not think this study's findings apply to them. status. But find me two rich brothers and I'll show you two\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused.\n\ninvestments not thought through well enough? Are wayward Did failed businesses not try hard enough? Were bad\ncareers due to laziness? Sometimes, yes. Of course.\n\npursuing has less than 100% odds of succeeding, and risk is But how much? It's so hard to know. Everything worth\nof that equation. Just as with luck, the story gets too hard just what happens when you end up on the unfortunate side\ntoo messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first\nan 80% chance of making money, and I just happened to place. It's also possible that I made a good decision that had\nwhich is which? Did I make a mistake, or did | just end up on the side of the unfortunate 20%. How do I know\nexperience the reality of risk?\n\nwere wise. But in the real world, day to day, we simply don't. It's possible to statistically measure whether some decisions\nIt's too hard. We prefer simple stories, which are easy but often devilishly misleading\n\nDII DD 40))\n\nF7 F8 F9 F10 F11 F12"
   },
   "scaled1600_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
-    "missingGroundtruthLineCount" : 2,
-    "rawObservationCount" : 37
+    "missingGroundtruthLineCount" : 1,
+    "missingSentences" : [
+      "It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%"
+    ],
+    "rawObservationCount" : 41,
+    "text" : "Tab\n\ngy-of-money-by-morgan-housel.pdf\n\n• devops\n\n• english\n\nreed, and Happiness\n\nG bàn n\/\n\n• news\n\n34 | 253\n\n• Các g x\n\n• The P: X\n\n《◆\n\nDetec\n\n必\n\nClaud\n\n盛り\n\n® Webs\n\nM trivia\n\n*\n\nAil NotebookLM\n\nLeetCode\n\nMai O dsh gemini\n\n日•\n\nenglish central\n\ntradingvi\n\nEconomist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be rich than he is tall. I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status. But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward careers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation. Just as with luck, the story gets too hard, too messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first place. It's also possible that I made a good decision that had an 80% chance of making money, and just happened to end up on the side of the unfortunate 20%. How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?\n\nIt's possible to statistically measure whether some decisions were wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but often devilishly misleading.\n\nFS\n\nF6\n\nF7\n\nDIl\n\nF8\n\n59\n\nF10\n\nF11\n\nF12"
   },
   "scaled1600_legacy" : {
     "droppedLowConfidenceCount" : 0,
-    "keptObservationCount" : 61,
-    "lineCount" : 22,
-    "missingGroundtruthLineCount" : 11,
-    "rawObservationCount" : 61
+    "keptObservationCount" : 64,
+    "lineCount" : 23,
+    "missingGroundtruthLineCount" : 10,
+    "missingSentences" : [
+      "Economist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.",
+      "If you are rich and tall, your brother is more likely to also be rich than he is tall",
+      "I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status",
+      "Failure-which can be anything from bankruptcy to not meeting a personal goal-is equally abused.",
+      "Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation",
+      "It's possible that I made a bad decision by buying it in the first place",
+      "It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%",
+      "How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?",
+      "It's possible to statistically measure whether some decisions were wise",
+      "We prefer simple stories, which are easy but often devilishly misleading."
+    ],
+    "rawObservationCount" : 64,
+    "text" : "Tab Help\n\n• Các g x 6 The P. x B Detec: Claud ® Webs\ngy-of-money-by-morgan-housel.pdf *\n> tech • devops • english • news • trivia •ai O dsh • gemini ^i NotebookLM € LeetCode english central ® API AI © tradingvi\nreed, and Happiness 34 \/ 253 90%\n\namong brothers are more correlated than height or weight. Economist Bhashkar Mazumder has shown that incomes\nrich than he is tall. I think most of us intuitively know this is If you are rich and tall, your brother is more likely to also be\ntrue-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic\nstatus. But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused\nDid failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward\ncareers due to laziness? Sometimes, yes. Of course.\n\npursuing has less than 100% odds of succeeding, and risk is But how much? It's so hard to know. Everything worth\njust what happens when you end up on the unfortunate side of that equation. Just as with luck, the story gets too hard,\ntoo messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first\nan 80% chance of making money, and I just happened to place. It's also possible that I made a good decision that had\nend up on the side of the unfortunate 20%. How do I know which is which? Did I make a mistake, or did l just\nexperience the reality of risk?\n\nwere wise. But in the real world, day to day, we simply don't. It's possible to statistically measure whether some decisions\noften devilishly misleading. It's too hard. We prefer simple stories, which are easy but\n\n80 DII DD 401)\n\nF5 F6 F7 F8 F9 F10 F11 F12"
   },
+  "scaled1600Pixels" : "1201x1600",
   "sourcePixels" : "3603x4800"
 }

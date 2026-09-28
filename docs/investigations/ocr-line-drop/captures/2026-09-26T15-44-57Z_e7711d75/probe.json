@@ -1,31 +1,59 @@
 {
+  "app_recognizeDetailed" : {
+    "engine" : "documents",
+    "lineCount" : 30,
+    "missingGroundtruthLineCount" : 1,
+    "missingSentences" : [
+      "How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?"
+    ],
+    "paragraphCount" : 8,
+    "text" : "Economist Bhashkar Mazumder has shown that incomes\namong brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be\nrich than he is tall. I think most of us intuitively know this is\ntrue-the quality of your education and the doors that open\nfor you are heavily linked to your parents' socioeconomic\nstatus. But find me two rich brothers and I'll show you two\nmen who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not\nmeeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad\ninvestments not thought through well enough? Are wayward\ncareers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth\npursuing has less than 100% odds of succeeding, and risk is\njust what happens when you end up on the unfortunate side\nof that equation. Just as with luck, the story gets too hard,\ntoo messy, too complex if we try to pick apart how much of\nan outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's\npossible that I made a bad decision by buying it in the first\nplace. It's also possible that I made a good decision that had\nan 80% chance of making money, and I just happened to\nend up on the side of the unfortunate 20%. How do I know\nwhich is which? Did I make a mistake, or did | just\nexperience the reality of risk?\n\nIt's possible to statistically measure whether some decisions\nwere wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but\noften devilishly misleading."
+  },
   "fullRes_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
-    "missingGroundtruthLineCount" : 2,
-    "rawObservationCount" : 8
+    "missingGroundtruthLineCount" : 1,
+    "missingSentences" : [
+      "How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?"
+    ],
+    "rawObservationCount" : 8,
+    "text" : "Economist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be rich than he is tall. I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status. But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward careers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation. Just as with luck, the story gets too hard, too messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first place. It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%. How do I know which is which? Did I make a mistake, or did | just experience the reality of risk?\n\nIt's possible to statistically measure whether some decisions were wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but often devilishly misleading."
   },
   "fullRes_legacy" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 30,
     "lineCount" : 29,
-    "missingGroundtruthLineCount" : 3,
-    "rawObservationCount" : 30
+    "missingGroundtruthLineCount" : 2,
+    "missingSentences" : [
+      "Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation",
+      "But in the real world, day to day, we simply don't."
+    ],
+    "rawObservationCount" : 30,
+    "text" : "Economist Bhashkar Mazumder has shown that incomes\namong brothers are more correlated than height or weight.\nIf you are rich and tall, your brother is more likely to also be\nrich than he is tall. I think most of us intuitively know this is\ntrue-the quality of your education and the doors that open\nfor you are heavily linked to your parents' socioeconomic\nstatus. But find me two rich brothers and I'll show you two\nmen who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not\nmeeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad\ninvestments not thought through well enough? Are wayward\ncareers due to laziness? Sometimes, yes. Of course.\n\npursuing has less than 100% odds of succeeding, and risk is But how much? It's so hard to know. Everything worth\n\njust what happens when you end up on the unfortunate side\nof that equation. Just as with luck, the story gets too hard,\ntoo messy, too complex if we try to pick apart how much of\nan outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's\npossible that I made a bad decision by buying it in the first\nplace. It's also possible that I made a good decision that had\nan 80% chance of making money, and I just happened to\nend up on the side of the unfortunate 20%. How do I know\nwhich is which? Did I make a mistake, or did I just\nexperience the reality of risk?\n\nIt's possible to statistically measure whether some decisions\nwere wise. But in the real world, day to day, we simply don't\nIt's too hard. We prefer simple stories, which are easy but\noften devilishly misleading."
   },
   "scaled1600_documents" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 0,
     "lineCount" : 0,
-    "missingGroundtruthLineCount" : 2,
-    "rawObservationCount" : 8
+    "missingGroundtruthLineCount" : 1,
+    "missingSentences" : [
+      "How do I know which is which? Did I make a mistake, or did I just experience the reality of risk?"
+    ],
+    "rawObservationCount" : 8,
+    "text" : "Economist Bhashkar Mazumder has shown that incomes among brothers are more correlated than height or weight.\n\nIf you are rich and tall, your brother is more likely to also be rich than he is tall. I think most of us intuitively know this is true-the quality of your education and the doors that open for you are heavily linked to your parents' socioeconomic status. But find me two rich brothers and I'll show you two men who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not meeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad investments not thought through well enough? Are wayward careers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth pursuing has less than 100% odds of succeeding, and risk is just what happens when you end up on the unfortunate side of that equation. Just as with luck, the story gets too hard, too messy, too complex if we try to pick apart how much of an outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's possible that I made a bad decision by buying it in the first place. It's also possible that I made a good decision that had an 80% chance of making money, and I just happened to end up on the side of the unfortunate 20%. How do I know which is which? Did I make a mistake, or did | just experience the reality of risk?\n\nIt's possible to statistically measure whether some decisions were wise. But in the real world, day to day, we simply don't.\n\nIt's too hard. We prefer simple stories, which are easy but often devilishly misleading."
   },
   "scaled1600_legacy" : {
     "droppedLowConfidenceCount" : 0,
     "keptObservationCount" : 30,
-    "lineCount" : 29,
-    "missingGroundtruthLineCount" : 3,
-    "rawObservationCount" : 30
+    "lineCount" : 30,
+    "missingGroundtruthLineCount" : 1,
+    "missingSentences" : [
+      "But in the real world, day to day, we simply don't."
+    ],
+    "rawObservationCount" : 30,
+    "text" : "Economist Bhashkar Mazumder has shown that incomes\namong brothers are more correlated than height or weight.\nIf you are rich and tall, your brother is more likely to also be\nrich than he is tall. I think most of us intuitively know this is\ntrue-the quality of your education and the doors that open\nfor you are heavily linked to your parents' socioeconomic\nstatus. But find me two rich brothers and I'll show you two\nmen who do not think this study's findings apply to them.\n\nFailure-which can be anything from bankruptcy to not\nmeeting a personal goal—is equally abused.\n\nDid failed businesses not try hard enough? Were bad\ninvestments not thought through well enough? Are wayward\ncareers due to laziness? Sometimes, yes. Of course.\n\nBut how much? It's so hard to know. Everything worth\npursuing has less than 100% odds of succeeding, and risk is\njust what happens when you end up on the unfortunate side\nof that equation. Just as with luck, the story gets too hard,\ntoo messy, too complex if we try to pick apart how much of\nan outcome was a conscious decision versus a risk.\n\nSay I buy a stock, and five years later it's gone nowhere. It's\npossible that I made a bad decision by buying it in the first\nplace. It's also possible that I made a good decision that had\nan 80% chance of making money, and I just happened to\nend up on the side of the unfortunate 20%. How do I know\nwhich is which? Did I make a mistake, or did I just\nexperience the reality of risk?\n\nIt's possible to statistically measure whether some decisions\nwere wise. But in the real world, day to day, we simply don't\nIt's too hard. We prefer simple stories, which are easy but\noften devilishly misleading."
   },
+  "scaled1600Pixels" : "1293x1600",
   "sourcePixels" : "3879x4800"
 }

@@ -45,6 +45,7 @@ def summarize_analysis(folder: Path, full: bool) -> None:
     if ocr_path.exists():
         ocr = load_json(ocr_path)
         lines = ocr.get("lines", [])
+        print(f"OCR engine: {ocr.get('engine', 'legacy (log cũ)')}")
         breaks = [l for l in lines if l.get("breakBefore")]
         raw = ocr.get("rawObservationCount")
         kept = ocr.get("observationCount")

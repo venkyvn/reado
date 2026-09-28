@@ -28,7 +28,12 @@ public enum ImageCompressor {
         let scale = maxEdge / longest
         let newW = Int(w * scale)
         let newH = Int(h * scale)
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: newW, height: newH))
+        // scale = 1: mặc định của renderer là scale màn hình (@3x) nên "1600px"
+        // từng ra ~4800px và FR-01 không được áp (ocr-line-drop).
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: newW, height: newH), format: format)
         return renderer.image { _ in
             image.draw(in: CGRect(x: 0, y: 0, width: newW, height: newH))
         }

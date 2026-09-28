@@ -119,6 +119,7 @@ public struct OpenAICompatClient: PageAnalyzer {
 
     private static func ocrDebugJSON(_ result: PageOCR.OCRResult) -> [String: Any] {
         [
+            "engine": result.engine,
             "observationCount": result.observations.count,
             // ocr-line-drop: rawObservationCount là tổng Vision trả về TRƯỚC lọc
             // confidence — chênh với observationCount + droppedLowConfidence.count

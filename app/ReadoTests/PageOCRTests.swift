@@ -135,6 +135,47 @@ final class PageOCRTests: XCTestCase {
         XCTAssertEqual(dropped, [low])
     }
 
+    // MARK: - ADR-042: engine documents — ghép đoạn có sẵn, không qua hình học.
+
+    private func obs(_ text: String, y: CGFloat = 0.5) -> PageOCR.Observation {
+        PageOCR.Observation(
+            text: text, boundingBox: CGRect(x: 0.1, y: y, width: 0.8, height: 0.02))
+    }
+
+    func testJoinParagraphsSingleParagraphJoinsLinesWithNewline() {
+        let result = PageOCR.joinParagraphs([[obs("line one", y: 0.9), obs("line two", y: 0.88)]])
+        XCTAssertEqual(result.text, "line one\nline two")
+        XCTAssertEqual(result.engine, "documents")
+        XCTAssertEqual(result.lines.map(\.breakBefore), [false, false])
+    }
+
+    func testJoinParagraphsSeparatesParagraphsWithBlankLine() {
+        let result = PageOCR.joinParagraphs([
+            [obs("para one a"), obs("para one b")],
+            [obs("para two")],
+        ])
+        XCTAssertEqual(result.text, "para one a\npara one b\n\npara two")
+        XCTAssertEqual(result.lines.map(\.breakBefore), [false, false, true])
+        XCTAssertEqual(result.lines.last?.breakReason, "document")
+        XCTAssertEqual(result.observations.count, 3)
+    }
+
+    func testJoinParagraphsDropsEmptyParagraphsAndLines() {
+        let result = PageOCR.joinParagraphs([
+            [obs("  ")],
+            [obs("real"), obs("")],
+            [],
+            [obs("second")],
+        ])
+        XCTAssertEqual(result.text, "real\n\nsecond")
+    }
+
+    func testJoinParagraphsYTopFollowsVisionOrigin() {
+        // Box Vision origin dưới-trái: y=0.9,h=0.02 → mép trên cách đỉnh ảnh 0.08.
+        let result = PageOCR.joinParagraphs([[obs("top", y: 0.9)]])
+        XCTAssertEqual(result.lines[0].yTop, 0.08, accuracy: 0.0001)
+    }
+
     func testGarbageBytesYieldEmpty() async throws {
         let text = try await PageOCR.recognize(imageData: Data([0x00, 0x01, 0x02]))
         XCTAssertEqual(text, "")

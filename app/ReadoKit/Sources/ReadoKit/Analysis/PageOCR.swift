@@ -63,16 +63,21 @@ public enum PageOCR {
         /// Observation bị loại vì `confidence < minConfidence` — rỗng khi dựng
         /// bằng `detailedReadingOrder` (lọc confidence chỉ xảy ra ở đường Vision thật).
         public let droppedLowConfidence: [Observation]
+        /// "documents" (`RecognizeDocumentsRequest`, iOS 26+, ADR-042) | "legacy"
+        /// (`VNRecognizeTextRequest` + ngắt đoạn hình học ADR-037).
+        public let engine: String
 
         public init(
             text: String, observations: [Observation], lines: [Line],
-            rawObservationCount: Int = 0, droppedLowConfidence: [Observation] = []
+            rawObservationCount: Int = 0, droppedLowConfidence: [Observation] = [],
+            engine: String = "legacy"
         ) {
             self.text = text
             self.observations = observations
             self.lines = lines
             self.rawObservationCount = rawObservationCount
             self.droppedLowConfidence = droppedLowConfidence
+            self.engine = engine
         }
     }
 
@@ -81,9 +86,68 @@ public enum PageOCR {
     }
 
     public static func recognizeDetailed(imageData: Data) async throws -> OCRResult {
-        try await Task.detached(priority: .userInitiated) {
+        // ADR-042: iOS 26+ dùng `RecognizeDocumentsRequest` (đoạn có sẵn từ Vision,
+        // không rơi/gộp hàng như legacy). Lỗi hoặc rỗng → rơi về legacy chứ không
+        // làm hỏng luồng phân tích.
+        if #available(iOS 26.0, *),
+           let result = try? await recognizeDocuments(imageData: imageData),
+           !result.text.isEmpty {
+            return result
+        }
+        return try await Task.detached(priority: .userInitiated) {
             try recognizeDetailedSync(imageData: imageData)
         }.value
+    }
+
+    @available(iOS 26.0, *)
+    private static func recognizeDocuments(imageData: Data) async throws -> OCRResult {
+        guard let image = cgImage(from: imageData) else {
+            return OCRResult(text: "", observations: [], lines: [], engine: "documents")
+        }
+        var request = RecognizeDocumentsRequest()
+        request.textRecognitionOptions.useLanguageCorrection = true
+        let observations = try await request.perform(on: image)
+        guard let document = observations.first?.document else {
+            return OCRResult(text: "", observations: [], lines: [], engine: "documents")
+        }
+        let paragraphs: [[Observation]] = document.paragraphs.map { paragraph in
+            paragraph.lines.map { line in
+                Observation(text: line.transcript, boundingBox: line.boundingBox.cgRect)
+            }
+        }
+        return joinParagraphs(paragraphs, rawObservationCount: paragraphs.count)
+    }
+
+    /// Testable: không gọi Vision. Đoạn đã có sẵn từ engine documents nên bỏ qua
+    /// `splitColumns`/`linesWithBreaks` hình học: trong đoạn nối hàng bằng `\n`,
+    /// giữa các đoạn `\n\n` (hợp đồng với prompt v5 không đổi). Hàng/đoạn rỗng bị bỏ.
+    public static func joinParagraphs(
+        _ paragraphs: [[Observation]], rawObservationCount: Int = 0
+    ) -> OCRResult {
+        var allLines: [Line] = []
+        var allObservations: [Observation] = []
+        var paragraphTexts: [String] = []
+        for paragraph in paragraphs {
+            let rows = paragraph.compactMap { obs -> Observation? in
+                let text = obs.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return nil }
+                return Observation(text: text, boundingBox: obs.boundingBox, confidence: obs.confidence)
+            }
+            guard !rows.isEmpty else { continue }
+            for (index, row) in rows.enumerated() {
+                allLines.append(Line(
+                    text: row.text, minX: row.boundingBox.minX, maxX: row.boundingBox.maxX,
+                    yTop: 1 - row.boundingBox.maxY, height: row.boundingBox.height,
+                    breakBefore: index == 0 && !paragraphTexts.isEmpty,
+                    breakReason: index == 0 && !paragraphTexts.isEmpty ? "document" : nil))
+            }
+            allObservations.append(contentsOf: rows)
+            paragraphTexts.append(rows.map(\.text).joined(separator: "\n"))
+        }
+        return OCRResult(
+            text: paragraphTexts.joined(separator: "\n\n"),
+            observations: allObservations, lines: allLines,
+            rawObservationCount: rawObservationCount, engine: "documents")
     }
 
     /// Testable: không gọi Vision.
