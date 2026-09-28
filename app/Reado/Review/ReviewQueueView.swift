@@ -57,9 +57,18 @@ struct ReviewQueueView: View {
 /// false khi nhúng làm TAB (không nút "Đóng"); sheet "Ôn bộ này" để true.
     private let showsCloseButton: Bool
 
-    init(initialScope: Set<String>? = nil, showsCloseButton: Bool = true) {
+    /// Chế độ khi vào màn — `.cram` chỉ từ nút "Ôn thêm" ở header collection.
+    private let initialMode: ReviewMode
+
+    init(
+        initialScope: Set<String>? = nil,
+        showsCloseButton: Bool = true,
+        initialMode: ReviewMode = .srs
+    ) {
         _scope = State(initialValue: initialScope)
+        _mode = State(initialValue: initialMode)
         self.showsCloseButton = showsCloseButton
+        self.initialMode = initialMode
     }
 
     var body: some View {
@@ -128,8 +137,9 @@ struct ReviewQueueView: View {
             }
         }
         .onAppear {
-            // Vào lại màn (đổi tab) luôn về hàng đợi đến hạn — Cram chỉ đi từ màn hết thẻ.
-            mode = .srs
+            // Vào lại màn (đổi tab) về chế độ khởi tạo (mặc định `.srs`) — Cram chỉ đi
+            // từ màn hết thẻ hoặc nút "Ôn thêm" ở header collection (initialMode).
+            mode = initialMode
             // Tab Ôn đọc scope mặc định đã lưu (Ôn nhanh ở Kho). Sheet "Ôn bộ này"
             // (showsCloseButton) giữ scope truyền vào thay vì ghi đè.
             if !showsCloseButton {

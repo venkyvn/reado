@@ -64,6 +64,7 @@ enum Fixtures {
     static func insertCard(
         in db: SQLiteDatabase,
         vocabItemID: String,
+        direction: String = "receptive",
         state: String = "new",
         dueIso: String = "2026-09-01T00:00:00Z",
         id: String = Identifier.uuid(),
@@ -81,11 +82,12 @@ enum Fixtures {
               id, vocab_item_id, direction, state, stability, difficulty,
               reps, lapses, learning_steps, scheduled_days,
               last_review_at, due_at, suspended_at
-            ) VALUES (?, ?, 'receptive', ?, ?, ?, ?, ?, 0, ?, ?, ?, ?);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?);
             """,
             [
                 .text(id),
                 .text(vocabItemID),
+                .text(direction),
                 .text(state),
                 .double(stability),
                 .double(difficulty),

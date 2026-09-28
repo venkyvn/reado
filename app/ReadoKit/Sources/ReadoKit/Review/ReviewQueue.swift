@@ -173,6 +173,14 @@ public enum ReviewQueue {
     /// `AppModel` (ý 3 "Học thêm") gọi hàm này để gắn phần nới hạn mức đúng ngày
     /// học hiện tại, KHÔNG dùng `Calendar.current` nửa đêm hệ thống.
     public static func currentDayStartIso(on db: SQLiteDatabase, now: Date) -> String {
+        currentDayWindow(on: db, now: now).start
+    }
+
+    /// Cửa sổ ngày học [start, end) chứa `now` theo `settings.timezone` +
+    /// `day_cutoff_hour` (FR-11) — `nextDue` dùng để đếm thẻ "cùng ngày".
+    public static func currentDayWindow(
+        on db: SQLiteDatabase, now: Date
+    ) -> DayBoundary.DayWindow {
         let timezoneID: String = (try? db.scalarString(
             "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
         let cutoffHour: Int = {
@@ -184,7 +192,7 @@ public enum ReviewQueue {
         }()
         let tz = TimeZone(identifier: timezoneID) ?? .current
         return DayBoundary.window(
-            now: now, timezone: tz, dayCutoffHour: cutoffHour).start
+            now: now, timezone: tz, dayCutoffHour: cutoffHour)
     }
 
     /// Hàm THUẦN (không DB) — phần nới "Học thêm" chỉ còn hiệu lực trong đúng

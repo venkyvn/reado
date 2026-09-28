@@ -68,7 +68,7 @@ Mọi journey **R1** dưới đây phải truy được về một trong hai. J1
 
 ## 2. Ánh xạ "học / ôn / trộn"
 
-Đây là hợp đồng ngôn ngữ với UI. "Ôn" **không** tự biến thành Cram — Cram chỉ vào bằng nút riêng ở màn hết thẻ (ADR-043).
+Đây là hợp đồng ngôn ngữ với UI. "Ôn" **không** tự biến thành Cram — Cram chỉ vào bằng nút riêng ở màn hết thẻ hoặc CTA "Ôn thêm" ở header collection hub (ADR-043).
 
 | Câu owner | Nghĩa trong Reado | Không phải |
 |---|---|---|
@@ -178,7 +178,8 @@ Một **session** = một lần capture thành công đã confirm picker (một 
 2. **Collection hub** mở. Trên hub, cùng lúc:
    - Control **Hiện trên Home** cho named collection này. Nếu Home đã đủ hai shortcut, mở chooser chọn collection bị thay; không tự thay ngầm.
    - CTA Capture (camera / thư viện — cùng path J1).
-   - CTA **Ôn collection này** → hàng đợi due đã lọc `collection_id` (FR-18). 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả.
+   - **Header thống kê** (cram-collection-r1 Phiên B): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) và 3 ô số — Đến hạn, "+N từ" trong 7 ngày (kèm "thêm lần cuối …"), Lần ôn tiếp ("Ngay bây giờ" nếu đang có due, không thì mốc tương đối + số thẻ cùng ngày học).
+   - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn thẻ đã học chưa due → **"Ôn thêm N thẻ"** (Cram ADR-043, không đổi lịch — mở thẳng chế độ Ôn thêm theo phạm vi bộ này); không còn gì → không nút, chỉ gợi ý dùng nút chụp nổi. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (ở màn ôn).
    - Danh sách **tối đa 10 session** gần nhất, **chọn được** từng cái.
    - Cửa **kho từ vựng theo collection** (mọi từ đã lưu vào collection này, kể cả từ session đã trôi).
 

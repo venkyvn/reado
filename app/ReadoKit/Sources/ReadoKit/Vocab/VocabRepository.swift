@@ -71,6 +71,27 @@ public enum VocabRepository {
         /// phải card) có ≥1 card `state='review'`, `stability >= ngưỡng`, chưa
         /// suspend. Ý 4 (motivation-r1) — "Đã thuộc X/Y" ở hub + dòng bộ Kho.
         public let masteredCount: Int
+        /// Thanh 4 màu ở header collection (cram-collection-r1 T3) — đếm theo TỪ,
+        /// mỗi từ đúng 1 nhóm theo ưu tiên Đã thuộc (`masteredCount`) › Đang học ›
+        /// Đang nhớ › Chưa học; từ chỉ còn thẻ suspended không thuộc nhóm nào.
+        /// "Đang học": có thẻ `learning`/`relearning`, chưa thuộc.
+        public let learningCount: Int
+        /// "Đang nhớ": có thẻ `review`, không có thẻ learning/relearning, chưa thuộc.
+        public let reviewingCount: Int
+        /// "Chưa học": còn lại (chỉ thẻ `new`, hoặc chưa có thẻ nào).
+        public let notStartedCount: Int
+        /// Số từ có `created_at` trong 7 ngày gần nhất tính tới `now`.
+        public let addedLast7Days: Int
+        /// Số THẻ Cram được — điều kiện y hệt `ReviewQueue.crammableCount`
+        /// (state ≠ new, chưa suspend, `due_at > now`).
+        public let crammableCount: Int
+    }
+
+    /// Lần ôn kế tiếp của một collection — mốc sớm nhất sau `now` và số thẻ đến
+    /// hạn trong cùng ngày học (FR-11, giờ chuyển ngày — không nửa đêm).
+    public struct NextDue: Equatable, Sendable {
+        public let date: Date
+        public let count: Int
     }
 
     /// Thứ tự sắp danh sách từ: FR-08 gộp cùng `term` cạnh nhau; J6 kho tạm theo
@@ -315,6 +336,11 @@ public enum VocabRepository {
         on db: SQLiteDatabase, now: Date
     ) throws -> [CollectionSummary] {
         let nowIso = ISOTimestamp.string(from: now)
+        let sevenDaysAgoIso = ISOTimestamp.string(
+            from: now.addingTimeInterval(-7 * 86_400))
+        // Bảng dẫn xuất `b` gom theo TỪ (1 dòng / từ) rồi theo collection: mỗi từ
+        // vào đúng 1 nhóm (m > l > r > active). Thứ tự bind theo vị trí `?` trong
+        // SQL: due_now, mastered (ngưỡng), added7, crammable, rồi ngưỡng trong `b`.
         let rows = try db.rows(
             """
             SELECT c.id, c.name, c.is_default,
@@ -325,16 +351,56 @@ public enum VocabRepository {
                    COUNT(DISTINCT CASE
                         WHEN ca.state = 'review' AND ca.stability >= ?
                              AND ca.suspended_at IS NULL
-                        THEN v.id END) AS mastered_count
+                        THEN v.id END) AS mastered_count,
+                   COALESCE(MAX(b.learning_count), 0) AS learning_count,
+                   COALESCE(MAX(b.reviewing_count), 0) AS reviewing_count,
+                   COALESCE(MAX(b.not_started_count), 0) AS not_started_count,
+                   COUNT(DISTINCT CASE WHEN v.created_at >= ? THEN v.id END)
+                        AS added_7d,
+                   COALESCE(SUM(CASE
+                        WHEN ca.state != 'new' AND ca.suspended_at IS NULL
+                             AND ca.due_at > ?
+                        THEN 1 ELSE 0 END), 0) AS crammable_count
             FROM collections c
             LEFT JOIN vocab_items v ON v.collection_id = c.id
             LEFT JOIN cards ca ON ca.vocab_item_id = v.id
+            LEFT JOIN (
+                SELECT cid,
+                    SUM(CASE WHEN m = 0 AND l = 1 THEN 1 ELSE 0 END)
+                        AS learning_count,
+                    SUM(CASE WHEN m = 0 AND l = 0 AND r = 1 THEN 1 ELSE 0 END)
+                        AS reviewing_count,
+                    SUM(CASE WHEN m = 0 AND l = 0 AND r = 0 AND active = 1
+                        THEN 1 ELSE 0 END) AS not_started_count
+                FROM (
+                    SELECT v2.collection_id AS cid, v2.id,
+                        MAX(CASE WHEN ca2.suspended_at IS NULL
+                                  AND ca2.state = 'review' AND ca2.stability >= ?
+                            THEN 1 ELSE 0 END) AS m,
+                        MAX(CASE WHEN ca2.suspended_at IS NULL
+                                  AND ca2.state IN ('learning', 'relearning')
+                            THEN 1 ELSE 0 END) AS l,
+                        MAX(CASE WHEN ca2.suspended_at IS NULL
+                                  AND ca2.state = 'review'
+                            THEN 1 ELSE 0 END) AS r,
+                        MAX(CASE WHEN ca2.id IS NULL OR ca2.suspended_at IS NULL
+                            THEN 1 ELSE 0 END) AS active
+                    FROM vocab_items v2
+                    LEFT JOIN cards ca2 ON ca2.vocab_item_id = v2.id
+                    GROUP BY v2.id
+                )
+                GROUP BY cid
+            ) b ON b.cid = c.id
             GROUP BY c.id
             ORDER BY c.is_default DESC, c.name COLLATE NOCASE;
             """,
-            [.text(nowIso), .double(Mastery.stabilityThreshold)])
+            [
+                .text(nowIso), .double(Mastery.stabilityThreshold),
+                .text(sevenDaysAgoIso), .text(nowIso),
+                .double(Mastery.stabilityThreshold),
+            ])
         return try rows.map { row in
-            guard row.count >= 7 else {
+            guard row.count >= 12 else {
                 throw DatabaseError.failed(
                     "thiếu cột summary", statement: "collection_summaries")
             }
@@ -345,8 +411,46 @@ public enum VocabRepository {
                 wordCount: Int(row[3].intValue ?? 0),
                 dueNow: Int(row[4].intValue ?? 0),
                 lastAddedAt: row[5].textValue.flatMap { ISOTimestamp.date(from: $0) },
-                masteredCount: Int(row[6].intValue ?? 0))
+                masteredCount: Int(row[6].intValue ?? 0),
+                learningCount: Int(row[7].intValue ?? 0),
+                reviewingCount: Int(row[8].intValue ?? 0),
+                notStartedCount: Int(row[9].intValue ?? 0),
+                addedLast7Days: Int(row[10].intValue ?? 0),
+                crammableCount: Int(row[11].intValue ?? 0))
         }
+    }
+
+    /// Lần ôn kế tiếp của một collection: `MIN(due_at)` của thẻ chưa suspend có
+    /// `due_at > now`, và số thẻ (chưa suspend, `due_at > now`) rơi trong cùng ngày
+    /// học chứa mốc đó (`ReviewQueue.currentDayWindow` — giờ chuyển ngày FR-11).
+    /// nil = không còn lịch nào sau `now`.
+    public static func nextDue(
+        on db: SQLiteDatabase, collectionID: String, now: Date
+    ) throws -> NextDue? {
+        let nowIso = ISOTimestamp.string(from: now)
+        // `MIN` trả NULL khi không còn thẻ nào → đọc qua `rows` (scalarString ném lỗi).
+        let minRows = try db.rows(
+            """
+            SELECT MIN(ca.due_at) FROM cards ca
+            JOIN vocab_items v ON v.id = ca.vocab_item_id
+            WHERE v.collection_id = ? AND ca.suspended_at IS NULL
+              AND ca.due_at > ?;
+            """, [.text(collectionID), .text(nowIso)])
+        guard
+            let minIso = minRows.first?.first?.textValue,
+            let minDate = ISOTimestamp.date(from: minIso)
+        else { return nil }
+        let window = ReviewQueue.currentDayWindow(on: db, now: minDate)
+        let count = try db.scalarInt64(
+            """
+            SELECT COUNT(*) FROM cards ca
+            JOIN vocab_items v ON v.id = ca.vocab_item_id
+            WHERE v.collection_id = ? AND ca.suspended_at IS NULL
+              AND ca.due_at > ? AND ca.due_at >= ? AND ca.due_at < ?;
+            """,
+            [.text(collectionID), .text(nowIso), .text(window.start),
+             .text(window.end)]) ?? 0
+        return NextDue(date: minDate, count: Int(count))
     }
 
     // MARK: — FR-17(b)(c) Collection Management

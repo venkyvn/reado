@@ -286,6 +286,145 @@ final class VocabularyListTests: XCTestCase {
         XCTAssertEqual(summary.masteredCount, 1)
     }
 
+    /// cram-collection-r1 T3 — mỗi từ đúng 1 nhóm theo ưu tiên Đã thuộc › Đang học
+    /// › Đang nhớ › Chưa học; từ chỉ còn thẻ suspended không thuộc nhóm nào.
+    func testSummaryBucketsPriorityAndSum() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "B")
+
+        // Đã thuộc thắng learning: 2 thẻ (2 direction) — review 21 + learning.
+        let mastered = try insertVocab(db, collection: col, term: "mastered")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: mastered, direction: "receptive",
+            state: "review", stability: 21)
+        try Fixtures.insertCard(
+            in: db, vocabItemID: mastered, direction: "productive",
+            state: "learning", stability: 1)
+        // learning + review (chưa thuộc) → Đang học.
+        let mixed = try insertVocab(db, collection: col, term: "mixed")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: mixed, direction: "receptive",
+            state: "learning", stability: 1)
+        try Fixtures.insertCard(
+            in: db, vocabItemID: mixed, direction: "productive",
+            state: "review", stability: 5)
+        // relearning → Đang học.
+        let relearning = try insertVocab(db, collection: col, term: "relearning")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: relearning, state: "relearning", stability: 2)
+        // review stability 5 → Đang nhớ.
+        let reviewing = try insertVocab(db, collection: col, term: "reviewing")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: reviewing, state: "review", stability: 5)
+        // chỉ thẻ new → Chưa học.
+        let fresh = try insertVocab(db, collection: col, term: "fresh")
+        try Fixtures.insertCard(in: db, vocabItemID: fresh, state: "new")
+        // không thẻ nào → Chưa học.
+        try insertVocab(db, collection: col, term: "nocard")
+        // chỉ thẻ suspended → không nhóm nào.
+        let suspended = try insertVocab(db, collection: col, term: "suspended")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: suspended, state: "review", stability: 30,
+            suspendedIso: "2026-09-10T00:00:00Z")
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        XCTAssertEqual(summary.wordCount, 7)
+        XCTAssertEqual(summary.masteredCount, 1)
+        XCTAssertEqual(summary.learningCount, 2)
+        XCTAssertEqual(summary.reviewingCount, 1)
+        XCTAssertEqual(summary.notStartedCount, 2)
+        XCTAssertEqual(
+            summary.masteredCount + summary.learningCount
+                + summary.reviewingCount + summary.notStartedCount,
+            summary.wordCount - 1)
+    }
+
+    /// `addedLast7Days` — 6 ngày trước tính, 8 ngày trước không.
+    func testSummaryAddedLast7Days() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "7d")
+        // fixedNow = 2026-09-18T02:00:00Z
+        try insertVocab(
+            db, collection: col, term: "recent", createdAt: "2026-09-12T02:00:00Z")
+        try insertVocab(
+            db, collection: col, term: "old", createdAt: "2026-09-10T02:00:00Z")
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        XCTAssertEqual(summary.wordCount, 2)
+        XCTAssertEqual(summary.addedLast7Days, 1)
+    }
+
+    /// `crammableCount` (header) khớp đúng `ReviewQueue.crammableCount` (hàng đợi
+    /// Cram) — một nguồn sự thật về điều kiện thẻ Cram được.
+    func testSummaryCrammableMatchesReviewQueue() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "C")
+        let future = "2026-09-25T00:00:00Z"
+        let vocab = try insertVocab(db, collection: col, term: "v")
+        // review chưa due → tính (x2 direction).
+        try Fixtures.insertCard(
+            in: db, vocabItemID: vocab, direction: "receptive",
+            state: "review", dueIso: future)
+        try Fixtures.insertCard(
+            in: db, vocabItemID: vocab, direction: "productive",
+            state: "learning", dueIso: future)
+        // review đã due → không.
+        let due = try insertVocab(db, collection: col, term: "due")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: due, state: "review",
+            dueIso: "2026-09-01T00:00:00Z")
+        // new (due tương lai) → không.
+        let fresh = try insertVocab(db, collection: col, term: "fresh")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: fresh, state: "new", dueIso: future)
+        // suspended → không.
+        let suspended = try insertVocab(db, collection: col, term: "susp")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: suspended, state: "review", dueIso: future,
+            suspendedIso: "2026-09-10T00:00:00Z")
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        let queueCount = try ReviewQueue.crammableCount(
+            on: db, now: Fixtures.fixedNow, scope: [col])
+        XCTAssertEqual(summary.crammableCount, 2)
+        XCTAssertEqual(Int64(summary.crammableCount), queueCount)
+    }
+
+    /// `nextDue` — MIN(due_at) sau now + số thẻ trong cùng ngày học (Asia/Ho_Chi_Minh,
+    /// cutoff FR-11); thẻ suspended và thẻ ngày sau không tính. Không lịch → nil.
+    func testNextDueSameDayCount() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "N")
+        let empty = try Fixtures.insertCollection(in: db, name: "Rỗng")
+        // fixedNow = 2026-09-18T02:00Z → ngày học kế tiếp 19/09 (VN 10:00 và 17:00).
+        for (term, due, suspended) in [
+            ("a", "2026-09-19T03:00:00Z", String?.none),
+            ("b", "2026-09-19T10:00:00Z", nil),
+            ("c", "2026-09-20T03:00:00Z", nil),
+            ("d", "2026-09-19T05:00:00Z", "2026-09-10T00:00:00Z"),
+        ] {
+            let v = try insertVocab(db, collection: col, term: term)
+            try Fixtures.insertCard(
+                in: db, vocabItemID: v, state: "review", dueIso: due,
+                suspendedIso: suspended)
+        }
+
+        let next = try XCTUnwrap(
+            VocabRepository.nextDue(
+                on: db, collectionID: col, now: Fixtures.fixedNow))
+        XCTAssertEqual(next.date, Fixtures.iso("2026-09-19T03:00:00Z"))
+        XCTAssertEqual(next.count, 2)
+        XCTAssertNil(
+            try VocabRepository.nextDue(
+                on: db, collectionID: empty, now: Fixtures.fixedNow))
+    }
+
     /// Bộ rỗng (0 vocab) → cả wordCount và masteredCount đều 0 — UI ẩn thanh
     /// tiến độ thay vì hiện "0/0" trông như lỗi.
     func testSummaryMasteredCountEmptyCollection() throws {

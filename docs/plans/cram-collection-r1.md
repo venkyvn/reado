@@ -1,6 +1,6 @@
 # Plan — Cram "Ôn thêm" + thiết kế lại header màn Collection
 
-> **Trạng thái 2026-09-28:** Phiên A (T1+T2 Cram) ✅ commit, 263/265 xanh. T5 docs phần Cram xong (ADR-043, journeys, prd, ROADMAP). **Còn:** Phiên B (T3+T4 header collection) + docs kèm theo. `SessionDoneView` chưa có nút Cram (tránh đè visual-polish).
+> **Trạng thái 2026-09-28 — ĐÓNG:** Phiên A (T1+T2 Cram) ✅ và Phiên B (T3+T4 header collection) ✅, 267/269 xanh. T5 docs xong. **Lệch plan khi làm B:** (1) CTA chính ghi "Ôn bộ này · N đến hạn" thay vì "Ôn N thẻ đến hạn" — `dueNow` đếm cả thẻ new mà hàng đợi cắt theo hạn mức new/ngày; (2) file mới chỉ cần tạo trong `app/Reado/Library/` (synchronized folders, ADR-046) — bỏ `pbxproj_tool.py add`; (3) `ReviewQueueView` thêm `initialMode` để nút "Ôn thêm" mở thẳng Cram; (4) `ReviewQueue.currentDayWindow` tách từ `currentDayStartIso` cho `nextDue`. **Chưa xem tay UI** (Cram + header) trên simulator; `SessionDoneView` vẫn chưa có nút Cram.
 
 ## Context
 

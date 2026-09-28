@@ -46,6 +46,8 @@ final class AppModel {
 
     // FR-05/06: các phiên đọc song ngữ của collection đang xem (J2 hub).
     private(set) var sessions: [ReadingSession] = []
+    /// Lần ôn kế tiếp của collection đang mở ở hub (header, cram-collection-r1).
+    private(set) var collectionNextDue: VocabRepository.NextDue?
 
     // FR-01: capture state
     var lastCapturedImage: CapturedImage?
@@ -124,6 +126,13 @@ final class AppModel {
         let lastAddedAt: Date?
         /// Q-08 "đã thuộc" — ý 4 motivation-r1 ("Đã thuộc X/Y" ở hub + Kho).
         let masteredCount: Int
+        /// Header collection (cram-collection-r1 T3): thanh 4 màu theo từ.
+        let learningCount: Int
+        let reviewingCount: Int
+        let notStartedCount: Int
+        let addedLast7Days: Int
+        /// Thẻ Cram được (đếm thẻ) — quyết định CTA "Ôn thêm".
+        let crammableCount: Int
     }
 
     init() {
@@ -617,7 +626,12 @@ final class AppModel {
                 totalItems: summary.wordCount,
                 dueNow: summary.dueNow,
                 lastAddedAt: summary.lastAddedAt,
-                masteredCount: summary.masteredCount)
+                masteredCount: summary.masteredCount,
+                learningCount: summary.learningCount,
+                reviewingCount: summary.reviewingCount,
+                notStartedCount: summary.notStartedCount,
+                addedLast7Days: summary.addedLast7Days,
+                crammableCount: summary.crammableCount)
         }
     }
 
@@ -636,6 +650,16 @@ final class AppModel {
         }
         vocabulary = (try? VocabRepository.listVocabulary(
             on: database, collectionID: collectionID, order: order)) ?? []
+    }
+
+    /// Nạp lần ôn kế tiếp của một collection cho ô "Lần ôn tiếp" ở header hub.
+    func loadNextDue(collectionID: String) {
+        guard let database else {
+            collectionNextDue = nil
+            return
+        }
+        collectionNextDue = try? VocabRepository.nextDue(
+            on: database, collectionID: collectionID, now: SystemClock().now)
     }
 
     /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).

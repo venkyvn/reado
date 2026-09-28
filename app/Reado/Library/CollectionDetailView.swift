@@ -25,6 +25,7 @@ struct CollectionDetailView: View {
     // J2 hub: ôn bộ này (scoped). Chụp đi qua FloatShutter nổi ở RootView (port
     // UI lab §6) — không còn sheet capture/analysis riêng trong Hub.
     @State private var showReview = false
+    @State private var reviewMode: ReviewMode = .srs
 
     private var overview: AppModel.CollectionOverview? {
         model.collections.first { $0.id == collectionID }
@@ -36,38 +37,23 @@ struct CollectionDetailView: View {
         List {
             if let overview {
                 Section {
-                    LabeledContent("Số từ", value: "\(overview.totalItems)")
-                    // Ý 4 motivation-r1: "Đã thuộc X/Y" (Q-08). Bộ rỗng ẩn hẳn
-                    // thanh này — 0/0 trông như lỗi, không phải tiến bộ.
-                    if overview.totalItems > 0 {
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            ProgressView(
-                                value: Double(overview.masteredCount),
-                                total: Double(overview.totalItems))
-                            Text("Đã thuộc \(overview.masteredCount)/\(overview.totalItems)")
-                                .font(Typo.meta)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    if let lastAddedAt = overview.lastAddedAt {
-                        LabeledContent(
-                            "Lần thêm gần nhất",
-                            value: lastAddedAt.formatted(
-                                date: .abbreviated, time: .shortened))
-                    }
-                    // FR-17: kho tạm không hiện control "Hiện trên Home" (J2).
-                    if !isInbox {
-                        HomePinToggle(collectionID: collectionID)
-                    }
+                    CollectionStatsHeader(
+                        overview: overview,
+                        nextDue: model.collectionNextDue,
+                        onReview: {
+                            reviewMode = .srs
+                            showReview = true
+                        },
+                        onCram: {
+                            reviewMode = .cram
+                            showReview = true
+                        })
                 }
 
-                // J2 hub: hành động nhanh — ôn phạm vi bộ này. Chụp dùng
-                // FloatShutter nổi (port UI lab §6), không CTA "Chụp thêm phiên".
-                Section {
-                    Button {
-                        showReview = true
-                    } label: {
-                        Label("Ôn bộ này", systemImage: "brain.head.profile")
+                // FR-17: kho tạm không hiện control "Hiện trên Home" (J2).
+                if !isInbox {
+                    Section {
+                        HomePinToggle(collectionID: collectionID)
                     }
                 }
             }
@@ -149,7 +135,7 @@ struct CollectionDetailView: View {
         .sheet(isPresented: $showReview, onDismiss: {
             reloadAfterSession()
         }) {
-            NavigationStack { ReviewQueueView(initialScope: [collectionID]) }
+            NavigationStack { ReviewQueueView(initialScope: [collectionID], initialMode: reviewMode) }
         }
     }
 
@@ -300,6 +286,7 @@ struct CollectionDetailView: View {
             collectionID: collectionID,
             order: isInbox ? .byDateAdded : .byTerm)
         model.loadSessions(collectionID: collectionID)
+        model.loadNextDue(collectionID: collectionID)
     }
 
     /// Sau một sheet (ôn) đóng lại — refresh từ, phiên, overview.
