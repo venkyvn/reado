@@ -4,6 +4,19 @@
 > Người implement: Sonnet, **mỗi task 1 session**, mở bằng `/rstart`, đóng bằng `/rhandoff`.
 > CI: để sau, không nằm trong plan này.
 
+## Trạng thái (cập nhật 2026-09-28)
+
+**Phase A xong** (A1–A5, 5 commit `repo-hygiene-r1`, ADR-044). **Phase B chưa bắt đầu** — chờ `visual-polish-r1` khép + `git status` sạch ở `app/`.
+
+Lệch so với plan ban đầu:
+- **A1:** `.env` đã có sẵn (cùng key với `.env.example`, so bằng hash) nên không gộp; `.env.example` mới lấy biến từ `proxy/main.py` + biến dev (`READO_*`) thay vì biến Phase 0. `ref/sample/page-37` là file text → giữ track.
+- **A2:** `.keep.json` (nội dung `{}`, không ai dùng) giữ nguyên — chờ owner.
+- **A4:** ADR là **044** (043 dành cho visual-polish). 4 dòng link archive trong `ROADMAP.md` đã sửa luôn (stage riêng đúng 4 hunk, hunk của session kia không bị kéo vào) thay vì để B5; các dòng lịch sử khác trong ROADMAP còn nhắc archive dạng chữ thường — B5 dọn nốt.
+- **A5:** ngoài `ImageCompressor` còn phải sửa `PageOCR.swift` (availability `macOS 26.0`, 2 dòng, không đổi hành vi iOS). Lane `kit` = 4/4; full iOS = 256/258 (2 skip), bằng mốc trước.
+- Tiện thể: `docs/research/{vocabulary,review}.md` có mục **TL;DR** đầu file.
+
+Chờ owner: `docs/sample.md` (untracked, không rõ chủ), `.keep.json`, repo `venkyvn/reado` public hay private (ảnh `ref/sample` vẫn nằm trong history cũ).
+
 ## Context
 
 Fen hỏi cấu trúc repo đang ở mức nào và cải thiện gì. Kết luận review 2026-09-28: quy trình agent + docs mạnh (top ~5%), nhưng kéo xuống bởi:
