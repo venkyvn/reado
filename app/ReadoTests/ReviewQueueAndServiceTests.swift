@@ -40,6 +40,74 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(Array(try ReviewQueue.newCardIDs(on: db, quota: 0)), [])
     }
 
+    // MARK: — new-order-r1 (ADR-047): thẻ mới ưu tiên bộ đang đọc
+
+    /// Thẻ mới của một vocab trong `collectionID`, tạo lúc `createdAt`
+    /// (`due_at` = lúc tạo như FR-09).
+    @discardableResult
+    private func insertNewAt(
+        _ db: SQLiteDatabase, collectionID: String, term: String, createdAt: String
+    ) throws -> String {
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: term, createdAt: createdAt)
+        return try Fixtures.insertCard(in: db, vocabItemID: vocabID, dueIso: createdAt)
+    }
+
+    func testNewBranchPrefersCollectionWithLatestVocab() throws {
+        let db = try Fixtures.seededDB()
+        let old = try Fixtures.insertCollection(in: db, name: "Sách bỏ dở")
+        let current = try Fixtures.insertCollection(in: db, name: "Sách đang đọc")
+        try insertNewAt(db, collectionID: old, term: "stale", createdAt: "2026-08-01T00:00:00Z")
+        let fresh = try insertNewAt(
+            db, collectionID: current, term: "fresh", createdAt: "2026-09-10T00:00:00Z")
+
+        let ids = try ReviewQueue.newCardIDs(on: db, quota: 1)
+        XCTAssertEqual(ids, [fresh], "bộ vừa thêm từ gần nhất chiếm hạn mức trước")
+    }
+
+    func testNewBranchKeepsPageOrderAcrossCollections() throws {
+        let db = try Fixtures.seededDB()
+        let old = try Fixtures.insertCollection(in: db, name: "B")
+        let current = try Fixtures.insertCollection(in: db, name: "A")
+        let b1 = try insertNewAt(db, collectionID: old, term: "b1", createdAt: "2026-08-01T00:00:00Z")
+        try insertNewAt(db, collectionID: old, term: "b2", createdAt: "2026-08-02T00:00:00Z")
+        let a1 = try insertNewAt(db, collectionID: current, term: "a1", createdAt: "2026-09-05T00:00:00Z")
+        let a2 = try insertNewAt(db, collectionID: current, term: "a2", createdAt: "2026-09-06T00:00:00Z")
+        let a3 = try insertNewAt(db, collectionID: current, term: "a3", createdAt: "2026-09-07T00:00:00Z")
+
+        let ids = try ReviewQueue.newCardIDs(on: db, quota: 4)
+        XCTAssertEqual(ids, [a1, a2, a3, b1],
+                       "hết bộ mới rồi mới tới bộ cũ; trong bộ giữ thứ tự trang")
+    }
+
+    func testNewBranchRepeatedTermFirstWithinCollection() throws {
+        let db = try Fixtures.seededDB()
+        let current = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let other = try Fixtures.insertCollection(in: db, name: "Bộ khác")
+        try insertNewAt(db, collectionID: current, term: "once", createdAt: "2026-09-01T00:00:00Z")
+        let again = try insertNewAt(
+            db, collectionID: current, term: "Resilient", createdAt: "2026-09-02T00:00:00Z")
+        // Cùng từ đã gặp ở bộ khác (lần đầu, cũ hơn) — không cần có thẻ.
+        try Fixtures.insertVocab(
+            in: db, collectionID: other, term: "resilient", normalized: "Resilient",
+            createdAt: "2026-07-01T00:00:00Z")
+
+        let ids = try ReviewQueue.newCardIDs(on: db, quota: 1)
+        XCTAssertEqual(ids, [again], "từ gặp lại lên trước từ gặp một lần trong cùng bộ")
+    }
+
+    func testNewBranchScopeStillFiltersWithNewOrder() throws {
+        let db = try Fixtures.seededDB()
+        let old = try Fixtures.insertCollection(in: db, name: "Cũ")
+        let current = try Fixtures.insertCollection(in: db, name: "Mới")
+        let oldCard = try insertNewAt(
+            db, collectionID: old, term: "old", createdAt: "2026-08-01T00:00:00Z")
+        try insertNewAt(db, collectionID: current, term: "new", createdAt: "2026-09-10T00:00:00Z")
+
+        let ids = try ReviewQueue.newCardIDs(on: db, quota: 5, scope: [old])
+        XCTAssertEqual(ids, [oldCard], "phạm vi chỉ lọc, không kéo bộ ngoài phạm vi vào")
+    }
+
     func testDueBranchNotLimitedAndOrdered() throws {
         let db = try Fixtures.seededDB()
         let collectionID = try defaultCollectionID(db)

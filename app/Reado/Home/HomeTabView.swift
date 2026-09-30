@@ -92,10 +92,10 @@ struct HomeTabView: View {
                 // Plain: Button trong List tô cả label theo tint → chữ mờ xanh, lệch các row khác.
                 .buttonStyle(.plain)
             } else if progress.backlog > 0 {
-                // FR-14: hết hạn mức hôm nay — tồn đọng hiện RIÊNG, không CTA giả.
-                Label(
-                    "Đã hết hạn mức hôm nay · \(progress.backlog) thẻ mới đang chờ",
-                    systemImage: "hourglass")
+                // FR-14: hết hạn mức hôm nay — không CTA giả. new-order-r1: bỏ con
+                // số tồn (vision Retention "không cần học hết"); FR-14 cho phép
+                // không hiện tồn. "Học thêm 10 từ" vẫn ở SessionDoneView.
+                Label("Xong phần hôm nay", systemImage: "checkmark.circle")
                     .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)
             }

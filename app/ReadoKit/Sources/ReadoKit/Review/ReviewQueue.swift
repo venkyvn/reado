@@ -9,6 +9,9 @@ public enum ReviewQueue {
     /// Nhánh 1 — thẻ mới đến hạn, quota = daily_new_limit trừ số thẻ mới đã
     /// giới thiệu hôm nay. `scope` (FR-18): nil = tất cả, ngược lại chỉ chọn
     /// card thuộc đúng các collection — hạn mức vẫn áp TOÀN CỤC trước (không nới).
+    /// Thứ tự (new-order-r1, ADR-047): bộ vừa thêm từ gần nhất trước (kể cả kho
+    /// tạm) → trong bộ, từ gặp lại (cùng `term_normalized` ở ≥2 dòng) trước →
+    /// thứ tự trang (`created_at`, rồi `due_at`).
     public static func newCardIDs(
         on db: SQLiteDatabase, quota: Int64, scope: Set<String>? = nil
     ) throws -> [String] {
@@ -22,7 +25,12 @@ public enum ReviewQueue {
             JOIN vocab_items v ON v.id = c.vocab_item_id
             WHERE c.state = 'new' AND c.suspended_at IS NULL
               AND \(clause)
-            ORDER BY c.due_at, c.id
+            ORDER BY
+              (SELECT MAX(v2.created_at) FROM vocab_items v2
+                WHERE v2.collection_id = v.collection_id) DESC,
+              (SELECT COUNT(*) FROM vocab_items v3
+                WHERE v3.term_normalized = v.term_normalized) DESC,
+              v.created_at, c.due_at, c.id
             LIMIT ?;
             """, params
         ).compactMap { $0.first?.textValue }

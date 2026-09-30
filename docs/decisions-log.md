@@ -760,3 +760,10 @@
 - **Quyết định:** `Reado` + `ReadoTests` thành `PBXFileSystemSynchronizedRootGroup`. Fen convert bằng Xcode 27 (Xcode ghi objectVersion **70**, không phải 77 như plan). Trước khi convert phải gỡ reference trùng và 2 file có path nhiều cấp (`Capture/CaptureView.swift`, `Screens/ReviewQueueView.swift`) — Xcode từ chối nếu còn.
 - **Hệ quả:** `pbxproj_tool.py` chỉ còn `check`/`list` (`add`/`remove` bỏ). `check` bắt objectVersion < 70, mất root group, fileRef `.swift` rời, exception set. Cấm exception set (file trong `membershipExceptions` bị loại khỏi target ngầm). File trong thư mục là được compile, kể cả chưa track git. Kiểm: probe test 1/1, hai probe build lỗi (thư mục gốc + thư mục con) đều FAIL đúng file, full 263/265 bằng mốc.
 
+## ADR-047 — Thứ tự thẻ mới ưu tiên bộ vừa thêm từ (new-order-r1)
+
+- **Ngày:** 2026-09-30
+- **Bối cảnh:** `ReviewQueue.newCardIDs` xếp thẻ mới theo `ORDER BY c.due_at, c.id` — `due_at` của thẻ mới = lúc tạo (FR-09), nên từ của một collection đã bỏ dở từ lâu luôn ra trước từ của collection đang đọc hôm nay, chiếm hết `daily_new_limit`. Vision-refresh-r2 chốt: scheduler lo *khi nào* ôn, không lo *bao nhiêu* — "ưu tiên từ của thứ đang đọc, từ gặp lại nhiều lần".
+- **Quyết định:** Đổi `ORDER BY` của nhánh thẻ mới thành ba khoá: (1) collection có `MAX(vocab_items.created_at)` gần nhất DESC — kể cả kho tạm; (2) trong collection đó, `term_normalized` xuất hiện ở nhiều dòng hơn (từ gặp lại) DESC; (3) `vocab_items.created_at` rồi `cards.due_at`/`id` — giữ thứ tự trang. Không đổi hạn mức, không đổi nhánh thẻ đến hạn, không đổi schema. Dùng lại index có sẵn `idx_vocab_inbox_time`/`idx_vocab_term`.
+- **Hệ quả:** `DailyProgressService` gọi chung `newCardIDs` nên số Home tự khớp. Home bỏ con số tồn ("thẻ mới đang chờ") — hết hạn mức hôm nay chỉ hiện "Xong phần hôm nay", không đếm ngược nữa (khớp "không cần học hết"). `reencounter-r1` T3 sẽ cộng thêm số lần `seen` (bảng `encounters`) vào khoá thứ (2). Test: `ReviewQueueAndServiceTests` 4 case mới (bộ mới hơn trước, giữ thứ tự trang khi hết bộ mới, từ gặp lại lên trước trong bộ, scope vẫn chỉ lọc không kéo bộ ngoài phạm vi).
+

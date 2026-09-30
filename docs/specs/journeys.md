@@ -230,7 +230,7 @@ Mọi state capture của J1 cộng:
 
 **Trigger:** Home hiện số **new hôm nay** — con số **sau** `daily_new_limit`, không phải tổng card `due_at` vừa capture (FR-14).  
 **Job:** JTBD-02.  
-**Queue:** nhánh `new` của FR-11.
+**Queue:** nhánh `new` của FR-11, thứ tự ưu tiên collection vừa thêm từ gần nhất → từ gặp lại → thứ tự trang (new-order-r1, ADR-047) — không phải thứ tự tạo thẻ.
 
 ### Happy path
 
@@ -238,7 +238,7 @@ Mọi state capture của J1 cộng:
 2. Mặt trước: `term` + `pos` only (FR-12).
 3. Lật: `meaning_vi`, IPA, câu gốc, **tên collection** (kho tạm cũng hiện tên, không để trống).
 4. Grade → FSRS + review log ảnh chụp **trước** khi chấm (FR-12). Undo về đúng state cũ.
-5. Hết hạn mức new hôm nay → về Home. Backlog new **không** nhồi vào queue hôm nay; hiện số backlog **riêng**.
+5. Hết hạn mức new hôm nay → về Home. Backlog new **không** nhồi vào queue hôm nay; Home **không hiện con số tồn** (new-order-r1) — chỉ báo "Xong phần hôm nay".
 
 Leech (FR-19) không đếm vào số Home và không vào queue — badge, không journey riêng.
 
@@ -246,7 +246,7 @@ Leech (FR-19) không đếm vào số Home và không vào queue — badge, khô
 
 | State | Hành vi |
 |---|---|
-| Hết new trong hạn mức, backlog > 0 | Home: "xong hạn mức hôm nay", backlog nhãn riêng, không CTA giả "học tiếp" cùng nhánh |
+| Hết new trong hạn mức, backlog > 0 | Home: "Xong phần hôm nay", không hiện số backlog, không CTA giả "học tiếp" cùng nhánh |
 | Hết new trong hạn mức, backlog > 0, vừa chấm ≥1 thẻ trong phiên | `SessionDoneView` (J4 bước 4) thêm CTA "Học thêm 10 từ" — nới hạn mức new **riêng ngày học hiện tại** (Q-A bộ nhớ app, Q-B N=10 cố định, ADR-039); bấm → nạp lại đúng hàng đợi (vẫn áp toàn cục trước lọc phạm vi). Backlog = 0 (không còn thẻ new nào tồn) → **ẩn** CTA, không nới hạn mức vô nghĩa. Hệ thống không bao giờ tự nới. |
 | Hết new và backlog = 0 | CTA sang J1/J2 |
 | 0 new vì chưa capture | Cùng CTA capture; không empty-state chết |
