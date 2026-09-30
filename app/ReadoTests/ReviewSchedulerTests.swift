@@ -19,7 +19,7 @@ final class ReviewSchedulerTests: XCTestCase {
         XCTAssertEqual(ReadoFSRS.defaultWeights.count, 21)
         let scheduler = try makeScheduler()
         XCTAssertTrue(scheduler.isV6)
-        XCTAssertEqual(scheduler.parameters.w.count, 21)
+        XCTAssertEqual(scheduler.weightCount, 21)
     }
 
     func testShortTermOffEveryGradeLandsInReview() throws {
@@ -89,12 +89,9 @@ final class ReviewSchedulerTests: XCTestCase {
 
     func testStateCodesRoundTripAllFour() {
         for code in CardStateCode.allCodes {
-            guard let state = CardStateCode.toState(code) else {
-                return XCTFail("không map được \(code)")
-            }
-            XCTAssertEqual(CardStateCode.from(state), code)
+            XCTAssertTrue(CardStateCode.isValid(code), "không map được \(code)")
         }
-        XCTAssertNil(CardStateCode.toState("bogus"))
+        XCTAssertFalse(CardStateCode.isValid("bogus"))
     }
 
     func testSnapshotRejectsUnknownStateCode() throws {

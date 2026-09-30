@@ -83,7 +83,7 @@ public enum VocabRepository {
         /// Số từ có `created_at` trong 7 ngày gần nhất tính tới `now`.
         public let addedLast7Days: Int
         /// Số THẻ Cram được — điều kiện y hệt `ReviewQueue.crammableCount`
-        /// (state ≠ new, chưa suspend, `due_at > now`).
+        /// (state ≠ new, chưa suspend, `due_at > window.end` — hạn ngày học).
         public let crammableCount: Int
     }
 
@@ -328,14 +328,15 @@ public enum VocabRepository {
 
     // MARK: — FR-17(a) + Home overview
 
-    /// Tổng quan mọi collection — tên, số từ, thẻ đến hạn (`due_at <= now`, chưa
-    /// suspend), lần thêm từ gần nhất, số từ đã thuộc (Q-08, ý 4 motivation-r1).
+    /// Tổng quan mọi collection — tên, số từ, thẻ đến hạn (`due_at <= window.end`
+    /// — hạn ngày học, chưa suspend), lần thêm từ gần nhất, số từ đã thuộc
+    /// (Q-08, ý 4 motivation-r1).
     /// `COUNT(DISTINCT v.id)` chống việc JOIN cards nhân dòng (một vocab tối đa
     /// 2 card theo direction) — áp dụng cả cho `mastered_count`.
     public static func allCollectionSummaries(
         on db: SQLiteDatabase, now: Date
     ) throws -> [CollectionSummary] {
-        let nowIso = ISOTimestamp.string(from: now)
+        let windowEndIso = ReviewQueue.currentDayWindow(on: db, now: now).end
         let sevenDaysAgoIso = ISOTimestamp.string(
             from: now.addingTimeInterval(-7 * 86_400))
         // Bảng dẫn xuất `b` gom theo TỪ (1 dòng / từ) rồi theo collection: mỗi từ
@@ -395,8 +396,8 @@ public enum VocabRepository {
             ORDER BY c.is_default DESC, c.name COLLATE NOCASE;
             """,
             [
-                .text(nowIso), .double(Mastery.stabilityThreshold),
-                .text(sevenDaysAgoIso), .text(nowIso),
+                .text(windowEndIso), .double(Mastery.stabilityThreshold),
+                .text(sevenDaysAgoIso), .text(windowEndIso),
                 .double(Mastery.stabilityThreshold),
             ])
         return try rows.map { row in
@@ -421,13 +422,14 @@ public enum VocabRepository {
     }
 
     /// Lần ôn kế tiếp của một collection: `MIN(due_at)` của thẻ chưa suspend có
-    /// `due_at > now`, và số thẻ (chưa suspend, `due_at > now`) rơi trong cùng ngày
+    /// `due_at > window.end` (hạn ngày học hiện tại — không trỏ vào thẻ đã nằm
+    /// trong hàng đợi hôm nay), và số thẻ cùng điều kiện rơi trong cùng ngày
     /// học chứa mốc đó (`ReviewQueue.currentDayWindow` — giờ chuyển ngày FR-11).
-    /// nil = không còn lịch nào sau `now`.
+    /// nil = không còn lịch nào sau cửa sổ hiện tại.
     public static func nextDue(
         on db: SQLiteDatabase, collectionID: String, now: Date
     ) throws -> NextDue? {
-        let nowIso = ISOTimestamp.string(from: now)
+        let currentWindowEnd = ReviewQueue.currentDayWindow(on: db, now: now).end
         // `MIN` trả NULL khi không còn thẻ nào → đọc qua `rows` (scalarString ném lỗi).
         let minRows = try db.rows(
             """
@@ -435,7 +437,7 @@ public enum VocabRepository {
             JOIN vocab_items v ON v.id = ca.vocab_item_id
             WHERE v.collection_id = ? AND ca.suspended_at IS NULL
               AND ca.due_at > ?;
-            """, [.text(collectionID), .text(nowIso)])
+            """, [.text(collectionID), .text(currentWindowEnd)])
         guard
             let minIso = minRows.first?.first?.textValue,
             let minDate = ISOTimestamp.date(from: minIso)
@@ -448,7 +450,7 @@ public enum VocabRepository {
             WHERE v.collection_id = ? AND ca.suspended_at IS NULL
               AND ca.due_at > ? AND ca.due_at >= ? AND ca.due_at < ?;
             """,
-            [.text(collectionID), .text(nowIso), .text(window.start),
+            [.text(collectionID), .text(currentWindowEnd), .text(window.start),
              .text(window.end)]) ?? 0
         return NextDue(date: minDate, count: Int(count))
     }

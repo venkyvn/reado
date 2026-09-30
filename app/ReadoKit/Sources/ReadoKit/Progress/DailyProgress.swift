@@ -46,10 +46,9 @@ public enum DailyProgressService {
         now: Date,
         extraNew: Int = 0
     ) throws -> DailyProgress {
-        let nowIso = ISOTimestamp.string(from: now)
-
         // timezone + giờ chuyển ngày — đúng cặp giá trị FR-11 dùng chung.
-        let dayStartIso = ReviewQueue.currentDayStartIso(on: db, now: now)
+        let window = ReviewQueue.currentDayWindow(on: db, now: now)
+        let dayStartIso = window.start
         let timezoneID: String = (try? db.scalarString(
             "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
         let cutoffHour: Int = {
@@ -70,8 +69,9 @@ public enum DailyProgressService {
         let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - Int64(introduced))
         let newQueued = try ReviewQueue.newCardIDs(on: db, quota: remainingQuota).count
 
-        // Nhánh due — không hạn mức (FR-11).
-        let dueCount = try ReviewQueue.dueCardIDs(on: db, dueBeforeIso: nowIso).count
+        // Nhánh due — không hạn mức (FR-11); hạn theo ngày học (window.end),
+        // không theo `now` thời điểm gọi (T1 fsrs-queue-fix-r1).
+        let dueCount = try ReviewQueue.dueCardIDs(on: db, dueBeforeIso: window.end).count
 
         let dueToday = newQueued + dueCount
         // backlog = thẻ new còn lại chưa vào hôm nay (thẻ đã giới thiệu đã rời

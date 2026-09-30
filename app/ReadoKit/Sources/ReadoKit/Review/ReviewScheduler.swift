@@ -117,7 +117,7 @@ public enum ReadoFSRS {
     /// không phải import swift-fsrs.
     public static var defaultWeights: [Double] { FSRSDefaults.defaultWv6 }
 
-    public static func parameters(from settings: SchedulingSettings) throws
+    static func parameters(from settings: SchedulingSettings) throws
         -> FSRSParameters
     {
         var weights = FSRSDefaults.defaultWv6
@@ -186,11 +186,15 @@ public enum ReadoFSRS {
     }
 }
 
+/// `@unchecked Sendable`: cả `engine`/`parameters` đều `let`, gán một lần ở
+/// `init` và không đổi sau đó — không cần đồng bộ hoá thêm.
 public final class ReviewScheduler: @unchecked Sendable {
-    /// Engine swift-fsrs — public cho ai muốn dùng trực tiếp; API product
-    /// của Reado đi qua `grade(...)` bên dưới.
-    public let engine: FSRS
-    public let parameters: FSRSParameters
+    let engine: FSRS
+    let parameters: FSRSParameters
+
+    /// Số trọng số đang dùng — che kiểu `FSRSParameters` khỏi API công khai,
+    /// chỉ để test xác nhận `defaultWv6` (21 phần tử).
+    public var weightCount: Int { parameters.w.count }
 
     /// True = engine đang chạy FSRS-6 (21 trọng số) — guard chống FSRS-5
     /// ngấm vào thầm lặng (tech-stack mục 3.1).
@@ -203,7 +207,7 @@ public final class ReviewScheduler: @unchecked Sendable {
     }
 
     /// Chấm bằng Card của thư viện (dùng nội bộ / nâng cao).
-    public func grade(_ rating: ReadoRating, card: Card, now: Date) throws
+    func grade(_ rating: ReadoRating, card: Card, now: Date) throws
         -> ReviewOutcome
     {
         let item = try engine.next(
@@ -244,11 +248,11 @@ public enum CardStateCode {
         ["new", "learning", "review", "relearning"]
     }
 
-    public static func from(_ state: CardState) -> String {
+    static func from(_ state: CardState) -> String {
         state.stringValue
     }
 
-    public static func toState(_ code: String) -> CardState? {
+    static func toState(_ code: String) -> CardState? {
         switch code {
         case "new": .new
         case "learning": .learning
@@ -256,5 +260,11 @@ public enum CardStateCode {
         case "relearning": .relearning
         default: nil
         }
+    }
+
+    /// Che kiểu `CardState` khỏi API công khai — test chỉ cần biết code có
+    /// map được hay không, không cần round-trip qua kiểu thư viện.
+    public static func isValid(_ code: String) -> Bool {
+        toState(code).map { from($0) == code } ?? false
     }
 }

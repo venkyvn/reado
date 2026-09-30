@@ -367,6 +367,7 @@ final class AppModel {
         do {
             let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
             let now = SystemClock().now
+            let windowEnd = ReviewQueue.currentDayWindow(on: database, now: now).end
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
                 on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope,
                 extraNew: effectiveExtraNew)
@@ -376,7 +377,7 @@ final class AppModel {
             dueOutsideScope = try Int(
                 ReviewQueue.dueOutsideScopeCount(
                     on: database,
-                    dueBeforeIso: ISOTimestamp.string(from: now),
+                    dueBeforeIso: windowEnd,
                     scope: scope))
             crammableCount = try Int(
                 ReviewQueue.crammableCount(on: database, now: now, scope: scope))

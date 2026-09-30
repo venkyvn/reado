@@ -36,7 +36,9 @@ public enum ReviewQueue {
         ).compactMap { $0.first?.textValue }
     }
 
-    /// Nhánh 2 — thẻ ôn lại đã đến hạn tới cuối "hôm nay".
+    /// Nhánh 2 — thẻ ôn lại đã đến hạn tới cuối "hôm nay" (`dueBeforeIso` PHẢI
+    /// là `currentDayWindow(...).end` — hạn ôn theo NGÀY HỌC, không phải `now`
+    /// thời điểm bấm; T1 fsrs-queue-fix-r1: thẻ hẹn 21h hôm nay hiện từ sáng).
     /// KHÔNG có LIMIT theo daily_new_limit. `scope` (FR-18): nil = tất cả.
     public static func dueCardIDs(
         on db: SQLiteDatabase, dueBeforeIso: String, scope: Set<String>? = nil
@@ -61,8 +63,9 @@ public enum ReviewQueue {
     public static let cramBatchSize = 20
 
     /// Cram (FR-18 tiêu chí 4, ADR-011/043) — thẻ ĐÃ HỌC (state ≠ new), chưa
-    /// suspend, CHƯA đến hạn (`due_at > now`; thẻ đến hạn đi đường srs), sắp đến
-    /// hạn trước. `scope` nil = tất cả. Thẻ new KHÔNG vào đây — đường "Học thêm".
+    /// suspend, CHƯA đến hạn ngày học (`due_at > window.end`; thẻ đến hạn tối
+    /// nay đi đường srs dù chưa qua `now`), sắp đến hạn trước. `scope` nil =
+    /// tất cả. Thẻ new KHÔNG vào đây — đường "Học thêm".
     public static func cramCardIDs(
         on db: SQLiteDatabase,
         now: Date,
@@ -70,8 +73,9 @@ public enum ReviewQueue {
         limit: Int = cramBatchSize
     ) throws -> [String] {
         guard limit > 0 else { return [] }
+        let windowEnd = currentDayWindow(on: db, now: now).end
         let (clause, binds) = inScopeClause(scope)
-        var params: [SQLValue] = [.text(ISOTimestamp.string(from: now))]
+        var params: [SQLValue] = [.text(windowEnd)]
         params.append(contentsOf: binds)
         params.append(.int(Int64(limit)))
         return try db.rows(
@@ -93,8 +97,9 @@ public enum ReviewQueue {
     public static func crammableCount(
         on db: SQLiteDatabase, now: Date, scope: Set<String>? = nil
     ) throws -> Int64 {
+        let windowEnd = currentDayWindow(on: db, now: now).end
         let (clause, binds) = inScopeClause(scope)
-        var params: [SQLValue] = [.text(ISOTimestamp.string(from: now))]
+        var params: [SQLValue] = [.text(windowEnd)]
         params.append(contentsOf: binds)
         return try db.scalarInt64(
             """
@@ -260,15 +265,14 @@ public enum ReviewQueue {
         scope: Set<String>? = nil,
         extraNew: Int = 0
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
-        let nowIso = ISOTimestamp.string(from: now)
-        let dayStartIso = currentDayStartIso(on: db, now: now)
+        let window = currentDayWindow(on: db, now: now)
 
         // Nhánh 1 — new (quota).
-        let introduced = try newIntroducedCount(on: db, dayStartIso: dayStartIso)
+        let introduced = try newIntroducedCount(on: db, dayStartIso: window.start)
         let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - introduced)
         let newIDs = try newCardIDs(on: db, quota: remainingQuota, scope: scope)
-        // Nhánh 2 — due (review/relearning, đến cuối ngày cutoff).
-        let dueIDs = try dueCardIDs(on: db, dueBeforeIso: nowIso, scope: scope)
+        // Nhánh 2 — due (review/relearning, đến cuối ngày học — window.end).
+        let dueIDs = try dueCardIDs(on: db, dueBeforeIso: window.end, scope: scope)
         let allCardIDs = newIDs + dueIDs
         guard !allCardIDs.isEmpty else { return ([], [:]) }
 

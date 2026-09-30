@@ -30,9 +30,7 @@ final class PrimitivesTests: XCTestCase {
             CardStateCode.allCodes,
             ["new", "learning", "review", "relearning"])
         for code in CardStateCode.allCodes {
-            let state = CardStateCode.toState(code)
-            XCTAssertNotNil(state)
-            XCTAssertEqual(CardStateCode.from(state!), code)
+            XCTAssertTrue(CardStateCode.isValid(code))
         }
     }
 }

@@ -47,7 +47,7 @@ public struct CardSnapshot: Equatable, Sendable {
     /// `Card` cho engine. `elapsedDays` = số ngày tròn (làm tròn) kể từ
     /// last_review — 0 với thẻ mới. LongTermScheduler dùng giá trị này làm
     /// `interval` khi tính recall stability, nên phải truyền đầy đủ.
-    public func schedulerCard(now: Date) throws -> Card {
+    func schedulerCard(now: Date) throws -> Card {
         guard let cardState = CardStateCode.toState(state) else {
             throw ReviewSchedulerError.invalidCardStateCode(state)
         }

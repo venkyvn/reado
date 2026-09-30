@@ -256,6 +256,31 @@ final class VocabularyListTests: XCTestCase {
             summary.lastAddedAt, Fixtures.iso("2026-09-05T00:00:00Z"))
     }
 
+    /// T1 fsrs-queue-fix-r1 — `due_now` phải đếm thẻ due TỐI NAY (trước giờ
+    /// chuyển ngày, `window.end`), dù chưa qua `now`; thẻ due SAU giờ chuyển
+    /// ngày thì chưa tính.
+    func testSummaryDueNowCountsUpToDayWindowEnd() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "S2")
+        let window = ReviewQueue.currentDayWindow(on: db, now: Fixtures.fixedNow)
+        let windowEndDate = try XCTUnwrap(ISOTimestamp.date(from: window.end))
+
+        let laterToday = try insertVocab(db, collection: col, term: "later-today")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: laterToday, state: "review",
+            dueIso: ISOTimestamp.string(
+                from: Fixtures.fixedNow.addingTimeInterval(6 * 3600)))
+        let afterCutoff = try insertVocab(db, collection: col, term: "after-cutoff")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: afterCutoff, state: "review",
+            dueIso: ISOTimestamp.string(from: windowEndDate.addingTimeInterval(3600)))
+
+        let summaries = try VocabRepository.allCollectionSummaries(
+            on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+        XCTAssertEqual(summary.dueNow, 1, "chỉ thẻ trước window.end mới tính due_now")
+    }
+
     /// Ý 4 motivation-r1 — `masteredCount` (Q-08): `state='review' AND
     /// stability >= 21 AND suspended_at IS NULL`. Khớp đúng điều kiện
     /// `Mastery.stabilityThreshold` / `VocabRepository.matureKeys` (FR-10).
@@ -423,6 +448,35 @@ final class VocabularyListTests: XCTestCase {
         XCTAssertNil(
             try VocabRepository.nextDue(
                 on: db, collectionID: empty, now: Fixtures.fixedNow))
+    }
+
+    /// T1 fsrs-queue-fix-r1 — `nextDue` không được trỏ vào thẻ ĐÃ nằm trong
+    /// hàng đợi hôm nay (`due_at <= window.end`), dù thẻ đó due sau `now`.
+    func testNextDueExcludesCardsAlreadyInTodayQueue() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "N2")
+        let window = ReviewQueue.currentDayWindow(on: db, now: Fixtures.fixedNow)
+        let windowEndDate = try XCTUnwrap(ISOTimestamp.date(from: window.end))
+
+        // Due tối nay (sau `now`, trước window.end) — đã trong hàng đợi hôm
+        // nay, KHÔNG được là "Lần ôn tiếp".
+        let laterToday = try insertVocab(db, collection: col, term: "later-today")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: laterToday, state: "review",
+            dueIso: ISOTimestamp.string(
+                from: Fixtures.fixedNow.addingTimeInterval(6 * 3600)))
+        // Due sau window.end — đây mới là "Lần ôn tiếp" thật.
+        let tomorrowDueIso = ISOTimestamp.string(
+            from: windowEndDate.addingTimeInterval(3600))
+        let tomorrow = try insertVocab(db, collection: col, term: "tomorrow")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: tomorrow, state: "review", dueIso: tomorrowDueIso)
+
+        let next = try XCTUnwrap(
+            VocabRepository.nextDue(on: db, collectionID: col, now: Fixtures.fixedNow))
+        XCTAssertEqual(
+            next.date, Fixtures.iso(tomorrowDueIso),
+            "không trỏ vào thẻ đã nằm trong hàng đợi hôm nay")
     }
 
     /// Bộ rỗng (0 vocab) → cả wordCount và masteredCount đều 0 — UI ẩn thanh

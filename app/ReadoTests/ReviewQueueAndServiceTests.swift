@@ -148,6 +148,43 @@ final class ReviewQueueAndServiceTests: XCTestCase {
             [])
     }
 
+    /// T1 fsrs-queue-fix-r1 — hạn ôn theo NGÀY HỌC (`window.end`), không theo
+    /// thời điểm bấm `now`: thẻ hẹn giờ sau `now` nhưng vẫn trước giờ chuyển
+    /// ngày phải hiện từ sáng; thẻ hẹn sau giờ chuyển ngày thì chưa hiện.
+    func testDueBranchUsesDayWindowEndNotNow() throws {
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+        let window = ReviewQueue.currentDayWindow(on: db, now: Fixtures.fixedNow)
+        let windowEndDate = try XCTUnwrap(ISOTimestamp.date(from: window.end))
+
+        // Due 6h sau `now` (fixedNow = 09:00 VN), vẫn trước giờ chuyển ngày
+        // (04:00 VN hôm sau) → PHẢI đến hạn dù chưa qua `now`.
+        let laterTodayVocab = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "later-today")
+        let laterTodayCard = try Fixtures.insertCard(
+            in: db, vocabItemID: laterTodayVocab, state: "review",
+            dueIso: ISOTimestamp.string(
+                from: Fixtures.fixedNow.addingTimeInterval(6 * 3600)))
+
+        // Due sau window.end (qua giờ chuyển ngày) → CHƯA đến hạn.
+        let afterCutoffVocab = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "after-cutoff")
+        try Fixtures.insertCard(
+            in: db, vocabItemID: afterCutoffVocab, state: "review",
+            dueIso: ISOTimestamp.string(from: windowEndDate.addingTimeInterval(3600)))
+
+        let dueIDs = try ReviewQueue.dueCardIDs(on: db, dueBeforeIso: window.end)
+        XCTAssertEqual(
+            dueIDs, [laterTodayCard],
+            "chỉ thẻ trước window.end đến hạn, dù chưa qua now")
+
+        let (items, _) = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 0, now: Fixtures.fixedNow)
+        XCTAssertEqual(
+            items.map(\.term), ["later-today"],
+            "loadFullQueue tự tính window.end, không so due_at với now")
+    }
+
     func testSuspendedExcludedFromBothBranches() throws {
         let db = try Fixtures.seededDB()
         let collectionID = try defaultCollectionID(db)

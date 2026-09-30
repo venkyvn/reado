@@ -112,7 +112,7 @@ extension ReviewQueueView {
                 model.reloadOverview()
             }
         } catch {
-            // AppModel đã set reviewError.
+            actionError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
     }
 
@@ -162,7 +162,7 @@ extension ReviewQueueView {
             // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
             refreshIntervals()
         } catch {
-            // AppModel đã set reviewError.
+            actionError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
     }
 }

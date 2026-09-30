@@ -53,6 +53,30 @@ final class CramReviewTests: XCTestCase {
         XCTAssertEqual(try ReviewQueue.crammableCount(on: db, now: now), 2)
     }
 
+    /// T1 fsrs-queue-fix-r1 — thẻ due TỐI NAY (trước giờ chuyển ngày, dù sau
+    /// `now`) đi đường srs (`dueCardIDs`), KHÔNG được lọt vào Cram dù
+    /// `due_at > now` (bug cũ so trực tiếp với `now` thay vì `window.end`).
+    func testCramExcludesCardsDueLaterTodayBeforeDayCutoff() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let window = ReviewQueue.currentDayWindow(on: db, now: now)
+        let windowEndDate = try XCTUnwrap(ISOTimestamp.date(from: window.end))
+
+        let laterToday = try insertCard(
+            db, collectionID: col, term: "later-today",
+            dueIso: ISOTimestamp.string(from: windowEndDate.addingTimeInterval(-3600)))
+        let afterCutoff = try insertCard(
+            db, collectionID: col, term: "after-cutoff",
+            dueIso: ISOTimestamp.string(from: windowEndDate.addingTimeInterval(3600)))
+
+        let ids = try ReviewQueue.cramCardIDs(on: db, now: now)
+        XCTAssertEqual(
+            ids, [afterCutoff],
+            "due trước window.end (kể cả sau now) đi đường srs, không phải Cram")
+        XCTAssertFalse(ids.contains(laterToday))
+        XCTAssertEqual(try ReviewQueue.crammableCount(on: db, now: now), 1)
+    }
+
     func testCramQueueRespectsScopeAndLimit() throws {
         let db = try Fixtures.seededDB()
         let colA = try Fixtures.insertCollection(in: db, name: "A")

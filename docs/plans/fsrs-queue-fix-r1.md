@@ -33,7 +33,7 @@
 ## Tầng 2 — Tasks
 1 task = 1 session. Chỉ implement task fen vừa OK.
 
-### T1 — due-window (hạn ôn theo ngày học) ⭐ làm trước
+### T1 — due-window (hạn ôn theo ngày học) ✅ xong 2026-09-30
 - **Files** — mọi chỗ so `due_at` với `now` trong logic hàng đợi → `ReviewQueue.currentDayWindow(on:now:).end`:
   - `app/ReadoKit/Sources/ReadoKit/Review/ReviewQueue.swift`: `loadFullQueue` (`dueBeforeIso` = `window.end`); `cramCardIDs` / `crammableCount` → `due_at > window.end` (tính trong hàm, chữ ký giữ nguyên — thẻ đến hạn tối nay không lọt vào Cram); sửa comment `dueCardIDs`.
   - `app/Reado/App/AppModel.swift` `loadReviewQueue`: `dueOutsideScopeCount` dùng `window.end`.
@@ -45,6 +45,7 @@
   - `VocabularyListTests`: `due_now` / `nextDue` lệch đúng như trên.
   - Chạy lại `ScopedReviewTests`, `LearnMoreTests` (fixture dễ giả định `due = now + 1h` là chưa đến hạn).
 - **DoD:** `scripts/test.sh` xanh full suite · `grep -rn "due_at <= \|due_at > " app/ReadoKit/Sources` không còn chỗ nào bind `now` trong logic hàng đợi · journal ghi lý do.
+- **Xong 2026-09-30:** 277 test (275 chạy + 2 skip opt-in) xanh, `** TEST SUCCEEDED **`. Chi tiết: `docs/journal/2026-09-30.md` mục "fsrs-queue-fix-r1 — T1 due-window".
 
 ### T2 — grade-atomic (preview = thật, một `now`, leech trong transaction)
 - **Files:**

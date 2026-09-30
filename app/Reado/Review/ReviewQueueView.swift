@@ -38,6 +38,9 @@ struct ReviewQueueView: View {
     @State var undoSnapshot: CardSnapshot?
     @State var showUndoToast: Bool = false
     @State private var isLoading = true
+    /// Lỗi khi chấm/hoàn tác giữa phiên (khác `model.reviewError` — cái đó chỉ
+    /// dành cho lỗi tải hàng đợi, không thay cả màn bằng `errorView`).
+    @State var actionError: String?
 
     // Ăn mừng đo được (ADR-038): đếm dồn phiên + toast "Thuộc rồi!" khi vừa
     // vượt ngưỡng Q-08. Sống trong @State, mất khi rời màn — không persist.
@@ -139,6 +142,16 @@ struct ReviewQueueView: View {
                 mode = .srs
                 Task { await loadQueue() }
             }
+        }
+        .alert(
+            "Không lưu được",
+            isPresented: Binding(
+                get: { actionError != nil },
+                set: { if !$0 { actionError = nil } })
+        ) {
+            Button("Đóng", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "")
         }
         .onAppear {
             // Vào lại màn (đổi tab) về chế độ khởi tạo (mặc định `.srs`) — Cram chỉ đi
