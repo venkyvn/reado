@@ -93,7 +93,7 @@ app/
 
 - Acceptance criteria của FR = test case (rulebook mục 4). Test hành vi ở
   `app/ReadoTests`, chạy iOS Simulator: `xcodebuild -project Reado.xcodeproj
-  -scheme Reado -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test`.
+  -scheme Reado -destination 'platform=iOS Simulator,name=iPhone Air' test`.
 - **ReadoTests KHÔNG có `TEST_HOST` — chỉ link `ReadoKit` (local package), KHÔNG
   link app target.** Hệ quả: `AppModel`/SwiftUI view KHÔNG unit-test được. Test
   logic ở ReadoKit (enum error, queue/service/decoder, repository); hành vi của

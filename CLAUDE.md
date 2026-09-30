@@ -106,7 +106,7 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - `session-context.sh` (SessionStart) tự nạp HEAD + thay đổi chưa commit + `docs/session-brief.md` §1–2 vào context khi mở/`/clear`/`/compact` — đỡ phải tự đọc lại.
 
 **Bẫy build**
-- Simulator: **iPhone 18 Pro**. `Reado.xcodeproj` objectVersion 70 (synchronized folders); local package dùng `XCSwiftPackageProductDependency`.
+- Simulator: **iPhone Air**. `Reado.xcodeproj` objectVersion 70 (synchronized folders); local package dùng `XCSwiftPackageProductDependency`.
 - `ISO8601FormatStyle()` trần không parse nổi — compose đủ field (`ISOTimestamp.swift`).
 - SQLite `COLLATE NOCASE` chỉ gập ASCII — gập tiếng Việt ở tầng app (FR-20).
 - TOCropViewController từ SPM từ xa — build đầu cần mạng.

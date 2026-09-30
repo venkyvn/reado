@@ -19,7 +19,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SIM_NAME="iPhone 18 Pro"
+SIM_NAME="iPhone Air"
 BUNDLE_ID="${READO_BUNDLE_ID:-com.readoluca.app}"
 FIXTURE="$ROOT/scripts/fixtures/demo-vocab.csv"
 OUT="$ROOT/.tmp/screens"

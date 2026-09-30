@@ -34,7 +34,7 @@ for f in s.get("testFailures", [])[:20]:
 '
 }
 
-SIM_NAME="iPhone 18 Pro"
+SIM_NAME="iPhone Air"
 RESULT="$ROOT/.tmp/results/last.xcresult"
 mkdir -p "$ROOT/.tmp/results"
 

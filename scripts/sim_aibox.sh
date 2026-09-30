@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SIM_NAME="iPhone 18 Pro"
+SIM_NAME="iPhone Air"
 # com.reado.app đã bị trùng khi ký máy thật → fen đổi sang com.readoluca.app.
 BUNDLE_ID="${READO_BUNDLE_ID:-com.readoluca.app}"
 
