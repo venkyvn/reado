@@ -51,6 +51,7 @@ struct KhoTabView: View {
                 }
             }
         }
+        .shellScrollChrome()
         .navigationTitle("Kho")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

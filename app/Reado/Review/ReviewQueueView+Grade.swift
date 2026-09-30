@@ -74,6 +74,7 @@ extension ReviewQueueView {
             dragOffset = .zero
             didPassThreshold = false
         }
+        dragAnchor = nil
         let item = items[currentIndex]
         guard let snapshot = lastSnapshot else { return }
         let gradedSnapshot = snapshot

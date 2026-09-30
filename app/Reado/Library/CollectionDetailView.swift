@@ -79,6 +79,7 @@ struct CollectionDetailView: View {
                 }
             }
         }
+        .shellScrollChrome()
         .navigationTitle(overview?.name ?? "Bộ")
         .toolbar { toolbarContent }
         .onAppear {

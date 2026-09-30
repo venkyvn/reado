@@ -129,16 +129,21 @@ extension ReviewQueueView {
         DragGesture(minimumDistance: 20, coordinateSpace: .local)
             .onChanged { value in
                 guard !isCommitting, !reduceMotion else { return }
+                // `minimumDistance` đã nuốt sẵn ~20pt trước khi lần onChanged đầu
+                // báo — trừ neo để thẻ bắt đầu đi theo tay từ 0 thay vì nhảy bậc.
+                let anchor = dragAnchor ?? value.translation
+                if dragAnchor == nil { dragAnchor = value.translation }
                 dragOffset = CGSize(
-                    width: value.translation.width,
-                    height: value.translation.height * SwipeMotion.verticalDamp)
-                let passed = abs(value.translation.width) >= SwipeCommit.threshold
+                    width: value.translation.width - anchor.width,
+                    height: (value.translation.height - anchor.height) * SwipeMotion.verticalDamp)
+                let passed = abs(dragOffset.width) >= SwipeCommit.threshold
                 if passed, !didPassThreshold {
                     Haptics.threshold()
                 }
                 didPassThreshold = passed
             }
             .onEnded { value in
+                dragAnchor = nil
                 guard !isCommitting else { return }
                 // Ngưỡng theo điểm thoát dự đoán: hất nhanh dưới 110pt vẫn chấm.
                 let predicted = value.predictedEndTranslation.width

@@ -57,6 +57,7 @@ struct HomeTabView: View {
             homePinRows
         }
         .refreshable { model.reloadOverview() }
+        .shellScrollChrome()
     }
 
     // FR-14: tổng quan Daily Progress — "sẽ ôn hôm nay" theo hạn mức (FR-11),

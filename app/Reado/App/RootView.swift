@@ -53,6 +53,8 @@ struct RootView: View {
     @State private var khoPath: [ShellRoute] = []
     @State private var showCapture = false
     @State private var showAnalysis = false
+    // T3a shell-chrome-r1: ẩn thanh tab + shutter khi cuộn xuống.
+    @State private var chrome = ShellChrome()
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -72,7 +74,11 @@ struct RootView: View {
             .tag(AppTab.home)
 
             NavigationStack {
+                // Tab Ôn không nằm trong path push nào — `safeAreaInset` của
+                // ShellTabBar trên TabView không lan tới đây (đo bằng screenshot,
+                // T2 shell-chrome-r1): tự chừa khe bằng đúng chiều cao capsule.
                 ReviewQueueView(showsCloseButton: false)
+                    .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
             }
             .toolbar(.hidden, for: .tabBar)
             .toolbarBackground(.hidden, for: .tabBar)
@@ -90,6 +96,10 @@ struct RootView: View {
             .tabItem { Label(AppTab.kho.title, systemImage: AppTab.kho.icon) }
             .tag(AppTab.kho)
         }
+        .environment(chrome)
+        .onChange(of: selectedTab) { chrome.reveal() }
+        .onChange(of: homePath) { chrome.reveal() }
+        .onChange(of: khoPath) { chrome.reveal() }
         .overlay(alignment: .bottom) {
             // Shutter nổi trên Home / Kho root và Hub; ẩn trên Ôn, lịch streak và
             // phiên đọc (port UI lab §10). Overlay (không inset) để không đẩy list.
@@ -110,13 +120,18 @@ struct RootView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: showShutter)
+        .animation(reduceMotion ? nil : Motion.reveal, value: chrome.isHidden)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ShellTabBar(selection: $selectedTab, onReselect: popSelectedTabToRoot)
+            ShellTabBar(
+                selection: $selectedTab,
+                onReselect: popSelectedTabToRoot,
+                isHidden: chrome.isHidden)
         }
         // ADR-036: fullScreenCover (không sheet) — CaptureView tự vẽ full-bleed
         // đen; sheet để lộ viền bo góc + không che hết status bar, không hợp
         // camera. Không bọc NavigationStack: CaptureView tự có chrome (X/dest/+).
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
+            chrome.reveal()
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
             if model.lastCapturedImage != nil {
                 showAnalysis = true
@@ -125,6 +140,7 @@ struct RootView: View {
             CaptureView()
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
+            chrome.reveal()
             // port UI lab §5.7: Lưu xong → về Hub bộ vừa lưu (kể cả kho tạm).
             // Đang đứng trên đúng hub đó → chỉ refresh (dataRevision bump), không push trùng.
             if let hubID = model.pendingHubNavigationID {
@@ -172,6 +188,7 @@ struct RootView: View {
     /// Shutter nổi chỉ hiện trên "bề mặt chụp": root Home, root Kho và Hub. Ẩn
     /// trên tab Ôn, lịch streak và phiên đọc (đang đọc, đang lật thẻ).
     private var showShutter: Bool {
+        if chrome.isHidden { return false }
         if model.suppressFloatShutter { return false }
         switch selectedTab {
         case .review: return false

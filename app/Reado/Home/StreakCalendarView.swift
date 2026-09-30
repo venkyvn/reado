@@ -27,6 +27,7 @@ struct StreakCalendarView: View {
             }
             .padding(Spacing.md)
         }
+        .shellScrollChrome()
         .navigationTitle("Lịch ôn")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.loadStreakHeatmap() }

@@ -12,9 +12,15 @@ struct ShellTabBar: View {
     /// `outerBottomPadding` (đo bằng screenshot: cộng thêm gây nút cao hơn capsule
     /// ~100pt, vì safe area môi trường ở đó đã gồm sẵn cả ShellTabBar).
     static let shutterGap: CGFloat = 12
+    /// Khe cần chừa ở CUỐI trang cho màn không có `safeAreaInset` xuyên qua
+    /// `TabView` (vd `ReviewQueueView` tab Ôn) — nội dung tự áp `.safeAreaPadding`
+    /// bằng số này để hàng nút cuối không chui xuống dưới capsule.
+    static let reservedHeight = height + outerBottomPadding + Spacing.sm
 
     @Binding var selection: AppTab
     var onReselect: (AppTab) -> Void = { _ in }
+    /// T3a shell-chrome-r1 — true khi vừa cuộn xuống, ẩn capsule khỏi màn hình.
+    var isHidden: Bool = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -33,6 +39,13 @@ struct ShellTabBar: View {
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
         .padding(.bottom, Self.outerBottomPadding)
+        // D3 shell-chrome-r1: KHÔNG đổi frame/padding khi ẩn — safe area (dùng bởi
+        // ReviewQueueView/HomeTabView `.safeAreaPadding`) phải đứng yên, chỉ trượt
+        // + mờ capsule. +40 phủ home indicator (~34pt), không cần GeometryReader.
+        .offset(y: isHidden && !reduceMotion ? Self.height + Self.outerBottomPadding + 40 : 0)
+        .opacity(isHidden ? 0 : 1)
+        .allowsHitTesting(!isHidden)
+        .accessibilityHidden(isHidden)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Điều hướng")
     }

@@ -31,6 +31,7 @@ struct ExportView: View {
                 errorSection(err)
             }
         }
+        .shellScrollChrome()
         .animation(reduceMotion ? nil : Motion.reveal, value: exportError)
         .navigationTitle("Dữ liệu")
         .navigationBarTitleDisplayMode(.inline)

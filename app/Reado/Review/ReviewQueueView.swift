@@ -21,6 +21,10 @@ struct ReviewQueueView: View {
 
     // Vuốt Tinder (ADR-033): thẻ bám theo tay + tilt + fly-off. Mapping giữ ADR-025.
     @State var dragOffset: CGSize = .zero
+    /// Điểm neo = `translation` tại lần `onChanged` đầu (`minimumDistance` đã
+    /// nuốt sẵn vài pt trước khi gesture bắt đầu báo) — trừ neo để thẻ đi theo
+    /// tay từ 0, không nhảy một bậc lúc bắt đầu kéo (T4 shell-chrome-r1).
+    @State var dragAnchor: CGSize?
     @State var isCommitting = false
     /// Haptic ngưỡng chỉ kêu một lần mỗi lần vượt, không kêu lại mỗi frame kéo.
     @State var didPassThreshold = false

@@ -1,6 +1,14 @@
 # Plan: shell-chrome-r1
 
 > Fen confirm 2026-09-28 (T1–T3b); T4 thêm 2026-09-30 (fen góp ý lần 2). 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T4 → T3a → T3b**.
+>
+> **Khép 2026-09-30 — cả 5 task ✅, build+test xanh (267/269, 2 skip opt-in).** Lệch so với HLD lúc lập:
+> `ScrollChromeTracker` (T3a) chuyển sang **ReadoKit** thay vì `app/Reado` — `ReadoTests` không có test host vào target `Reado`
+> (không `@testable import` được), phát hiện khi soạn `SettingsTests.clampNewLimit` (T1) rồi thấy lại ở T3a; đặt logic thuần ở
+> ReadoKit là đúng convention sẵn có của repo (xem `CaptureFailureTests` comment) nên giữ, không lùi về app target. Vì lý do
+> tương tự, bỏ test `clampNewLimit` (T1) — hàm 3 dòng, verify tay đủ.
+> **Chưa xem tay:** T3a/T3b (cuộn ẩn/hiện thật) và một phần T4 (còn giật sau khi vá neo không) — máy chạy agent không có
+> Simulator GUI/touch input, chỉ chụp ảnh tĩnh được. Chi tiết: `docs/journal/2026-09-30.md` mục shell-chrome-r1.
 
 ## Spec
 - **FR / journey:** FR-15 + J-R1-S (núm học tập — đã xong ở 3.7, chỉ đổi control nhập) · FR-11 (giờ chuyển ngày) · shell `ShellTabBar` / `FloatShutter` (port UI lab) · swipe chấm thẻ (`SwipeCommit`, cảm giác kéo). Không GWT mới.
@@ -26,7 +34,7 @@
 
 ## Tầng 2 — Tasks
 
-### T1 — settings-inputs
+### T1 — settings-inputs ✅ 2026-09-30
 - **Files:** `app/Reado/Settings/SettingsView.swift` (khối `learningSection`, ~dòng 108–129; comment dòng 45).
 - **Làm:**
   - Thẻ mới/ngày — thay `Stepper` bằng:
@@ -60,7 +68,7 @@
 - **Test:** `app/ReadoTests/SettingsTests.swift` thêm 1 test `clampNewLimit`: -5→0, 1500→999, 12→12, 0→0. `scripts/test.sh test -only-testing:ReadoTests/SettingsTests` rồi full.
 - **DoD:** full test xanh; simulator: gõ số → Lưu → rời màn + vào lại thấy đúng; lăn wheel → Lưu → footer "Đã lưu"; fen xem tay.
 
-### T2 — review-grade-inset
+### T2 — review-grade-inset ✅ 2026-09-30
 - **Files:** `app/Reado/Review/ReviewQueueView+Grade.swift` (`.padding(.bottom, Spacing.lg)` ~dòng 34), `app/Reado/Review/ReviewQueueView+Card.swift` (khối bottom controls ~dòng 83–92), có thể `app/Reado/App/RootView.swift` (tab Ôn ~dòng 74–80) + `ShellTabBar.swift`.
 - **Làm:**
   1. **Tái hiện trước, không đoán.** Simulator iPhone 18 Pro cần có ≥1 thẻ due (seed nếu trống). Screenshot `xcrun simctl io booted screenshot <scratchpad>/t2-tab.png`: tab Ôn, lật thẻ. Rồi `<scratchpad>/t2-sheet.png`: Hub → Ôn (sheet), lật thẻ. Đọc 2 ảnh.
@@ -72,7 +80,7 @@
 - **Test:** layout thuần — không unit test. Bằng chứng: screenshot trước/sau trong scratchpad (không commit ảnh) + full test xanh.
 - **DoD:** 4 nút nằm trọn trên capsule, khe ≥ 8pt, trên iPhone 18 Pro; Ôn dạng sheet không lệch; fen xem tay.
 
-### T4 — review-swipe-feel
+### T4 — review-swipe-feel ✅ 2026-09-30 (vá A; nghi phạm B chưa cần — xem journal)
 - **Files:** `app/Reado/Review/ReviewQueueView+Card.swift` (`swipeGesture` ~dòng 128–155, `cardView` ~46–70). Có thể `app/Reado/Shared/DesignSystem.swift` (`cardShadow` dòng 51), chỉ khi cần cho bước 4.
 - **Nghi phạm (đọc code, chưa đo):**
   - **A — nhảy lúc bắt đầu kéo (khả năng cao nhất).** `DragGesture(minimumDistance: 20)` → lần `onChanged` đầu tiên `translation.width` đã ~±20pt → thẻ nhảy một bậc thay vì đi theo ngón tay từ 0.
@@ -87,7 +95,7 @@
 - **Test:** logic neo là phép trừ thuần trong View, không cần unit test mới. `scripts/test.sh test -only-testing:ReadoTests/ReviewQueueAndServiceTests` rồi full. Bằng chứng: video trước/sau trong scratchpad (không commit).
 - **DoD:** thẻ đi theo ngón tay từ 0, không bậc nhảy; kéo qua lại liên tục không khựng; tap vẫn lật thẻ; hất nhanh vẫn chấm; Undo về đúng giữa; full test xanh; fen xem tay trên máy thật (giật khung đo trên simulator không đáng tin).
 
-### T3a — scroll-chrome-core
+### T3a — scroll-chrome-core ✅ 2026-09-30 (logic ở ReadoKit, không phải app/Reado — xem ghi chú đầu file)
 - **Files mới:** `app/Reado/App/ShellChrome.swift`, `app/ReadoTests/ScrollChromeTrackerTests.swift`.
 - **Files sửa:** `app/Reado/App/RootView.swift`, `app/Reado/App/ShellTabBar.swift`, `app/Reado/Home/HomeTabView.swift` (gắn thử 1 màn).
 - **Làm:**
@@ -151,7 +159,7 @@
 - **Test:** `ScrollChromeTrackerTests` (6 case): xuống 30pt từ offset 100 → ẩn · xuống 10pt → nil · đang ẩn, lên 15pt → hiện · rung ±5pt nhiều lần → nil · về offset 4 → hiện · offset > maxOffset → nil. `-only-testing:ReadoTests/ScrollChromeTrackerTests` rồi full.
 - **DoD:** full test xanh; simulator Home: cuộn xuống → capsule + shutter trượt đi; kéo lên nhẹ → hiện; về đỉnh → hiện; đổi tab / push Settings → hiện; không giật ở mép trên/dưới; fen xem tay.
 
-### T3b — scroll-chrome-rollout
+### T3b — scroll-chrome-rollout ✅ 2026-09-30 (build+test xanh; cuộn ẩn/hiện chưa xem tay)
 - **Files:** gắn `.shellScrollChrome()` (1 dòng, lên đúng `ScrollView`/`List` gốc) vào `app/Reado/Library/KhoTabView.swift`, `app/Reado/Library/CollectionDetailView.swift`, `app/Reado/Home/StreakCalendarView.swift`, `app/Reado/Settings/SettingsView.swift`, `app/Reado/Library/ExportView.swift`. **Không** gắn `ReadingSessionView`, `ReviewQueueView`, các sheet.
 - **Lưu ý:** `StreakCalendarView` có `safeAreaInset(edge: .bottom) { cta }` — kiểm CTA không bị lộ/che lạ khi thanh ẩn. `SettingsView`: ô nhập T1 đang focus + bàn phím → không được ẩn/hiện nhấp nháy (nếu có, guard trong modifier không đủ → báo fen).
 - **Test:** không unit test mới; full test xanh.

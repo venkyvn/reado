@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10
     @State private var dayCutoffHour = 4
+    @FocusState private var limitFieldFocused: Bool
     // 3.12 — nhắc ôn tập (local notification), default TẮT + 20:00.
     @State private var reminderEnabled = false
     @State private var reminderMinutes = 20 * 60
@@ -42,7 +43,8 @@ struct SettingsView: View {
                 }
             }
         }
-        // Chỉ bốn giá trị này: List không animate mỗi lần Stepper/Picker đổi.
+        .shellScrollChrome()
+        // Chỉ bốn giá trị này: List không animate mỗi lần ô nhập/Picker đổi.
         .animation(reduceMotion ? nil : Motion.reveal, value: saveError)
         .animation(reduceMotion ? nil : Motion.reveal, value: saved)
         .animation(reduceMotion ? nil : Motion.reveal, value: reminderEnabled)
@@ -53,6 +55,10 @@ struct SettingsView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Lưu") { save() }
                     .disabled(!didLoad)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Xong") { limitFieldFocused = false }
             }
         }
         .onAppear { load() }
@@ -75,7 +81,11 @@ struct SettingsView: View {
             }
         }
         .onChange(of: cefrLevels) { saved = false }
-        .onChange(of: dailyNewLimit) { saved = false }
+        .onChange(of: dailyNewLimit) { _, newValue in
+            saved = false
+            let clamped = Self.clampNewLimit(newValue)
+            if clamped != newValue { dailyNewLimit = clamped }
+        }
         .onChange(of: dayCutoffHour) { saved = false }
         .onChange(of: reminderEnabled) { saved = false }
         .onChange(of: reminderMinutes) { saved = false }
@@ -106,25 +116,29 @@ struct SettingsView: View {
             }
 
             // Hạn mức thẻ mới/ngày (FR-11) — 0 hợp lệ (D-lim-0), trần 999.
-            Stepper(value: $dailyNewLimit, in: 0...999) {
-                HStack {
-                    Text("Thẻ mới mỗi ngày")
-                    Spacer()
-                    Text("\(dailyNewLimit)")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
+            HStack {
+                Text("Thẻ mới mỗi ngày")
+                Spacer()
+                TextField("0", value: $dailyNewLimit, format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: 80)
+                    .focused($limitFieldFocused)
             }
 
             // Giờ chuyển ngày (FR-11/14) — streak & hạn mức quy theo giờ này.
-            Stepper(value: $dayCutoffHour, in: 0...23) {
-                HStack {
-                    Label("Giờ chuyển ngày", systemImage: "bed.double")
-                    Spacer()
-                    Text(Self.hourLabel(dayCutoffHour))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+            // Cùng kiểu wheel với "Giờ nhắc" bên dưới — đồng bộ UI.
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Label("Giờ chuyển ngày", systemImage: "bed.double")
+                Picker("Giờ chuyển ngày", selection: $dayCutoffHour) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        Text(Self.hourLabel(hour)).tag(hour)
+                    }
                 }
+                .pickerStyle(.wheel)
+                .frame(maxHeight: 120)
             }
         } header: {
             Label("Học tập", systemImage: "book.closed")
@@ -366,6 +380,7 @@ struct SettingsView: View {
 
     private func save() {
         saveError = nil
+        dailyNewLimit = Self.clampNewLimit(dailyNewLimit)
         do {
             try model.saveLearningSettings(
                 cefrLevels: cefrLevels,
@@ -386,6 +401,11 @@ struct SettingsView: View {
 
     private static func hourLabel(_ hour: Int) -> String {
         String(format: "%02d:00", hour)
+    }
+
+    /// Kẹp ô nhập "Thẻ mới mỗi ngày" — D-lim-0 hợp lệ, trần 999.
+    static func clampNewLimit(_ value: Int) -> Int {
+        min(max(value, 0), 999)
     }
 }
 
