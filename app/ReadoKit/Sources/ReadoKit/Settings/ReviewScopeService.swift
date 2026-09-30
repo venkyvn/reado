@@ -49,10 +49,8 @@ public enum ReviewScopeService {
         }
         let all = (row[1].intValue ?? 0) != 0
         var ids: [String] = []
-        if let json = row[0].textValue, !json.isEmpty,
-           let data = json.data(using: .utf8)
-        {
-            ids = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        if let json = row[0].textValue, !json.isEmpty {
+            ids = JSONStringArray.decode(json) ?? []
         }
         // Chưa ghim bộ nào → mặc định "tất cả" (cho cả seed default review_all = 0).
         guard !ids.isEmpty else { return .empty }
@@ -74,13 +72,7 @@ public enum ReviewScopeService {
                 "SELECT 1 FROM collections WHERE id = ? LIMIT 1;", [.text(id)])
             guard exists != nil else { throw ReviewScopeError.notFound }
         }
-        let json: String
-        if reviewAll {
-            json = "[]"
-        } else {
-            let data = try JSONEncoder().encode(ids)
-            json = String(data: data, encoding: .utf8) ?? "[]"
-        }
+        let json = reviewAll ? "[]" : JSONStringArray.encode(ids)
         try db.run(
             """
             UPDATE settings

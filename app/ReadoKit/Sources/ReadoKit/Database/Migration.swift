@@ -47,9 +47,7 @@ public enum Migration {
             .compactMap { $0 }
             .filter { !$0.isEmpty }
         guard !legacy.isEmpty else { return }
-        let json: String =
-            (try? String(
-                data: JSONEncoder().encode(legacy), encoding: .utf8)) ?? "[]"
+        let json = JSONStringArray.encode(legacy)
         try db.run(
             "UPDATE settings SET home_pin_ids = ?, home_shortcut_1_id = NULL, home_shortcut_2_id = NULL WHERE id = 1;",
             [.text(json)])

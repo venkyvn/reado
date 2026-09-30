@@ -46,7 +46,7 @@ public enum HomePinService {
         }
         let raw: [String]
         if let json = row[0].textValue, !json.isEmpty,
-           let legacy = decode(json), !legacy.isEmpty
+           let legacy = JSONStringArray.decode(json), !legacy.isEmpty
         {
             raw = legacy
         } else {
@@ -89,18 +89,7 @@ public enum HomePinService {
         }
         try db.run(
             "UPDATE settings SET home_pin_ids = ? WHERE id = 1;",
-            [.text(encode(normalized))])
+            [.text(JSONStringArray.encode(normalized))])
         return normalized
-    }
-
-    // JSON codec — mảng [String] (thứ tự đúng nghĩa, không dùng Set).
-    private static func encode(_ ids: [String]) -> String {
-        guard let data = try? JSONEncoder().encode(ids) else { return "[]" }
-        return String(data: data, encoding: .utf8) ?? "[]"
-    }
-
-    private static func decode(_ json: String) -> [String]? {
-        guard let data = json.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode([String].self, from: data)
     }
 }

@@ -194,18 +194,9 @@ public enum ReviewQueue {
     public static func currentDayWindow(
         on db: SQLiteDatabase, now: Date
     ) -> DayBoundary.DayWindow {
-        let timezoneID: String = (try? db.scalarString(
-            "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
-        let cutoffHour: Int = {
-            if let v = try? db.scalarInt64(
-                "SELECT day_cutoff_hour FROM settings WHERE id = 1;") {
-                return Int(v)
-            }
-            return 4
-        }()
-        let tz = TimeZone(identifier: timezoneID) ?? .current
+        let (timezone, cutoffHour) = DayContext.read(on: db)
         return DayBoundary.window(
-            now: now, timezone: tz, dayCutoffHour: cutoffHour)
+            now: now, timezone: timezone, dayCutoffHour: cutoffHour)
     }
 
     /// Hàm THUẦN (không DB) — phần nới "Học thêm" chỉ còn hiệu lực trong đúng

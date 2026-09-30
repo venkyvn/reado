@@ -119,7 +119,7 @@ public enum StreakCalendarService {
     /// Toàn bộ dữ liệu cho màn Lịch streak: streak hiện tại + dài nhất + lưới
     /// 18×7. `timezone` / `day_cutoff_hour` đọc từ settings (cùng cặp FR-11/14).
     public static func load(on db: SQLiteDatabase, now: Date) throws -> StreakHeatmap {
-        let (timezone, cutoffHour) = try readDayContext(on: db)
+        let (timezone, cutoffHour) = DayContext.read(on: db)
         let reviews = try dayCounts(
             on: db, column: "reviewed_at", table: "review_logs",
             timezone: timezone, cutoffHour: cutoffHour)
@@ -138,21 +138,6 @@ public enum StreakCalendarService {
     }
 
     // MARK: — Nội bộ
-
-    /// timezone + giờ chuyển ngày — đúng cặp giá trị FR-11 dùng chung.
-    private static func readDayContext(on db: SQLiteDatabase) throws -> (TimeZone, Int) {
-        let timezoneID: String = (try? db.scalarString(
-            "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
-        let cutoffHour: Int = {
-            if let v = try? db.scalarInt64(
-                "SELECT day_cutoff_hour FROM settings WHERE id = 1;") {
-                return Int(v)
-            }
-            return 4
-        }()
-        let timezone = TimeZone(identifier: timezoneID) ?? .current
-        return (timezone, cutoffHour)
-    }
 
     /// Gộp timestamp của một cột thành [đầu-cửa-sổ ngày: số lần].
     private static func dayCounts(
