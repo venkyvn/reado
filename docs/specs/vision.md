@@ -2,6 +2,8 @@
 
 > Tài liệu này trả lời câu hỏi **tại sao Reado đáng tồn tại**, không phải câu hỏi
 > xây nó thế nào. Phần "thế nào là xong" nằm ở [PRD](docs/specs/prd.md).
+> Vision có thể đổi khi sản phẩm lớn lên, nhưng chỉ giữ **luật hiện hành** — lịch sử
+> quyết định và lý do đảo chiều nằm ở [decisions-log](docs/decisions-log.md).
 
 ---
 
@@ -48,9 +50,14 @@ không ai thật sự viết ra.
 gốc. Người đọc tự quyết định khi nào liếc sang — không phải dừng lại, không phải
 mở tab khác, không phải gõ lại câu vào ô tìm kiếm.
 
+Bản dịch tốt còn là **thứ để học**, không chỉ để gỡ chỗ bí: đặt cạnh câu gốc, nó
+cho thấy một ý tiếng Anh được chuyển sang tiếng Việt tự nhiên thế nào — cả cụm, cả
+nhịp câu, chứ không phải từng chữ. Một bản dịch hay làm người ta muốn đọc tiếp.
+
 **Chống lại:** Bắt người dùng "cố đoán nghĩa qua ngữ cảnh" như một kỷ luật bắt
 buộc. Đoán nghĩa là kỹ năng tốt, nhưng ép buộc nó ở mọi câu thì chỉ làm người ta
-đọc chậm lại và bỏ sớm hơn.
+đọc chậm lại và bỏ sớm hơn. Và bản dịch word by word khô cứng: nó gỡ được nghĩa
+nhưng giết hứng đọc, và không dạy được gì về cách diễn đạt.
 
 ---
 
@@ -63,6 +70,10 @@ buộc. Đoán nghĩa là kỹ năng tốt, nhưng ép buộc nó ở mọi câu
 **Với Reado:** Từ vựng và cụm từ được trích ra từ chính trang sách người dùng vừa
 đọc, lọc theo trình độ CEFR họ khai báo. Việc đưa một từ vào bộ ôn tập diễn ra
 ngay tại thời điểm gặp nó, trong một thao tác.
+
+AI chỉ **đề xuất**; người dùng là **người duyệt cuối**. AI đoán được từ nào khó với
+một trình độ, nhưng không biết chắc từ nào làm chính người này khựng — và nó có thể
+sai nghĩa. Giữ, bỏ, sửa trước khi lưu là quyền của người đọc.
 
 **Chống lại:** Word list dựng sẵn tách rời khỏi việc đọc. Và cả thái cực ngược
 lại: lưu tất cả mọi từ trong trang. Bộ ôn tập chứa thứ người dùng đã biết thì
@@ -79,14 +90,16 @@ chẳng mấy chốc sẽ bị bỏ.
 **Với Reado:** Mỗi thẻ ôn tập mang theo ngữ cảnh nơi nó được gặp — câu gốc, và tên
 collection mà người dùng đã tự đặt. Ôn từ vựng đồng thời là ôn lại khoảnh khắc đọc.
 
-Nguyên lý ở đây là **thẻ phải có chỗ bám**, không phải một danh sách field cụ thể.
-Collection là cách hiện thực hiện tại; nó thay cho `tên sách + số trang` của bản
-trước, vì nguồn đọc thật còn có báo và web — mà một bài báo mạng thì không có số
-trang. Chi tiết ở
+Nguyên lý ở đây là **thẻ phải có chỗ bám**, không phải một danh sách field cụ thể
+hay một bố cục mặt thẻ cụ thể. Hình thức hiện tại: mặt trước hỏi tối giản (chỉ từ),
+mặt sau trả lời đủ (nghĩa, câu gốc, collection) — kiểm tra ít, hiển thị nhiều.
+Collection thay cho `tên sách + số trang`, vì nguồn đọc thật còn có báo và web — mà
+một bài báo mạng thì không có số trang. Chi tiết ở
 [research/vocabulary.md](docs/research/vocabulary.md).
 
-**Chống lại:** Thẻ hai mặt kiểu từ điển. Chúng dễ sinh ra hàng loạt, và cũng dễ
-dẫn tới việc thuộc lòng bản dịch mà vẫn không dùng được từ đó trong câu.
+**Chống lại:** Thẻ không có câu gốc — nghĩa trần kiểu từ điển. Chúng dễ sinh ra
+hàng loạt, và cũng dễ dẫn tới việc thuộc lòng bản dịch mà vẫn không dùng được từ đó
+trong câu.
 
 ---
 
@@ -100,16 +113,13 @@ dẫn tới việc thuộc lòng bản dịch mà vẫn không dùng được t�
 phải một khối văn bản. Có cấu trúc thì mới lên lịch ôn được, tra cứu được, thống kê
 được, và xuất ra được.
 
-**Phạm vi của nguyên lý này hẹp hơn bản đầu, và cần nói thẳng.** Thứ được giữ vĩnh
-viễn là **từ vựng**. Artefact đọc — text trang, bản dịch song ngữ, tóm tắt — chỉ được
-giữ trong phạm vi hẹp: **10 phiên đọc gần nhất của mỗi collection có tên**, đủ để mở
-lại vài trang vừa đọc (Q-10, ADR-029). Phiên thứ 11 trôi đi; kho tạm không lưu phiên;
-ảnh gốc không bao giờ được lưu (NFR-04).
+Thứ được giữ vĩnh viễn là **từ vựng**. Artefact đọc — text trang, bản dịch song
+ngữ, tóm tắt — chỉ được giữ cho **vài phiên đọc gần nhất** của mỗi collection có
+tên, đủ để mở lại mấy trang vừa đọc. Ảnh gốc không bao giờ được lưu.
 
 Hai lý do cho giới hạn này: toàn văn trang sách là bề mặt bản quyền lớn hơn hẳn một
 câu trích, và nhu cầu đọc lại có thật nhưng chỉ với vài trang gần nhất, không phải cả
-cuốn. Lịch sử đảo chiều (bản đầu hứa lưu cả `segment` lẫn `summary`, bản sau cho mọi
-thứ trôi, rồi chốt ở giữa) nằm ở ADR-029.
+cuốn.
 
 **Chống lại:** Biến Reado thành một chat interface đẹp hơn. Nếu người dùng vẫn
 phải copy thủ công từ câu trả lời sang nơi khác, Reado chưa giải quyết được gì.
@@ -125,14 +135,21 @@ phải copy thủ công từ câu trả lời sang nơi khác, Reado chưa giả
 **Với Reado:** Bản tóm tắt xuất hiện **sau** khi đọc, đóng vai trò công cụ tự
 kiểm tra: *"mình hiểu đúng trang này chưa?"* Nó không thay thế trang sách.
 
+Nguyên lý này **không** cấm ghi nhận tiến bộ — nó cấm tiến bộ ảo. Số đo có thật (số
+thẻ vừa ôn, chuỗi ngày ôn, từ vừa lên mức) là phản chiếu hành trình. Mỗi từ đi qua
+bốn mức, và mức cuối nằm ở chính việc đọc chứ không ở thẻ:
+
+| Mức | Nghĩa |
+|---|---|
+| Mới | Đã lưu, chưa ôn |
+| Đang học | Đang ôn, chưa vững |
+| Đã nhớ | Scheduler ước lượng nhớ được lâu |
+| **Đã thấm** | Gặp lại khi đọc sách thật và nhận ra |
+
 **Chống lại:** Chế độ "đọc nhanh 10 cuốn sách qua tóm tắt". Điều đó có thể hợp lý
 với một app đọc sách, nhưng với một app học ngôn ngữ thì nó phá huỷ chính cơ chế
-tạo ra tiến bộ.
-
-Nguyên lý này **không** cấm ghi nhận tiến bộ. Cho người dùng thấy số đo có thật — số
-thẻ vừa ôn, từ vừa chạm ngưỡng "đã thuộc", chuỗi ngày ôn — là phản chiếu hành trình,
-không phải thay thế nó. Thứ bị chặn là tiến bộ ảo: điểm/XP, huy hiệu không gắn với việc
-đã làm, bảng xếp hạng (ADR-038, NG-04).
+tạo ra tiến bộ. Và tiến bộ ảo: điểm/XP, huy hiệu không gắn với việc đã làm, bảng
+xếp hạng.
 
 ---
 
@@ -145,10 +162,14 @@ thẻ giấy Leitner đến SM-2 của SuperMemo, rồi FSRS mà Anki dùng hi�
 
 Reado không sáng tạo gì ở tầng này. Nó dùng một scheduler đã được chứng minh, và
 dồn toàn bộ nỗ lực vào phần chưa ai làm tốt: **đưa đúng từ vào bộ ôn tập, kèm đủ
-ngữ cảnh, mà không bắt người dùng gõ lại một chữ nào.**
+ngữ cảnh, mà không bắt người dùng gõ lại một chữ nào.** Ôn thêm ngoài lịch chỉ ghi
+lại, không đổi lịch mà scheduler đã tính; lần nhận ra từ khi đọc cũng vậy.
 
-Ôn thêm ngoài lịch (Cram, ADR-043) không phải ngoại lệ: lượt cram chỉ ghi log, không
-đổi lịch mà scheduler đã tính.
+Scheduler giải được **khi nào** ôn một thẻ, không giải được **bao nhiêu** thẻ đổ
+vào. Đọc hăng một buổi là đủ sinh ra lượng thẻ mới mà nhiều ngày không học hết — và
+con số tồn đọng đó đủ làm người ta bỏ app. Reado không đòi học hết: **mỗi ngày giữ
+thêm vài từ là đủ**. Việc của app là ưu tiên từ đáng học trước — từ của thứ đang
+đọc, từ gặp lại nhiều lần — và để phần còn lại được phép chờ.
 
 ---
 
@@ -162,3 +183,10 @@ Người dùng vẫn đọc thứ họ muốn đọc, ở độ khó thật củ
 mọi **từ** họ học được trên đường đi đều ở lại với họ. Trang sách thì phần lớn
 trôi đi, chỉ vài phiên gần nhất được giữ để đọc lại — đó là đánh đổi có chủ ý ở
 nguyên lý 5.
+
+Vòng lặp khép lại khi từ quay về trang sách:
+
+> **đọc → khựng → giữ → ôn → nhận ra khi đọc tiếp**
+
+Khoảnh khắc nhận ra một từ cũ giữa trang mới là bằng chứng mạnh nhất rằng Reado
+đang làm đúng việc của nó.
