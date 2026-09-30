@@ -760,3 +760,12 @@
 - **Quyết định:** `Reado` + `ReadoTests` thành `PBXFileSystemSynchronizedRootGroup`. Fen convert bằng Xcode 27 (Xcode ghi objectVersion **70**, không phải 77 như plan). Trước khi convert phải gỡ reference trùng và 2 file có path nhiều cấp (`Capture/CaptureView.swift`, `Screens/ReviewQueueView.swift`) — Xcode từ chối nếu còn.
 - **Hệ quả:** `pbxproj_tool.py` chỉ còn `check`/`list` (`add`/`remove` bỏ). `check` bắt objectVersion < 70, mất root group, fileRef `.swift` rời, exception set. Cấm exception set (file trong `membershipExceptions` bị loại khỏi target ngầm). File trong thư mục là được compile, kể cả chưa track git. Kiểm: probe test 1/1, hai probe build lỗi (thư mục gốc + thư mục con) đều FAIL đúng file, full 263/265 bằng mốc.
 
+
+## ADR-047 — CI bằng GitHub Actions, CD hoãn (ci-r1)
+
+- **Ngày:** 2026-09-30
+- **Bối cảnh:** chưa có CI; `repo-hygiene-r1` để CI "sau". Repo `venkyvn/reado` public → runner macOS miễn phí. Runner `macos-26` chỉ có Xcode 26.x + simulator iPhone 17.x (máy fen: Xcode 27, iPhone 18 Pro).
+- **Quyết định:** `.github/workflows/ci.yml`, 4 job, mọi lệnh iOS đi qua `scripts/test.sh` (cùng đường với máy fen). `lint` (pbxproj check + link docs, link docs mới chỉ cảnh báo vì còn 6 anchor dòng cũ ở `docs/plans/cram-collection-r1.md`) · `proxy` (unittest + import smoke) · `kit` (`scripts/test.sh kit`) · `app` (`scripts/test.sh`, `needs: kit`). `test.sh` nhận `READO_SIM_NAME` (mặc định iPhone 18 Pro; CI đặt iPhone 17 Pro). Trigger: PR, push `main`/`claude/**`, dispatch; concurrency huỷ lượt cũ cùng nhánh.
+- **Kiểm:** run đầu trên Xcode 26 của runner: app 267/269 (2 skip opt-in), kit 10/10, proxy 4/4, tổng ~9 phút — khớp số máy fen.
+- **CD hoãn, vì còn mở:** TestFlight cần Apple Developer + signing/secret của fen (hoặc Xcode Cloud cấu hình trong App Store Connect); proxy chưa chốt hosting vendor + auth (`solution-design.md` mục "lúc deploy"). Không viết workflow đoán.
+- **Chưa làm:** branch protection bắt buộc job xanh (cần fen bật trong Settings); bump action lên bản Node 24.

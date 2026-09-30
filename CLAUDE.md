@@ -22,6 +22,7 @@
   ```
   Log đầy đủ ở `/tmp/build.log`, kết quả ở `.tmp/results/last.xcresult` (lane `kit`: `/tmp/build-kit.log`, `.tmp/results/kit.xcresult`) — cần chi tiết thì đọc các file đó, không đọc nguyên.
 - Proxy: `cd proxy && python3 -m unittest -q`.
+- CI: `.github/workflows/ci.yml` (ADR-047) gọi lại đúng các lệnh trên; CI đặt `READO_SIM_NAME="iPhone 17 Pro"` vì runner chưa có iPhone 18 Pro. Log/xcresult của lượt hỏng ở artifact của run.
 - **Cấm `swift build`** (đụng cache `~/Library`).
 - Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — không ghi vào file này.
 
