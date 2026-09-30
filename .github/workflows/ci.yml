@@ -1,0 +1,107 @@
+name: CI
+
+# CI của Reado (ADR-047). Mọi lệnh build/test đi qua scripts/test.sh — y hệt máy fen (CLAUDE.md §2).
+# Repo public → runner macOS miễn phí.
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+# Push + PR cùng nhánh dùng chung một nhóm → chỉ giữ lượt mới nhất.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Runner chỉ có iPhone 17.x (Xcode 26.x); máy fen dùng iPhone 18 Pro (Xcode 27).
+  READO_SIM_NAME: iPhone 17 Pro
+
+jobs:
+  lint:
+    name: Lint (pbxproj · docs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: pbxproj còn synchronized folders
+        run: python3 scripts/pbxproj_tool.py check
+      - name: Link docs nội bộ (chưa chặn — còn 6 anchor dòng cũ ở docs/plans/cram-collection-r1.md)
+        run: node scripts/verify/check-doc-links.mjs || echo "::warning::check-doc-links báo link/anchor hỏng — xem log"
+
+  proxy:
+    name: Proxy (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: proxy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: proxy/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Unit test
+        run: python -m unittest -q
+      - name: Import smoke (bắt lỗi cú pháp/import của main.py)
+        run: python -c "import main; print('routes:', [r.path for r in main.app.routes])"
+
+  kit:
+    name: ReadoKit (macOS, logic thuần)
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: xcodebuild -version
+      - uses: actions/cache@v4
+        with:
+          path: .xcode-packages
+          key: spm-${{ hashFiles('app/ReadoKit/Package.resolved', 'app/Reado.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+      - name: scripts/test.sh kit
+        run: scripts/test.sh kit
+      - name: Log + xcresult khi hỏng
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kit-failure
+          path: |
+            /tmp/build-kit.log
+            .tmp/results/kit.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
+
+  app:
+    name: App (build + test trên simulator)
+    needs: [kit]
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode + simulator
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | grep -E "iPhone 17 Pro( |\()" || true
+      - uses: actions/cache@v4
+        with:
+          path: .xcode-packages
+          key: spm-${{ hashFiles('app/ReadoKit/Package.resolved', 'app/Reado.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+      - name: scripts/test.sh
+        run: scripts/test.sh
+      - name: Log + xcresult
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-results
+          path: |
+            /tmp/build.log
+            .tmp/results/last.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

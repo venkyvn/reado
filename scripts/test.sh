@@ -34,7 +34,8 @@ for f in s.get("testFailures", [])[:20]:
 '
 }
 
-SIM_NAME="iPhone 18 Pro"
+# Máy fen = iPhone 18 Pro (Xcode 27); CI (runner Xcode 26.x) đặt READO_SIM_NAME="iPhone 17 Pro".
+SIM_NAME="${READO_SIM_NAME:-iPhone 18 Pro}"
 RESULT="$ROOT/.tmp/results/last.xcresult"
 mkdir -p "$ROOT/.tmp/results"
 
