@@ -29,7 +29,7 @@
 
 | Doc | Đọc khi nào |
 |---|---|
-| `docs/specs/vision.md` | 6 nguyên lý — resolver mọi chỗ mơ hồ |
+| `docs/specs/vision.md` | 6 nguyên lý — đọc ở mỗi `/rplan` + resolver mọi chỗ mơ hồ |
 | `docs/specs/prd.md` | FR/NFR/M/A, R1/R2 scope, bảng "Đã chốt" |
 | `docs/specs/solution-design.md` | "Thế nào" của R1: kiến trúc, DDL, ranh giới transaction |
 | `docs/specs/db.md` | Dialect SQLite R1 (tầng A) + sync Later (tầng B) |

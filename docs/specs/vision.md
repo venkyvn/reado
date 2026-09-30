@@ -100,23 +100,16 @@ dẫn tới việc thuộc lòng bản dịch mà vẫn không dùng được t�
 phải một khối văn bản. Có cấu trúc thì mới lên lịch ôn được, tra cứu được, thống kê
 được, và xuất ra được.
 
-**Phạm vi của nguyên lý này đã thu hẹp, và cần nói thẳng.** Bản trước hứa lưu cả
-`segment` lẫn `summary`. Giờ thì không: bản dịch song ngữ và tóm tắt chỉ sống trong
-phiên đọc, dưới dạng một buffer cuộn khoảng chục trang gần nhất, rồi trôi đi — **đến
-2026-09-18 cửa nhỏ được mở lại, xem cập nhật cuối mục**. Hai
-lý do: toàn văn trang sách là bề mặt bản quyền lớn hơn hẳn một câu trích, và người
-dùng gần như không bao giờ mở lại trang đã đọc.
+**Phạm vi của nguyên lý này hẹp hơn bản đầu, và cần nói thẳng.** Thứ được giữ vĩnh
+viễn là **từ vựng**. Artefact đọc — text trang, bản dịch song ngữ, tóm tắt — chỉ được
+giữ trong phạm vi hẹp: **10 phiên đọc gần nhất của mỗi collection có tên**, đủ để mở
+lại vài trang vừa đọc (Q-10, ADR-029). Phiên thứ 11 trôi đi; kho tạm không lưu phiên;
+ảnh gốc không bao giờ được lưu (NFR-04).
 
-Cái giá phải trả là thật, và nó rơi đúng vào chỗ đau nhất — phần dịch giờ trôi đi y
-như câu trả lời trong chat history, tức đúng nỗi đau khai sinh ra Reado. Chấp nhận
-được vì thứ đáng giữ đã được giữ: **nguyên lý này giờ áp cho từ vựng, không áp cho
-artefact đọc.** Nếu về sau xuất hiện nhu cầu đọc lại có thật, quyết định này mở lại
-được.
-
-> **Cập nhật 2026-09-18 (Q-10 chốt, ADR-029):** nhu cầu đọc lại có thật — owner mở lại
-> cửa này trong phạm vi hẹp: **text + dịch của 10 phiên đọc gần nhất mỗi collection có
-> tên** được lưu bền để đọc lại (dễ đọc sách). Ảnh gốc vẫn cấm; kho tạm không lưu phiên.
-> Nguyên lý vẫn áp cho mọi thứ ngoài 10 phiên đó — từ vựng là thứ giữ vĩnh viễn.
+Hai lý do cho giới hạn này: toàn văn trang sách là bề mặt bản quyền lớn hơn hẳn một
+câu trích, và nhu cầu đọc lại có thật nhưng chỉ với vài trang gần nhất, không phải cả
+cuốn. Lịch sử đảo chiều (bản đầu hứa lưu cả `segment` lẫn `summary`, bản sau cho mọi
+thứ trôi, rồi chốt ở giữa) nằm ở ADR-029.
 
 **Chống lại:** Biến Reado thành một chat interface đẹp hơn. Nếu người dùng vẫn
 phải copy thủ công từ câu trả lời sang nơi khác, Reado chưa giải quyết được gì.
@@ -136,6 +129,11 @@ kiểm tra: *"mình hiểu đúng trang này chưa?"* Nó không thay thế tran
 với một app đọc sách, nhưng với một app học ngôn ngữ thì nó phá huỷ chính cơ chế
 tạo ra tiến bộ.
 
+Nguyên lý này **không** cấm ghi nhận tiến bộ. Cho người dùng thấy số đo có thật — số
+thẻ vừa ôn, từ vừa chạm ngưỡng "đã thuộc", chuỗi ngày ôn — là phản chiếu hành trình,
+không phải thay thế nó. Thứ bị chặn là tiến bộ ảo: điểm/XP, huy hiệu không gắn với việc
+đã làm, bảng xếp hạng (ADR-038, NG-04).
+
 ---
 
 ## Retention Is A Solved Problem — Use The Solution
@@ -149,6 +147,9 @@ Reado không sáng tạo gì ở tầng này. Nó dùng một scheduler đã đ�
 dồn toàn bộ nỗ lực vào phần chưa ai làm tốt: **đưa đúng từ vào bộ ôn tập, kèm đủ
 ngữ cảnh, mà không bắt người dùng gõ lại một chữ nào.**
 
+Ôn thêm ngoài lịch (Cram, ADR-043) không phải ngoại lệ: lượt cram chỉ ghi log, không
+đổi lịch mà scheduler đã tính.
+
 ---
 
 ## Conclusion
@@ -158,5 +159,6 @@ Triết lý cốt lõi của Reado:
 > **Đọc sách thật. Không mất gì.**
 
 Người dùng vẫn đọc thứ họ muốn đọc, ở độ khó thật của nó. Reado chỉ đảm bảo rằng
-mọi **từ** họ học được trên đường đi đều ở lại với họ. Trang sách thì trôi đi —
-đó là đánh đổi có chủ ý ở nguyên lý 5.
+mọi **từ** họ học được trên đường đi đều ở lại với họ. Trang sách thì phần lớn
+trôi đi, chỉ vài phiên gần nhất được giữ để đọc lại — đó là đánh đổi có chủ ý ở
+nguyên lý 5.

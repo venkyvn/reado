@@ -7,6 +7,7 @@ Chỉ lưu sau khi fen confirm (in ra chat trước). Không viết PRD mới �
 
 ## Spec
 - FR / journey: (grep prd.md + journeys.md — GWT giữ nguyên, không viết lại)
+- Nguyên lý: phục vụ #N (vision.md) · đụng mục "Chống lại" / NG nào (không → ghi "không")
 - In-scope:
 - Out-of-scope / không đụng:
 - Q mở / chỗ thiếu hợp đồng: (nếu có → dừng, hỏi fen)
