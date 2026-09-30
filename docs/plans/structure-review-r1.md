@@ -1,7 +1,7 @@
 # Plan: structure-review-r1 — review cấu trúc code + roadmap refactor/enhance
 
 > Nguồn: fen nhờ "ngó cách cấu trúc code, xem có gì refactor/enhance" (2026-09-30). Review **tĩnh** (grep + đọc có chọn lọc) tại HEAD `3e8b0c2` trong session cloud không có Xcode — **chưa build/test gì**. Mọi `file:dòng` đúng tại HEAD đó; tới lượt task nào thì kiểm lại bằng `grep -n` trước khi sửa.
-> Trạng thái: **đề xuất — chưa task nào được fen OK.** 1 task = 1 session (CLAUDE.md §7); task đụng hợp đồng phải `/rplan` riêng.
+> Trạng thái (2026-09-30): **T1 fen đã OK nhưng chưa code** (session cloud không build được → bàn giao local, xem `docs/journal/2026-09-30.md`); các task còn lại: đề xuất, chưa OK. 1 task = 1 session (CLAUDE.md §7); task đụng hợp đồng phải `/rplan` riêng.
 > Quy mô lúc review: `app/Reado` 6.2k dòng / 19 file · `ReadoKit` 6.1k / 45 file · `ReadoTests` 5.0k / 25 file (~256 hàm `test…`) · `proxy` 264 dòng Python.
 
 ## Spec
@@ -30,7 +30,7 @@ Vấn đề gom ở **ranh giới app↔Kit bị mòn khi tính năng dồn vào
 | # | Phát hiện | Bằng chứng |
 |---|---|---|
 | A1 | **Chấm/undo lỗi bị nuốt im.** View `catch` rỗng, comment "AppModel đã set reviewError" nhưng `grade`/`undoReview` không bao giờ set (chỉ `loadReviewQueue` set). DB/scheduler lỗi → bấm chấm không phản hồi | `ReviewQueueView.swift:601-603,647-649` · `AppModel.swift:338,355` |
-| A2 | **Kiểu swift-fsrs lọt API public** (trái conventions §2/§8.10): `ReviewScheduler.engine`/`.parameters`/`grade(card:)`, `CardSnapshot.schedulerCard`, `CardStateCode.from/toState`. Chỉ 1 test chạm. `@unchecked Sendable` (§6) có thể giữ vì chỉ `let` — nên ghi lý do vào comment | `ReviewScheduler.swift:189-193,206,247,251` · `CardSnapshot.swift:50` · `ReviewSchedulerTests.swift:22` |
+| A2 | **Kiểu swift-fsrs lọt API public** (trái conventions §2/§8.10) — 7 chỗ: `ReadoFSRS.parameters(from:)`, `ReviewScheduler.engine`/`.parameters`/`grade(card:)`, `CardSnapshot.schedulerCard`, `CardStateCode.from/toState`. Test chạm: `ReviewSchedulerTests` (`:22`, `:90-98`) và `ReadoKitTests/PrimitivesTests` (`:28-37`). `@unchecked Sendable` (§6) có thể giữ vì chỉ `let` — nên ghi lý do vào comment. *(Review lần đầu chỉ đếm 6 vì chữ ký nhiều dòng, và bỏ sót test dùng `CardStateCode`.)* | `ReviewScheduler.swift:120-121,189-193,206,247,251` · `CardSnapshot.swift:50` |
 | A3 | **SQL thô ở app** (`SELECT id FROM collections WHERE is_default = 1`), trùng đúng câu trong Kit | `AppModel.swift:481-482` ↔ `VocabRepository.swift:199` |
 | A4 | **`Date()` lách `Clock`** (default param + gọi thẳng) và **`?? Date()` che timestamp hỏng** thay vì throw như `ReviewService.fetchSnapshot` | `Seeder.swift:29` · `VocabRepository.swift:134,168,304` · `ExportService.swift:220,329` · `AnalysisAgentStore.swift:123` · `ReadingSession.swift:79` |
 | A5 | **Xử lý `database == nil` thiếu nhất quán:** 28× `guard let database` trả ≥ 6 kiểu (`0`, `nil`, `false`, `[]`, silent, throw); `importRows` ném `.emptyFile` ("File rỗng…") sai ngữ nghĩa | `AppModel.swift:745` (+27 chỗ) |
@@ -88,11 +88,41 @@ Thứ tự khuyên: **Phase 1** (T1 → T2 → T3 → T4) · **Phase 2** (T5 →
 
 ### Phase 1 — đúng luật, hết nuốt lỗi
 
-#### T1 — `kit-boundary-hygiene` (A2 + A3 + A4)
+#### T1 — `kit-boundary-hygiene` (A2 + A3 + A4) — ⏳ fen OK 2026-09-30, **CHƯA code**
 
-- **Files:** `ReadoKit/Review/ReviewScheduler.swift` (`engine`, `parameters`, `grade(card:)`, `CardStateCode.from/toState` → `internal`; thêm `public var weightCount: Int` cho test, không lộ kiểu FSRS; ghi lý do cạnh `@unchecked Sendable`) · `Review/CardSnapshot.swift` (`schedulerCard` → `internal`) · `Vocab/VocabRepository.swift` (thêm `defaultCollectionID(on:)` dùng ở `saveCapture`; bỏ default `now: Date = Date()`; `?? Date()` → `throw DatabaseError.failed` theo mẫu `ReviewService.fetchSnapshot`) · `Database/Seeder.swift`, `Export/ExportService.swift` (bỏ default `now`) · `Analysis/AnalysisAgentStore.swift` (`add` nhận `now`) · `Session/ReadingSession.swift` (throw) · `Reado/AppModel.swift` (`matureKeysForCapture` gọi `defaultCollectionID`) · sửa call site (`grep -rn` `Seeder.seed`, `saveCapture`, `fetchBundle`, `AnalysisAgentStore.add`).
-- **Test:** `ReviewSchedulerTests` dòng 22 đổi sang `weightCount`; thêm 1 test `defaultCollectionID` (dùng `Fixtures.seededDB()`); thêm 1 test timestamp hỏng → throw (UPDATE thẳng cột `created_at` rồi gọi `allCollections`/`listSessions`). Toàn suite cũ vẫn xanh.
-- **DoD:** suite xanh · `grep -rnE 'public .*\b(FSRS|FSRSParameters|Card|CardState|RecordLogItem)\b' app/ReadoKit/Sources` rỗng · `grep -rn 'Date()' app/ReadoKit/Sources` chỉ còn `Clock.swift`, `DebugTrace`, đo thời gian ở `OpenAICompatClient` · `grep -rnE '"(SELECT|INSERT|UPDATE|DELETE) ' app/Reado` rỗng.
+Session cloud không có Xcode nên chỉ khảo sát; checklist dưới là kết quả grep toàn `app/` tại HEAD `f27397b`. Làm ở local theo đúng thứ tự, rồi verify.
+
+**Quyết định thiết kế (đã chốt khi khảo sát):**
+- Không dùng `@testable import ReadoKit` (repo chưa có chỗ nào dùng; cấu hình testability của package chưa kiểm được) → thêm API mức chuỗi: `ReviewScheduler.weightCount` và `CardStateCode.isValid(_:)` (= `toState(code).map { from($0) == code } ?? false`, giữ bảo vệ "nâng swift-fsrs mà `stringValue` đổi thì test đỏ").
+- `AnalysisAgentStore.add` nhận `now: Date` **bắt buộc**, đặt ngay sau `apiKey:` (trước `makeActive:`/`secrets:`).
+- `?? Date()` → throw. Mọi cột `created_at` là `TEXT NOT NULL` không DEFAULT và mọi fixture đều ISO `Z`, nên throw mới không nên kích hoạt trong test; nếu có test đỏ vì nó thì đó là dữ liệu hỏng thật — đừng nới lại thành fallback.
+
+**Sửa A2 (kiểu FSRS khỏi API public):**
+1. `Review/ReviewScheduler.swift` — `:120-121` `ReadoFSRS.parameters(from:)` bỏ `public` (chỉ `ReviewScheduler.init` gọi) · `:192-193` `engine`, `parameters` bỏ `public`, sửa comment `:190-191` ("public cho ai muốn dùng trực tiếp" hết đúng), thêm `public var weightCount: Int { parameters.w.count }` · `:189` ghi lý do `@unchecked Sendable` (chỉ `let`, engine không đổi sau init) · `:206` `grade(_:card:now:)` bỏ `public` · `:247`, `:251` `CardStateCode.from`/`toState` bỏ `public`, thêm `public static func isValid(_ code: String) -> Bool`.
+2. `Review/CardSnapshot.swift:50` — `schedulerCard(now:)` bỏ `public`.
+3. Test phải đổi theo (đã grep hết, không call site nào khác): `ReadoTests/ReviewSchedulerTests.swift:22` (`scheduler.parameters.w.count` → `scheduler.weightCount`) · `:90-98` (`testStateCodesRoundTripAllFour` → mọi `allCodes` đều `isValid`, `"bogus"` thì không) · `ReadoKit/Tests/ReadoKitTests/PrimitivesTests.swift:28-37` (cùng kiểu).
+
+**Sửa A3 (SQL thô khỏi app):**
+4. `Vocab/VocabRepository.swift` — thêm `public static func defaultCollectionID(on db: SQLiteDatabase) throws -> String?` (`db.scalarString("SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")`); `saveCapture` `:197-203` gọi nó (giữ `throw … "thiếu kho tạm seed"` khi nil).
+5. `Reado/AppModel.swift:481-482` (`matureKeysForCapture`) — thay SQL thô bằng `try? VocabRepository.defaultCollectionID(on: database)` (`try?` tự flatten `String??` → `String?`).
+
+**Sửa A4 (`Date()` lách Clock):**
+6. Bỏ default `= Date()` ở `Database/Seeder.swift:29` · `Vocab/VocabRepository.swift:134` (`createCollection` — **`saveCapture` đã không có default, đừng đụng**) · `Export/ExportService.swift:220` (`fetchBundle`) và `:329` (`buildJSON`).
+7. Call site bắt buộc thêm `now:` (đã grep hết `app/`): `Seeder.seed` — `Reado/AppModel.swift:140` (`now: SystemClock().now`; 2 test đã truyền) · `createCollection` — `Reado/AppModel.swift:593` (`CSVImport.swift:249` đã truyền; không test nào gọi trực tiếp) · `fetchBundle`/`buildJSON` — mọi caller đã truyền `now:` (ExportTests ×5, `ExportView.swift:193`), không cần sửa.
+8. `Analysis/AnalysisAgentStore.swift:94-123` `add` — thêm `now: Date`, `:123` dùng `ISOTimestamp.string(from: now)`. Call site: `Reado/AppModel.swift:167` (dev seed) và `:407`, `Reado/SettingsView.swift:328` → `now: SystemClock().now` · `ReadoTests/AnalysisTests.swift:245` và `:307` → `now: Fixtures.fixedNow`.
+9. `?? Date()` → `throw DatabaseError.failed("created_at sai định dạng ISO", statement: …)` theo mẫu `ReviewService.fetchSnapshot` — `Session/ReadingSession.swift:75-82` (`listSessions`: closure `rows.map` không throw → viết lại bằng vòng `for` cho chắc suy luận kiểu) · `Vocab/VocabRepository.swift:168` (`allCollections`: đã trong `try rows.map`, chỉ thay fallback bằng `guard … else { throw }`) · `:304` (`listVocabulary`: `rows.compactMap` → `try rows.compactMap`).
+
+**Test thêm** (vào file test có sẵn — KHÔNG cần đụng pbxproj):
+- `VocabularyListTests`: `defaultCollectionID` sau `Fixtures.seededDB()` = id "Kho tạm"; trên DB chỉ `Migration.run` (chưa seed) = `nil`.
+- `VocabularyListTests`: `Fixtures.insertCollection(in:name:createdAt: "khong-phai-iso")` rồi `allCollections` → `XCTAssertThrowsError`; tương tự `listVocabulary` với `Fixtures.insertVocab(…createdAt:)`.
+- (tuỳ chọn) `ReadingSessionTests`: phiên có `created_at` hỏng → `listSessions` throw.
+
+**Verify (bắt buộc ở local trước khi khép):**
+- Chạy `scripts/test.sh` **trước khi sửa** để lấy baseline (số trong brief đã cũ; T5 của ux-polish-r1 chưa có full suite).
+- Sau khi sửa: `python3 scripts/pbxproj_tool.py check` (không thêm file mới nên chỉ là cổng) → `scripts/test.sh` phải `** TEST SUCCEEDED **`, `RESULT: passed` ≥ baseline + test mới.
+- Grep DoD: (a) `grep -n -A2 'public' app/ReadoKit/Sources/ReadoKit/Review/ReviewScheduler.swift app/ReadoKit/Sources/ReadoKit/Review/CardSnapshot.swift` — không chữ ký public nào (kể cả dòng `->` kế tiếp) nhắc `FSRS`/`FSRSParameters`/`Card`/`CardState` · (b) `grep -rn 'Date()' app/ReadoKit/Sources` chỉ còn `Clock.swift`, `DebugTrace`, đo thời gian ở `OpenAICompatClient` · (c) `grep -rnE '"(SELECT|INSERT|UPDATE|DELETE) ' app/Reado` rỗng.
+- Smoke tay ~1 phút trên simulator: Kho hiện danh sách bộ · chụp → phân tích → Lưu vào kho tạm (dùng `defaultCollectionID`) · Cài đặt → thêm agent (dùng `add(now:)`) · Dữ liệu → xuất JSON (dùng `buildJSON(now:)`).
+- Khép bằng `/rhandoff` (thay `session-brief` §1, đánh dấu T1 ✅ kèm commit + số test thật ở đây).
 
 #### T2 — `appmodel-cleanup` (A1 + A5 + A6)
 
