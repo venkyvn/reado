@@ -50,16 +50,7 @@ public enum DailyProgressService {
 
         // timezone + giờ chuyển ngày — đúng cặp giá trị FR-11 dùng chung.
         let dayStartIso = ReviewQueue.currentDayStartIso(on: db, now: now)
-        let timezoneID: String = (try? db.scalarString(
-            "SELECT timezone FROM settings WHERE id = 1;")) ?? "UTC"
-        let cutoffHour: Int = {
-            if let v = try? db.scalarInt64(
-                "SELECT day_cutoff_hour FROM settings WHERE id = 1;") {
-                return Int(v)
-            }
-            return 4
-        }()
-        let timezone = TimeZone(identifier: timezoneID) ?? .current
+        let (timezone, cutoffHour) = DayContext.read(on: db)
 
         // Nhánh new (hạn mức) — luật FR-11: quota trừ số thẻ mới đã giới thiệu.
         // `extraNew` (ý 3 "Học thêm 10 từ"): nới trần RIÊNG hôm nay, giữ ở
