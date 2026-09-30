@@ -112,7 +112,8 @@ extension ReviewQueueView {
                 model.reloadOverview()
             }
         } catch {
-            // AppModel đã set reviewError.
+            // Lỗi chấm/hoàn tác hiện chưa được báo cho người dùng (AppModel không
+            // set reviewError ở đường này) — thẻ giữ nguyên để thử lại.
         }
     }
 
@@ -162,7 +163,8 @@ extension ReviewQueueView {
             // lastSnapshot giữ nguyên (snapshot của thẻ vừa undo để có thể grade lại).
             refreshIntervals()
         } catch {
-            // AppModel đã set reviewError.
+            // Lỗi chấm/hoàn tác hiện chưa được báo cho người dùng (AppModel không
+            // set reviewError ở đường này) — thẻ giữ nguyên để thử lại.
         }
     }
 }

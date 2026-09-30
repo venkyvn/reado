@@ -62,7 +62,7 @@ public final class SQLiteDatabase: @unchecked Sendable {
         let rc = sqlite3_open_v2(
             path,
             &db,
-            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
             nil
         )
         guard rc == SQLITE_OK, let db else {

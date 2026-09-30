@@ -20,6 +20,9 @@ struct GradeResult: Equatable {
 /// Model mở SQLite, migration, seed và chịu trách nhiệm đọc overview.
 /// Scaffold (ROADMAP task 1.2): đồng bộ trên main, dữ liệu nhỏ — màn hình
 /// thật (FR-01..03…) sẽ chuyển qua actor/URLSession khi có proxy.
+/// `@MainActor`: state `@Observable` cho UI và một kết nối SQLite dùng chung —
+/// mọi truy cập đi qua main actor, không còn hàm async chạy ngoài main thread.
+@MainActor
 @Observable
 final class AppModel {
     private(set) var database: SQLiteDatabase?
