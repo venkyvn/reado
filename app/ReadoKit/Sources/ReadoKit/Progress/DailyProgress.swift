@@ -78,9 +78,9 @@ public enum DailyProgressService {
         // reviewedToday: >= dayStartIso cùng cách so lexicographic mà
         // `newIntroducedCount` đang dùng — chuỗi ISO cùng độ dài nên so sánh
         // chuỗi = so sánh thời gian.
-        let reviewedToday = ((try? db.scalarInt64(
+        let reviewedToday = (try db.scalarInt64(
             "SELECT COUNT(*) FROM review_logs WHERE mode = 'srs' AND reviewed_at >= ?;",
-            [.text(dayStartIso)])) ?? 0) > 0
+            [.text(dayStartIso)]) ?? 0) > 0
 
         return DailyProgress(
             dueToday: dueToday,

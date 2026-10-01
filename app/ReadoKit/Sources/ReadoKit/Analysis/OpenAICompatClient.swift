@@ -110,7 +110,7 @@ public struct OpenAICompatClient: PageAnalyzer {
             )
             #endif
             trace.mergeMeta(["error": "urlError", "urlErrorCode": urlError.code.rawValue])
-            throw Self.mapURLError(urlError)
+            throw OpenAICompatErrorMapper.url(urlError)
         } catch {
             trace.mergeMeta(["error": String(describing: error)])
             throw error
@@ -149,7 +149,7 @@ public struct OpenAICompatClient: PageAnalyzer {
     /// Gửi một lượt chat/completions dạng stream, đọc `data:` từng chunk cho
     /// tới `[DONE]`. Server lờ `stream` và trả JSON thường (Content-Type
     /// `application/json`, không dòng nào bắt đầu `data:`) vẫn decode được —
-    /// đi qua đường `messageContent(from:)` cũ.
+    /// đi qua đường `AnalysisResponseExtractor.messageContent(from:)` cũ.
     private func send(
         pageOCR: String,
         cefr: String,
@@ -190,7 +190,7 @@ public struct OpenAICompatClient: PageAnalyzer {
             {
                 throw ResponseFormatRejected()
             }
-            throw Self.mapHTTP(status: http.statusCode, data: errorData)
+            throw OpenAICompatErrorMapper.http(status: http.statusCode, data: errorData)
         }
 
         let content = try await Self.readContent(from: bytes, onProgress: onProgress)
@@ -233,7 +233,7 @@ public struct OpenAICompatClient: PageAnalyzer {
             guard let data = full.data(using: .utf8) else {
                 throw AnalysisError.schemaViolation("phản hồi không phải UTF-8")
             }
-            return try messageContent(from: data)
+            return try AnalysisResponseExtractor.messageContent(from: data)
         }
 
         var buffer = ""
@@ -274,7 +274,7 @@ public struct OpenAICompatClient: PageAnalyzer {
             done = handle(line)
         }
         if !buffer.isEmpty { report(.writing(chars: buffer.count), force: true) }
-        return try extractAnalysisJSON(from: buffer)
+        return try AnalysisResponseExtractor.extractAnalysisJSON(from: buffer)
     }
 
     private func endpoint() throws -> URL {
@@ -324,151 +324,11 @@ public struct OpenAICompatClient: PageAnalyzer {
         return try JSONSerialization.data(withJSONObject: payload)
     }
 
-    /// Đường cũ (không-stream): toàn bộ envelope OpenAI Chat Completions trong
-    /// một `Data`. Dùng khi server lờ `stream: true`.
-    private static func messageContent(from data: Data) throws -> String {
-        let object = try JSONSerialization.jsonObject(with: data)
-        guard let root = object as? [String: Any],
-              let choices = root["choices"] as? [[String: Any]],
-              let choice = choices.first
-        else {
-            throw AnalysisError.schemaViolation("thiếu choices[0]")
-        }
-        if let message = choice["message"] as? [String: Any] {
-            if let text = message["content"] as? String, !text.isEmpty {
-                return try extractAnalysisJSON(from: text)
-            }
-            if let parts = message["content"] as? [[String: Any]] {
-                let text = parts.compactMap { $0["text"] as? String }.joined()
-                if !text.isEmpty { return try extractAnalysisJSON(from: text) }
-            }
-            if let content = message["content"],
-               JSONSerialization.isValidJSONObject(content)
-            {
-                let bytes = try JSONSerialization.data(withJSONObject: content)
-                return try extractAnalysisJSON(from: String(decoding: bytes, as: UTF8.self))
-            }
-        }
-        if let text = choice["text"] as? String, !text.isEmpty {
-            return try extractAnalysisJSON(from: text)
-        }
-        throw AnalysisError.schemaViolation("message.content rỗng")
-    }
-
-    /// OpenAI-compatible providers do not agree on structured output: some ignore
-    /// `response_format`, wrap JSON in Markdown, or prepend a `<think>` block.
-    /// Accept those transport wrappers while still requiring Reado's root shape.
-    private static func extractAnalysisJSON(from raw: String) throws -> String {
-        let text = removingThinkBlocks(from: raw)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if let data = text.data(using: .utf8),
-           isAnalysisObject(data)
-        {
-            return text
-        }
-
-        for candidate in objectCandidates(in: text) {
-            guard let data = candidate.data(using: .utf8) else { continue }
-            if isAnalysisObject(data) {
-                return candidate
-            }
-        }
-        throw AnalysisError.schemaViolation(
-            "message.content không chứa JSON object có segments/vocabulary")
-    }
-
-    private static func removingThinkBlocks(from raw: String) -> String {
-        raw.replacingOccurrences(
-            of: #"<think\b[^>]*>[\s\S]*?</think>"#,
-            with: "",
-            options: [.regularExpression, .caseInsensitive])
-    }
-
-    private static func isAnalysisObject(_ data: Data) -> Bool {
-        guard let object = try? JSONSerialization.jsonObject(with: data),
-              let root = object as? [String: Any]
-        else { return false }
-        return root["segments"] != nil || root["vocabulary"] != nil
-    }
-
-    /// Return balanced `{...}` candidates, respecting braces and escapes inside strings.
-    private static func objectCandidates(in text: String) -> [String] {
-        let characters = Array(text)
-        var candidates: [String] = []
-        for start in characters.indices where characters[start] == "{" {
-            var depth = 0
-            var inString = false
-            var escaped = false
-            for index in start..<characters.endIndex {
-                let character = characters[index]
-                if inString {
-                    if escaped {
-                        escaped = false
-                    } else if character == "\\" {
-                        escaped = true
-                    } else if character == "\"" {
-                        inString = false
-                    }
-                    continue
-                }
-                if character == "\"" {
-                    inString = true
-                } else if character == "{" {
-                    depth += 1
-                } else if character == "}" {
-                    depth -= 1
-                    if depth == 0 {
-                        candidates.append(String(characters[start...index]))
-                        break
-                    }
-                }
-            }
-        }
-        return candidates
-    }
-
-    private static func mapHTTP(status: Int, data: Data) -> AnalysisError {
-        let root = try? JSONSerialization.jsonObject(with: data)
-        let errorObject = (root as? [String: Any])?["error"] as? [String: Any]
-        let message = errorObject?["message"] as? String
-        switch status {
-        case 301, 302, 307, 308:
-            // Đo thật: `https://api.ai-box.vn/chat/completions` (thiếu `/v1`)
-            // trả 301 thay vì lỗi rõ ràng — chặn redirect (noRedirectDelegate)
-            // để lộ đúng status này thay vì âm thầm follow sang GET.
-            return .providerError("Base URL có vẻ sai — thường phải kết thúc bằng /v1")
-        case 401:
-            return .providerError(message ?? "Key bị từ chối — kiểm tra lại trong Cài đặt")
-        case 403, 404:
-            return .providerError(message ?? "Model hoặc endpoint không tồn tại — kiểm tra trong Cài đặt")
-        case 429:
-            return .rateLimited
-        default:
-            if let message { return .providerError(message) }
-            let preview = String(decoding: data.prefix(200), as: UTF8.self)
-            return .providerError(preview.isEmpty ? "HTTP \(status)" : "HTTP \(status): \(preview)")
-        }
-    }
-
-    private static func mapURLError(_ error: URLError) -> AnalysisError {
-        switch error.code {
-        case .timedOut:
-            return .networkError(
-                "Agent phản hồi quá lâu — thử lại, hoặc đổi model nhanh hơn trong Cài đặt")
-        case .cannotFindHost, .cannotConnectToHost, .notConnectedToInternet:
-            let host = error.failingURL?.host.map { " (\($0))" } ?? ""
-            return .networkError("Không kết nối được tới agent\(host)")
-        default:
-            return .networkError(error.localizedDescription)
-        }
-    }
-
     /// Đánh dấu nội bộ: server từ chối `response_format`, thử lại 1 lần không kèm field.
     private struct ResponseFormatRejected: Error {}
 
     /// `URLSession` mặc định tự follow redirect (có thể đổi POST→GET, nuốt lỗi
-    /// 301 thật). Trả `nil` ở đây để giữ nguyên response gốc cho `mapHTTP`.
+    /// 301 thật). Trả `nil` ở đây để giữ nguyên response gốc cho `OpenAICompatErrorMapper.http`.
     private final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
         func urlSession(
             _: URLSession,

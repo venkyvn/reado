@@ -10,7 +10,8 @@ public enum ReviewQueue {
     /// giới thiệu hôm nay. `scope` (FR-18): nil = tất cả, ngược lại chỉ chọn
     /// card thuộc đúng các collection — hạn mức vẫn áp TOÀN CỤC trước (không nới).
     /// Thứ tự (new-order-r1, ADR-047): bộ vừa thêm từ gần nhất trước (kể cả kho
-    /// tạm) → trong bộ, từ gặp lại (cùng `term_normalized` ở ≥2 dòng) trước →
+    /// tạm) → trong bộ, từ gặp lại trước — số dòng cùng `term_normalized` CỘNG số
+    /// lần `seen` (FR-22, reencounter-r1 T3: từ chưa học mà trang mới lại có nó) →
     /// thứ tự trang (`created_at`, rồi `due_at`).
     public static func newCardIDs(
         on db: SQLiteDatabase, quota: Int64, scope: Set<String>? = nil
@@ -29,7 +30,9 @@ public enum ReviewQueue {
               (SELECT MAX(v2.created_at) FROM vocab_items v2
                 WHERE v2.collection_id = v.collection_id) DESC,
               (SELECT COUNT(*) FROM vocab_items v3
-                WHERE v3.term_normalized = v.term_normalized) DESC,
+                WHERE v3.term_normalized = v.term_normalized)
+              + (SELECT COUNT(*) FROM encounters e
+                  WHERE e.vocab_item_id = v.id AND e.kind = 'seen') DESC,
               v.created_at, c.due_at, c.id
             LIMIT ?;
             """, params
@@ -292,7 +295,8 @@ public enum ReviewQueue {
         let rows = try db.rows(
             """
             SELECT c.id AS card_id,
-                   v.term, v.pos, v.ipa, v.meaning_vi, v.example,
+                   v.term AS term, v.pos AS pos, v.ipa AS ipa,
+                   v.meaning_vi AS meaning_vi, v.example AS example,
                    col.name AS collection_name
             FROM cards c
             JOIN vocab_items v ON v.id = c.vocab_item_id
@@ -304,15 +308,15 @@ public enum ReviewQueue {
         var items: [ReviewItem] = []
         var snapshots: [String: CardSnapshot] = [:]
         for row in rows {
-            let cardID = row[0].textValue ?? ""
+            let cardID = row["card_id"].textValue ?? ""
             let item = ReviewItem(
                 cardID: cardID,
-                term: row[1].textValue ?? "",
-                pos: row[2].textValue ?? "other",
-                meaningVI: row[4].textValue ?? "",
-                ipa: row[3].textValue,
-                example: row[5].textValue ?? "",
-                collectionName: row[6].textValue ?? "")
+                term: row["term"].textValue ?? "",
+                pos: row["pos"].textValue ?? "other",
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                ipa: row["ipa"].textValue,
+                example: row["example"].textValue ?? "",
+                collectionName: row["collection_name"].textValue ?? "")
             items.append(item)
             if let snap = try ReviewService.fetchSnapshot(on: db, cardID: cardID) {
                 snapshots[cardID] = snap

@@ -96,6 +96,60 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(ids, [again], "từ gặp lại lên trước từ gặp một lần trong cùng bộ")
     }
 
+    private func vocabID(of cardID: String, _ db: SQLiteDatabase) throws -> String {
+        try XCTUnwrap(db.scalarString(
+            "SELECT vocab_item_id FROM cards WHERE id = ?;", [.text(cardID)]))
+    }
+
+    func testNewBranchWordSeenAgainComesFirstWithinCollection() throws {
+        // FR-22 (reencounter-r1 T3): từ chưa học mà trang mới lại có nó (`seen`)
+        // lên trước, dù theo thứ tự trang nó đứng sau.
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
+        let later = try insertNewAt(db, collectionID: book, term: "later", createdAt: "2026-09-02T00:00:00Z")
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later],
+                       "chưa có seen → giữ thứ tự trang")
+
+        try EncounterRepository.insertSeen(
+            on: db, vocabItemIDs: [try vocabID(of: later, db)], now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [later, first],
+                       "từ vừa gặp lại khi đọc lên trước")
+    }
+
+    func testNewBranchSeenCountAddsToRepeatedTermCount() throws {
+        // Khoá thứ (2) = số dòng cùng term + số `seen` (cộng, không thay thế).
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let other = try Fixtures.insertCollection(in: db, name: "Bộ khác")
+        // `dup`: 2 dòng cùng term (điểm 2) — `seenTwice`: 1 dòng + 2 seen (điểm 3).
+        let dup = try insertNewAt(db, collectionID: book, term: "dup", createdAt: "2026-09-01T00:00:00Z")
+        try Fixtures.insertVocab(
+            in: db, collectionID: other, term: "dup", createdAt: "2026-07-01T00:00:00Z")
+        let seenTwice = try insertNewAt(
+            db, collectionID: book, term: "seenTwice", createdAt: "2026-09-02T00:00:00Z")
+        let vocab = try vocabID(of: seenTwice, db)
+        try EncounterRepository.insertSeen(on: db, vocabItemIDs: [vocab], now: Fixtures.fixedNow)
+        try EncounterRepository.insertSeen(
+            on: db, vocabItemIDs: [vocab], now: Fixtures.fixedNow.addingTimeInterval(60))
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [seenTwice, dup])
+    }
+
+    func testNewBranchRecognizedDoesNotBoostOrder() throws {
+        // Chỉ `seen` cộng điểm: nhận ra = đã biết từ, không cần học trước.
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
+        let later = try insertNewAt(db, collectionID: book, term: "later", createdAt: "2026-09-02T00:00:00Z")
+        try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: try vocabID(of: later, db), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later])
+    }
+
     func testNewBranchScopeStillFiltersWithNewOrder() throws {
         let db = try Fixtures.seededDB()
         let old = try Fixtures.insertCollection(in: db, name: "Cũ")
@@ -253,7 +307,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         let now = Fixtures.fixedNow
         let outcome = try scheduler.grade(.good, snapshot: before, now: now)
         let logID = try ReviewService.record(
-            on: db, cardID: cardID, before: before, outcome: outcome, now: now)
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
 
         // cards đã cập nhật.
         let cardRow = try XCTUnwrap(
@@ -303,7 +358,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         let now = Fixtures.fixedNow
         let outcome = try scheduler.grade(.again, snapshot: before, now: now)
         let logID = try ReviewService.record(
-            on: db, cardID: cardID, before: before, outcome: outcome, now: now)
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
 
         XCTAssertEqual(
             try db.scalarInt64(
@@ -357,6 +413,67 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(
             try db.scalarInt64("SELECT COUNT(*) FROM review_logs;"), 0,
             "log không được rơi rớt sau rollback")
+    }
+
+    func testRecordWritesLastReviewAtEqualToLogReviewedAt() throws {
+        // review.md §4.1: `reviewed_at` thắng — cards.last_review_at và
+        // review_logs.reviewed_at phải CÙNG một giá trị (giờ bấm).
+        let db = try Fixtures.seededDB()
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: try defaultCollectionID(db), term: "same-now")
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, dueIso: "2026-09-15T00:00:00Z")
+        let before = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+        let now = Fixtures.fixedNow
+        let outcome = try scheduler.grade(.good, snapshot: before, now: now)
+
+        let logID = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
+
+        let lastReview = try XCTUnwrap(db.scalarString(
+            "SELECT last_review_at FROM cards WHERE id = ?;", [.text(cardID)]))
+        let reviewedAt = try XCTUnwrap(db.scalarString(
+            "SELECT reviewed_at FROM review_logs WHERE id = ?;", [.text(logID)]))
+        XCTAssertEqual(lastReview, reviewedAt)
+        XCTAssertEqual(lastReview, ISOTimestamp.string(from: now))
+    }
+
+    func testPreviewedOutcomeIsCommittedEvenWhenTappedLater() throws {
+        // D-2 fsrs-queue-fix-r1: nhãn hiện lúc t0, bấm lúc t0+10' → lịch ghi
+        // == lịch đã hiện (due tính từ t0), còn reviewed_at/last_review_at = giờ bấm.
+        let db = try Fixtures.seededDB()
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: try defaultCollectionID(db), term: "preview")
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, state: "review",
+            dueIso: "2026-09-17T00:00:00Z", stability: 4, difficulty: 5,
+            reps: 2, lastReviewIso: "2026-09-12T02:00:00Z", scheduledDays: 5)
+        let before = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+
+        let shownAt = Fixtures.fixedNow
+        let preview = try GradePreview.make(scheduler: scheduler, snapshot: before, now: shownAt)
+        let tappedAt = shownAt.addingTimeInterval(10 * 60)
+        let outcome = try XCTUnwrap(preview.outcome(
+            for: .good, cardID: cardID, snapshot: before, now: tappedAt))
+
+        let logID = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome, now: tappedAt
+        ).logID
+
+        let card = try XCTUnwrap(db.rows(
+            "SELECT scheduled_days, due_at, last_review_at FROM cards WHERE id = ?;",
+            [.text(cardID)]).first)
+        XCTAssertEqual(card[0].intValue, Int64(preview.outcomes[.good]?.scheduledDays ?? -1),
+                       "scheduled_days ghi == nhãn đã hiện")
+        XCTAssertEqual(card[1].textValue, ISOTimestamp.string(from: outcome.due))
+        XCTAssertEqual(card[2].textValue, ISOTimestamp.string(from: tappedAt),
+                       "last_review_at = giờ bấm thật")
+        let logged = try XCTUnwrap(db.scalarString(
+            "SELECT reviewed_at FROM review_logs WHERE id = ?;", [.text(logID)]))
+        XCTAssertEqual(logged, ISOTimestamp.string(from: tappedAt))
     }
 
     // MARK: — FR-11 façade: loadFullQueue (ROADMAP 2.5)

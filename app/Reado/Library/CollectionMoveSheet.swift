@@ -59,6 +59,7 @@ struct CollectionMoveSheet: View {
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .appErrorAlert()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Huỷ") { dismiss() }
@@ -67,10 +68,7 @@ struct CollectionMoveSheet: View {
             .alert("Tạo bộ", isPresented: $showCreate) {
                 TextField("Tên bộ", text: $newCollectionName)
                 Button("Tạo") {
-                    let newID: String? =
-                        (try? model.createCollection(name: newCollectionName))
-                        ?? nil
-                    if let newID {
+                    if let newID = model.createCollectionOrAlert(name: newCollectionName) {
                         onCommit(newID)
                         dismiss()
                     }

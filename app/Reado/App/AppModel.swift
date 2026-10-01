@@ -27,6 +27,15 @@ struct GradeResult: Equatable {
 final class AppModel {
     private(set) var database: SQLiteDatabase?
     private(set) var failure: String?
+    /// Lỗi người dùng cần thấy (alert ở `RootView` + sheet) — xem `AppModel+Errors`.
+    /// Đặt về nil khi người dùng đóng alert.
+    var alertMessage: String?
+    /// Các lần đọc đang lỗi (`read`) — để chỉ alert một lần tới khi đọc lại được.
+    @ObservationIgnored var failingReads: Set<String> = []
+    /// Đồng hồ duy nhất của app target — mọi `now` đi qua đây (một lần chấm /
+    /// một lần nạp dùng đúng một giá trị), không gọi `SystemClock()` rải rác.
+    /// Qualify `ReadoKit.Clock` để không nhầm với `Swift.Clock`.
+    let clock: any ReadoKit.Clock = SystemClock()
     private(set) var collections: [CollectionOverview] = []
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
@@ -38,87 +47,26 @@ final class AppModel {
     /// Ôn nhanh (port UI lab) — scope ôn mặc định của tab Ôn: 1–3 bộ ưu tiên
     /// hoặc "tất cả" (`reviewAll`).
     private(set) var reviewScopeDefault: ReviewScope = .empty
+    /// FR-22 / Home: số TỪ khác nhau được gặp lại (`seen` hoặc `recognized`) trong 7
+    /// ngày gần nhất — dòng "Gặp lại N từ tuần này" (ẩn khi 0).
+    private(set) var reencounteredThisWeek = 0
     /// ADR-041: agent đang active chạy được thật — proxy mặc định chưa deploy
     /// nên chỉ agent BYOK có key mới tính "sẵn sàng". TODO: khi proxy deploy
     /// xong, đổi điều kiện thành `hasKey` (proxy luôn `hasKey = true`).
     private(set) var activeAgentReady = false
 
-    // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
-    // một detail mở một lúc nên một biến là đủ).
-    var vocabulary: [VocabRepository.VocabularyListEntry] = []
-
-    // FR-05/06: các phiên đọc song ngữ của collection đang xem (J2 hub).
-    var sessions: [ReadingSession] = []
-    /// Lần ôn kế tiếp của collection đang mở ở hub (header, cram-collection-r1).
-    var collectionNextDue: VocabRepository.NextDue?
-
-    // FR-01: capture state
-    var lastCapturedImage: CapturedImage?
-    var captureError: String?
-
-    // FR-02: analysis state
-    var isAnalyzing = false
-    var analysisResult: PageAnalysis?
-    /// FR-04: giữ nguyên loại lỗi để UI chọn CTA đúng (chụp lại vs thử lại).
-    var analysisFailure: AnalysisError?
-    /// Chuỗi hiển thị cho lỗi phân tích — chỉ để UI đọc, không lưu.
-    var analysisError: String? { analysisFailure?.errorDescription }
-    /// Tiến độ agent đang gọi (đọc trang/chờ/suy nghĩ/viết) — chỉ `openai_compat`
-    /// (stream) phát ra; AnalysisView đổi dòng chữ theo đây thay vì đứng im.
-    var analysisProgress: AnalysisProgress?
-
-    // FR-04: yêu cầu mở lại CaptureView sau khi dọn state (ảnh mờ / sai ngôn ngữ).
-    var pendingRecapture = false
-    /// FR-21: lỗi agent (BYOK 401/timeout/...) → nút "Mở Cài đặt" bật cờ này;
-    /// RootView tiêu thụ ở onDismiss của sheet phân tích rồi dọn sạch.
-    var pendingSettingsNavigation = false
-
-    // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
-    // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
-    var analysisTargetCollectionID: String?
-
-    /// port UI lab §5.7: sau Lưu → RootView push Hub của bộ vừa lưu (kể cả kho
-    /// tạm). Set ở `saveSelection` thành công, dọn ở `handleCapturedImage` (lần
-    /// chụp kế tiếp) + sau khi RootView tiêu thụ.
-    var pendingHubNavigationID: String?
-
-    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để FloatShutter
-    /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
-    var shutterTargetCollectionID: String?
-
-    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
-    /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
-    var suppressFloatShutter = false
+    // Chia theo chức năng — xem `AppState.swift`.
+    let review = ReviewState()
+    let capture = CaptureFlow()
+    let shell = ShellSignals()
+    let library = LibraryState()
 
     /// Bump mỗi lần reload overview — để CollectionDetailView đang mở tự refresh
     /// (từ/phiên) sau khi lưu mà không cần push hub trùng.
     private(set) var dataRevision = 0
 
-    // FR-11/FR-12: hàng đợi ôn state
-    var isLoadingReview = false
-    var reviewError: String?
-    var reviewItems: [ReviewQueue.ReviewItem] = []
-    var reviewSnapshots: [String: CardSnapshot] = [:]
-    var currentReviewSnapshot: CardSnapshot?
-
-    // FR-18: phạm vi ôn hiện tại (nil = tất cả collection) + nợ due ngoài phạm
-    // vi (phải nhìn thấy — research/vocabulary.md 4.2).
-    var reviewScope: Set<String>? = nil
-    var dueOutsideScope = 0
-    /// Số thẻ Cram được trong phạm vi hiện tại (đã học, chưa đến hạn) — quyết
-    /// định nút "Ôn thêm" ở màn hết thẻ (ADR-043).
-    var crammableCount = 0
-
-    /// Ý 3 motivation-r1 ("Học thêm 10 từ", Q-A/Q-B đã chốt): phần nới hạn mức
-    /// new RIÊNG ngày học hiện tại — chỉ bộ nhớ app, KHÔNG lưu DB/migration.
-    /// Gắn theo `dayStart` (giờ chuyển ngày FR-11, không nửa đêm hệ thống) —
-    /// qua ngày mới tự mất qua `ReviewQueue.effectiveExtra`.
-    var extraNewQuota: (dayStart: String, count: Int)?
     /// Q-B đã chốt: N = 10 từ cố định, một nút "Học thêm 10 từ".
     static let learnMoreBatchSize = 10
-
-    /// Các review item hiện hàng đợi (hai nhánh) — cách đọc cho ReviewQueueView.
-    var reviewQueue: [ReviewQueue.ReviewItem] { reviewItems }
 
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
@@ -133,6 +81,8 @@ final class AppModel {
         let learningCount: Int
         let reviewingCount: Int
         let notStartedCount: Int
+        /// "Đã thấm" (FR-22): từ Q-08 + ≥1 lần nhận ra — tập con của `masteredCount`.
+        let absorbedCount: Int
         let addedLast7Days: Int
         /// Thẻ Cram được (đếm thẻ) — quyết định CTA "Ôn thêm".
         let crammableCount: Int
@@ -205,18 +155,33 @@ final class AppModel {
 
     func reloadOverview() {
         guard let database else { return }
-        collections = (try? Self.loadOverview(db: database)) ?? []
-        dailyProgress = (try? Self.loadDailyProgress(db: database, extraNew: effectiveExtraNew))
-        homePinIDs = (try? HomePinService.ids(on: database)) ?? []
-        reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
+        let now = clock.now
+        collections = read("danh sách bộ", fallback: []) {
+            try Self.loadOverview(db: database, now: now)
+        }
+        dailyProgress = read("tiến độ hôm nay", fallback: nil) { () throws -> DailyProgress? in
+            try Self.loadDailyProgress(db: database, now: now, extraNew: effectiveExtraNew)
+        }
+        reencounteredThisWeek = read("số từ gặp lại", fallback: 0) {
+            try EncounterRepository.distinctWordsEncountered(
+                on: database, since: now.addingTimeInterval(-7 * 86_400))
+        }
+        homePinIDs = read("bộ ghim ở Home", fallback: []) {
+            try HomePinService.ids(on: database)
+        }
+        reviewScopeDefault = read("phạm vi ôn", fallback: .empty) {
+            try ReviewScopeService.load(on: database)
+        }
         // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới
         // tính "sẵn sàng" cho checklist onboarding.
-        if let list = try? AnalysisAgentStore.list(on: database) {
-            activeAgentReady = list.agents.first { $0.id == list.activeID }
-                .map { !$0.isBuiltinProxy && $0.hasKey } ?? false
-        } else {
-            activeAgentReady = false
-        }
+        let agents: (agents: [AnalysisAgent], activeID: String)? =
+            read("danh sách agent", fallback: nil) {
+                try AnalysisAgentStore.list(on: database)
+            }
+        activeAgentReady = agents.flatMap { list in
+            list.agents.first { $0.id == list.activeID }
+                .map { !$0.isBuiltinProxy && $0.hasKey }
+        } ?? false
         dataRevision &+= 1
     }
 
@@ -231,7 +196,7 @@ final class AppModel {
     /// với `dayStart` thật của DB đang mở.
     var effectiveExtraNew: Int {
         guard let database else { return 0 }
-        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: SystemClock().now)
-        return ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
+        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
+        return ReviewQueue.effectiveExtra(stored: review.extraNewQuota, currentDayStart: dayStart)
     }
 }

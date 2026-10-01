@@ -7,6 +7,8 @@ import SwiftUI
 struct CollectionStatsHeader: View {
     let overview: AppModel.CollectionOverview
     let nextDue: VocabRepository.NextDue?
+    /// Mốc "bây giờ" cho chữ tương đối (từ `AppModel.clock`) — view thuần, không tự gọi `Date()`.
+    let now: Date
     let onReview: () -> Void
     let onCram: () -> Void
 
@@ -32,18 +34,23 @@ struct CollectionStatsHeader: View {
         var id: String { label }
     }
 
-    /// Thứ tự = thứ tự ưu tiên phân nhóm (ReadoKit): Đã thuộc › Đang nhớ › Đang
-    /// học › Chưa học. Mẫu số là tổng 4 nhóm (không phải `totalItems`) để thanh
-    /// luôn đầy khi có từ chỉ còn thẻ suspended.
+    /// Thang 4 mức (vision #6, reencounter-r1 T3): Đã thấm › Đã nhớ › Đang học ›
+    /// Mới. Đã nhớ = Q-08 chưa nhận ra (`masteredCount − absorbedCount`); Đang học
+    /// gộp "Đang nhớ" cũ (`learning + reviewing`). Mẫu số là tổng 4 nhóm (không
+    /// phải `totalItems`) để thanh luôn đầy khi có từ chỉ còn thẻ suspended.
     private var segments: (items: [Segment], total: Int) {
+        let remembered = max(0, overview.masteredCount - overview.absorbedCount)
         let items = [
-            Segment(label: "Đã thuộc", count: overview.masteredCount, color: Theme.ok),
+            Segment(label: "Đã thấm", count: overview.absorbedCount, color: Theme.ok),
             Segment(
-                label: "Đang nhớ", count: overview.reviewingCount,
+                label: "Đã nhớ", count: remembered,
                 color: Color.accentColor.opacity(0.6)),
-            Segment(label: "Đang học", count: overview.learningCount, color: Theme.due),
             Segment(
-                label: "Chưa học", count: overview.notStartedCount,
+                label: "Đang học",
+                count: overview.learningCount + overview.reviewingCount,
+                color: Theme.due),
+            Segment(
+                label: "Mới", count: overview.notStartedCount,
                 color: Theme.surfaceStrong),
         ]
         return (items, items.reduce(0) { $0 + $1.count })
@@ -52,7 +59,7 @@ struct CollectionStatsHeader: View {
     private var progressCard: some View {
         let (items, total) = segments
         return VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Đã thuộc \(overview.masteredCount)/\(overview.totalItems)")
+            Text("Đã nhớ \(overview.masteredCount)/\(overview.totalItems)")
                 .font(Typo.rowTitle)
                 .monospacedDigit()
             GeometryReader { proxy in
@@ -157,7 +164,7 @@ struct CollectionStatsHeader: View {
         guard let last = overview.lastAddedAt else { return nil }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        return "thêm lần cuối " + formatter.localizedString(for: last, relativeTo: Date())
+        return "thêm lần cuối " + formatter.localizedString(for: last, relativeTo: now)
     }
 
     private var nextDueValue: String {
@@ -166,7 +173,7 @@ struct CollectionStatsHeader: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .full
-        return formatter.localizedString(for: nextDue.date, relativeTo: Date())
+        return formatter.localizedString(for: nextDue.date, relativeTo: now)
     }
 
     private var nextDueDetail: String? {

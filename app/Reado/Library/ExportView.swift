@@ -158,17 +158,13 @@ struct ExportView: View {
     }
 
     private func exportCSV() {
-        guard let db = model.database else {
-            exportError = "Không có cơ sở dữ liệu"
-            return
-        }
         isExporting = true
         exportError = nil
         exportedCSV = nil
         defer { isExporting = false }
         do {
             let ids = selectedCollectionIDs.isEmpty ? nil : Array(selectedCollectionIDs)
-            let tsv = try ExportService.buildTSV(on: db, collectionIDs: ids)
+            let tsv = try model.exportTSV(collectionIDs: ids)
             guard let data = tsv.data(using: .utf8) else {
                 exportError = "Không mã hoá được UTF-8"
                 return
@@ -181,18 +177,12 @@ struct ExportView: View {
     }
 
     private func exportJSON() {
-        guard let db = model.database else {
-            exportError = "Không có cơ sở dữ liệu"
-            return
-        }
         isExporting = true
         exportError = nil
         exportedJSON = nil
         defer { isExporting = false }
         do {
-            // JSON backup LUÔN toàn bộ máy (J-R1-D #4) — không lọc collection.
-            let data = try ExportService.buildJSON(on: db, now: SystemClock().now)
-            exportedJSON = data
+            exportedJSON = try model.exportJSON()
             showShareJSON = true
         } catch {
             exportError = "Lỗi xuất JSON: \(error.localizedDescription)"

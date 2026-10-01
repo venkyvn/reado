@@ -157,7 +157,7 @@ Reado — **MỞ** ghi nhận cục bộ (kèm nhãn agent) hay bỏ R1; chốt 
 
 **Nguồn DDL duy nhất để áp dụng = mã** `app/ReadoKit/.../Database/Migration.swift` v1
 (1.3 đã dựng, đối chiếu 40 test) — khớp [db.md tầng A](docs/specs/db.md#a-r1--sqlite-trên-máy)
-từng dòng: 7 bảng + index, **đủ 20 cột `settings` kể cả `timezone`** (điểm "bổ sung
+từng dòng: 7 bảng v1 + bảng `encounters` (migration v4, FR-22/ADR-048) + index, **đủ 20 cột `settings` kể cả `timezone`** (điểm "bổ sung
 settings.timezone" của task 0.6 đã nằm trong migration, seed lấy `TimeZone.current`,
 không tự bịa). SD **không copy DDL lần ba** — ba bản (doc, SD, code) là nguồn drift.
 Mọi đổi schema tương lai đi qua migration đánh số + `PRAGMA user_version`.
@@ -186,10 +186,12 @@ Mỗi khối dưới là **một transaction** — không có trạng thái nử
 | 5 | Lưu phiên đọc (3.4) | `INSERT reading_sessions` + trim còn 10 mới nhất/collection — cùng transaction; kho tạm không ghi phiên (ADR-029) | ◻ |
 | 6 | FR-17 chuyển collection | `UPDATE vocab_items SET collection_id` — **không đụng cards/FSRS** (state giữ nguyên); lô lớn chia theo từ khoá, không phá bảng | ◻ |
 | 7 | FR-20 gộp CSV | Một transaction; 0 dòng chọn = không ghi | ◻ sau skeleton |
+| 8 | Lưu trang có từ cũ (FR-22) | `INSERT encounters(kind='seen')` cho mỗi vocab đã có trong kho — **cùng transaction** với khối 4 + 5 (`EncounterRepository.insertSeen`, không tự mở transaction; `inTransaction` không lồng được) | ✅ repository (T1) · ◻ nối vào lưu trang (T2) |
+| 9 | "Nhận ra" khi đọc (FR-22) | Kiểm "đã nhận ra hôm nay chưa" + `INSERT encounters(kind='recognized')` — một transaction riêng (`EncounterRepository.recordRecognized`); không đụng `cards`/`review_logs` | ✅ T1 |
 
 Ràng buộc FK đã định hình sẵn ranh giới: `vocab_items ON DELETE RESTRICT` (xoá
 collection phải xử lý vocab trước — rule ở PRD FR-17), `cards ON DELETE
-CASCADE`, `reading_sessions ON DELETE CASCADE`, `settings.home_shortcut_* ON DELETE
+CASCADE`, `reading_sessions ON DELETE CASCADE`, `encounters ON DELETE CASCADE`, `settings.home_shortcut_* ON DELETE
 SET NULL`, `settings.active_agent_id` NOT NULL → xoá agent đang active phải fallback
 proxy **trong cùng lúc** cập nhật settings.
 

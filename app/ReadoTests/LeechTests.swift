@@ -292,4 +292,86 @@ final class LeechTests: XCTestCase {
         XCTAssertFalse(suspended?.isNull ?? true,
                        "card phải suspend sau chuỗi Again")
     }
+
+    // MARK: — T2 fsrs-queue-fix-r1: leech cùng transaction với lần chấm
+
+    /// Thẻ review lapses=5 + Again → lapses 6 (chạm ngưỡng).
+    private func makeLeechBorderCard(
+        _ db: SQLiteDatabase, term: String
+    ) throws -> (cardID: String, before: CardSnapshot, outcome: ReviewOutcome) {
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: try defaultCollectionID(db), term: term)
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, state: "review",
+            dueIso: "2026-08-01T00:00:00Z", stability: 3.0, difficulty: 5.0,
+            reps: 2, lapses: 5)
+        let before = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+        let outcome = try scheduler.grade(.again, snapshot: before, now: Fixtures.fixedNow)
+        return (cardID, before, outcome)
+    }
+
+    func testRecordWithThresholdSuspendsAndLogsInOneCall() throws {
+        let db = try Fixtures.seededDB()
+        let (cardID, before, outcome) = try makeLeechBorderCard(db, term: "atomic-leech")
+        let threshold = try XCTUnwrap(LeechService.readThreshold(on: db))
+
+        let result = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome,
+            leechThreshold: threshold, now: Fixtures.fixedNow)
+
+        XCTAssertTrue(result.becameLeech, "một lần gọi record vừa ghi log vừa suspend")
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM review_logs WHERE card_id = ?;", [.text(cardID)]),
+            1)
+        XCTAssertEqual(
+            try db.scalarString(
+                "SELECT suspended_at FROM cards WHERE id = ?;", [.text(cardID)]),
+            ISOTimestamp.string(from: Fixtures.fixedNow),
+            "suspended_at dùng cùng `now` với reviewed_at")
+    }
+
+    func testUndoOfLeechGradeLiftsSuspension() throws {
+        let db = try Fixtures.seededDB()
+        let (cardID, before, outcome) = try makeLeechBorderCard(db, term: "undo-leech")
+        let result = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome,
+            leechThreshold: 6, now: Fixtures.fixedNow)
+        XCTAssertTrue(result.becameLeech)
+
+        try ReviewService.undo(
+            on: db, cardID: cardID, logID: result.logID, before: before)
+
+        let restored = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        XCTAssertNil(restored.suspendedAt, "undo trả thẻ về hàng đợi (suspended_at từ snapshot)")
+        XCTAssertEqual(restored.lapses, 5)
+        XCTAssertEqual(
+            try db.scalarInt64("SELECT COUNT(*) FROM review_logs;"), 0)
+    }
+
+    func testRecordWithoutThresholdNeverSuspends() throws {
+        let db = try Fixtures.seededDB()
+        let (cardID, before, outcome) = try makeLeechBorderCard(db, term: "leech-off")
+
+        let result = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome,
+            leechThreshold: nil, now: Fixtures.fixedNow)
+
+        XCTAssertFalse(result.becameLeech)
+        let suspended = try db.scalar(
+            "SELECT suspended_at FROM cards WHERE id = ?;", [.text(cardID)])
+        XCTAssertEqual(suspended?.isNull, true, "tắt leech → không suspend")
+    }
+
+    func testRecordBelowThresholdDoesNotSuspend() throws {
+        let db = try Fixtures.seededDB()
+        let (cardID, before, outcome) = try makeLeechBorderCard(db, term: "below")
+
+        let result = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome,
+            leechThreshold: 7, now: Fixtures.fixedNow)
+
+        XCTAssertFalse(result.becameLeech, "lapses 6 < ngưỡng 7")
+    }
 }

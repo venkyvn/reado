@@ -19,10 +19,11 @@ extension VocabRepository {
             from: now.addingTimeInterval(-7 * 86_400))
         // Bảng dẫn xuất `b` gom theo TỪ (1 dòng / từ) rồi theo collection: mỗi từ
         // vào đúng 1 nhóm (m > l > r > active). Thứ tự bind theo vị trí `?` trong
-        // SQL: due_now, mastered (ngưỡng), added7, crammable, rồi ngưỡng trong `b`.
+        // SQL: due_now, mastered (ngưỡng), added7, crammable, absorbed (ngưỡng), rồi
+        // ngưỡng trong `b`.
         let rows = try db.rows(
             """
-            SELECT c.id, c.name, c.is_default,
+            SELECT c.id AS id, c.name AS name, c.is_default AS is_default,
                    COUNT(DISTINCT v.id) AS word_count,
                    SUM(CASE WHEN ca.suspended_at IS NULL AND ca.due_at <= ?
                         THEN 1 ELSE 0 END) AS due_now,
@@ -39,7 +40,14 @@ extension VocabRepository {
                    COALESCE(SUM(CASE
                         WHEN ca.state != 'new' AND ca.suspended_at IS NULL
                              AND ca.due_at > ?
-                        THEN 1 ELSE 0 END), 0) AS crammable_count
+                        THEN 1 ELSE 0 END), 0) AS crammable_count,
+                   COUNT(DISTINCT CASE
+                        WHEN ca.state = 'review' AND ca.stability >= ?
+                             AND ca.suspended_at IS NULL
+                             AND EXISTS (SELECT 1 FROM encounters e
+                                         WHERE e.vocab_item_id = v.id
+                                           AND e.kind = 'recognized')
+                        THEN v.id END) AS absorbed_count
             FROM collections c
             LEFT JOIN vocab_items v ON v.collection_id = c.id
             LEFT JOIN cards ca ON ca.vocab_item_id = v.id
@@ -77,25 +85,23 @@ extension VocabRepository {
                 .text(windowEndIso), .double(Mastery.stabilityThreshold),
                 .text(sevenDaysAgoIso), .text(windowEndIso),
                 .double(Mastery.stabilityThreshold),
+                .double(Mastery.stabilityThreshold),
             ])
-        return try rows.map { row in
-            guard row.count >= 12 else {
-                throw DatabaseError.failed(
-                    "thiếu cột summary", statement: "collection_summaries")
-            }
-            return CollectionSummary(
-                id: row[0].textValue ?? "",
-                name: row[1].textValue ?? "",
-                isDefault: (row[2].intValue ?? 0) != 0,
-                wordCount: Int(row[3].intValue ?? 0),
-                dueNow: Int(row[4].intValue ?? 0),
-                lastAddedAt: row[5].textValue.flatMap { ISOTimestamp.date(from: $0) },
-                masteredCount: Int(row[6].intValue ?? 0),
-                learningCount: Int(row[7].intValue ?? 0),
-                reviewingCount: Int(row[8].intValue ?? 0),
-                notStartedCount: Int(row[9].intValue ?? 0),
-                addedLast7Days: Int(row[10].intValue ?? 0),
-                crammableCount: Int(row[11].intValue ?? 0))
+        return rows.map { row in
+            CollectionSummary(
+                id: row["id"].textValue ?? "",
+                name: row["name"].textValue ?? "",
+                isDefault: (row["is_default"].intValue ?? 0) != 0,
+                wordCount: Int(row["word_count"].intValue ?? 0),
+                dueNow: Int(row["due_now"].intValue ?? 0),
+                lastAddedAt: row["last_added"].textValue.flatMap { ISOTimestamp.date(from: $0) },
+                masteredCount: Int(row["mastered_count"].intValue ?? 0),
+                learningCount: Int(row["learning_count"].intValue ?? 0),
+                reviewingCount: Int(row["reviewing_count"].intValue ?? 0),
+                notStartedCount: Int(row["not_started_count"].intValue ?? 0),
+                absorbedCount: Int(row["absorbed_count"].intValue ?? 0),
+                addedLast7Days: Int(row["added_7d"].intValue ?? 0),
+                crammableCount: Int(row["crammable_count"].intValue ?? 0))
         }
     }
 

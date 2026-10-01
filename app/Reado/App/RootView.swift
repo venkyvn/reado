@@ -133,7 +133,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
             chrome.reveal()
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
-            if model.lastCapturedImage != nil {
+            if model.capture.lastCapturedImage != nil {
                 showAnalysis = true
             }
         }) {
@@ -143,22 +143,22 @@ struct RootView: View {
             chrome.reveal()
             // port UI lab §5.7: Lưu xong → về Hub bộ vừa lưu (kể cả kho tạm).
             // Đang đứng trên đúng hub đó → chỉ refresh (dataRevision bump), không push trùng.
-            if let hubID = model.pendingHubNavigationID {
-                model.pendingHubNavigationID = nil
-                if model.shutterTargetCollectionID != hubID {
+            if let hubID = model.shell.pendingHubNavigationID {
+                model.shell.pendingHubNavigationID = nil
+                if model.shell.shutterTargetCollectionID != hubID {
                     selectedTab = .home
                     homePath.append(.hub(hubID))
                 }
             }
             // FR-04: ảnh mờ / không phải tiếng Anh → mở lại CaptureView.
-            if model.pendingRecapture {
-                model.pendingRecapture = false
+            if model.capture.pendingRecapture {
+                model.capture.pendingRecapture = false
                 showCapture = true
             }
             // FR-21 GWT cuối: lỗi agent → nút "Mở Cài đặt" trong AnalysisView
             // bật cờ này; đưa thẳng về Home → push Settings.
-            if model.pendingSettingsNavigation {
-                model.pendingSettingsNavigation = false
+            if model.shell.pendingSettingsNavigation {
+                model.shell.pendingSettingsNavigation = false
                 selectedTab = .home
                 homePath = [.settings]
             }
@@ -166,6 +166,7 @@ struct RootView: View {
             NavigationStack { AnalysisView() }
         }
         .onAppear { model.reloadOverview() }
+        .appErrorAlert()
     }
 
     /// Bấm lại tab đang đứng → pop stack về root (Home / Kho). Tab Ôn không có path.
@@ -181,7 +182,7 @@ struct RootView: View {
     private func openShutterCapture() {
         // port UI lab §9: haptic lúc chụp.
         Haptics.action()
-        model.analysisTargetCollectionID = model.shutterTargetCollectionID
+        model.capture.analysisTargetCollectionID = model.shell.shutterTargetCollectionID
         showCapture = true
     }
 
@@ -189,7 +190,7 @@ struct RootView: View {
     /// trên tab Ôn, lịch streak và phiên đọc (đang đọc, đang lật thẻ).
     private var showShutter: Bool {
         if chrome.isHidden { return false }
-        if model.suppressFloatShutter { return false }
+        if model.shell.suppressFloatShutter { return false }
         switch selectedTab {
         case .review: return false
         case .home: return isCaptureSurface(homePath)

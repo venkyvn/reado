@@ -64,18 +64,18 @@ public enum AnalyzerFactory {
         let rows = try db.rows(
             "SELECT cefr_levels, cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
         let cefrLevel = Self.cefrLevelString(from: rows.first)
-        let activeAgentID = rows.first?.last?.textValue
+        let activeAgentID = rows.first?["active_agent_id"].textValue
         if let activeAgentID {
             let agentRows = try db.rows(
                 "SELECT id, kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
                 [.text(activeAgentID)])
-            if let row = agentRows.first, row.count >= 4 {
+            if let row = agentRows.first {
                 return (
                     analyzer(
-                        for: row[1].textValue ?? "reado_proxy",
-                        baseURL: row[2].textValue,
-                        model: row[3].textValue,
-                        agentID: row[0].textValue,
+                        for: row["kind"].textValue ?? "reado_proxy",
+                        baseURL: row["base_url"].textValue,
+                        model: row["model"].textValue,
+                        agentID: row["id"].textValue,
                         session: session,
                         onProgress: onProgress),
                     cefrLevel)
@@ -87,16 +87,16 @@ public enum AnalyzerFactory {
 
     /// Ghép các CEFR level đã chọn thành chuỗi cho prompt; cột JSON rỗng/cài cũ
     /// → đọc `cefr_level` đơn; cả hai rỗng → "B2".
-    private static func cefrLevelString(from row: [SQLValue]?) -> String {
+    private static func cefrLevelString(from row: SQLRow?) -> String {
         guard let row else { return "B2" }
-        if let json = row[0].textValue,
+        if let json = row["cefr_levels"].textValue,
            let data = json.data(using: .utf8),
            let levels = try? JSONDecoder().decode([CEFRLevel].self, from: data),
            !levels.isEmpty
         {
             return levels.map(\.rawValue).joined(separator: ", ")
         }
-        if let single = row[1].textValue, !single.isEmpty { return single }
+        if let single = row["cefr_level"].textValue, !single.isEmpty { return single }
         return "B2"
     }
 }

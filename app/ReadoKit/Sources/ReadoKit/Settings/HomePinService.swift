@@ -39,19 +39,18 @@ public enum HomePinService {
                 SELECT home_pin_ids, home_shortcut_1_id, home_shortcut_2_id
                 FROM settings WHERE id = 1;
                 """
-            ).first,
-            row.count == 3
+            ).first
         else {
             return []
         }
         let raw: [String]
-        if let json = row[0].textValue, !json.isEmpty,
+        if let json = row["home_pin_ids"].textValue, !json.isEmpty,
            let legacy = JSONStringArray.decode(json), !legacy.isEmpty
         {
             raw = legacy
         } else {
             // JSON chưa ghi (cài cũ) → đọc 2 slot rồi compact, không ghi ngược.
-            raw = [row[1].textValue, row[2].textValue]
+            raw = [row["home_shortcut_1_id"].textValue, row["home_shortcut_2_id"].textValue]
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
         }

@@ -38,7 +38,7 @@ struct ReviewQueueView: View {
     @State var undoSnapshot: CardSnapshot?
     @State var showUndoToast: Bool = false
     @State private var isLoading = true
-    /// Lỗi khi chấm/hoàn tác giữa phiên (khác `model.reviewError` — cái đó chỉ
+    /// Lỗi khi chấm/hoàn tác giữa phiên (khác `model.review.error` — cái đó chỉ
     /// dành cho lỗi tải hàng đợi, không thay cả màn bằng `errorView`).
     @State var actionError: String?
 
@@ -82,7 +82,7 @@ struct ReviewQueueView: View {
         ZStack {
             if isLoading {
                 ProgressView("Đang tải hàng đợi…")
-            } else if let error = model.reviewError {
+            } else if let error = model.review.error {
                 errorView(error)
             } else if items.isEmpty {
                 emptyView
@@ -176,12 +176,12 @@ struct ReviewQueueView: View {
             } description: {
                 Text("Chưa có thẻ nào đã học mà chưa đến hạn trong phạm vi này.")
             }
-        } else if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
+        } else if model.review.dueOutsideScope > 0, let scope = model.review.scope, !scope.isEmpty {
             // J5: hết due trong phạm vi nhưng ngoài vẫn còn — nợ phải hiện rõ.
             ContentUnavailableView {
                 Label("Không còn thẻ trong phạm vi này", systemImage: "checkmark.circle")
             } description: {
-                Text("Còn \(model.dueOutsideScope) thẻ đến hạn nằm ngoài phạm vi đã chọn.")
+                Text("Còn \(model.review.dueOutsideScope) thẻ đến hạn nằm ngoài phạm vi đã chọn.")
             } actions: {
                 Button("Ôn tất cả") {
                     self.scope = nil
@@ -196,7 +196,7 @@ struct ReviewQueueView: View {
             ContentUnavailableView {
                 Label("Không có gì cần ôn", systemImage: "checkmark.circle")
             } description: {
-                Text(model.crammableCount > 0
+                Text(model.review.crammableCount > 0
                     ? "Chưa có thẻ nào đến hạn. Bạn vẫn có thể ôn thêm — lịch ôn không bị thay đổi."
                     : "Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới.")
             } actions: {
@@ -210,8 +210,8 @@ struct ReviewQueueView: View {
     /// thẻ để cram → không hiện gì (nút vô nghĩa).
     @ViewBuilder
     private var cramButton: some View {
-        if model.crammableCount > 0 {
-            Button("Ôn thêm \(min(model.crammableCount, ReviewQueue.cramBatchSize)) thẻ") {
+        if model.review.crammableCount > 0 {
+            Button("Ôn thêm \(min(model.review.crammableCount, ReviewQueue.cramBatchSize)) thẻ") {
                 mode = .cram
                 Task { await loadQueue() }
             }
@@ -243,11 +243,11 @@ struct ReviewQueueView: View {
     // còn card due ngoài scope, đừng giấu dưới một "Hết thẻ hôm nay" không điều kiện.
     @ViewBuilder
     var debtBanner: some View {
-        if model.dueOutsideScope > 0, let scope = model.reviewScope, !scope.isEmpty {
+        if model.review.dueOutsideScope > 0, let scope = model.review.scope, !scope.isEmpty {
             HStack(spacing: Spacing.row) {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(Theme.due)
-                Text("Còn \(model.dueOutsideScope) thẻ đến hạn ngoài phạm vi")
+                Text("Còn \(model.review.dueOutsideScope) thẻ đến hạn ngoài phạm vi")
                     .font(Typo.meta)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -310,7 +310,7 @@ struct ReviewQueueView: View {
             } else {
                 try await model.loadReviewQueue(scope: scope)
             }
-            self.items = model.reviewItems
+            self.items = model.review.items
             // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.
             self.currentIndex = 0
             self.flipDegrees = 0
@@ -323,14 +323,14 @@ struct ReviewQueueView: View {
             self.masteredToastTask?.cancel()
             self.showMasteredToast = false
             if let first = items.first,
-               let snap = model.reviewSnapshots[first.cardID] {
+               let snap = model.review.snapshots[first.cardID] {
                 lastSnapshot = snap
             } else {
                 lastSnapshot = nil
             }
             refreshIntervals()
         } catch {
-            // reviewError đã set trong model.
+            // review.error đã set trong model.
         }
     }
 }

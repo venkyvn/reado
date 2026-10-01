@@ -35,15 +35,12 @@ extension VocabRepository {
             FROM collections
             ORDER BY is_default DESC, name COLLATE NOCASE;
             """)
-        return try rows.map { row in
-            guard row.count >= 4 else {
-                throw DatabaseError.failed("thiếu cột", statement: "collections")
-            }
-            return Collection(
-                id: row[0].textValue ?? "",
-                name: row[1].textValue ?? "",
-                isDefault: (row[2].intValue ?? 0) != 0,
-                createdAt: ISOTimestamp.date(from: row[3].textValue ?? "") ?? Date())
+        return rows.map { row in
+            Collection(
+                id: row["id"].textValue ?? "",
+                name: row["name"].textValue ?? "",
+                isDefault: (row["is_default"].intValue ?? 0) != 0,
+                createdAt: ISOTimestamp.date(from: row["created_at"].textValue ?? "") ?? Date())
         }
     }
 

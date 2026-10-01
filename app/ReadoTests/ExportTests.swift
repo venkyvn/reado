@@ -117,6 +117,22 @@ final class ExportTests: XCTestCase {
         XCTAssertEqual(bundle.reviewLogs.first?.rating, 3)
     }
 
+    func testJSON_includesEncounters() throws {
+        let (db, _, vocabID, _) = try makeCol(term: "hello")
+        try EncounterRepository.insertSeen(
+            on: db, vocabItemIDs: [vocabID], now: Fixtures.fixedNow)
+        try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: vocabID, now: Fixtures.fixedNow)
+
+        let data = try ExportService.buildJSON(on: db, now: Fixtures.fixedNow)
+        let bundle = try JSONDecoder().decode(ExportBundle.self, from: data)
+
+        XCTAssertEqual(bundle.counts.encounters, 2)
+        XCTAssertEqual(Set(bundle.encounters.map(\.kind)), ["seen", "recognized"])
+        XCTAssertTrue(bundle.encounters.allSatisfy { $0.vocabItemID == vocabID })
+        XCTAssertEqual(bundle.version, 1, "thêm khoá, không đổi version")
+    }
+
     func testJSON_scopeRecorded() throws {
         let (db, colID, _, _) = try makeCol(term: "hello")
         let bundle = try ExportService.fetchBundle(

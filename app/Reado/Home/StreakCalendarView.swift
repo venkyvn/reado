@@ -37,18 +37,18 @@ struct StreakCalendarView: View {
         // ADR-036: fullScreenCover — xem RootView cho lý do.
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
             // J1: chụp xong (đã có ảnh) → mở phân tích, đích ngầm kho tạm.
-            if model.lastCapturedImage != nil { showAnalysis = true }
+            if model.capture.lastCapturedImage != nil { showAnalysis = true }
         }) {
             CaptureView()
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
-            if model.pendingRecapture {
-                model.pendingRecapture = false
+            if model.capture.pendingRecapture {
+                model.capture.pendingRecapture = false
                 showCapture = true
             }
             // FR-21: màn này không có đường push Settings riêng — chỉ dọn cờ,
             // RootView (nơi mở lại từ Home/Kho) mới thật sự đưa đi Cài đặt.
-            model.pendingSettingsNavigation = false
+            model.shell.pendingSettingsNavigation = false
             reload()
         }) {
             NavigationStack { AnalysisView() }

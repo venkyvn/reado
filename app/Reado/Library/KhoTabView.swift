@@ -67,7 +67,7 @@ struct KhoTabView: View {
         .alert("Tạo bộ", isPresented: $showNewCollection) {
             TextField("Tên bộ", text: $newCollectionName)
             Button("Tạo") {
-                _ = try? model.createCollection(name: newCollectionName)
+                _ = model.createCollectionOrAlert(name: newCollectionName)
             }
             Button("Huỷ", role: .cancel) {}
         } message: {
@@ -127,7 +127,10 @@ struct KhoTabView: View {
             }
             Spacer()
             if collection.totalItems > 0 {
-                MasteryRing(mastered: collection.masteredCount, total: collection.totalItems)
+                MasteryRing(
+                    mastered: collection.masteredCount,
+                    total: collection.totalItems,
+                    absorbed: collection.absorbedCount)
             }
             if collection.dueNow > 0 {
                 Pill(text: "\(collection.dueNow)", tone: .due)

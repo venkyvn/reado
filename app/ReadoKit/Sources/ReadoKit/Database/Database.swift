@@ -119,16 +119,17 @@ public final class SQLiteDatabase: @unchecked Sendable {
     /// Truy vấn trả mảng dòng; `limit > 0` thì dừng sau `limit` dòng.
     public func rows(
         _ sql: String, _ parameters: [SQLValue] = [], limit: Int = 0
-    ) throws -> [[SQLValue]] {
+    ) throws -> [SQLRow] {
         let statement = try prepare(sql)
         try statement.bind(parameters)
-        var result: [[SQLValue]] = []
+        let columnIndex = statement.columnIndex()
+        var result: [SQLRow] = []
         while try statement.step() == SQLITE_ROW {
-            var row: [SQLValue] = []
+            var values: [SQLValue] = []
             for index in 0..<statement.columnCount() {
-                row.append(try statement.columnValue(Int32(index)))
+                values.append(try statement.columnValue(Int32(index)))
             }
-            result.append(row)
+            result.append(SQLRow(values: values, columnIndex: columnIndex))
             if limit > 0 && result.count >= limit { break }
         }
         return result
@@ -175,6 +176,37 @@ public final class SQLiteDatabase: @unchecked Sendable {
             try? exec("ROLLBACK;")
             throw error
         }
+    }
+}
+
+/// Một dòng kết quả. Dùng được như mảng (`row[0]`, `row.count`, `row.first`) và —
+/// khuyến nghị cho dòng nhiều cột — theo TÊN cột: `row["due_at"]`. Đọc theo tên
+/// không vỡ im lặng khi thêm/đổi thứ tự cột trong SELECT (refactor-r3 #2).
+///
+/// Tên cột = tên SQLite báo (`AS alias` nếu có). Tên trùng trong một SELECT: cột
+/// ĐẦU thắng — nhớ đặt alias. Tên không có trong SELECT là lỗi lập trình:
+/// `assertionFailure` (Debug/test dừng, nói rõ cột nào) và trả `.null` ở Release.
+public struct SQLRow: RandomAccessCollection, Sendable {
+    public let values: [SQLValue]
+    private let columnIndex: [String: Int]
+
+    init(values: [SQLValue], columnIndex: [String: Int]) {
+        self.values = values
+        self.columnIndex = columnIndex
+    }
+
+    public var startIndex: Int { 0 }
+    public var endIndex: Int { values.count }
+
+    public subscript(position: Int) -> SQLValue { values[position] }
+
+    public subscript(name: String) -> SQLValue {
+        guard let index = columnIndex[name] else {
+            assertionFailure(
+                "SQLRow: không có cột '\(name)' (có: \(columnIndex.keys.sorted()))")
+            return .null
+        }
+        return values[index]
     }
 }
 
@@ -235,6 +267,18 @@ public final class SQLiteStatement: @unchecked Sendable {
     public func columnCount() -> Int32 {
         guard let stmt else { return 0 }
         return sqlite3_column_count(stmt)
+    }
+
+    /// Tên cột → vị trí (cột đầu thắng khi trùng tên). Gọi một lần mỗi truy vấn.
+    func columnIndex() -> [String: Int] {
+        guard let stmt else { return [:] }
+        var map: [String: Int] = [:]
+        for index in 0..<Int(sqlite3_column_count(stmt)) {
+            guard let cName = sqlite3_column_name(stmt, Int32(index)) else { continue }
+            let name = String(cString: cName)
+            if map[name] == nil { map[name] = index }
+        }
+        return map
     }
 
     public func columnValue(_ index: Int32) throws -> SQLValue {

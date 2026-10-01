@@ -42,14 +42,13 @@ public enum ReviewScopeService {
                 SELECT review_priority_ids, review_all
                 FROM settings WHERE id = 1;
                 """
-            ).first,
-            row.count == 2
+            ).first
         else {
             return .empty
         }
-        let all = (row[1].intValue ?? 0) != 0
+        let all = (row["review_all"].intValue ?? 0) != 0
         var ids: [String] = []
-        if let json = row[0].textValue, !json.isEmpty {
+        if let json = row["review_priority_ids"].textValue, !json.isEmpty {
             ids = JSONStringArray.decode(json) ?? []
         }
         // Chưa ghim bộ nào → mặc định "tất cả" (cho cả seed default review_all = 0).

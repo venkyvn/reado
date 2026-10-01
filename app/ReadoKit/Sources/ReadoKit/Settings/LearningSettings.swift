@@ -94,13 +94,12 @@ public enum SettingsService {
                        reminder_enabled, reminder_minutes
                 FROM settings WHERE id = 1;
                 """
-            ).first,
-            row.count == 6
+            ).first
         else {
             throw SettingsError.notSeeded
         }
         let cefrLevels: [CEFRLevel] = {
-            if let json = row[0].textValue,
+            if let json = row["cefr_levels"].textValue,
                let data = json.data(using: .utf8),
                let levels = try? JSONDecoder().decode([CEFRLevel].self, from: data),
                !levels.isEmpty
@@ -108,18 +107,18 @@ public enum SettingsService {
                 return levels
             }
             // Cài cũ: cột `cefr_levels` rỗng → dùng `cefr_level` đơn.
-            if let single = row[1].textValue.flatMap(CEFRLevel.init(rawValue:)) {
+            if let single = row["cefr_level"].textValue.flatMap(CEFRLevel.init(rawValue:)) {
                 return [single]
             }
             return LearningSettings.defaults.cefrLevels
         }()
         let limit =
-            Int(row[2].intValue ?? Int64(LearningSettings.defaults.dailyNewLimit))
+            Int(row["daily_new_limit"].intValue ?? Int64(LearningSettings.defaults.dailyNewLimit))
         let cutoff =
-            Int(row[3].intValue ?? Int64(LearningSettings.defaults.dayCutoffHour))
-        let reminderEnabled = (row[4].intValue ?? 0) != 0
+            Int(row["day_cutoff_hour"].intValue ?? Int64(LearningSettings.defaults.dayCutoffHour))
+        let reminderEnabled = (row["reminder_enabled"].intValue ?? 0) != 0
         let reminderMinutes =
-            Int(row[5].intValue ?? Int64(LearningSettings.defaults.reminderMinutes))
+            Int(row["reminder_minutes"].intValue ?? Int64(LearningSettings.defaults.reminderMinutes))
         return LearningSettings(
             cefrLevels: cefrLevels, dailyNewLimit: limit, dayCutoffHour: cutoff,
             reminderEnabled: reminderEnabled, reminderMinutes: reminderMinutes)

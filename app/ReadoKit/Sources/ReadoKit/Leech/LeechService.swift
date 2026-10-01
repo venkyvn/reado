@@ -28,9 +28,11 @@ public enum LeechService {
         return v > 0 ? Int(v) : nil
     }
 
-    /// Sau một lần chấm: nếu `lapses` của card đạt/ngưỡng thì suspend.
-    /// Gọi SAU `ReviewService.record` (cùng transaction cha hoặc ngay sau đó).
-    /// Trả về outcome để caller báo UI ("Card này đã bị đánh dấu leech").
+    /// Sau một lần chấm: đọc ngưỡng từ settings rồi `suspendIfNeeded`. Đường
+    /// tách rời (ngoài transaction chấm) — production đi qua
+    /// `ReviewService.record(leechThreshold:)` để leech cùng transaction với
+    /// UPDATE cards + INSERT review_logs. Trả về outcome để caller báo UI
+    /// ("Card này đã bị đánh dấu leech").
     @discardableResult
     public static func evaluateAfterGrade(
         on db: SQLiteDatabase,
@@ -42,6 +44,21 @@ public enum LeechService {
             let lapses = try currentLapses(on: db, cardID: cardID)
             return Outcome(becameLeech: false, lapses: lapses, threshold: nil)
         }
+        return try suspendIfNeeded(on: db, cardID: cardID, threshold: threshold, now: now)
+    }
+
+    /// Nếu `lapses` hiện tại của card đạt/vượt `threshold` thì suspend (set
+    /// `suspended_at = now`, chỉ khi chưa suspend). KHÔNG tự mở transaction —
+    /// `inTransaction` không lồng được (BEGIN trong BEGIN lỗi), nên hàm này chạy
+    /// được trong thân transaction của caller (`ReviewService.record`) và thấy
+    /// `lapses` vừa UPDATE trên cùng kết nối.
+    @discardableResult
+    public static func suspendIfNeeded(
+        on db: SQLiteDatabase,
+        cardID: String,
+        threshold: Int,
+        now: Date
+    ) throws -> Outcome {
         let lapses = try currentLapses(on: db, cardID: cardID)
         guard lapses >= threshold else {
             return Outcome(becameLeech: false, lapses: lapses, threshold: threshold)
@@ -84,32 +101,30 @@ public enum LeechService {
     public static func fetchLeeches(on db: SQLiteDatabase) throws -> [LeechCard] {
         let rows = try db.rows(
             """
-            SELECT ca.id, ca.vocab_item_id, ca.lapses, ca.suspended_at, ca.state,
-                   v.term, v.meaning_vi, v.example
+            SELECT ca.id AS id, ca.vocab_item_id AS vocab_item_id,
+                   ca.lapses AS lapses, ca.suspended_at AS suspended_at,
+                   ca.state AS state, v.term AS term,
+                   v.meaning_vi AS meaning_vi, v.example AS example
             FROM cards ca
             JOIN vocab_items v ON v.id = ca.vocab_item_id
             WHERE ca.suspended_at IS NOT NULL
             ORDER BY ca.suspended_at DESC, ca.id;
             """, [])
         return try rows.map { row in
-            guard row.count >= 8 else {
-                throw DatabaseError.failed(
-                    "fetchLeeches thiếu cột (\(row.count)/8)", statement: "fetchLeeches")
-            }
-            guard let suspendedIso = row[3].textValue,
+            guard let suspendedIso = row["suspended_at"].textValue,
                   let suspendedAt = ISOTimestamp.date(from: suspendedIso) else {
                 throw DatabaseError.failed(
                     "suspended_at sai định dạng ISO", statement: "fetchLeeches")
             }
             return LeechCard(
-                cardID: row[0].textValue ?? "",
-                vocabItemID: row[1].textValue ?? "",
-                lapses: Int(row[2].intValue ?? 0),
+                cardID: row["id"].textValue ?? "",
+                vocabItemID: row["vocab_item_id"].textValue ?? "",
+                lapses: Int(row["lapses"].intValue ?? 0),
                 suspendedAt: suspendedAt,
-                state: row[4].textValue ?? "",
-                term: row[5].textValue ?? "",
-                meaningVI: row[6].textValue ?? "",
-                example: row[7].textValue ?? "")
+                state: row["state"].textValue ?? "",
+                term: row["term"].textValue ?? "",
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                example: row["example"].textValue ?? "")
         }
     }
 

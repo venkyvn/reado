@@ -159,14 +159,13 @@ public enum ReadoFSRS {
                        fsrs_params, fsrs_version
                 FROM settings WHERE id = 1;
                 """
-            ).first,
-            row.count == 5
+            ).first
         else {
             throw DatabaseError.failed(
                 "settings id=1 chưa seed", statement: "SELECT settings")
         }
         let params: [Double]?
-        if let raw = row[3].textValue {
+        if let raw = row["fsrs_params"].textValue {
             guard
                 let data = raw.data(using: .utf8),
                 let decoded = try? JSONDecoder().decode([Double].self, from: data)
@@ -178,11 +177,11 @@ public enum ReadoFSRS {
             params = nil
         }
         return SchedulingSettings(
-            requestRetention: row[0].doubleValue ?? 0.9,
-            maximumInterval: Double(row[1].intValue ?? 36_500),
-            enableFuzz: (row[2].intValue ?? 1) != 0,
+            requestRetention: row["request_retention"].doubleValue ?? 0.9,
+            maximumInterval: Double(row["maximum_interval"].intValue ?? 36_500),
+            enableFuzz: (row["enable_fuzz"].intValue ?? 1) != 0,
             fsrsParams: params,
-            fsrsVersion: row[4].textValue)
+            fsrsVersion: row["fsrs_version"].textValue)
     }
 }
 

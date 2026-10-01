@@ -1,7 +1,7 @@
 # Plan: fsrs-queue-fix-r1
 
 > Fen save 2026-09-30. Nguồn: review "FSRS đã best practice chưa" (session cloud, đối chiếu `swift-fsrs` @`4fbaf20`).
-> 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T3**. T3 **chặn** tới khi chốt D-3 (dưới).
+> 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T3**. T1 ✅ T2 ✅; T3 **chặn** tới khi chốt D-3 (dưới).
 > Chưa code. Test phải chạy ở máy có Xcode (`scripts/test.sh`) — container cloud không build được.
 
 ## Spec
@@ -47,7 +47,8 @@
 - **DoD:** `scripts/test.sh` xanh full suite · `grep -rn "due_at <= \|due_at > " app/ReadoKit/Sources` không còn chỗ nào bind `now` trong logic hàng đợi · journal ghi lý do.
 - **Xong 2026-09-30:** 277 test (275 chạy + 2 skip opt-in) xanh, `** TEST SUCCEEDED **`. Chi tiết: `docs/journal/2026-09-30.md` mục "fsrs-queue-fix-r1 — T1 due-window".
 
-### T2 — grade-atomic (preview = thật, một `now`, leech trong transaction)
+### T2 — grade-atomic (preview = thật, một `now`, leech trong transaction) ✅ xong 2026-10-01
+- **Xong 2026-10-01** (commit `12090f9`, fen chạy trên Mac): **281/283** xanh (2 skip opt-in), `** TEST SUCCEEDED **`; thêm `GradePreview.swift` + 6 test (`GradePreviewTests` lane kit, `LeechTests`, `ReviewQueueAndServiceTests`). Lệch plan: `ReviewService.record` trả `RecordResult(logID, becameLeech)` (struct, không tuple); `evaluateAfterGrade` giữ vì `LeechTests` còn gọi; dedupe `INSERT review_logs` (srs+cram) gộp vào đây (refactor-r2 mục 5).
 - **Files:**
   - Mới `app/ReadoKit/Sources/ReadoKit/Review/GradePreview.swift`: giữ `cardID`, `snapshot`, `computedAt`, 4 `ReviewOutcome`; `outcome(for:cardID:snapshot:now:)` trả cache khi đúng thẻ + đúng snapshot + `now - computedAt < 30 phút`, ngược lại `nil` (caller tính lại).
   - `AppModel`: `intervalLabels` điền cache; `grade` lấy `let now = SystemClock().now` **một lần**, ưu tiên outcome cache (D-2), `reviewed_at` = `now`; `gradeCram` cũng một `now`.
