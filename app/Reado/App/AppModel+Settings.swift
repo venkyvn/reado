@@ -100,7 +100,7 @@ extension AppModel {
     /// đang chụp. Chưa chọn bộ → kho tạm. Lỗi DB → tập rỗng, không giấu từ.
     func matureKeysForCapture() -> Set<String> {
         guard let database else { return [] }
-        let target = analysisTargetCollectionID
+        let target = capture.analysisTargetCollectionID
         return read("từ đã thuộc của bộ", fallback: []) {
             let collectionID: String?
             if let target {

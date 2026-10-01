@@ -39,7 +39,7 @@ struct CollectionDetailView: View {
                 Section {
                     CollectionStatsHeader(
                         overview: overview,
-                        nextDue: model.collectionNextDue,
+                        nextDue: model.library.collectionNextDue,
                         onReview: {
                             reviewMode = .srs
                             showReview = true
@@ -60,7 +60,7 @@ struct CollectionDetailView: View {
 
             sessionsSection
 
-            if model.vocabulary.isEmpty {
+            if model.library.vocabulary.isEmpty {
                 ContentUnavailableView(
                     "Chưa có từ",
                     systemImage: "text.book.closed",
@@ -71,11 +71,11 @@ struct CollectionDetailView: View {
                     .listRowSeparator(.hidden)
             } else {
                 Section {
-                    ForEach(model.vocabulary) { entry in
+                    ForEach(model.library.vocabulary) { entry in
                         vocabRow(entry)
                     }
                 } header: {
-                    Text("Từ vựng · \(model.vocabulary.count)")
+                    Text("Từ vựng · \(model.library.vocabulary.count)")
                 }
             }
         }
@@ -85,11 +85,11 @@ struct CollectionDetailView: View {
         .onAppear {
             reloadList()
             // port UI lab §6: chụp bằng shutter nổi prefilt vào đúng bộ đang mở.
-            model.shutterTargetCollectionID = collectionID
+            model.shell.shutterTargetCollectionID = collectionID
         }
         .onDisappear {
-            if model.shutterTargetCollectionID == collectionID {
-                model.shutterTargetCollectionID = nil
+            if model.shell.shutterTargetCollectionID == collectionID {
+                model.shell.shutterTargetCollectionID = nil
             }
         }
         .onChange(of: model.dataRevision) {
@@ -149,12 +149,12 @@ struct CollectionDetailView: View {
     private var sessionsSection: some View {
         if !isInbox {
             Section {
-                if model.sessions.isEmpty {
+                if model.library.sessions.isEmpty {
                     Text("Chưa có phiên đọc. Chụp trang vào bộ này để lưu bản song ngữ (giữ tối đa 10 phiên).")
                         .font(Typo.meta)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(model.sessions) { session in
+                    ForEach(model.library.sessions) { session in
                         NavigationLink {
                             ReadingSessionView(session: session)
                         } label: {
@@ -174,7 +174,7 @@ struct CollectionDetailView: View {
                     }
                 }
             } header: {
-                Text("Phiên đọc (\(model.sessions.count)/10)")
+                Text("Phiên đọc (\(model.library.sessions.count)/10)")
             }
         }
     }

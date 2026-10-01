@@ -38,10 +38,10 @@ struct AnalysisView: View {
         drafts.filter(\.isSelected).count
     }
 
-    /// Dòng chữ theo tiến độ agent (FR-02) — model.analysisProgress nil (proxy
+    /// Dòng chữ theo tiến độ agent (FR-02) — model.capture.analysisProgress nil (proxy
     /// không stream, hoặc chưa kịp báo) rơi về câu chung.
     private var progressTitle: String {
-        switch model.analysisProgress {
+        switch model.capture.analysisProgress {
         case nil, .readingPage:
             "Đang đọc chữ trên máy…"
         case .waitingAgent:
@@ -80,10 +80,10 @@ struct AnalysisView: View {
 
     var body: some View {
         Group {
-            if model.analysisFailure != nil {
+            if model.capture.analysisFailure != nil {
                 failureView
                     .transition(.opacity)
-            } else if model.isAnalyzing {
+            } else if model.capture.isAnalyzing {
                 // FR-02: progress rõ theo AnalysisProgress (stream) — trang dài
                 // với agent tắt suy nghĩ mất ~15-30s, không để màn đứng im.
                 // U7 ux-polish-r1: skeleton bên dưới gợi hình dạng kết quả sắp về.
@@ -104,7 +104,7 @@ struct AnalysisView: View {
                 .padding(.top, Spacing.xl)
                 .frame(maxWidth: .infinity)
                 .transition(.opacity)
-            } else if let result = model.analysisResult {
+            } else if let result = model.capture.analysisResult {
                 resultList(result)
                     .transition(.opacity)
             } else {
@@ -114,14 +114,14 @@ struct AnalysisView: View {
                     .transition(.opacity)
             }
         }
-        .animation(reduceMotion ? nil : Motion.reveal, value: model.isAnalyzing)
+        .animation(reduceMotion ? nil : Motion.reveal, value: model.capture.isAnalyzing)
         .onAppear { encounterMatcher = model.makeEncounterMatcher() }
         .appErrorAlert()
         .sheet(item: $encounterSelection) { EncounterSheet(selection: $0) }
         .navigationTitle("Duyệt & lưu từ vựng")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if model.analysisResult != nil {
+            if model.capture.analysisResult != nil {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         quitTapped()
@@ -131,7 +131,7 @@ struct AnalysisView: View {
                     .accessibilityLabel("Đóng phiên duyệt")
                 }
             }
-            if model.analysisResult != nil {
+            if model.capture.analysisResult != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lưu (\(selectedCount))") { save() }
                         .disabled(selectedCount == 0)
@@ -140,7 +140,7 @@ struct AnalysisView: View {
         }
         // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
         // Swipe sheet bị chặn tới khi đã lưu/bỏ; nút Đóng hỏi rõ ràng.
-        .interactiveDismissDisabled(model.analysisResult != nil && !hasConfirmed)
+        .interactiveDismissDisabled(model.capture.analysisResult != nil && !hasConfirmed)
         .alert("Bỏ kết quả phân tích?", isPresented: $showQuitWarning) {
             Button("Bỏ kết quả", role: .destructive) {
                 model.discardAnalysis()
@@ -154,14 +154,14 @@ struct AnalysisView: View {
         .onAppear {
             syncDraftsIfNeeded()
         }
-        .onChange(of: model.analysisResult) { _, _ in syncDraftsIfNeeded() }
+        .onChange(of: model.capture.analysisResult) { _, _ in syncDraftsIfNeeded() }
         .task {
             // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
             // sheet), phân tích được kích hoạt khi màn hình này xuất hiện.
-            if model.analysisResult == nil,
-               model.analysisError == nil,
-               model.lastCapturedImage != nil,
-               !model.isAnalyzing {
+            if model.capture.analysisResult == nil,
+               model.capture.analysisError == nil,
+               model.capture.lastCapturedImage != nil,
+               !model.capture.isAnalyzing {
                 await model.analyzeCurrentImage()
             }
         }
@@ -188,7 +188,7 @@ struct AnalysisView: View {
     /// cho **thử lại** cùng ảnh.
     @ViewBuilder
     private var failureView: some View {
-        if let failure = model.analysisFailure {
+        if let failure = model.capture.analysisFailure {
             switch failure {
             case .imageUnreadable:
                 ContentUnavailableView {
@@ -224,7 +224,7 @@ struct AnalysisView: View {
                     // thẳng về Cài đặt thay vì để user tự đoán phải sửa gì.
                     Button("Mở Cài đặt") {
                         model.discardAnalysis()
-                        model.pendingSettingsNavigation = true
+                        model.shell.pendingSettingsNavigation = true
                         dismiss()
                     }
                     Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
@@ -235,7 +235,7 @@ struct AnalysisView: View {
             ContentUnavailableView {
                 Label("Không phân tích được trang", systemImage: "exclamationmark.triangle")
             } description: {
-                Text(model.analysisError ?? "Đã có lỗi xảy ra.")
+                Text(model.capture.analysisError ?? "Đã có lỗi xảy ra.")
             } actions: {
                 Button("Thử lại") {
                     Task { await model.analyzeCurrentImage() }
@@ -253,7 +253,7 @@ struct AnalysisView: View {
     // MARK: - Flow
 
     private func syncDraftsIfNeeded() {
-        guard let result = model.analysisResult, drafts.isEmpty else { return }
+        guard let result = model.capture.analysisResult, drafts.isEmpty else { return }
         // port UI lab §5.5: preselect = verified && cefr ∈ settings.cefrLevels.
         let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
         drafts = ReviewDraftBuilder.drafts(
@@ -263,7 +263,7 @@ struct AnalysisView: View {
     }
 
     private func quitTapped() {
-        if model.analysisResult != nil, !hasConfirmed {
+        if model.capture.analysisResult != nil, !hasConfirmed {
             showQuitWarning = true
         } else {
             dismiss()
@@ -276,10 +276,10 @@ struct AnalysisView: View {
             // có tên; kho tạm không lưu phiên (kho chứa từ chưa phân loại).
             // port UI lab: đích đã chọn TỪ LÚC CHỤP (`analysisTargetCollectionID`),
             // duyệt từ chỉ đọc — không chọn lại ở đây.
-            let result = model.analysisResult
+            let result = model.capture.analysisResult
             let saved = try model.saveSelection(
                 drafts,
-                collectionID: model.analysisTargetCollectionID,
+                collectionID: model.capture.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
                 summaryVI: result?.summaryVI ?? "")
             hasConfirmed = true
@@ -293,7 +293,7 @@ struct AnalysisView: View {
 
     /// Nhãn đích lưu cho thông báo thành công (kho tạm hoặc tên collection).
     private var destinationLabel: String {
-        if let id = model.analysisTargetCollectionID,
+        if let id = model.capture.analysisTargetCollectionID,
            let collection = model.collections.first(where: { $0.id == id }) {
             return "«\(collection.name)»"
         }

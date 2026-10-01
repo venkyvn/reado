@@ -102,7 +102,7 @@ extension ReviewQueueView {
             }
             // Nạp snapshot cho thẻ mới hiện (để chấm tiếp).
             if currentIndex < items.count,
-               let nextSnap = model.reviewSnapshots[items[currentIndex].cardID] {
+               let nextSnap = model.review.snapshots[items[currentIndex].cardID] {
                 lastSnapshot = nextSnap
                 refreshIntervals()
             } else {

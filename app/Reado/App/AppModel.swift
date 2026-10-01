@@ -55,80 +55,16 @@ final class AppModel {
     /// xong, đổi điều kiện thành `hasKey` (proxy luôn `hasKey = true`).
     private(set) var activeAgentReady = false
 
-    // FR-08/FR-17: danh sách từ của collection đang xem (detail view giữ state,
-    // một detail mở một lúc nên một biến là đủ).
-    var vocabulary: [VocabRepository.VocabularyListEntry] = []
-
-    // FR-05/06: các phiên đọc song ngữ của collection đang xem (J2 hub).
-    var sessions: [ReadingSession] = []
-    /// Lần ôn kế tiếp của collection đang mở ở hub (header, cram-collection-r1).
-    var collectionNextDue: VocabRepository.NextDue?
-
-    // FR-01: capture state
-    var lastCapturedImage: CapturedImage?
-    var captureError: String?
-
-    // FR-02: analysis state
-    var isAnalyzing = false
-    var analysisResult: PageAnalysis?
-    /// FR-04: giữ nguyên loại lỗi để UI chọn CTA đúng (chụp lại vs thử lại).
-    var analysisFailure: AnalysisError?
-    /// Chuỗi hiển thị cho lỗi phân tích — chỉ để UI đọc, không lưu.
-    var analysisError: String? { analysisFailure?.errorDescription }
-    /// Tiến độ agent đang gọi (đọc trang/chờ/suy nghĩ/viết) — chỉ `openai_compat`
-    /// (stream) phát ra; AnalysisView đổi dòng chữ theo đây thay vì đứng im.
-    var analysisProgress: AnalysisProgress?
-
-    // FR-04: yêu cầu mở lại CaptureView sau khi dọn state (ảnh mờ / sai ngôn ngữ).
-    var pendingRecapture = false
-    /// FR-21: lỗi agent (BYOK 401/timeout/...) → nút "Mở Cài đặt" bật cờ này;
-    /// RootView tiêu thụ ở onDismiss của sheet phân tích rồi dọn sạch.
-    var pendingSettingsNavigation = false
-
-    // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
-    // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
-    var analysisTargetCollectionID: String?
-
-    /// port UI lab §5.7: sau Lưu → RootView push Hub của bộ vừa lưu (kể cả kho
-    /// tạm). Set ở `saveSelection` thành công, dọn ở `handleCapturedImage` (lần
-    /// chụp kế tiếp) + sau khi RootView tiêu thụ.
-    var pendingHubNavigationID: String?
-
-    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để FloatShutter
-    /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
-    var shutterTargetCollectionID: String?
-
-    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
-    /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
-    var suppressFloatShutter = false
+    // Chia theo chức năng — xem `AppState.swift`.
+    let review = ReviewState()
+    let capture = CaptureFlow()
+    let shell = ShellSignals()
+    let library = LibraryState()
 
     /// Bump mỗi lần reload overview — để CollectionDetailView đang mở tự refresh
     /// (từ/phiên) sau khi lưu mà không cần push hub trùng.
     private(set) var dataRevision = 0
 
-    // FR-11/FR-12: hàng đợi ôn state
-    var isLoadingReview = false
-    var reviewError: String?
-    var reviewItems: [ReviewQueue.ReviewItem] = []
-    var reviewSnapshots: [String: CardSnapshot] = [:]
-    var currentReviewSnapshot: CardSnapshot?
-    /// Lịch 4 nút của thẻ đang hiện — `grade` dùng lại để nhãn == lịch ghi
-    /// (T2 fsrs-queue-fix-r1). Chỉ cache nội bộ, UI không quan sát.
-    @ObservationIgnored var gradePreview: GradePreview?
-
-    // FR-18: phạm vi ôn hiện tại (nil = tất cả collection) + nợ due ngoài phạm
-    // vi (phải nhìn thấy — research/vocabulary.md 4.2).
-    var reviewScope: Set<String>? = nil
-    var dueOutsideScope = 0
-    /// Số thẻ Cram được trong phạm vi hiện tại (đã học, chưa đến hạn) — quyết
-    /// định nút "Ôn thêm" ở màn hết thẻ (ADR-043).
-    var crammableCount = 0
-
-    /// Ý 3 motivation-r1 ("Học thêm 10 từ", Q-A/Q-B đã chốt): phần nới hạn mức
-    /// new RIÊNG ngày học hiện tại — chỉ bộ nhớ app, KHÔNG lưu DB/migration.
-    /// Gắn theo `dayStart` (giờ chuyển ngày FR-11, không nửa đêm hệ thống) —
-    /// qua ngày mới tự mất qua `ReviewQueue.effectiveExtra`.
-    var extraNewQuota: (dayStart: String, count: Int)?
     /// Q-B đã chốt: N = 10 từ cố định, một nút "Học thêm 10 từ".
     static let learnMoreBatchSize = 10
 
@@ -261,6 +197,6 @@ final class AppModel {
     var effectiveExtraNew: Int {
         guard let database else { return 0 }
         let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
-        return ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
+        return ReviewQueue.effectiveExtra(stored: review.extraNewQuota, currentDayStart: dayStart)
     }
 }

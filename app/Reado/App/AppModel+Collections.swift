@@ -42,10 +42,10 @@ extension AppModel {
         order: VocabRepository.VocabularyOrder
     ) {
         guard let database else {
-            vocabulary = []
+            library.vocabulary = []
             return
         }
-        vocabulary = read("danh sách từ", fallback: []) {
+        library.vocabulary = read("danh sách từ", fallback: []) {
             try VocabRepository.listVocabulary(
                 on: database, collectionID: collectionID, order: order)
         }
@@ -54,11 +54,11 @@ extension AppModel {
     /// Nạp lần ôn kế tiếp của một collection cho ô "Lần ôn tiếp" ở header hub.
     func loadNextDue(collectionID: String) {
         guard let database else {
-            collectionNextDue = nil
+            library.collectionNextDue = nil
             return
         }
         let now = clock.now
-        collectionNextDue = read("lần ôn kế tiếp", fallback: nil) {
+        library.collectionNextDue = read("lần ôn kế tiếp", fallback: nil) {
             () throws -> VocabRepository.NextDue? in
             try VocabRepository.nextDue(on: database, collectionID: collectionID, now: now)
         }
@@ -67,10 +67,10 @@ extension AppModel {
     /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).
     func loadSessions(collectionID: String) {
         guard let database else {
-            sessions = []
+            library.sessions = []
             return
         }
-        sessions = read("phiên đọc", fallback: []) {
+        library.sessions = read("phiên đọc", fallback: []) {
             try ReadingSessionRepository.listSessions(
                 on: database, collectionID: collectionID)
         }

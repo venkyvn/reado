@@ -72,7 +72,7 @@ struct CaptureView: View {
         } message: {
             Text("Hãy thử chụp lại hoặc chọn một ảnh khác.")
         }
-        .onAppear { initialDest = model.analysisTargetCollectionID }
+        .onAppear { initialDest = model.capture.analysisTargetCollectionID }
         .task { await camera.start() }
         .onDisappear { camera.stop() }
         .onChange(of: pickerItem) { _, newItem in
@@ -196,7 +196,7 @@ struct CaptureView: View {
     private var topBar: some View {
         HStack(alignment: .top, spacing: 10) {
             Button {
-                model.analysisTargetCollectionID = initialDest
+                model.capture.analysisTargetCollectionID = initialDest
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -294,7 +294,7 @@ struct CaptureView: View {
 
     /// Tên đích hiện tại cho chip (nil = kho tạm).
     private var destName: String {
-        if let id = model.analysisTargetCollectionID,
+        if let id = model.capture.analysisTargetCollectionID,
            let c = model.collections.first(where: { $0.id == id }) {
             return c.name
         }
@@ -303,7 +303,7 @@ struct CaptureView: View {
 
     /// Đích hiện tại có phải kho tạm không — chọn dòng gợi ý dưới chip.
     private var cameraDestIsInbox: Bool {
-        if let id = model.analysisTargetCollectionID,
+        if let id = model.capture.analysisTargetCollectionID,
            let c = model.collections.first(where: { $0.id == id }) {
             return c.isDefault
         }
@@ -313,7 +313,7 @@ struct CaptureView: View {
     /// Chọn đích + haptic (port UI lab §9: `.selection` lúc đổi dest).
     private func selectDest(_ id: String?) {
         UISelectionFeedbackGenerator().selectionChanged()
-        model.analysisTargetCollectionID = id
+        model.capture.analysisTargetCollectionID = id
     }
 
     /// Sheet chọn collection lưu — radio, kho tạm ghi "mặc định" (port UI lab §4.3).
@@ -329,7 +329,7 @@ struct CaptureView: View {
                             Label("Kho tạm", systemImage: "tray")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            if model.analysisTargetCollectionID == nil {
+                            if model.capture.analysisTargetCollectionID == nil {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accentColor)
                             }
@@ -347,7 +347,7 @@ struct CaptureView: View {
                                 Text(c.name)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                if model.analysisTargetCollectionID == c.id {
+                                if model.capture.analysisTargetCollectionID == c.id {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accentColor)
                                 }

@@ -35,10 +35,10 @@ struct ReadingSessionView: View {
         // Phiên đọc push bên trong Hub (không vào ShellRoute) → tắt shutter nổi
         // FloatShutter của RootView khi đang đọc (port UI lab §10).
         .onAppear {
-            model.suppressFloatShutter = true
+            model.shell.suppressFloatShutter = true
             encounterMatcher = model.makeEncounterMatcher()
         }
-        .onDisappear { model.suppressFloatShutter = false }
+        .onDisappear { model.shell.suppressFloatShutter = false }
         .sheet(item: $encounterSelection) { EncounterSheet(selection: $0) }
     }
 
