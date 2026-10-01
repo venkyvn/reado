@@ -21,9 +21,10 @@ struct CollectionDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var moveSheetIntention: MoveIntention?
     @State private var showExport = false
+    @State private var showPinChooser = false
 
     // J2 hub: ôn bộ này (scoped) mở phiên ôn toàn màn qua `startReview` (RootView giữ
-    // cover). Chụp đi qua FloatShutter nổi ở RootView (port UI lab §6) — không còn
+    // cover). Chụp đi qua nút chụp trong thanh tab (port UI lab §6) — không còn
     // sheet capture/analysis riêng trong Hub.
     @Environment(\.startReview) private var startReview
 
@@ -47,13 +48,6 @@ struct CollectionDetailView: View {
                         onCram: {
                             startReview(ReviewRequest(scope: [collectionID], mode: .extra))
                         })
-                }
-
-                // FR-17: kho tạm không hiện control "Hiện trên Home" (J2).
-                if !isInbox {
-                    Section {
-                        HomePinToggle(collectionID: collectionID)
-                    }
                 }
             }
 
@@ -83,7 +77,7 @@ struct CollectionDetailView: View {
         .toolbar { toolbarContent }
         .onAppear {
             reloadList()
-            // port UI lab §6: chụp bằng shutter nổi prefilt vào đúng bộ đang mở.
+            // port UI lab §6: nút chụp trong thanh tab prefill vào đúng bộ đang mở.
             model.shell.shutterTargetCollectionID = collectionID
         }
         .onDisappear {
@@ -92,10 +86,12 @@ struct CollectionDetailView: View {
             }
         }
         .onChange(of: model.dataRevision) {
-            // Lưu từ shutter (port §5.7) hoặc đóng cover ôn (`RootView` gọi
+            // Lưu từ nút chụp (ADR-053) hoặc đóng cover ôn (`RootView` gọi
             // `reloadOverview`) bump overview → hub đang mở tự refresh.
             reloadList()
         }
+        // FR-17: chooser "đã đủ 5 pin" — gắn ngoài Menu để không biến mất cùng menu.
+        .homePinChooser(collectionID: collectionID, isPresented: $showPinChooser)
         .alert("Đổi tên bộ", isPresented: $showRename) {
             TextField("Tên mới", text: $renameText)
             Button("Lưu") {
@@ -202,6 +198,11 @@ struct CollectionDetailView: View {
                 }
             }
             Menu {
+                // FR-17: kho tạm không ghim được (J2).
+                if !isInbox {
+                    HomePinMenuButton(
+                        collectionID: collectionID, onFull: { showPinChooser = true })
+                }
                 Button("Đổi tên") {
                     renameText = overview?.name ?? ""
                     showRename = true
