@@ -51,6 +51,7 @@ struct HomeTabView: View {
             OnboardingChecklistSection(onOpenSettings: onSettings, onCapture: onCapture)
             Section("Hôm nay") {
                 dailyProgressRows
+                reencounterRow
                 inboxRow
                 streakRow
             }
@@ -99,6 +100,26 @@ struct HomeTabView: View {
                     .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    /// FR-22: "Gặp lại N từ tuần này" — số từ khác nhau được gặp lại khi đọc
+    /// (7 ngày gần nhất). Ẩn khi 0 (0 trông như lỗi, không phải tiến bộ).
+    @ViewBuilder
+    private var reencounterRow: some View {
+        if model.reencounteredThisWeek > 0 {
+            HStack(spacing: Spacing.row) {
+                IconTile(systemImage: "eye", tint: Theme.ok)
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text("Gặp lại \(model.reencounteredThisWeek) từ tuần này")
+                        .font(Typo.rowTitle)
+                        .contentTransition(.numericText())
+                    Text("Từ đã lưu xuất hiện lại khi bạn đọc")
+                        .font(Typo.rowSubtitle)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -178,7 +199,10 @@ struct HomeTabView: View {
                             }
                             Spacer()
                             if collection.totalItems > 0 {
-                                MasteryRing(mastered: collection.masteredCount, total: collection.totalItems)
+                                MasteryRing(
+                                    mastered: collection.masteredCount,
+                                    total: collection.totalItems,
+                                    absorbed: collection.absorbedCount)
                             }
                             if collection.dueNow > 0 {
                                 Pill(text: "\(collection.dueNow)", tone: .due)

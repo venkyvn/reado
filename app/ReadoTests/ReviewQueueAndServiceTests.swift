@@ -96,6 +96,60 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(ids, [again], "từ gặp lại lên trước từ gặp một lần trong cùng bộ")
     }
 
+    private func vocabID(of cardID: String, _ db: SQLiteDatabase) throws -> String {
+        try XCTUnwrap(db.scalarString(
+            "SELECT vocab_item_id FROM cards WHERE id = ?;", [.text(cardID)]))
+    }
+
+    func testNewBranchWordSeenAgainComesFirstWithinCollection() throws {
+        // FR-22 (reencounter-r1 T3): từ chưa học mà trang mới lại có nó (`seen`)
+        // lên trước, dù theo thứ tự trang nó đứng sau.
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
+        let later = try insertNewAt(db, collectionID: book, term: "later", createdAt: "2026-09-02T00:00:00Z")
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later],
+                       "chưa có seen → giữ thứ tự trang")
+
+        try EncounterRepository.insertSeen(
+            on: db, vocabItemIDs: [try vocabID(of: later, db)], now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [later, first],
+                       "từ vừa gặp lại khi đọc lên trước")
+    }
+
+    func testNewBranchSeenCountAddsToRepeatedTermCount() throws {
+        // Khoá thứ (2) = số dòng cùng term + số `seen` (cộng, không thay thế).
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let other = try Fixtures.insertCollection(in: db, name: "Bộ khác")
+        // `dup`: 2 dòng cùng term (điểm 2) — `seenTwice`: 1 dòng + 2 seen (điểm 3).
+        let dup = try insertNewAt(db, collectionID: book, term: "dup", createdAt: "2026-09-01T00:00:00Z")
+        try Fixtures.insertVocab(
+            in: db, collectionID: other, term: "dup", createdAt: "2026-07-01T00:00:00Z")
+        let seenTwice = try insertNewAt(
+            db, collectionID: book, term: "seenTwice", createdAt: "2026-09-02T00:00:00Z")
+        let vocab = try vocabID(of: seenTwice, db)
+        try EncounterRepository.insertSeen(on: db, vocabItemIDs: [vocab], now: Fixtures.fixedNow)
+        try EncounterRepository.insertSeen(
+            on: db, vocabItemIDs: [vocab], now: Fixtures.fixedNow.addingTimeInterval(60))
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [seenTwice, dup])
+    }
+
+    func testNewBranchRecognizedDoesNotBoostOrder() throws {
+        // Chỉ `seen` cộng điểm: nhận ra = đã biết từ, không cần học trước.
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
+        let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
+        let later = try insertNewAt(db, collectionID: book, term: "later", createdAt: "2026-09-02T00:00:00Z")
+        try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: try vocabID(of: later, db), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later])
+    }
+
     func testNewBranchScopeStillFiltersWithNewOrder() throws {
         let db = try Fixtures.seededDB()
         let old = try Fixtures.insertCollection(in: db, name: "Cũ")

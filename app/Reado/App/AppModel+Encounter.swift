@@ -26,8 +26,11 @@ extension AppModel {
     func recognizeWord(_ vocabItemID: String) -> Bool {
         guard let database else { return false }
         do {
-            return try EncounterRepository.recordRecognized(
+            let recorded = try EncounterRepository.recordRecognized(
                 on: database, vocabItemID: vocabItemID, now: clock.now)
+            // Đã thấm / "Gặp lại N từ" đổi theo → nạp lại số liệu Home + Hub.
+            if recorded { reloadOverview() }
+            return recorded
         } catch {
             DebugTrace.event("encounter", "recognizeFailed", ["error": String(describing: error)])
             return false

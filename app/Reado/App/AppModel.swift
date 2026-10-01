@@ -42,6 +42,9 @@ final class AppModel {
     /// Ôn nhanh (port UI lab) — scope ôn mặc định của tab Ôn: 1–3 bộ ưu tiên
     /// hoặc "tất cả" (`reviewAll`).
     private(set) var reviewScopeDefault: ReviewScope = .empty
+    /// FR-22 / Home: số TỪ khác nhau được gặp lại (`seen` hoặc `recognized`) trong 7
+    /// ngày gần nhất — dòng "Gặp lại N từ tuần này" (ẩn khi 0).
+    private(set) var reencounteredThisWeek = 0
     /// ADR-041: agent đang active chạy được thật — proxy mặc định chưa deploy
     /// nên chỉ agent BYOK có key mới tính "sẵn sàng". TODO: khi proxy deploy
     /// xong, đổi điều kiện thành `hasKey` (proxy luôn `hasKey = true`).
@@ -137,6 +140,8 @@ final class AppModel {
         let learningCount: Int
         let reviewingCount: Int
         let notStartedCount: Int
+        /// "Đã thấm" (FR-22): từ Q-08 + ≥1 lần nhận ra — tập con của `masteredCount`.
+        let absorbedCount: Int
         let addedLast7Days: Int
         /// Thẻ Cram được (đếm thẻ) — quyết định CTA "Ôn thêm".
         let crammableCount: Int
@@ -213,6 +218,8 @@ final class AppModel {
         collections = (try? Self.loadOverview(db: database, now: now)) ?? []
         dailyProgress = (try? Self.loadDailyProgress(
             db: database, now: now, extraNew: effectiveExtraNew))
+        reencounteredThisWeek = (try? EncounterRepository.distinctWordsEncountered(
+            on: database, since: now.addingTimeInterval(-7 * 86_400))) ?? 0
         homePinIDs = (try? HomePinService.ids(on: database)) ?? []
         reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
         // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới

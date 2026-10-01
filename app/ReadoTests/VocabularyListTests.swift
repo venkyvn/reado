@@ -366,6 +366,77 @@ final class VocabularyListTests: XCTestCase {
             summary.wordCount - 1)
     }
 
+    /// reencounter-r1 T3 — `absorbedCount` = từ Q-08 + ≥1 `recognized` (tập con
+    /// của `masteredCount`); SQL phải khớp `Mastery.level` — nguồn luật duy nhất.
+    func testSummaryAbsorbedCountMatchesMasteryLevel() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "T")
+        // (term, state, stability, suspended, số lần nhận ra khi đọc)
+        let specs: [(String, String, Double, Bool, Int)] = [
+            ("fresh", "new", 0, false, 0),
+            ("learn", "learning", 30, false, 0),
+            ("rev5", "review", 5, false, 0),
+            ("rev5rec", "review", 5, false, 1),       // nhận ra nhưng chưa Q-08 → Đang học
+            ("mature", "review", 21, false, 0),       // Đã nhớ
+            ("absorbed", "review", 21, false, 1),     // Đã thấm
+            ("absorbed2", "review", 40, false, 1),    // Đã thấm (nhiều ngày nhận ra → vẫn 1 từ)
+            ("leechRec", "review", 30, true, 1),      // suspend → không nhóm nào
+        ]
+        var expected: [Mastery.Level: Int] = [:]
+        for (term, state, stability, suspended, recognized) in specs {
+            let vocab = try insertVocab(db, collection: col, term: term)
+            try Fixtures.insertCard(
+                in: db, vocabItemID: vocab, state: state, stability: stability,
+                suspendedIso: suspended ? "2026-09-10T00:00:00Z" : nil)
+            for day in 0..<recognized {
+                try EncounterRepository.recordRecognized(
+                    on: db, vocabItemID: vocab,
+                    now: Fixtures.fixedNow.addingTimeInterval(Double(day) * 86_400))
+            }
+            // absorbed2: thêm một ngày nhận ra nữa để chắc COUNT DISTINCT theo TỪ.
+            if term == "absorbed2" {
+                try EncounterRepository.recordRecognized(
+                    on: db, vocabItemID: vocab,
+                    now: Fixtures.fixedNow.addingTimeInterval(86_400))
+            }
+            if !suspended {
+                let level = Mastery.level(
+                    state: state, stability: stability, recognizedCount: recognized)
+                expected[level, default: 0] += 1
+            }
+        }
+        // Từ không có thẻ nào → Mới.
+        try insertVocab(db, collection: col, term: "nocard")
+        expected[.new, default: 0] += 1
+
+        let summaries = try VocabRepository.allCollectionSummaries(on: db, now: Fixtures.fixedNow)
+        let summary = try XCTUnwrap(summaries.first { $0.id == col })
+
+        XCTAssertEqual(summary.absorbedCount, 2)
+        XCTAssertEqual(summary.masteredCount, 3, "Q-08 gồm cả từ đã thấm")
+        // Ánh xạ UI (CollectionStatsHeader): Đã nhớ = mastered − absorbed; Đang học
+        // gộp learning + reviewing; Mới = notStarted.
+        XCTAssertEqual(summary.masteredCount - summary.absorbedCount, expected[.remembered] ?? 0)
+        XCTAssertEqual(summary.absorbedCount, expected[.absorbed] ?? 0)
+        XCTAssertEqual(summary.learningCount + summary.reviewingCount, expected[.learning] ?? 0)
+        XCTAssertEqual(summary.notStartedCount, expected[.new] ?? 0)
+    }
+
+    func testSummaryAbsorbedIsZeroWhenNothingRecognized() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "Z")
+        let vocab = try insertVocab(db, collection: col, term: "mature")
+        try Fixtures.insertCard(in: db, vocabItemID: vocab, state: "review", stability: 30)
+        // `seen` không tính vào Đã thấm — chỉ `recognized`.
+        try EncounterRepository.insertSeen(on: db, vocabItemIDs: [vocab], now: Fixtures.fixedNow)
+
+        let summary = try XCTUnwrap(
+            VocabRepository.allCollectionSummaries(on: db, now: Fixtures.fixedNow)
+                .first { $0.id == col })
+        XCTAssertEqual(summary.masteredCount, 1)
+        XCTAssertEqual(summary.absorbedCount, 0)
+    }
+
     /// `addedLast7Days` — 6 ngày trước tính, 8 ngày trước không.
     func testSummaryAddedLast7Days() throws {
         let db = try Fixtures.seededDB()

@@ -19,7 +19,8 @@ extension VocabRepository {
             from: now.addingTimeInterval(-7 * 86_400))
         // Bảng dẫn xuất `b` gom theo TỪ (1 dòng / từ) rồi theo collection: mỗi từ
         // vào đúng 1 nhóm (m > l > r > active). Thứ tự bind theo vị trí `?` trong
-        // SQL: due_now, mastered (ngưỡng), added7, crammable, rồi ngưỡng trong `b`.
+        // SQL: due_now, mastered (ngưỡng), added7, crammable, absorbed (ngưỡng), rồi
+        // ngưỡng trong `b`.
         let rows = try db.rows(
             """
             SELECT c.id, c.name, c.is_default,
@@ -39,7 +40,14 @@ extension VocabRepository {
                    COALESCE(SUM(CASE
                         WHEN ca.state != 'new' AND ca.suspended_at IS NULL
                              AND ca.due_at > ?
-                        THEN 1 ELSE 0 END), 0) AS crammable_count
+                        THEN 1 ELSE 0 END), 0) AS crammable_count,
+                   COUNT(DISTINCT CASE
+                        WHEN ca.state = 'review' AND ca.stability >= ?
+                             AND ca.suspended_at IS NULL
+                             AND EXISTS (SELECT 1 FROM encounters e
+                                         WHERE e.vocab_item_id = v.id
+                                           AND e.kind = 'recognized')
+                        THEN v.id END) AS absorbed_count
             FROM collections c
             LEFT JOIN vocab_items v ON v.collection_id = c.id
             LEFT JOIN cards ca ON ca.vocab_item_id = v.id
@@ -77,9 +85,10 @@ extension VocabRepository {
                 .text(windowEndIso), .double(Mastery.stabilityThreshold),
                 .text(sevenDaysAgoIso), .text(windowEndIso),
                 .double(Mastery.stabilityThreshold),
+                .double(Mastery.stabilityThreshold),
             ])
         return try rows.map { row in
-            guard row.count >= 12 else {
+            guard row.count >= 13 else {
                 throw DatabaseError.failed(
                     "thiếu cột summary", statement: "collection_summaries")
             }
@@ -94,6 +103,7 @@ extension VocabRepository {
                 learningCount: Int(row[7].intValue ?? 0),
                 reviewingCount: Int(row[8].intValue ?? 0),
                 notStartedCount: Int(row[9].intValue ?? 0),
+                absorbedCount: Int(row[12].intValue ?? 0),
                 addedLast7Days: Int(row[10].intValue ?? 0),
                 crammableCount: Int(row[11].intValue ?? 0))
         }

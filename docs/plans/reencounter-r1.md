@@ -58,5 +58,6 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 - DoD: full xanh + fen xem tay trên simulator.
 
 ### T3 — thang tiến độ
+- **Trạng thái 2026-10-01:** code + test đã viết (cloud, **chưa build/chạy test, UI chưa xem tay**). `Mastery.Level` + `Mastery.level(state:stability:recognizedCount:)` (hàm thuần — nguồn luật; SQL đối chiếu trong test); `CollectionSummary.absorbedCount` (thêm cột 12 + một bind ngưỡng, `masteredCount` giữ nghĩa Q-08 gồm cả Đã thấm); `ReviewQueue.newCardIDs` khoá (2) = số dòng cùng term **+ `seen`** (`recognized` không cộng điểm); `AppModel.reencounteredThisWeek` (7 ngày gần nhất, nạp trong `reloadOverview`), `recognizeWord` gọi `reloadOverview` khi vừa ghi; UI: thanh 4 nhóm Đã thấm › Đã nhớ › Đang học › Mới ở `CollectionStatsHeader`, `MasteryRing(absorbed:)` cung thứ hai (Home + Kho), nhãn "Đã thuộc" → "Đã nhớ" (toast "Thuộc rồi!" ADR-038 giữ nguyên), hàng "Gặp lại N từ tuần này" ở Home (ẩn khi 0). Docs: PRD FR-11 criterion thứ tự thẻ mới nhắc `seen`. Test: `MasteryLevelTests` (kit), `VocabularyListTests` (+2, đối chiếu SQL ↔ `Mastery.level`), `ReviewQueueAndServiceTests` (+3).
 - `Mastery.level`, `absorbedCount`, thanh 4 màu đổi nhãn Mới · Đang học · Đã nhớ · Đã thấm, `MasteryRing`, Home "Gặp lại N từ tuần này"; `newCardIDs` cộng số `seen` vào key ưu tiên.
 - DoD: full xanh.

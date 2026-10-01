@@ -127,7 +127,10 @@ struct KhoTabView: View {
             }
             Spacer()
             if collection.totalItems > 0 {
-                MasteryRing(mastered: collection.masteredCount, total: collection.totalItems)
+                MasteryRing(
+                    mastered: collection.masteredCount,
+                    total: collection.totalItems,
+                    absorbed: collection.absorbedCount)
             }
             if collection.dueNow > 0 {
                 Pill(text: "\(collection.dueNow)", tone: .due)

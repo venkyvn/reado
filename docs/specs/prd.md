@@ -545,8 +545,9 @@ dọn, và toàn bộ giá trị của FR-18 mất theo.
 - **Given** số card mới vượt `daily_new_limit` nên phải chọn card nào vào trước
   (new-order-r1, ADR-047), **when** hàng đợi được dựng, **then** collection có từ
   được thêm gần đây nhất — kể cả kho tạm — được ưu tiên trước collection cũ hơn;
-  trong cùng collection, từ đã gặp lại nhiều lần (cùng form đã có ≥2 dòng trong kho)
-  được ưu tiên trước từ chỉ gặp một lần; sau hai tiêu chí đó mới tới thứ tự trang.
+  trong cùng collection, từ đã gặp lại nhiều lần (cùng form đã có ≥2 dòng trong kho,
+  **cộng** số lần `seen` ở FR-22 — từ chưa học mà trang mới lại có nó) được ưu tiên trước
+  từ chỉ gặp một lần; sau hai tiêu chí đó mới tới thứ tự trang.
   Đây là câu trả lời cho *card nào*, không đổi *card mới có bao nhiêu*.
 
 Giới hạn card mới là yêu cầu bắt buộc, không phải tuỳ chọn. Không có nó, một buổi

@@ -26,6 +26,7 @@ extension AppModel {
                 learningCount: summary.learningCount,
                 reviewingCount: summary.reviewingCount,
                 notStartedCount: summary.notStartedCount,
+                absorbedCount: summary.absorbedCount,
                 addedLast7Days: summary.addedLast7Days,
                 crammableCount: summary.crammableCount)
         }

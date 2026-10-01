@@ -32,18 +32,23 @@ struct CollectionStatsHeader: View {
         var id: String { label }
     }
 
-    /// Thứ tự = thứ tự ưu tiên phân nhóm (ReadoKit): Đã thuộc › Đang nhớ › Đang
-    /// học › Chưa học. Mẫu số là tổng 4 nhóm (không phải `totalItems`) để thanh
-    /// luôn đầy khi có từ chỉ còn thẻ suspended.
+    /// Thang 4 mức (vision #6, reencounter-r1 T3): Đã thấm › Đã nhớ › Đang học ›
+    /// Mới. Đã nhớ = Q-08 chưa nhận ra (`masteredCount − absorbedCount`); Đang học
+    /// gộp "Đang nhớ" cũ (`learning + reviewing`). Mẫu số là tổng 4 nhóm (không
+    /// phải `totalItems`) để thanh luôn đầy khi có từ chỉ còn thẻ suspended.
     private var segments: (items: [Segment], total: Int) {
+        let remembered = max(0, overview.masteredCount - overview.absorbedCount)
         let items = [
-            Segment(label: "Đã thuộc", count: overview.masteredCount, color: Theme.ok),
+            Segment(label: "Đã thấm", count: overview.absorbedCount, color: Theme.ok),
             Segment(
-                label: "Đang nhớ", count: overview.reviewingCount,
+                label: "Đã nhớ", count: remembered,
                 color: Color.accentColor.opacity(0.6)),
-            Segment(label: "Đang học", count: overview.learningCount, color: Theme.due),
             Segment(
-                label: "Chưa học", count: overview.notStartedCount,
+                label: "Đang học",
+                count: overview.learningCount + overview.reviewingCount,
+                color: Theme.due),
+            Segment(
+                label: "Mới", count: overview.notStartedCount,
                 color: Theme.surfaceStrong),
         ]
         return (items, items.reduce(0) { $0 + $1.count })
@@ -52,7 +57,7 @@ struct CollectionStatsHeader: View {
     private var progressCard: some View {
         let (items, total) = segments
         return VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Đã thuộc \(overview.masteredCount)/\(overview.totalItems)")
+            Text("Đã nhớ \(overview.masteredCount)/\(overview.totalItems)")
                 .font(Typo.rowTitle)
                 .monospacedDigit()
             GeometryReader { proxy in

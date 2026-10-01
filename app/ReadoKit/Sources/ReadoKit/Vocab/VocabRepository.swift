@@ -80,6 +80,10 @@ public enum VocabRepository {
         public let reviewingCount: Int
         /// "Chưa học": còn lại (chỉ thẻ `new`, hoặc chưa có thẻ nào).
         public let notStartedCount: Int
+        /// "Đã thấm" (reencounter-r1 T3): số TỪ đạt Q-08 (thuộc `masteredCount`)
+        /// VÀ có ≥ 1 lần `recognized` — tập con của `masteredCount`. "Đã nhớ" =
+        /// `masteredCount − absorbedCount`.
+        public let absorbedCount: Int
         /// Số từ có `created_at` trong 7 ngày gần nhất tính tới `now`.
         public let addedLast7Days: Int
         /// Số THẻ Cram được — điều kiện y hệt `ReviewQueue.crammableCount`
