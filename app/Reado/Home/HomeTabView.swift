@@ -8,13 +8,12 @@ import SwiftUI
 struct HomeTabView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let onReview: () -> Void
+    /// ux-redesign-r1 T1a: "Ôn tập hôm nay" / "Ôn thêm" mở phiên ôn toàn màn qua `RootView`,
+    /// không còn đổi sang tab Ôn.
+    @Environment(\.startReview) private var startReview
     let onSettings: () -> Void
     let onData: () -> Void
     let onCapture: () -> Void
-    /// extra-review-r1 B2: mở tab Ôn thẳng vào Ôn thêm (set `pendingReviewMode`
-    /// rồi đổi tab — `onReview` đổi tab không cũng không đủ, tab mặc định `.srs`).
-    let onReviewExtra: () -> Void
 
     var body: some View {
         Group {
@@ -71,7 +70,8 @@ struct HomeTabView: View {
         if let progress = model.dailyProgress {
             if progress.dueToday > 0 {
                 Button {
-                    onReview()
+                    // Phạm vi mặc định đã lưu (Ôn nhanh ở Kho) — như tab Ôn cũ vẫn đọc.
+                    startReview(ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .srs))
                 } label: {
                     HStack(spacing: Spacing.row) {
                         IconTile(systemImage: "brain.head.profile")
@@ -85,7 +85,7 @@ struct HomeTabView: View {
                                 .contentTransition(.numericText())
                         }
                         Spacer()
-                        // Nút hành động (đổi tab), không phải push → không vẽ chevron điều hướng.
+                        // Nút hành động (mở phiên ôn), không phải push → không vẽ chevron điều hướng.
                         Image(systemName: "play.circle.fill")
                             .font(.title2)
                             .foregroundStyle(Color.accentColor)
@@ -98,7 +98,9 @@ struct HomeTabView: View {
             } else if model.homeExtraAvailableCount > 0 {
                 // extra-review-r1 B2: xong phần hôm nay nhưng vẫn còn từ mới/ôn
                 // sớm toàn kho — CTA "Ôn thêm" thay cho nhãn trung tính cũ.
-                Button(action: onReviewExtra) {
+                Button {
+                    startReview(ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .extra))
+                } label: {
                     HStack(spacing: Spacing.row) {
                         IconTile(systemImage: "arrow.clockwise")
                         VStack(alignment: .leading, spacing: Spacing.tight) {

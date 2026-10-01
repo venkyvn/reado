@@ -77,11 +77,6 @@ final class ShellSignals {
     /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
     var suppressFloatShutter = false
 
-    /// extra-review-r1 B2: Home "Ôn thêm N thẻ" đổi tab Ôn + set cờ này để tab
-    /// mở thẳng `.extra` thay vì mặc định `.srs` — `ReviewQueueView` (tab, không
-    /// `showsCloseButton`) đọc rồi dọn ở `onAppear`, giống `pendingHubNavigationID`.
-    var pendingReviewMode: ReviewMode?
-
     #if DEBUG
     /// verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` bật cờ này; AnalysisView
     /// đọc ở `.task` để tự mở `EncounterSheet` của match đầu tiên (demo gạch chân

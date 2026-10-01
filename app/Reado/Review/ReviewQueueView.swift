@@ -62,22 +62,15 @@ struct ReviewQueueView: View {
     // `lastSnapshot` đổi thẻ (loadQueue/gradeNow/undo), không tính trong body.
     @State var intervalLabels: [ReadoRating: String] = [:]
 
-    /// Mở sẵn phạm vi (J2 "Ôn bộ này") — nil = tất cả collection. `showsCloseButton`
-/// false khi nhúng làm TAB (không nút "Đóng"); sheet "Ôn bộ này" để true.
-    private let showsCloseButton: Bool
+    /// ux-redesign-r1 T1a: đã nạp hàng đợi lần đầu chưa — màn luôn nằm trong cover
+    /// toàn màn (`RootView` + `ReviewRequest`), `onAppear` không được nạp lại làm mất `tally`.
+    @State private var hasLoaded = false
 
-    /// Chế độ khi vào màn — `.extra` từ nút "Ôn thêm" ở header collection / Home.
-    private let initialMode: ReviewMode
-
-    init(
-        initialScope: Set<String>? = nil,
-        showsCloseButton: Bool = true,
-        initialMode: ReviewMode = .srs
-    ) {
+    /// `initialScope` nil = tất cả collection (J2 "Ôn bộ này" truyền [id]); `initialMode`
+    /// `.extra` từ nút "Ôn thêm" ở header collection / Home.
+    init(initialScope: Set<String>? = nil, initialMode: ReviewMode = .srs) {
         _scope = State(initialValue: initialScope)
         _mode = State(initialValue: initialMode)
-        self.showsCloseButton = showsCloseButton
-        self.initialMode = initialMode
     }
 
     var body: some View {
@@ -100,7 +93,7 @@ struct ReviewQueueView: View {
                     streak: model.dailyProgress?.streak ?? 0,
                     extraAvailable: model.review.extraAvailableCount,
                     onExtra: {
-                        // Lượt Ôn thêm kế tiếp — cùng scope, không dismiss sheet.
+                        // Lượt Ôn thêm kế tiếp — cùng scope, không đóng cover.
                         mode = .extra
                         Task { await loadQueue() }
                     }
@@ -119,10 +112,11 @@ struct ReviewQueueView: View {
         .navigationTitle(mode == .extra ? "Ôn thêm" : "Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if showsCloseButton {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Đóng") { dismiss() }
+            ToolbarItem(placement: .topBarLeading) {
+                Button { dismiss() } label: {
+                    Label("Đóng", systemImage: "xmark")
                 }
+                .accessibilityLabel("Đóng")
             }
             // FR-18: chọn phạm vi ôn (tất cả / một / vài collection).
             ToolbarItem(placement: .topBarTrailing) {
@@ -151,20 +145,10 @@ struct ReviewQueueView: View {
             Text(actionError ?? "")
         }
         .onAppear {
-            // Vào lại màn (đổi tab) về chế độ khởi tạo (mặc định `.srs`) — trừ khi
-            // Home vừa xin mở thẳng Ôn thêm (`pendingReviewMode`, chỉ tab Ôn đọc —
-            // sheet "Ôn bộ này" dùng initialMode riêng của nó).
-            if !showsCloseButton, let pending = model.shell.pendingReviewMode {
-                mode = pending
-                model.shell.pendingReviewMode = nil
-            } else {
-                mode = initialMode
-            }
-            // Tab Ôn đọc scope mặc định đã lưu (Ôn nhanh ở Kho). Sheet "Ôn bộ này"
-            // (showsCloseButton) giữ scope truyền vào thay vì ghi đè.
-            if !showsCloseButton {
-                scope = model.reviewScopeDefault.scopeSet
-            }
+            // Chỉ nạp lần đầu: scope/mode đã vào qua `init` (người gọi tự chọn,
+            // Home truyền scope mặc định đã lưu), nạp lại sẽ reset con trỏ + tally.
+            guard !hasLoaded else { return }
+            hasLoaded = true
             Task { await loadQueue() }
         }
     }
@@ -233,11 +217,9 @@ struct ReviewQueueView: View {
                 : "Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
             debtBanner
-            if showsCloseButton {
-                Button("Đóng") { dismiss() }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.top, Spacing.sm)
-            }
+            Button("Đóng") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, Spacing.sm)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

@@ -22,10 +22,10 @@ struct CollectionDetailView: View {
     @State private var moveSheetIntention: MoveIntention?
     @State private var showExport = false
 
-    // J2 hub: ôn bộ này (scoped). Chụp đi qua FloatShutter nổi ở RootView (port
-    // UI lab §6) — không còn sheet capture/analysis riêng trong Hub.
-    @State private var showReview = false
-    @State private var reviewMode: ReviewMode = .srs
+    // J2 hub: ôn bộ này (scoped) mở phiên ôn toàn màn qua `startReview` (RootView giữ
+    // cover). Chụp đi qua FloatShutter nổi ở RootView (port UI lab §6) — không còn
+    // sheet capture/analysis riêng trong Hub.
+    @Environment(\.startReview) private var startReview
 
     private var overview: AppModel.CollectionOverview? {
         model.collections.first { $0.id == collectionID }
@@ -42,12 +42,10 @@ struct CollectionDetailView: View {
                         nextDue: model.library.collectionNextDue,
                         now: model.clock.now,
                         onReview: {
-                            reviewMode = .srs
-                            showReview = true
+                            startReview(ReviewRequest(scope: [collectionID], mode: .srs))
                         },
                         onCram: {
-                            reviewMode = .extra
-                            showReview = true
+                            startReview(ReviewRequest(scope: [collectionID], mode: .extra))
                         })
                 }
 
@@ -94,7 +92,8 @@ struct CollectionDetailView: View {
             }
         }
         .onChange(of: model.dataRevision) {
-            // Lưu từ shutter (port §5.7) bump overview → hub đang mở tự refresh.
+            // Lưu từ shutter (port §5.7) hoặc đóng cover ôn (`RootView` gọi
+            // `reloadOverview`) bump overview → hub đang mở tự refresh.
             reloadList()
         }
         .alert("Đổi tên bộ", isPresented: $showRename) {
@@ -132,11 +131,6 @@ struct CollectionDetailView: View {
         }
         .sheet(isPresented: $showExport) {
             NavigationStack { ExportView(initialCollectionIDs: [collectionID]) }
-        }
-        .sheet(isPresented: $showReview, onDismiss: {
-            reloadAfterSession()
-        }) {
-            NavigationStack { ReviewQueueView(initialScope: [collectionID], initialMode: reviewMode) }
         }
     }
 
@@ -288,12 +282,6 @@ struct CollectionDetailView: View {
             order: isInbox ? .byDateAdded : .byTerm)
         model.loadSessions(collectionID: collectionID)
         model.loadNextDue(collectionID: collectionID)
-    }
-
-    /// Sau một sheet (ôn) đóng lại — refresh từ, phiên, overview.
-    private func reloadAfterSession() {
-        reloadList()
-        model.reloadOverview()
     }
 
     private func commitMove(to targetID: String, intention: MoveIntention) {

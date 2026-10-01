@@ -5,6 +5,8 @@ import SwiftUI
 /// NavigationStack + modal sheet cũ. Capture/Analysis vẫn là sheet phủ toàn
 /// tab; Cài đặt/Dữ liệu là push trên Home. Chụp nhanh bằng `FloatShutter` nổi
 /// (không tab Chụp). Thanh tab = `ShellTabBar` capsule, ẩn native tab bar.
+/// ux-redesign-r1 T1a: phiên ôn là cover toàn màn (`ReviewRequest`), mở từ mọi nơi
+/// qua `\.startReview` — tab Ôn chỉ còn màn "Bắt đầu ôn" tạm (T1b bỏ).
 enum AppTab: Hashable, CaseIterable {
     case home
     case review
@@ -53,6 +55,8 @@ struct RootView: View {
     @State private var khoPath: [ShellRoute] = []
     @State private var showCapture = false
     @State private var showAnalysis = false
+    // ux-redesign-r1 T1a: phiên ôn toàn màn — nil = đóng.
+    @State private var reviewRequest: ReviewRequest?
     // T3a shell-chrome-r1: ẩn thanh tab + shutter khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
@@ -60,14 +64,9 @@ struct RootView: View {
         TabView(selection: $selectedTab) {
             NavigationStack(path: $homePath) {
                 HomeTabView(
-                    onReview: { selectedTab = .review },
                     onSettings: { homePath.append(.settings) },
                     onData: { homePath.append(.data) },
-                    onCapture: openShutterCapture,
-                    onReviewExtra: {
-                        model.shell.pendingReviewMode = .extra
-                        selectedTab = .review
-                    })
+                    onCapture: openShutterCapture)
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
                     }
@@ -78,11 +77,9 @@ struct RootView: View {
             .tag(AppTab.home)
 
             NavigationStack {
-                // Tab Ôn không nằm trong path push nào — `safeAreaInset` của
-                // ShellTabBar trên TabView không lan tới đây (đo bằng screenshot,
-                // T2 shell-chrome-r1): tự chừa khe bằng đúng chiều cao capsule.
-                ReviewQueueView(showsCloseButton: false)
-                    .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
+                // Nội dung canh giữa nên không cần `safeAreaPadding(reservedHeight)` như bản
+                // hàng đợi cũ — hàng nút cuối không còn nằm sát đáy.
+                ReviewStartView()
             }
             .toolbar(.hidden, for: .tabBar)
             .toolbarBackground(.hidden, for: .tabBar)
@@ -101,6 +98,7 @@ struct RootView: View {
             .tag(AppTab.kho)
         }
         .environment(chrome)
+        .environment(\.startReview, { reviewRequest = $0 })
         .onChange(of: selectedTab) { chrome.reveal() }
         .onChange(of: homePath) { chrome.reveal() }
         .onChange(of: khoPath) { chrome.reveal() }
@@ -142,6 +140,18 @@ struct RootView: View {
             }
         }) {
             CaptureView()
+        }
+        // ux-redesign-r1 T1a: phiên ôn toàn màn — che cả thanh tab nên không đổi tab giữa phiên,
+        // `tally` không mất. Đóng → nạp lại tổng quan: Home/Hub/Lịch streak tự refresh qua
+        // `dataRevision`.
+        .fullScreenCover(item: $reviewRequest, onDismiss: {
+            chrome.reveal()
+            model.reloadOverview()
+        }) { request in
+            NavigationStack {
+                ReviewQueueView(initialScope: request.scope, initialMode: request.mode)
+            }
+            .appErrorAlert()
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
             chrome.reveal()
@@ -234,10 +244,9 @@ struct RootView: View {
         case .kho:
             selectedTab = .kho
         case .review:
-            selectedTab = .review
+            reviewRequest = ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .srs)
         case .reviewExtra:
-            model.shell.pendingReviewMode = .extra
-            selectedTab = .review
+            reviewRequest = ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .extra)
         case let .collection(key):
             guard let match = model.collections.first(where: { $0.id == key || $0.name == key })
             else {
