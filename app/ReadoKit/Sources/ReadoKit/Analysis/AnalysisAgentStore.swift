@@ -76,14 +76,14 @@ public enum AnalysisAgentStore {
             ORDER BY created_at;
             """)
         let agents = rows.map { row in
-            let id = row[0].textValue ?? ""
-            let kind = row[1].textValue ?? ""
+            let id = row["id"].textValue ?? ""
+            let kind = row["kind"].textValue ?? ""
             return AnalysisAgent(
                 id: id,
                 kind: kind,
-                name: row[2].textValue ?? "",
-                baseURL: row[3].textValue,
-                model: row[4].textValue,
+                name: row["name"].textValue ?? "",
+                baseURL: row["base_url"].textValue,
+                model: row["model"].textValue,
                 hasKey: kind == "reado_proxy" || secrets.contains(agentID: id))
         }
         return (agents, activeID)

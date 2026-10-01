@@ -56,10 +56,9 @@ public enum Migration {
                 SELECT home_shortcut_1_id, home_shortcut_2_id
                 FROM settings WHERE id = 1;
                 """
-            ).first,
-            row.count == 2
+            ).first
         else { return }
-        let legacy = [row[0].textValue, row[1].textValue]
+        let legacy = [row["home_shortcut_1_id"].textValue, row["home_shortcut_2_id"].textValue]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
         guard !legacy.isEmpty else { return }

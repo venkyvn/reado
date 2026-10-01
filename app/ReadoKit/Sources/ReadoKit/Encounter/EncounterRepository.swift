@@ -84,7 +84,9 @@ public enum EncounterRepository {
     public static func loadLexicon(on db: SQLiteDatabase) throws -> [EncounterLexiconEntry] {
         let rows = try db.rows(
             """
-            SELECT v.id, v.term, v.pos, v.ipa, v.meaning_vi, v.collection_id, c.name
+            SELECT v.id AS id, v.term AS term, v.pos AS pos, v.ipa AS ipa,
+                   v.meaning_vi AS meaning_vi, v.collection_id AS collection_id,
+                   c.name AS collection_name
             FROM vocab_items v
             JOIN collections c ON c.id = v.collection_id
             WHERE NOT EXISTS (
@@ -92,19 +94,15 @@ public enum EncounterRepository {
               WHERE k.vocab_item_id = v.id AND k.suspended_at IS NOT NULL)
             ORDER BY v.created_at, v.id;
             """)
-        return try rows.map { row in
-            guard row.count >= 7 else {
-                throw DatabaseError.failed(
-                    "loadLexicon thiếu cột (\(row.count)/7)", statement: "loadLexicon")
-            }
-            return EncounterLexiconEntry(
-                vocabItemID: row[0].textValue ?? "",
-                term: row[1].textValue ?? "",
-                pos: row[2].textValue ?? "",
-                ipa: row[3].textValue,
-                meaningVI: row[4].textValue ?? "",
-                collectionID: row[5].textValue ?? "",
-                collectionName: row[6].textValue ?? "")
+        return rows.map { row in
+            EncounterLexiconEntry(
+                vocabItemID: row["id"].textValue ?? "",
+                term: row["term"].textValue ?? "",
+                pos: row["pos"].textValue ?? "",
+                ipa: row["ipa"].textValue,
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                collectionID: row["collection_id"].textValue ?? "",
+                collectionName: row["collection_name"].textValue ?? "")
         }
     }
 

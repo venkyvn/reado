@@ -101,32 +101,30 @@ public enum LeechService {
     public static func fetchLeeches(on db: SQLiteDatabase) throws -> [LeechCard] {
         let rows = try db.rows(
             """
-            SELECT ca.id, ca.vocab_item_id, ca.lapses, ca.suspended_at, ca.state,
-                   v.term, v.meaning_vi, v.example
+            SELECT ca.id AS id, ca.vocab_item_id AS vocab_item_id,
+                   ca.lapses AS lapses, ca.suspended_at AS suspended_at,
+                   ca.state AS state, v.term AS term,
+                   v.meaning_vi AS meaning_vi, v.example AS example
             FROM cards ca
             JOIN vocab_items v ON v.id = ca.vocab_item_id
             WHERE ca.suspended_at IS NOT NULL
             ORDER BY ca.suspended_at DESC, ca.id;
             """, [])
         return try rows.map { row in
-            guard row.count >= 8 else {
-                throw DatabaseError.failed(
-                    "fetchLeeches thiếu cột (\(row.count)/8)", statement: "fetchLeeches")
-            }
-            guard let suspendedIso = row[3].textValue,
+            guard let suspendedIso = row["suspended_at"].textValue,
                   let suspendedAt = ISOTimestamp.date(from: suspendedIso) else {
                 throw DatabaseError.failed(
                     "suspended_at sai định dạng ISO", statement: "fetchLeeches")
             }
             return LeechCard(
-                cardID: row[0].textValue ?? "",
-                vocabItemID: row[1].textValue ?? "",
-                lapses: Int(row[2].intValue ?? 0),
+                cardID: row["id"].textValue ?? "",
+                vocabItemID: row["vocab_item_id"].textValue ?? "",
+                lapses: Int(row["lapses"].intValue ?? 0),
                 suspendedAt: suspendedAt,
-                state: row[4].textValue ?? "",
-                term: row[5].textValue ?? "",
-                meaningVI: row[6].textValue ?? "",
-                example: row[7].textValue ?? "")
+                state: row["state"].textValue ?? "",
+                term: row["term"].textValue ?? "",
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                example: row["example"].textValue ?? "")
         }
     }
 

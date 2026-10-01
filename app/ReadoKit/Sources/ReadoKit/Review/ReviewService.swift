@@ -17,33 +17,29 @@ public enum ReviewService {
             FROM cards WHERE id = ?;
             """, [.text(cardID)])
         guard let row = rows.first else { return nil }
-        guard row.count >= 11 else {
-            throw DatabaseError.failed(
-                "fetch cards thiếu cột (\(row.count)/11)", statement: nil)
-        }
         guard
-            let state = row[7].textValue,
+            let state = row["state"].textValue,
             CardStateCode.toState(state) != nil
         else {
             throw DatabaseError.failed(
-                "state lạ: \(row[7].textValue ?? "nil")", statement: nil)
+                "state lạ: \(row["state"].textValue ?? "nil")", statement: nil)
         }
-        guard let dueDate = ISOTimestamp.date(from: row[1].textValue ?? "") else {
+        guard let dueDate = ISOTimestamp.date(from: row["due_at"].textValue ?? "") else {
             throw DatabaseError.failed(
                 "due_at sai định dạng ISO", statement: "SELECT cards")
         }
         return CardSnapshot(
-            id: row[0].textValue ?? "",
+            id: row["id"].textValue ?? "",
             due: dueDate,
-            stability: row[2].doubleValue ?? 0,
-            difficulty: row[3].doubleValue ?? 0,
-            learningSteps: Int(row[4].intValue ?? 0),
-            reps: Int(row[5].intValue ?? 0),
-            lapses: Int(row[6].intValue ?? 0),
+            stability: row["stability"].doubleValue ?? 0,
+            difficulty: row["difficulty"].doubleValue ?? 0,
+            learningSteps: Int(row["learning_steps"].intValue ?? 0),
+            reps: Int(row["reps"].intValue ?? 0),
+            lapses: Int(row["lapses"].intValue ?? 0),
             state: state,
-            lastReview: row[8].textValue.flatMap { ISOTimestamp.date(from: $0) },
-            scheduledDays: Int(row[9].intValue ?? 0),
-            suspendedAt: row[10].textValue.flatMap { ISOTimestamp.date(from: $0) }
+            lastReview: row["last_review_at"].textValue.flatMap { ISOTimestamp.date(from: $0) },
+            scheduledDays: Int(row["scheduled_days"].intValue ?? 0),
+            suspendedAt: row["suspended_at"].textValue.flatMap { ISOTimestamp.date(from: $0) }
         )
     }
 

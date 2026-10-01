@@ -295,7 +295,8 @@ public enum ReviewQueue {
         let rows = try db.rows(
             """
             SELECT c.id AS card_id,
-                   v.term, v.pos, v.ipa, v.meaning_vi, v.example,
+                   v.term AS term, v.pos AS pos, v.ipa AS ipa,
+                   v.meaning_vi AS meaning_vi, v.example AS example,
                    col.name AS collection_name
             FROM cards c
             JOIN vocab_items v ON v.id = c.vocab_item_id
@@ -307,15 +308,15 @@ public enum ReviewQueue {
         var items: [ReviewItem] = []
         var snapshots: [String: CardSnapshot] = [:]
         for row in rows {
-            let cardID = row[0].textValue ?? ""
+            let cardID = row["card_id"].textValue ?? ""
             let item = ReviewItem(
                 cardID: cardID,
-                term: row[1].textValue ?? "",
-                pos: row[2].textValue ?? "other",
-                meaningVI: row[4].textValue ?? "",
-                ipa: row[3].textValue,
-                example: row[5].textValue ?? "",
-                collectionName: row[6].textValue ?? "")
+                term: row["term"].textValue ?? "",
+                pos: row["pos"].textValue ?? "other",
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                ipa: row["ipa"].textValue,
+                example: row["example"].textValue ?? "",
+                collectionName: row["collection_name"].textValue ?? "")
             items.append(item)
             if let snap = try ReviewService.fetchSnapshot(on: db, cardID: cardID) {
                 snapshots[cardID] = snap

@@ -133,7 +133,7 @@ public enum VocabRepository {
         let threshold = setting.first?.first?.doubleValue ?? defaultMatureStability
         let rows = try db.rows(
             """
-            SELECT v.term_normalized, v.pos
+            SELECT v.term_normalized AS term_normalized, v.pos AS pos
             FROM vocab_items v
             JOIN cards c ON c.vocab_item_id = v.id
             WHERE v.collection_id = ?
@@ -143,9 +143,8 @@ public enum VocabRepository {
             """,
             [.text(collectionID), .double(threshold)])
         return Set(rows.compactMap { row in
-            guard row.count >= 2,
-                  let term = row[0].textValue,
-                  let pos = row[1].textValue
+            guard let term = row["term_normalized"].textValue,
+                  let pos = row["pos"].textValue
             else { return nil }
             return "\(term)|\(pos.lowercased())"
         })
@@ -275,28 +274,30 @@ public enum VocabRepository {
         }
         let rows = try db.rows(
             """
-            SELECT v.id, v.collection_id, c.name, v.term, v.term_normalized,
-                   v.pos, v.ipa, v.meaning_vi, v.example, v.cefr, v.created_at
+            SELECT v.id AS id, v.collection_id AS collection_id,
+                   c.name AS collection_name, v.term AS term,
+                   v.term_normalized AS term_normalized, v.pos AS pos,
+                   v.ipa AS ipa, v.meaning_vi AS meaning_vi, v.example AS example,
+                   v.cefr AS cefr, v.created_at AS created_at
             FROM vocab_items v
             JOIN collections c ON c.id = v.collection_id
             WHERE v.collection_id = ?
             ORDER BY \(orderClause);
             """,
             [.text(collectionID)])
-        return rows.compactMap { row in
-            guard row.count >= 11 else { return nil }
-            return VocabularyListEntry(
-                id: row[0].textValue ?? "",
-                collectionID: row[1].textValue ?? "",
-                collectionName: row[2].textValue ?? "",
-                term: row[3].textValue ?? "",
-                termNormalized: row[4].textValue ?? "",
-                pos: row[5].textValue ?? "other",
-                ipa: row[6].textValue,
-                meaningVI: row[7].textValue ?? "",
-                example: row[8].textValue ?? "",
-                cefr: row[9].textValue,
-                createdAt: ISOTimestamp.date(from: row[10].textValue ?? "") ?? Date())
+        return rows.map { row in
+            VocabularyListEntry(
+                id: row["id"].textValue ?? "",
+                collectionID: row["collection_id"].textValue ?? "",
+                collectionName: row["collection_name"].textValue ?? "",
+                term: row["term"].textValue ?? "",
+                termNormalized: row["term_normalized"].textValue ?? "",
+                pos: row["pos"].textValue ?? "other",
+                ipa: row["ipa"].textValue,
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                example: row["example"].textValue ?? "",
+                cefr: row["cefr"].textValue,
+                createdAt: ISOTimestamp.date(from: row["created_at"].textValue ?? "") ?? Date())
         }
     }
 }

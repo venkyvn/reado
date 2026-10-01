@@ -189,24 +189,24 @@ public enum ExportService {
             whereClause = ""
         }
         let sql = """
-            SELECT v.term, v.pos, IFNULL(v.ipa,''), v.meaning_vi,
-                   IFNULL(v.cefr,''), v.example, c.name
+            SELECT v.term AS term, v.pos AS pos, IFNULL(v.ipa,'') AS ipa,
+                   v.meaning_vi AS meaning_vi, IFNULL(v.cefr,'') AS cefr,
+                   v.example AS example, c.name AS collection_name
             FROM vocab_items v
             JOIN collections c ON c.id = v.collection_id
             \(whereClause)
             ORDER BY c.name COLLATE NOCASE, v.created_at, v.id;
             """
         let rows = try db.rows(sql, params)
-        return rows.compactMap { r in
-            guard r.count >= 7 else { return nil }
-            return ExportRow(
-                term: r[0].textValue ?? "",
-                pos: r[1].textValue ?? "",
-                ipa: r[2].textValue ?? "",
-                meaningVI: r[3].textValue ?? "",
-                cefr: r[4].textValue ?? "",
-                example: r[5].textValue ?? "",
-                collectionName: r[6].textValue ?? ""
+        return rows.map { r in
+            ExportRow(
+                term: r["term"].textValue ?? "",
+                pos: r["pos"].textValue ?? "",
+                ipa: r["ipa"].textValue ?? "",
+                meaningVI: r["meaning_vi"].textValue ?? "",
+                cefr: r["cefr"].textValue ?? "",
+                example: r["example"].textValue ?? "",
+                collectionName: r["collection_name"].textValue ?? ""
             )
         }
     }
@@ -233,88 +233,83 @@ public enum ExportService {
         // Collections
         let collRows = try db.rows(
             "SELECT id, name, is_default, created_at FROM collections ORDER BY name COLLATE NOCASE;")
-        let collections: [ExportCollection] = try collRows.map { r in
-            guard r.count >= 4 else { throw DatabaseError.failed("thiếu cột collections", statement: nil) }
-            return ExportCollection(
-                id: r[0].textValue ?? "",
-                name: r[1].textValue ?? "",
-                isDefault: (r[2].intValue ?? 0) != 0,
-                createdAt: r[3].textValue ?? ""
+        let collections: [ExportCollection] = collRows.map { r in
+            ExportCollection(
+                id: r["id"].textValue ?? "",
+                name: r["name"].textValue ?? "",
+                isDefault: (r["is_default"].intValue ?? 0) != 0,
+                createdAt: r["created_at"].textValue ?? ""
             )
         }
 
         // VocabItems
         let vocabRows = try db.rows(
             "SELECT id, collection_id, term, term_normalized, pos, ipa, meaning_vi, example, cefr, created_at FROM vocab_items ORDER BY created_at, id;")
-        let vocabItems: [ExportVocabItem] = vocabRows.compactMap { r in
-            guard r.count >= 10 else { return nil }
-            return ExportVocabItem(
-                id: r[0].textValue ?? "",
-                collectionID: r[1].textValue ?? "",
-                term: r[2].textValue ?? "",
-                termNormalized: r[3].textValue ?? "",
-                pos: r[4].textValue ?? "",
-                ipa: r[5].textValue,
-                meaningVI: r[6].textValue ?? "",
-                example: r[7].textValue ?? "",
-                cefr: r[8].textValue,
-                createdAt: r[9].textValue ?? ""
+        let vocabItems: [ExportVocabItem] = vocabRows.map { r in
+            ExportVocabItem(
+                id: r["id"].textValue ?? "",
+                collectionID: r["collection_id"].textValue ?? "",
+                term: r["term"].textValue ?? "",
+                termNormalized: r["term_normalized"].textValue ?? "",
+                pos: r["pos"].textValue ?? "",
+                ipa: r["ipa"].textValue,
+                meaningVI: r["meaning_vi"].textValue ?? "",
+                example: r["example"].textValue ?? "",
+                cefr: r["cefr"].textValue,
+                createdAt: r["created_at"].textValue ?? ""
             )
         }
 
         // Cards
         let cardRows = try db.rows(
             "SELECT id, vocab_item_id, direction, state, stability, difficulty, reps, lapses, learning_steps, scheduled_days, last_review_at, due_at, suspended_at FROM cards ORDER BY due_at, id;")
-        let cards: [ExportCard] = cardRows.compactMap { r in
-            guard r.count >= 13 else { return nil }
-            return ExportCard(
-                id: r[0].textValue ?? "",
-                vocabItemID: r[1].textValue ?? "",
-                direction: r[2].textValue ?? "receptive",
-                state: r[3].textValue ?? "new",
-                stability: r[4].doubleValue ?? 0,
-                difficulty: r[5].doubleValue ?? 0,
-                reps: Int(r[6].intValue ?? 0),
-                lapses: Int(r[7].intValue ?? 0),
-                learningSteps: Int(r[8].intValue ?? 0),
-                scheduledDays: Int(r[9].intValue ?? 0),
-                lastReviewAt: r[10].textValue,
-                dueAt: r[11].textValue ?? "",
-                suspendedAt: r[12].textValue
+        let cards: [ExportCard] = cardRows.map { r in
+            ExportCard(
+                id: r["id"].textValue ?? "",
+                vocabItemID: r["vocab_item_id"].textValue ?? "",
+                direction: r["direction"].textValue ?? "receptive",
+                state: r["state"].textValue ?? "new",
+                stability: r["stability"].doubleValue ?? 0,
+                difficulty: r["difficulty"].doubleValue ?? 0,
+                reps: Int(r["reps"].intValue ?? 0),
+                lapses: Int(r["lapses"].intValue ?? 0),
+                learningSteps: Int(r["learning_steps"].intValue ?? 0),
+                scheduledDays: Int(r["scheduled_days"].intValue ?? 0),
+                lastReviewAt: r["last_review_at"].textValue,
+                dueAt: r["due_at"].textValue ?? "",
+                suspendedAt: r["suspended_at"].textValue
             )
         }
 
         // ReviewLogs — snapshot TRƯỚC khi chấm (FR-12)
         let logRows = try db.rows(
             "SELECT id, card_id, mode, rating, state_before, stability_before, difficulty_before, learning_steps_before, due_before, elapsed_days, scheduled_days, reviewed_at FROM review_logs ORDER BY reviewed_at, id;")
-        let reviewLogs: [ExportReviewLog] = logRows.compactMap { r in
-            guard r.count >= 12 else { return nil }
-            return ExportReviewLog(
-                id: r[0].textValue ?? "",
-                cardID: r[1].textValue ?? "",
-                mode: r[2].textValue ?? "srs",
-                rating: Int(r[3].intValue ?? 1),
-                stateBefore: r[4].textValue ?? "new",
-                stabilityBefore: r[5].doubleValue ?? 0,
-                difficultyBefore: r[6].doubleValue ?? 0,
-                learningStepsBefore: Int(r[7].intValue ?? 0),
-                dueBefore: r[8].textValue ?? "",
-                elapsedDays: Int(r[9].intValue ?? 0),
-                scheduledDays: Int(r[10].intValue ?? 0),
-                reviewedAt: r[11].textValue ?? ""
+        let reviewLogs: [ExportReviewLog] = logRows.map { r in
+            ExportReviewLog(
+                id: r["id"].textValue ?? "",
+                cardID: r["card_id"].textValue ?? "",
+                mode: r["mode"].textValue ?? "srs",
+                rating: Int(r["rating"].intValue ?? 1),
+                stateBefore: r["state_before"].textValue ?? "new",
+                stabilityBefore: r["stability_before"].doubleValue ?? 0,
+                difficultyBefore: r["difficulty_before"].doubleValue ?? 0,
+                learningStepsBefore: Int(r["learning_steps_before"].intValue ?? 0),
+                dueBefore: r["due_before"].textValue ?? "",
+                elapsedDays: Int(r["elapsed_days"].intValue ?? 0),
+                scheduledDays: Int(r["scheduled_days"].intValue ?? 0),
+                reviewedAt: r["reviewed_at"].textValue ?? ""
             )
         }
 
         // Encounters (FR-22) — gặp lại từ cũ khi đọc, ngoài FSRS
         let encounterRows = try db.rows(
             "SELECT id, vocab_item_id, kind, created_at FROM encounters ORDER BY created_at, id;")
-        let encounters: [ExportEncounter] = encounterRows.compactMap { r in
-            guard r.count >= 4 else { return nil }
-            return ExportEncounter(
-                id: r[0].textValue ?? "",
-                vocabItemID: r[1].textValue ?? "",
-                kind: r[2].textValue ?? "seen",
-                createdAt: r[3].textValue ?? ""
+        let encounters: [ExportEncounter] = encounterRows.map { r in
+            ExportEncounter(
+                id: r["id"].textValue ?? "",
+                vocabItemID: r["vocab_item_id"].textValue ?? "",
+                kind: r["kind"].textValue ?? "seen",
+                createdAt: r["created_at"].textValue ?? ""
             )
         }
 
@@ -365,11 +360,11 @@ public enum ExportService {
     static func fetchExportSettings(on db: SQLiteDatabase) throws -> ExportSettings {
         guard let row = try db.rows(
             "SELECT cefr_level, daily_new_limit, request_retention, maximum_interval, enable_fuzz, day_cutoff_hour, timezone, enable_short_term, fsrs_version, fsrs_params FROM settings WHERE id = 1;"
-        ).first, row.count == 10 else {
+        ).first else {
             throw DatabaseError.failed("settings id=1 chưa seed", statement: nil)
         }
         let fsrsParams: [Double]? = {
-            guard let raw = row[9].textValue else { return nil }
+            guard let raw = row["fsrs_params"].textValue else { return nil }
             guard let data = raw.data(using: .utf8),
                   let decoded = try? JSONDecoder().decode([Double].self, from: data) else {
                 return nil
@@ -377,15 +372,15 @@ public enum ExportService {
             return decoded
         }()
         return ExportSettings(
-            cefrLevel: row[0].textValue ?? "B2",
-            dailyNewLimit: Int(row[1].intValue ?? 10),
-            requestRetention: row[2].doubleValue ?? 0.9,
-            maximumInterval: Int(row[3].intValue ?? 36500),
-            enableFuzz: (row[4].intValue ?? 1) != 0,
-            dayCutoffHour: Int(row[5].intValue ?? 4),
-            timezone: row[6].textValue ?? "UTC",
-            enableShortTerm: (row[7].intValue ?? 1) != 0,
-            fsrsVersion: row[8].textValue,
+            cefrLevel: row["cefr_level"].textValue ?? "B2",
+            dailyNewLimit: Int(row["daily_new_limit"].intValue ?? 10),
+            requestRetention: row["request_retention"].doubleValue ?? 0.9,
+            maximumInterval: Int(row["maximum_interval"].intValue ?? 36500),
+            enableFuzz: (row["enable_fuzz"].intValue ?? 1) != 0,
+            dayCutoffHour: Int(row["day_cutoff_hour"].intValue ?? 4),
+            timezone: row["timezone"].textValue ?? "UTC",
+            enableShortTerm: (row["enable_short_term"].intValue ?? 1) != 0,
+            fsrsVersion: row["fsrs_version"].textValue,
             fsrsParams: fsrsParams
         )
     }

@@ -23,7 +23,7 @@ extension VocabRepository {
         // ngưỡng trong `b`.
         let rows = try db.rows(
             """
-            SELECT c.id, c.name, c.is_default,
+            SELECT c.id AS id, c.name AS name, c.is_default AS is_default,
                    COUNT(DISTINCT v.id) AS word_count,
                    SUM(CASE WHEN ca.suspended_at IS NULL AND ca.due_at <= ?
                         THEN 1 ELSE 0 END) AS due_now,
@@ -87,25 +87,21 @@ extension VocabRepository {
                 .double(Mastery.stabilityThreshold),
                 .double(Mastery.stabilityThreshold),
             ])
-        return try rows.map { row in
-            guard row.count >= 13 else {
-                throw DatabaseError.failed(
-                    "thiếu cột summary", statement: "collection_summaries")
-            }
-            return CollectionSummary(
-                id: row[0].textValue ?? "",
-                name: row[1].textValue ?? "",
-                isDefault: (row[2].intValue ?? 0) != 0,
-                wordCount: Int(row[3].intValue ?? 0),
-                dueNow: Int(row[4].intValue ?? 0),
-                lastAddedAt: row[5].textValue.flatMap { ISOTimestamp.date(from: $0) },
-                masteredCount: Int(row[6].intValue ?? 0),
-                learningCount: Int(row[7].intValue ?? 0),
-                reviewingCount: Int(row[8].intValue ?? 0),
-                notStartedCount: Int(row[9].intValue ?? 0),
-                absorbedCount: Int(row[12].intValue ?? 0),
-                addedLast7Days: Int(row[10].intValue ?? 0),
-                crammableCount: Int(row[11].intValue ?? 0))
+        return rows.map { row in
+            CollectionSummary(
+                id: row["id"].textValue ?? "",
+                name: row["name"].textValue ?? "",
+                isDefault: (row["is_default"].intValue ?? 0) != 0,
+                wordCount: Int(row["word_count"].intValue ?? 0),
+                dueNow: Int(row["due_now"].intValue ?? 0),
+                lastAddedAt: row["last_added"].textValue.flatMap { ISOTimestamp.date(from: $0) },
+                masteredCount: Int(row["mastered_count"].intValue ?? 0),
+                learningCount: Int(row["learning_count"].intValue ?? 0),
+                reviewingCount: Int(row["reviewing_count"].intValue ?? 0),
+                notStartedCount: Int(row["not_started_count"].intValue ?? 0),
+                absorbedCount: Int(row["absorbed_count"].intValue ?? 0),
+                addedLast7Days: Int(row["added_7d"].intValue ?? 0),
+                crammableCount: Int(row["crammable_count"].intValue ?? 0))
         }
     }
 

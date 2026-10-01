@@ -74,11 +74,11 @@ public enum ReadingSessionRepository {
             """, [.text(collectionID)])
         return rows.map { row in
             ReadingSession(
-                id: row[0].textValue ?? "",
-                collectionID: row[1].textValue ?? "",
-                createdAt: ISOTimestamp.date(from: row[2].textValue ?? "") ?? Date(),
-                segments: decodeSegments(row[3].textValue ?? ""),
-                summary: row[4].textValue)
+                id: row["id"].textValue ?? "",
+                collectionID: row["collection_id"].textValue ?? "",
+                createdAt: ISOTimestamp.date(from: row["created_at"].textValue ?? "") ?? Date(),
+                segments: decodeSegments(row["segments"].textValue ?? ""),
+                summary: row["summary"].textValue)
         }
     }
 
