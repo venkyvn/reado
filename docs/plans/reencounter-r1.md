@@ -1,6 +1,6 @@
 # Plan — reencounter-r1: gặp lại từ cũ khi đọc + mức "Đã thấm"
 
-> **Trạng thái 2026-10-01:** fen OK (go) cả schema `encounters` và FR-22 mới. 3 task: **T1 ✅ T2 ✅** (fen xác nhận test xanh + xem tay UI 2026-10-01), T3 chưa.
+> **Trạng thái 2026-10-01:** fen OK (go) cả schema `encounters` và FR-22 mới. 3 task: **T1 ✅ T2 ✅ T3 ✅(tạm)** — T1/T2 fen xác nhận test xanh + xem tay UI; T3 fen chốt "tạm xem như xong" 2026-10-01 (xem ghi chú ở T3).
 
 ## Spec
 - FR / journey: **FR-22 mới "Gặp lại từ cũ khi đọc"** (thêm vào PRD ở T1); lấp criterion 3 của FR-05 (chạm vocab trong đoạn → nghĩa + IPA — chưa làm ở `ReadingSessionView`). Thước đo trực tiếp **M-06**. J2.
@@ -57,7 +57,8 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 - Test: `seen` ghi đúng transaction lưu; UI test/preview tối thiểu.
 - DoD: full xanh + fen xem tay trên simulator.
 
-### T3 — thang tiến độ
-- **Trạng thái 2026-10-01:** code + test đã viết (cloud, **chưa build/chạy test, UI chưa xem tay**). `Mastery.Level` + `Mastery.level(state:stability:recognizedCount:)` (hàm thuần — nguồn luật; SQL đối chiếu trong test); `CollectionSummary.absorbedCount` (thêm cột 12 + một bind ngưỡng, `masteredCount` giữ nghĩa Q-08 gồm cả Đã thấm); `ReviewQueue.newCardIDs` khoá (2) = số dòng cùng term **+ `seen`** (`recognized` không cộng điểm); `AppModel.reencounteredThisWeek` (7 ngày gần nhất, nạp trong `reloadOverview`), `recognizeWord` gọi `reloadOverview` khi vừa ghi; UI: thanh 4 nhóm Đã thấm › Đã nhớ › Đang học › Mới ở `CollectionStatsHeader`, `MasteryRing(absorbed:)` cung thứ hai (Home + Kho), nhãn "Đã thuộc" → "Đã nhớ" (toast "Thuộc rồi!" ADR-038 giữ nguyên), hàng "Gặp lại N từ tuần này" ở Home (ẩn khi 0). Docs: PRD FR-11 criterion thứ tự thẻ mới nhắc `seen`. Test: `MasteryLevelTests` (kit), `VocabularyListTests` (+2, đối chiếu SQL ↔ `Mastery.level`), `ReviewQueueAndServiceTests` (+3).
+### T3 — thang tiến độ ✅(tạm) 2026-10-01
+- **Chốt tạm 2026-10-01:** fen build được bản T3 và xem Home nhưng **chưa thấy** dòng "Gặp lại N từ tuần này" — code đọc lại không thấy lỗi, nhiều khả năng N = 0 (hàng cố ý ẩn khi 0; `seen` chỉ ghi khi LƯU trang mới có từ cũ, `recognized` chỉ khi bấm "Nhận ra"). **Chưa xác minh:** kết quả test T3 (không báo số), dòng Home với dữ liệu thật, thanh 4 màu/`MasteryRing` đã thấm. Nếu sau này vẫn không hiện khi `SELECT … FROM encounters` có dòng trong 7 ngày → bug thật, mở lại.
+- **Code (viết ở cloud):** `Mastery.Level` + `Mastery.level(state:stability:recognizedCount:)` (hàm thuần — nguồn luật; SQL đối chiếu trong test); `CollectionSummary.absorbedCount` (thêm cột 12 + một bind ngưỡng, `masteredCount` giữ nghĩa Q-08 gồm cả Đã thấm); `ReviewQueue.newCardIDs` khoá (2) = số dòng cùng term **+ `seen`** (`recognized` không cộng điểm); `AppModel.reencounteredThisWeek` (7 ngày gần nhất, nạp trong `reloadOverview`), `recognizeWord` gọi `reloadOverview` khi vừa ghi; UI: thanh 4 nhóm Đã thấm › Đã nhớ › Đang học › Mới ở `CollectionStatsHeader`, `MasteryRing(absorbed:)` cung thứ hai (Home + Kho), nhãn "Đã thuộc" → "Đã nhớ" (toast "Thuộc rồi!" ADR-038 giữ nguyên), hàng "Gặp lại N từ tuần này" ở Home (ẩn khi 0). Docs: PRD FR-11 criterion thứ tự thẻ mới nhắc `seen`. Test: `MasteryLevelTests` (kit), `VocabularyListTests` (+2, đối chiếu SQL ↔ `Mastery.level`), `ReviewQueueAndServiceTests` (+3).
 - `Mastery.level`, `absorbedCount`, thanh 4 màu đổi nhãn Mới · Đang học · Đã nhớ · Đã thấm, `MasteryRing`, Home "Gặp lại N từ tuần này"; `newCardIDs` cộng số `seen` vào key ưu tiên.
 - DoD: full xanh.

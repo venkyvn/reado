@@ -159,7 +159,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | 3.8 | FR-10 Lọc "đã thuộc" lúc trích xuất | Q-06/Q-08/Q-09 **đã chốt** (ADR-032, 2026-09-22). Còn chờ dữ liệu thật trước khi bật — không hỏi lại ba Q | ⬜ chưa code |
 | 3.11 | FR-21 đầy đủ: list agent OpenAI-compat + add key Keychain + chọn active cho FR-02 | Sau skeleton (PRD mục 10); còn chờ 0.7 proxy + 1.5 adapter | ⬜ |
 | 3.13 | Đo + ghi nhận NFR-01/NFR-02 (chưa chốt ngưỡng) + kiểm M-07 bằng dữ liệu thật | R1 chỉ đo, R2 mới chốt ngưỡng; M-07 cần dữ liệu thật → cuối | ⬜ |
-| 3.16 | FR-22 Gặp lại từ cũ khi đọc (reencounter-r1, ADR-048): T1 dữ liệu · T2 màn đọc · T3 thang tiến độ + Home | M-06; plan `docs/plans/reencounter-r1.md` | 🔄 T1 ✅ + T2 ✅ 2026-10-01 (migration v4 `encounters`, `EncounterRepository`, `EncounterMatcher`, export; gạch chân + popover + `seen` khi lưu trang — fen xác nhận test xanh + xem tay UI); T3 code xong 2026-10-01 (thang 4 mức, thanh 4 màu, Home "Gặp lại N từ", `seen` vào thứ tự thẻ mới) — chờ test Mac + xem tay |
+| 3.16 | FR-22 Gặp lại từ cũ khi đọc (reencounter-r1, ADR-048): T1 dữ liệu · T2 màn đọc · T3 thang tiến độ + Home | M-06; plan `docs/plans/reencounter-r1.md` | 🔄 T1 ✅ + T2 ✅ 2026-10-01 (migration v4 `encounters`, `EncounterRepository`, `EncounterMatcher`, export; gạch chân + popover + `seen` khi lưu trang — fen xác nhận test xanh + xem tay UI); T3 ✅-tạm 2026-10-01 (thang 4 mức, thanh 4 màu, Home "Gặp lại N từ", `seen` vào thứ tự thẻ mới — fen chốt tạm xong; chưa xác minh test T3 + hàng Home với dữ liệu thật) |
 
 ### Phase 4 — R2 (cổng cứng: R1 đã dùng hằng ngày ≥ 4 tuần + owner GO; chốt **Q-11** trước)
 
