@@ -7,6 +7,8 @@ import SwiftUI
 struct CollectionStatsHeader: View {
     let overview: AppModel.CollectionOverview
     let nextDue: VocabRepository.NextDue?
+    /// Mốc "bây giờ" cho chữ tương đối (từ `AppModel.clock`) — view thuần, không tự gọi `Date()`.
+    let now: Date
     let onReview: () -> Void
     let onCram: () -> Void
 
@@ -162,7 +164,7 @@ struct CollectionStatsHeader: View {
         guard let last = overview.lastAddedAt else { return nil }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        return "thêm lần cuối " + formatter.localizedString(for: last, relativeTo: Date())
+        return "thêm lần cuối " + formatter.localizedString(for: last, relativeTo: now)
     }
 
     private var nextDueValue: String {
@@ -171,7 +173,7 @@ struct CollectionStatsHeader: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .full
-        return formatter.localizedString(for: nextDue.date, relativeTo: Date())
+        return formatter.localizedString(for: nextDue.date, relativeTo: now)
     }
 
     private var nextDueDetail: String? {

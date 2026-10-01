@@ -40,6 +40,7 @@ struct CollectionDetailView: View {
                     CollectionStatsHeader(
                         overview: overview,
                         nextDue: model.library.collectionNextDue,
+                        now: model.clock.now,
                         onReview: {
                             reviewMode = .srs
                             showReview = true
