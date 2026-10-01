@@ -1,6 +1,6 @@
 # Plan: refactor-r4 — tách CaptureView, dọn try?, B5 chuyển test sang ReadoKitTests
 
-> **Trạng thái:** T1 ✅ · T2 ✅ 2026-10-01 (355/357 xanh). T3 chưa làm.
+> **Trạng thái:** T1 ✅ · T2 ✅ · T3 ✅ 2026-10-01 (355/357 xanh). Plan khép.
 
 > Viết cho **Sonnet** thực thi: **1 task = 1 session**, làm đúng thứ tự T1 → T2 → T3.
 > Khi fen duyệt plan: lưu nguyên văn vào `docs/plans/refactor-r4.md` (commit chung với T1).

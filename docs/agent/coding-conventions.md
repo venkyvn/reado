@@ -110,7 +110,7 @@ app/
   ADR-046). Test chạy trên macOS (`kit`) ghi vào `~/Documents` THẬT (không
   sandbox) — class nào gọi `DebugTrace`/code ghi Documents phải override
   `DebugTrace.documentsDirectoryOverride` sang thư mục tạm ở `setUp`/`tearDown`
-  (mẫu: `DebugTraceTests`, `AnalysisTests`). Tin cột `Executed N tests` / dòng
+  (mẫu: `DebugTraceTests`, `AnalysisNetworkTestCase`). Tin cột `Executed N tests` / dòng
   `RESULT` của `scripts/test.sh`, không tin số trong commit cũ.
 - "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào ROADMAP.
 
