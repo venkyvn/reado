@@ -135,13 +135,15 @@ struct AnalysisView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsResult {
                 switch tab {
-                case .vocab: saveBar
+                case .vocab:
+                    if !drafts.isEmpty { saveBar }
                 case .page: translationBar
                 }
             }
         }
         // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
         // Swipe sheet bị chặn tới khi đã lưu/bỏ; nút Đóng hỏi rõ ràng.
+        // Giữ chặn kể cả khi rỗng sau FR-10: đóng bằng nút (X / Đóng) mới dọn state, vuốt thì không.
         .interactiveDismissDisabled(model.capture.analysisResult != nil && !hasConfirmed)
         .alert("Bỏ kết quả phân tích?", isPresented: $showQuitWarning) {
             Button("Bỏ kết quả", role: .destructive) {
@@ -273,10 +275,18 @@ struct AnalysisView: View {
             excludingMature: model.matureKeysForCapture())
     }
 
+    /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào
+    /// (T9: rỗng sau FR-10) thì chẳng có gì để mất — đóng thẳng.
+    private var hasUnsavedWork: Bool {
+        model.capture.analysisResult != nil && !hasConfirmed && !drafts.isEmpty
+    }
+
     private func quitTapped() {
-        if model.capture.analysisResult != nil, !hasConfirmed {
+        if hasUnsavedWork {
             showQuitWarning = true
         } else {
+            // Dọn state (ảnh + kết quả) để lần mở camera sau không tự mở lại phân tích cũ.
+            model.discardAnalysis()
             dismiss()
         }
     }
@@ -434,7 +444,33 @@ struct AnalysisView: View {
     // MARK: - Tab Từ vựng
 
     /// FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
+    @ViewBuilder
     private var vocabList: some View {
+        if drafts.isEmpty {
+            emptyVocabView
+        } else {
+            vocabRows
+        }
+    }
+
+    /// J1: không còn từ đáng học sau FR-10 (đã thuộc / agent không tìm được) → nói rõ + đường đi, không
+    /// để danh sách trống im lặng. Tab Trang vẫn đọc được.
+    private var emptyVocabView: some View {
+        ContentUnavailableView {
+            Label("Không còn từ đáng học trên trang này", systemImage: "text.badge.checkmark")
+        } description: {
+            Text("Các từ trên trang đã thuộc rồi, hoặc không có từ nào cần thêm. Bạn vẫn có thể đọc bản dịch ở tab Trang.")
+        } actions: {
+            Button("Chụp lại") { recapture() }
+                .buttonStyle(.borderedProminent)
+            Button("Đóng", role: .cancel) {
+                model.discardAnalysis()
+                dismiss()
+            }
+        }
+    }
+
+    private var vocabRows: some View {
         List {
             if !drafts.isEmpty {
                 Section {

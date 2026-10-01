@@ -10,7 +10,7 @@
 #   scripts/sim_screens.sh size <cỡ>       # Dynamic Type: extra-extra-large | large | ... (xcrun simctl ui)
 #   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system]
 #                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
-#                                      [--fresh] [--no-build]
+#                                      [--fixture <file.json>] [--fresh] [--no-build]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
@@ -18,6 +18,8 @@
 #                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
 #                                           # encounter-sheet, save-banner).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
+#                                           # `--fixture` đổi JSON cho màn analysis-fixture* (mặc định
+#                                           # scripts/fixtures/analysis-demo.json; analysis-empty.json = rỗng sau FR-10).
 #                                           # `--seed` chỉ có tác dụng khi kho ĐANG TRỐNG (seed-once, như CSV cũ)
 #                                           # — đổi seed thì luôn kèm `--fresh`. `demo-reviewed` dựng lịch ôn giả
 #                                           # (`DevSeed.gradeHistory`) cho CTA "Ôn thêm" + heatmap nhiều mức màu.
@@ -82,11 +84,17 @@ case "${1:-}" in
         --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
         --seed) SEED="${2:?Thiếu giá trị cho --seed}"; shift 2 ;;
         --alert) ALERT="${2:?Thiếu giá trị cho --alert}"; shift 2 ;;
+        --fixture) ANALYSIS_FIXTURE="${2:?Thiếu giá trị cho --fixture}"; shift 2 ;;
         --fresh) OPEN_FRESH=1; shift ;;
         --no-build) OPEN_BUILD=0; shift ;;
         *) echo "Tham số lạ: $1" >&2; exit 2 ;;
       esac
     done
+    # App đọc file qua đường dẫn tuyệt đối (simulator dùng chung ổ đĩa với máy chủ).
+    case "$ANALYSIS_FIXTURE" in
+      /*) ;;
+      *) ANALYSIS_FIXTURE="$ROOT/$ANALYSIS_FIXTURE" ;;
+    esac
     if [[ -n "$SEED" && "$OPEN_FRESH" == 0 ]]; then
       echo "Lưu ý: --seed chỉ áp khi kho trống — kèm --fresh nếu muốn chắc seed mới." >&2
     fi

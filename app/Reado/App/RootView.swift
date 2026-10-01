@@ -56,6 +56,8 @@ struct RootView: View {
     // `save-banner` cũng đặt nó. `bannerHubID` = Hub mà nút "Xem" mở (nil = banner không có đích).
     @State private var banner: ShellBannerItem?
     @State private var bannerHubID: String?
+    // ux-redesign-r1 T9: chụp khi chưa có agent chạy được → mở form thêm agent thay vì camera.
+    @State private var showAgentSetup = false
     // T3a shell-chrome-r1: ẩn thanh tab (kèm nút chụp) khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
@@ -172,6 +174,16 @@ struct RootView: View {
         }) {
             NavigationStack { AnalysisView() }
         }
+        // T9: phòng lỗi trước — không để người dùng chụp xong rồi mới biết thiếu agent. Nối agent xong thì
+        // tiếp tục việc đang làm dở (mở camera) thay vì bắt bấm lại; huỷ form thì ở nguyên chỗ.
+        .sheet(isPresented: $showAgentSetup, onDismiss: {
+            if model.activeAgentReady { openShutterCapture() }
+        }) {
+            AgentFormSheet(agent: nil) { name, base, modelName, key in
+                model.addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
+            }
+            .appErrorAlert()
+        }
         .onAppear {
             model.reloadOverview()
             #if DEBUG
@@ -216,9 +228,19 @@ struct RootView: View {
 
     /// Mở chụp từ nút chụp trong thanh tab — đích = bộ hub đang mở (nếu có), không thì kho tạm.
     private func openShutterCapture() {
+        openCapture(targetCollectionID: model.shell.shutterTargetCollectionID)
+    }
+
+    /// Cửa chung mọi đường vào camera. Chưa có agent chạy được (J1: phòng lỗi trước, Nielsen #5) →
+    /// form thêm agent, không mở camera rồi mới báo lỗi sau khi chụp.
+    private func openCapture(targetCollectionID: String?) {
+        guard model.activeAgentReady else {
+            showAgentSetup = true
+            return
+        }
         // port UI lab §9: haptic lúc chụp.
         Haptics.action()
-        model.capture.analysisTargetCollectionID = model.shell.shutterTargetCollectionID
+        model.capture.analysisTargetCollectionID = targetCollectionID
         showCapture = true
     }
 
@@ -280,7 +302,9 @@ struct RootView: View {
             selectedTab = .library
             libraryPath = [.data]
         case .capture:
-            openShutterCapture()
+            // Bỏ qua kiểm agent: chụp được màn camera kể cả `--seed empty` (chưa có agent).
+            model.capture.analysisTargetCollectionID = model.shell.shutterTargetCollectionID
+            showCapture = true
         case .analysisFixture:
             openDebugAnalysisFixture()
         case .analysisFixturePage:
@@ -343,11 +367,7 @@ struct RootView: View {
             // J1: CTA "Chụp trang" ở màn này đích ngầm kho tạm — không set
             // `shutterTargetCollectionID` như `openShutterCapture` (đó là cho
             // nút chụp trên Hub, muốn đích = hub đang mở).
-            StreakCalendarView(onCapture: {
-                Haptics.action()
-                model.capture.analysisTargetCollectionID = nil
-                showCapture = true
-            })
+            StreakCalendarView(onCapture: { openCapture(targetCollectionID: nil) })
         case .settings:
             SettingsView()
         case .data:
