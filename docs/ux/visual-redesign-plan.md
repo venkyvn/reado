@@ -1,5 +1,7 @@
 # Kế hoạch redesign visual Reado — bố trí · icon · vị trí · settings
 
+> **SUPERSEDED (2026-10-01, ADR-051)** — đã làm qua visual-polish-r1; `pro-rules.md`/`swiftui.csv` nhắc dưới đây không còn trong repo. Luật hiện hành: [design-system/reado/MASTER.md](../../design-system/reado/MASTER.md).
+
 > Phạm vi: **chỉ tầng View (SwiftUI)**. ReadoKit, logic, FSRS, DDL, FR — **giữ nguyên hoàn toàn**.
 > Neo triết lý: 6 nguyên lý `docs/specs/vision.md` (đặc biệt "Journey Over Summary" — chống gamification) + `pro-rules.md` (native checklist, trong skill `ui-ux-pro-max`) + `swiftui.csv` (luật SwiftUI).
 

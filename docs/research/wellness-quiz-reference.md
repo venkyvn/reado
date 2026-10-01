@@ -1,5 +1,7 @@
 # Wellness Quiz Prompt — Tham chiếu cho Reado
 
+> **Lỗi thời một phần (2026-10-01, ADR-051):** hex tint, rgba glass và font Inter trích từ MASTER cũ dưới đây không còn đúng. Luật hiện hành: [design-system/reado/MASTER.md](../../design-system/reado/MASTER.md).
+>
 > **Mục đích:** Ghi lại những gì học được từ prompt wellness quiz của fen để tham chiếu khi thiết kế UI Reado. Không phải yêu cầu sản phẩm mới, không thêm FR/journey, không code ở phase này.
 > **Nguồn prompt:** Yêu cầu build màn hình quiz wellness trong phone frame mockup — React 18 + Tailwind CSS 3 + Lucide React + Vite + TypeScript.
 

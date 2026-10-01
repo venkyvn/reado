@@ -45,7 +45,7 @@
 | `docs/session-brief.md` | Bàn giao session — đọc ở Turn 1 session mới |
 | `ROADMAP.md` | Tracker tiến độ + checklist theo FR (file lớn — Grep) |
 | `docs/idea.md` | Ý tưởng gốc của owner, giữ làm provenance |
-| `design-system/reado/MASTER.md` | Token/vật liệu UI (FROZEN liquid-glass) |
+| `design-system/reado/MASTER.md` | Quyết định look + luật UI native; token ở `DesignSystem.swift` |
 | `ref/pvo/` | Mô hình PVO — R2, **không đọc để build R1** |
 | `docs/journal/`, `docs/investigations/` | Nhật ký theo ngày · bundle điều tra (đọc khi truy vết) |
 
