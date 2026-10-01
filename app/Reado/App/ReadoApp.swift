@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 /// Design tokens duy nhất của Reado — mọi màu semantic đều qua đây
-/// (docs/ux/visual-redesign-plan.md §0). Không hardcode màu ở view.
+/// (`design-system/reado/MASTER.md` §Màu). Không hardcode màu ở view.
 ///
 /// Lưu ý: `accent` KHÔNG nằm ở đây — màu nhấn do người dùng chọn qua Settings
 /// (`AppTheme`) và áp ở `ReadoApp` qua `.tint`. View dùng `Color.accentColor`.
@@ -81,7 +81,7 @@ private extension UIColor {
 }
 
 /// Nhịp motion duy nhất của app — nội dung hiện/ẩn báo "vừa xuất hiện", không ăn mừng
-/// (vision "Journey Over Summary"). MASTER: 150–300ms, lệch dọc 8–16pt.
+/// (vision "Journey Over Summary"). Luật dùng: `design-system/reado/MASTER.md` §Bố cục.
 /// Sheet / tab / push KHÔNG đi qua đây — hệ thống tự animate, đè vào là hỏng.
 enum Motion {
     static let reveal = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.28)

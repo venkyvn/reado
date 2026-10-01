@@ -854,3 +854,25 @@
   `ReviewQueueAndServiceTests` (3 test đổi theo LIFO B3, thêm 1 test rowid
   cùng-lần-chụp), `VocabularyListTests` (1 chỗ đối chiếu `crammableCount`) —
   329/329 xanh ở `kit`, 348/350 xanh ở suite đầy đủ (giữ 2 skip cũ).
+
+## ADR-051 — MASTER.md viết lại thành luật UI native, khớp token thật — sửa phần "không sửa" của ADR visual-polish-r1
+
+- **Ngày:** 2026-10-01
+- **Bối cảnh:** `design-system/reado/MASTER.md` là output máy sinh của ui-ux-pro-max
+  cho web (CSS, hover, `cursor:pointer`, breakpoint, GSAP, "Hero + Testimonials";
+  anti-pattern "Boring design / No motivation" ngược vision). Văn bản đã lệch code:
+  tint ghi cứng trong khi accent thật là `Color.accentColor` theo `AppTheme`; card ghi
+  nền kem + bóng trong khi `card()` dùng `Theme.surface`, không bóng; font ghi Inter
+  trong khi code dùng text style hệ thống qua `Typo`. Agent đọc MASTER sẽ code sai.
+- **Quyết định:** Giữ FROZEN cho **quyết định look** (glass trên chrome, nội dung đọc
+  đặc). Văn bản viết lại (≤ 80 dòng, tiếng Việt) theo từ vựng SwiftUI. Luật chỉ ghi
+  tên token và khi nào dùng, không chép con số, trỏ về `DesignSystem.swift` và
+  `ReadoApp.swift`. Mỗi luật kiểm được pass/fail, kèm một dòng lý do. Có thêm mục
+  "Không làm" chiếu 6 nguyên lý vision, checklist chụp màn hình, và dòng "Đối chiếu
+  code lần cuối". Luật icon (outline ở toolbar, filled ở trạng thái chọn và CTA) lấy
+  từ `docs/ux/visual-redesign-plan.md` §1. Mục NL6 chỉ trích đúng vision ("XP, huy
+  hiệu không gắn với việc đã làm"), **không** đặt trần cho phần thưởng: owner muốn
+  để ngỏ phần thưởng gắn với số đo thật.
+- **Hệ quả:** Xoá `design-system/reado/pages/*.md` (luật web). `/raudit` grep từng
+  token mà MASTER nhắc tới. Skill `reado-ui` trỏ về MASTER kèm gotcha. Đổi MASTER khi
+  code đổi token là việc bình thường; đổi look phải được owner duyệt.

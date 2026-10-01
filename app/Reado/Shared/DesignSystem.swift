@@ -5,7 +5,7 @@ import UIKit
 // chữ + vài component dùng chung. Màu semantic vẫn ở `Theme` (ReadoApp.swift).
 // View không viết số lẻ 3/6/7/10/14/20/28/36 — đi qua token ở đây.
 
-/// Thang khoảng cách (MASTER.md §Spacing + 12 cho khe row của iOS).
+/// Thang khoảng cách — khi nào dùng: `design-system/reado/MASTER.md` §Bố cục.
 enum Spacing {
     /// Giữa các dòng chữ trong một khối.
     static let tight: CGFloat = 2

@@ -1,220 +1,77 @@
-# Design System Master File
+# Reado — Look & luật UI native
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+> **FROZEN 2026-09-14 (quyết định look):** glass trên chrome nổi, nội dung đọc đặc.
+> Quyết định này không đổi nếu fen chưa đồng ý. Phần chữ bên dưới được sửa cho khớp code (ADR-051).
+> Đối chiếu code lần cuối: `7f051af`.
 
-> **FROZEN 2026-09-14, look liquid-glass.** Apple material: glass trên nav/controls,
-> nội dung đọc đặc. Inter + tint `#007AFF`. **Không** `--force` regenerate.
+Mỗi luật kiểm được bằng diff hoặc ảnh chụp. Dòng `→` là lý do.
+Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036) và `FloatShutter` (glass tô accent, `.interactive()`).
 
----
+## Nguồn token
+- `app/Reado/Shared/DesignSystem.swift`: `Spacing`, `Radius`, `Typo`, `Pill`, `IconTile`, `VocabSummary`, `cardShadow()`.
+- `app/Reado/App/ReadoApp.swift`: `Theme`, `AppTheme`, `Motion`, `Haptics`, `card()`, `chromeGlass(in:)`.
+- Giá trị nằm trong code. File này chỉ ghi tên và khi nào dùng, không chép con số.
+  → Chép số thì sẽ lệch: bản cũ ghi tint và font cứng, trong khi code đã đổi.
 
-**Project:** Reado
-**Generated:** 2026-09-14 14:50:40
-**Category:** Language Learning App
-**Design Dials:** Variance 3/10 (Centered / Minimal) | Motion 2/10 (Subtle) | Density 5/10 (Standard)
+## Màu
+- Màu nhấn = `Color.accentColor` (thừa hưởng `.tint` ở `ReadoApp`). View không tự gọi `.tint(...)` cho màu nhấn, cũng không dùng `Color.blue`.
+  → Fen chọn accent trong `AppTheme` (Xanh rừng mặc định · Chàm · Nâu giấy · Hệ thống). Ghi cứng một màu là bỏ qua lựa chọn đó.
+- Hex chỉ được xuất hiện trong `AppTheme.accent`.
+  → Mỗi accent cần hai sắc độ light/dark, đặt một chỗ thì mới chỉnh được.
+- Màu trạng thái chỉ đi qua `Theme.due` / `ok` / `warn` / `danger` / `level`. Không dùng `.orange`/`.red` trần trong view.
+  → Hue mang nghĩa (đến hạn, lỗi, CEFR). Đổi nghĩa thì đổi đúng một chỗ.
+- Nền phụ (pill, ô nhập, card) dùng `Theme.surface` / `Theme.surfaceStrong`, không dùng `.secondary.opacity(...)`.
+  → Alpha cố định gần như tàng hình trên nền tối. System fill thì tự đổi theo dark mode.
+- Chữ trên nền tint nhạt luôn là `.primary`, giống `Pill`.
+  → Chữ cam/xanh trên nền cùng hue nhạt không đạt contrast 4.5:1.
 
----
+## Vật liệu (FROZEN)
+- Glass chỉ đặt trên chrome nổi (tab bar, nút nổi), qua `chromeGlass(in:)`. View không gọi `.glassEffect` / `.ultraThinMaterial` / `.regularMaterial` trực tiếp.
+  → Một hàm giữ đúng look iOS 26 và tự rơi về material cũ ở iOS < 26.
+- Khối nội dung đọc dùng `card()`: nền `Theme.surface`, đặc, không bóng.
+  → Chữ để đọc lâu cần nền đặc. Glass sau chữ làm giảm contrast.
+- `cardShadow()` chỉ dùng cho card Ôn (thẻ nổi, kéo được). Card khác không có bóng.
+  → Bóng đánh dấu thứ cầm kéo được. Rải khắp nơi thì mất nghĩa đó.
 
-## Global Rules
+## Chữ
+- Font chỉ lấy từ `Typo.*` hoặc text style hệ thống (`.body`, `.headline`…). Không font custom, không `.font(.system(size:))` ngoài `Typo.heroSymbol`.
+  → Text style giữ Dynamic Type. Cỡ cố định sẽ vỡ ở cỡ accessibility.
+- Chữ đọc phụ dùng `Typo.meta` + `.secondary`. `.caption` chỉ dùng cho pill và nhãn nhỏ.
+  → `.caption` quá nhỏ cho chữ người dùng phải đọc.
 
-### Color Palette
+## Icon
+- Chỉ dùng SF Symbols, không emoji làm icon.
+  → Symbol theo được Dynamic Type, đổi được màu theo tint và đọc được bằng VoiceOver. Emoji thì không.
+- Toolbar và điều hướng dùng symbol outline (`gearshape`, `plus`, `xmark`…).
+  → Đồng nhất một tầng. Filled cạnh outline trông như đang bật.
+- Trạng thái đã chọn/đã xong và CTA chính dùng `.fill` (`checkmark.circle.fill`, `camera.fill`). Tab bar dùng outline, chuyển sang `.fill` khi đang chọn.
+  → Filled = "đang bật / làm việc này", nhìn ra ngay không cần đọc chữ.
+- Icon đầu row dùng `IconTile`.
+  → Cùng cỡ thì mép trái các row thẳng hàng.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Ink | `#1C1C1E` | `--ink` |
-| Tint | `#007AFF` | `--tint` |
-| Glass | `rgba(255,255,255,0.55)` | `--glass` |
-| Hairline | `rgba(255,255,255,0.45)` | `--glass-line` |
-| Muted | `#636366` | `--muted` |
+## Bố cục
+- Khoảng cách dùng `Spacing.*`, bo góc dùng `Radius.*` kèm `style: .continuous`. Không viết số lẻ.
+  → Một thang duy nhất thì các màn khớp nhau mà không cần đo.
+- Nhãn nhỏ (due, CEFR, POS, trạng thái) dùng `Pill`. Khối một từ dùng `VocabSummary`.
+  → Kho và màn duyệt từ giữ cùng thứ tự dòng, không có capsule copy tay.
+- Nội dung cuộn trong shell phải chừa chỗ: `.safeAreaPadding(.bottom, ShellTabBar.reservedHeight)` hoặc đặt trong view đã có sẵn khoảng chừa này.
+  → Tab bar nổi đè lên nội dung. Nút Quên/Khó/Được/Dễ từng bị che.
+- Hiện/ẩn nội dung đi qua `Motion.run(reduceMotion:)` + `revealTransition()`. Haptic đi qua `Haptics.*`. Sheet/tab/push để hệ thống tự animate.
+  → Một nhịp motion duy nhất, tôn trọng Reduce Motion, không làm hiệu ứng ăn mừng.
+- Vùng chạm ≥ 44×44pt.
+  → Chuẩn HIG. Nút nhỏ hơn thì bấm trượt.
 
-**Color Notes:** Liquid Glass — blur/saturate on chrome only. Content layer opaque. No indigo, no Cormorant lookbook.
+## Không làm (chiếu `docs/specs/vision.md`)
+- NL1: màn/kho "bài đọc mẫu" do app soạn. → Nguồn học là văn bản thật người dùng tự chọn.
+- NL2: ẩn bản dịch sau quiz, hoặc bắt đoán nghĩa mới cho xem. → Nghĩa không bao giờ bị chặn.
+- NL3: chọn sẵn mọi từ trong trang, hoặc lưu không qua bước duyệt. → AI đề xuất, người đọc duyệt cuối.
+- NL4: mặt sau thẻ thiếu câu gốc hoặc collection. → Ngữ cảnh là chỗ bám của trí nhớ.
+- NL5: kết quả phân tích dạng bong bóng chat. → Dữ liệu có cấu trúc, không phải chat dùng một lần.
+- NL6: tóm tắt hiện trước trang. Điểm/XP, huy hiệu không gắn với việc đã làm. Bảng xếp hạng. → Chống tiến bộ ảo, chỉ hiện số đo có thật.
 
-### Typography
-
-- **UI / reading:** Inter (SF Pro stack fallback)
-- **Card term:** Inter 600, not display serif
-- **Mood:** iOS system, optical glass, navigation
-- **Google Fonts:** [Inter](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)
-
-### Spacing Variables
-
-*Density: 5/10 — Standard*
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
-
-### Shadow Depths
-
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
-
----
-
-## Component Specs
-
-### Buttons
-
-```css
-/* Primary Button */
-.btn-primary {
-  background: #007AFF;
-  color: #FFFFFF;
-  padding: 12px 24px;
-  border-radius: 16px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #1C1917;
-  border: 2px solid #1C1917;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #FFFBF3;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #2F6B4F;
-  outline: none;
-  box-shadow: 0 0 0 3px #2F6B4F33;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Minimalism & Swiss Style
-
-**Keywords:** Clean, simple, spacious, functional, white space, high contrast, geometric, sans-serif, grid-based, essential
-
-**Best For:** Enterprise apps, dashboards, documentation sites, SaaS platforms, professional tools
-
-**Key Effects:** Subtle hover (200-250ms), smooth transitions, sharp shadows if any, clear type hierarchy, fast loading
-
-### Page Pattern
-
-**Pattern Name:** Hero + Testimonials + CTA
-
-- **Conversion Strategy:** Social proof before CTA. Use a concise set of verified testimonials with photo, name, and role. CTA after social proof. Provide previous/next and pause controls; stop rotation on focus, hover, and reduced motion; announce slide position. Previous/next buttons and keyboard controls must expose every slide without dragging.
-- **CTA Placement:** Hero (sticky) + Post-testimonials
-- **Section Order:** Hero > Problem statement > Solution overview > Testimonials carousel > CTA
-
----
-
-## Motion
-
-**Scroll Reveal** (Subtle) — Trigger: scroll (viewport enter) | Duration: 300-400ms | Easing: `power1.out`
-
-```js
-gsap.from(el, { opacity: 0, y: 12, duration: 0.35, ease: 'power1.out', scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' } });
-```
-
-**Framework notes:** Requires the ScrollTrigger plugin registered once via gsap.registerPlugin(ScrollTrigger); Use matchMedia('(prefers-reduced-motion: reduce)') to skip non-essential motion and render the final state immediately
-
-- ✅ Keep the y offset small (8-16px) so it reads as a fade, not a slide
-- ❌ Don't reveal below-the-fold content needed for SEO/crawlers as invisible-by-default without a no-JS fallback
-- ⚡ toggleActions 'play none none reverse' avoids re-triggering on every scroll direction change
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Boring design
-- ❌ No motivation
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+## Checklist trước khi báo xong
+- [ ] Chụp cả light và dark: `scripts/sim_screens.sh shot <tên>`, đọc PNG.
+- [ ] Thử ≥ 2 accent: Xanh rừng và Nâu giấy (Settings → Chủ đề).
+- [ ] Dynamic Type `accessibility-extra-large` (`scripts/sim_screens.sh size accessibility-extra-large`): không cắt chữ, không chồng lấn.
+- [ ] Không có gì bị `ShellTabBar` che ở cuối màn cuộn.
+- [ ] Diff không thêm hex, số lẻ hay màu trần mới. Mọi giá trị đi qua token ở trên.
