@@ -31,6 +31,8 @@ struct ShellTabBar: View {
     @Namespace private var pillNamespace
 
     var body: some View {
+        // TODO(đo ảnh): khe giữa capsule và nút chụp (đang Spacing.sm) — xem ảnh iPhone nhỏ + AX-XL
+        // rồi chỉnh cho khớp nút Search tách của iOS 26.
         HStack(spacing: Spacing.sm) {
             tabCapsule
             if showsCapture {
