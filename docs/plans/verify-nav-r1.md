@@ -1,6 +1,6 @@
 # Plan: verify-nav-r1
 
-> **Trạng thái:** open (2026-10-01) - launch argument mở thẳng màn cho agent chụp simulator; T1 xong (`docs/journal/2026-10-01.md`), T2/T3 chưa làm
+> **Trạng thái:** open (2026-10-01) - launch argument mở thẳng màn cho agent chụp simulator; T1 + T2 xong (`docs/journal/2026-10-01.md`), T3 chưa làm. T2 phát hiện bug alert+sheet có sẵn — xem `docs/session-brief.md` §2.
 
 ## Context
 Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp được màn mở đầu (Home). Vì vậy brief §2.7 còn treo nhiều mục "chưa xem tay" (Ôn thêm, alert lỗi, reencounter, Capture, Settings, accent lệch). Mục tiêu: chỉ bằng launch argument của bản DEBUG, agent mở thẳng được một màn (kèm theme và seed), chụp light/dark rồi tự đọc PNG, không cần ai chạm tay.
@@ -34,7 +34,7 @@ Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp đư�
   - `DevSeed` (`Sources/ReadoKit/Settings/` hoặc thư mục `Dev/` mới): `static func gradeHistory(on db, now: Date, days: Int)`. Hàm này lấy thẻ `new`, chấm Good hoặc Hard bằng `ReviewScheduler` + `ReviewService.record` với `now - k ngày`, mỗi thẻ một transaction (đúng luật snapshot trước khi chấm), rồi `insertSeen` vài vocab. Chỉ chạy khi chưa có `review_logs`.
 - **Reado (app)**, mọi call site bọc `#if DEBUG`:
   - `ReadoApp.init`: parse `ProcessInfo.processInfo.arguments` một lần. Có theme thì ghi `UserDefaults` `appTheme`, đồng thời bật `reado.appliedForestDefault = true`. Bẫy: nếu không bật cờ thì `-ReadoTheme system` trên DB mới bị `applyForestDefaultIfNeeded` đổi về forest.
-  - `AppModel`: thay `seedDevDemoCSVIfNeeded` (đọc env `READO_DEV_DEMO_CSV`) bằng `seedDevIfNeeded(seed:)`. Thư mục fixture đi qua env `READO_DEV_FIXTURES` (simulator đọc được đường dẫn máy host, đúng cơ chế cũ). `demo` thì import `demo-vocab.csv`. `demo-reviewed` thì import xong gọi `DevSeed.gradeHistory`. `empty` thì không làm gì (để xem onboarding).
+  - `AppModel`: thêm `seedDevIfNeeded` đọc `DebugLaunch.seed` rồi gọi `seedDevDemoCSVIfNeeded` (giữ nguyên, đọc env `READO_DEV_DEMO_CSV`) + `DevSeed.gradeHistory` tuỳ trường hợp. `nil`/`demo` → chỉ CSV (hành vi cũ). `demo-reviewed` → CSV rồi `gradeHistory`. `empty` → bỏ qua hẳn (xem onboarding trống). Fixture phân tích đi qua env riêng `READO_DEV_ANALYSIS_FIXTURE` (đọc ở `RootView`, không phải `AppModel`).
   - `RootView.onAppear` → `applyDebugScreen(_:)` map sang state:
     - `home`, `kho`, `review`: đặt `selectedTab`.
     - `review-extra`: `model.shell.pendingReviewMode = .extra` rồi chọn tab review (đúng đường CTA Home).
@@ -43,7 +43,7 @@ Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp đư�
     - `capture`: `showCapture = true`.
     - `analysis-fixture`: decode JSON, gán `model.capture.analysisResult`, rồi `showAnalysis = true`.
     - `encounter-sheet`: giống analysis-fixture, thêm cờ `model.shell.debugOpenFirstEncounter` (thuộc `ShellSignals`, bọc `#if DEBUG`). `AnalysisView` đọc cờ trong `.task`, đợi khoảng 0.6s cho sheet ổn định, lấy match đầu tiên của `encounterMatcher` trên segment đầu, gán `encounterSelection` rồi xoá cờ.
-  - `-ReadoAlert`: dùng đường thật. `dup-name` gọi `model.createCollectionOrAlert(name: <tên bộ demo đã có>)`, `pin-limit` ghim tới bộ thứ 6 qua hàm ghim có sẵn. Hàm được gọi sau khi màn đã lên (delay ngắn), nên khi đi cùng `analysis-fixture` thì kiểm luôn được việc alert hiện trong sheet.
+  - `-ReadoAlert`: dùng đường thật. `dup-name` gọi `model.createCollectionOrAlert(name: Seeder.defaultCollectionName)`, `pin-limit` ép `HomePinError.tooMany` qua `HomePinService.set` 6 id giả (không cần 6 collection thật — `set` kiểm count trước khi validate từng id). **Chỉ áp dụng khi KHÔNG đi cùng `analysis-fixture`/`encounter-sheet`** — xem bug alert+sheet ở T2.
   - Có `problems` hoặc theme lạ thì gán `model.alertMessage = "Launch arg lạ: …"`. Lỗi hiện ngay trên ảnh chụp, không bao giờ âm thầm mở sai màn.
 - **Script** `scripts/sim_screens.sh`:
   - Thêm nhánh `open`: `bootstatus`, sau đó `--fresh` thì gỡ cài và cài lại bản build gần nhất, rồi grant quyền, rồi `SIMCTL_CHILD_READO_DEV_FIXTURES=… xcrun simctl launch --terminate-running-process … -ReadoScreen x [-ReadoTheme y] [-ReadoSeed z] [-ReadoAlert w]`, rồi `sleep` khoảng 4s.
@@ -62,10 +62,11 @@ Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp đư�
 - Test: `scripts/test.sh kit`. Các ca test: mỗi screen hợp lệ, `collection:` rỗng, key lặp lại (lấy giá trị cuối), giá trị lạ vào `problems`, thiếu value, argument của hệ thống (`-NSDoubleLocalizedStrings` và tương tự) bị bỏ qua. Sau đó `scripts/test.sh build`, rồi `open` từng màn và `shot`, đọc PNG.
 - DoD: kit xanh, build xanh. Mỗi màn T1 có cặp ảnh light/dark đúng màn. `open home --theme sepia` ra accent nâu. Gõ sai screen thì thấy alert "Launch arg lạ". Skill reado-ui đã đổi sang dùng `open`.
 
-### T2 — seed `demo-reviewed` + màn fixture + `-ReadoAlert`
-- Files: `ReadoKit/.../DevSeed.swift` (mới) + test kit, `App/AppModel.swift` (seed), `App/AppState.swift` (cờ DEBUG), `Analysis/AnalysisView.swift` (mở encounter đầu tiên), `App/RootView.swift`, `scripts/fixtures/analysis-demo.json` (mới), `scripts/sim_screens.sh` (`--seed`, `--alert`).
-- Test kit `DevSeedTests`: sau `gradeHistory` thì `dailyProgress.dueToday == 0`, `ReviewQueue.extraAvailableCount > 0`, `review_logs` có ≥ 10 ngày khác nhau, mọi `cards.state` thuộc 4 giá trị, gọi lần 2 thì không làm gì. Sau đó build, `open analysis-fixture`, `open encounter-sheet`, `open home --alert dup-name`, `open analysis-fixture --alert dup-name`.
-- DoD: kit xanh, build xanh. Ảnh cho thấy Home có CTA "Ôn thêm" và hàng "Gặp lại N từ" (N > 0), heatmap có nhiều mức màu, AnalysisView có gạch chân chấm, EncounterSheet chồng lên Analysis, alert hiện cả ở root lẫn trong sheet.
+### T2 — seed `demo-reviewed` + màn fixture + `-ReadoAlert` — ✅
+- Files: `ReadoKit/Dev/DevSeed.swift` (mới) + `ReadoKitTests/DevSeedTests.swift` (6 test), `App/AppModel.swift` (`seedDevIfNeeded`), `App/AppState.swift` (cờ `debugOpenFirstEncounter`), `App/AppModel+Collections.swift` (`debugTriggerPinLimitAlert`), `Analysis/AnalysisView.swift` (`.task` mở encounter đầu tiên), `App/RootView.swift` (`openDebugAnalysisFixture`/`applyDebugAlert`), `scripts/fixtures/analysis-demo.json` (mới), `scripts/sim_screens.sh` (`--seed`, `--alert`).
+- Test kit `DevSeedTests` (6 ca): `dueToday == 0` + `extraAvailableCount > 0` sau `gradeHistory`; ≥ 10 ngày khác nhau trong `review_logs`; mọi `cards.state` thuộc 4 giá trị đã biết và không còn thẻ `new`; có dòng `encounters` trong 7 ngày; gọi lần 2 không nhân đôi; kho rỗng thì không làm gì.
+- **Phát hiện ngoài kế hoạch — bug có sẵn, không phải do task này:** `RootView` và mỗi sheet (`AnalysisView`) cùng gắn `.appErrorAlert()` (`Shared/ErrorAlert.swift`) trên CHUNG `model.alertMessage`. Set `alertMessage` trong lúc một sheet đang mở (bất kể đồng bộ hay trễ 1.5s) làm UIKit coi RootView "already presenting" — log `com.apple.UIKit:Presentation`, "Attempt to present ... which is already presenting ..." — và huỷ CẢ sheet lẫn alert, không chỉ riêng alert. Xác nhận bằng `xcrun simctl spawn log stream` lúc debug `-ReadoAlert` + `analysis-fixture`. Vì vậy DoD gốc "alert hiện cả ở root lẫn trong sheet" **bỏ** — `RootView.applyDebugScreenIfNeeded` giờ bỏ qua `-ReadoAlert` khi đi cùng `analysis-fixture`/`encounter-sheet` (im lặng, không set `alertMessage` nữa vì chính nó cũng dính lỗi). Ghi vào `docs/session-brief.md` §2 cho owner — KHÔNG sửa `ErrorAlert.swift` ở task này (ảnh hưởng mọi sheet thật trong app, cần phiên riêng để kiểm kỹ).
+- DoD (đã đạt, trừ câu alert+sheet đã bỏ ở trên): kit 347/347 xanh, build xanh, full suite 366/368 (2 skip opt-in cũ). Ảnh chụp thật trên simulator xác nhận: Home có "Xong phần hôm nay — Ôn thêm 20 thẻ" + "Gặp lại 5 từ tuần này"; heatmap `Lịch ôn` nhiều mức màu (21 ngày streak); `analysis-fixture` mở đúng AnalysisView với 4 từ gạch chân chấm (keystone/routine/resilient/discipline); `encounter-sheet` mở đúng EncounterSheet "keystone" chồng lên Analysis; `--alert dup-name`/`pin-limit` đứng riêng (không kèm sheet) hiện alert đúng; `analysis-fixture --alert dup-name` giờ mở sheet bình thường, không còn treo trắng màn.
 
 ### T3 — chạy verify brief §2.7
 - Files: `docs/session-brief.md` §2.7 (cập nhật kết quả), `docs/journal/2026-10-xx.md`, ảnh trong `.tmp/screens/` (ngoài git).

@@ -257,10 +257,60 @@ struct RootView: View {
             homePath = [.data]
         case .capture:
             openShutterCapture()
-        case .analysisFixture, .encounterSheet:
-            // verify-nav-r1 T2: cần fixture phân tích + đọc encounterMatcher —
-            // chưa gán được chỉ với DebugLaunch, để task sau.
-            break
+        case .analysisFixture:
+            openDebugAnalysisFixture()
+        case .encounterSheet:
+            model.shell.debugOpenFirstEncounter = true
+            openDebugAnalysisFixture()
+        }
+        if let alert = launch.alert {
+            guard screen != .analysisFixture, screen != .encounterSheet else {
+                // BUG CÓ SẴN (phát hiện lúc verify-nav-r1 T2, không phải lỗi
+                // DebugLaunch): `RootView` và sheet (`AnalysisView`) cùng gắn
+                // `.appErrorAlert()` trên CÙNG `model.alertMessage`. Set alert
+                // trong lúc sheet đang mở — bất kể đồng bộ hay trễ bao lâu
+                // (đã thử 0ms và 1.5s, cùng kết quả) — UIKit coi RootView
+                // "already presenting" (log `com.apple.UIKit:Presentation`,
+                // "Attempt to present ... which is already presenting ..."),
+                // huỷ CẢ sheet lẫn alert vì cả hai cùng mount trên một Binding —
+                // kể cả set CHÍNH alertMessage cảnh báo này cũng dính cùng lỗi
+                // (đã thử, sheet biến mất) nên bỏ qua trong im lặng, không set
+                // alertMessage ở đây. Ghi vào `docs/session-brief.md` §2 cho
+                // owner — KHÔNG sửa `ErrorAlert.swift` ở task này (ngoài scope).
+                return
+            }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                applyDebugAlert(alert)
+            }
+        }
+    }
+
+    private func applyDebugAlert(_ alert: DebugLaunch.Alert) {
+        switch alert {
+        case .dupName:
+            _ = model.createCollectionOrAlert(name: Seeder.defaultCollectionName)
+        case .pinLimit:
+            model.debugTriggerPinLimitAlert()
+        }
+    }
+
+    /// verify-nav-r1 T2 — đọc JSON tĩnh (`READO_DEV_ANALYSIS_FIXTURE`,
+    /// `scripts/fixtures/analysis-demo.json`) qua đúng decoder thật
+    /// (`AnalysisResponseDecoder`) rồi mở thẳng màn "Duyệt & lưu từ vựng" —
+    /// không cần OCR/agent thật. Lỗi đọc/parse → alert, không đứng im ở Home.
+    private func openDebugAnalysisFixture() {
+        guard let path = ProcessInfo.processInfo.environment["READO_DEV_ANALYSIS_FIXTURE"],
+              let data = FileManager.default.contents(atPath: path)
+        else {
+            model.alertMessage = "Launch arg lạ: thiếu READO_DEV_ANALYSIS_FIXTURE"
+            return
+        }
+        do {
+            model.capture.analysisResult = try AnalysisResponseDecoder.decode(data)
+            showAnalysis = true
+        } catch {
+            model.alertMessage = "Launch arg lạ: fixture phân tích lỗi — \(error.localizedDescription)"
         }
     }
     #endif

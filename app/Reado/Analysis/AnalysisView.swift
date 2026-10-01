@@ -165,6 +165,22 @@ struct AnalysisView: View {
                 await model.analyzeCurrentImage()
             }
         }
+        #if DEBUG
+        .task {
+            // verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` (RootView bật
+            // `debugOpenFirstEncounter`): tự mở popover của match đầu tiên để
+            // agent chụp "gạch chân + EncounterSheet" không cần chạm tay. Đợi
+            // sheet ổn định (segments đã vẽ) trước khi set state.
+            guard model.shell.debugOpenFirstEncounter else { return }
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            model.shell.debugOpenFirstEncounter = false
+            guard let firstSegment = model.capture.analysisResult?.segments.first,
+                  let match = encounterMatcher.matches(in: firstSegment.sourceEN).first
+            else { return }
+            encounterSelection = EncounterSelection(
+                surface: String(firstSegment.sourceEN[match.range]), entries: match.entries)
+        }
+        #endif
         .alert(item: $saveAlert) { alert in
             switch alert {
             case let .success(count):

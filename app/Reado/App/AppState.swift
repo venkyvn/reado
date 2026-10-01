@@ -81,6 +81,13 @@ final class ShellSignals {
     /// mở thẳng `.extra` thay vì mặc định `.srs` — `ReviewQueueView` (tab, không
     /// `showsCloseButton`) đọc rồi dọn ở `onAppear`, giống `pendingHubNavigationID`.
     var pendingReviewMode: ReviewMode?
+
+    #if DEBUG
+    /// verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` bật cờ này; AnalysisView
+    /// đọc ở `.task` để tự mở `EncounterSheet` của match đầu tiên (demo gạch chân
+    /// chấm) rồi dọn sạch, giống các cờ `pending*` khác ở trên.
+    var debugOpenFirstEncounter = false
+    #endif
 }
 
 /// Dữ liệu của collection đang xem ở Hub (một Hub mở một lúc nên một bộ biến là đủ).

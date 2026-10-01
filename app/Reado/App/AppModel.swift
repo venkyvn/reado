@@ -110,7 +110,7 @@ final class AppModel {
             self.database = database
             #if DEBUG
             Self.seedDevAIBoxAgentIfNeeded(on: database)
-            Self.seedDevDemoCSVIfNeeded(on: database)
+            Self.seedDevIfNeeded(on: database)
             #endif
             reloadOverview()
         } catch {
@@ -153,6 +153,24 @@ final class AppModel {
               let rows = try? CSVImport.parse(text)
         else { return }
         _ = try? CSVImport.importRows(on: database, rows: rows, now: SystemClock().now)
+    }
+
+    /// verify-nav-r1 T2 — `-ReadoSeed demo|demo-reviewed|empty` (`DebugLaunch`,
+    /// `scripts/sim_screens.sh open --seed`) chọn kiểu dữ liệu mẫu. Không có cờ
+    /// (chạy qua Xcode, hoặc `sim_screens.sh` không truyền `--seed`) → hành vi
+    /// CŨ giữ nguyên: nạp CSV nếu `READO_DEV_DEMO_CSV` có mặt (không hỏi seed).
+    /// `empty` bỏ qua hẳn CSV kể cả khi env var có mặt — xem onboarding trống.
+    private static func seedDevIfNeeded(on database: SQLiteDatabase) {
+        let seed = DebugLaunch.parse(ProcessInfo.processInfo.arguments).seed
+        switch seed {
+        case .empty:
+            return
+        case .demo, nil:
+            seedDevDemoCSVIfNeeded(on: database)
+        case .demoReviewed:
+            seedDevDemoCSVIfNeeded(on: database)
+            try? DevSeed.gradeHistory(on: database, now: SystemClock().now)
+        }
     }
     #endif
 

@@ -1,0 +1,35 @@
+{
+  "segments": [
+    {
+      "source_en": "Sleep is the keystone of every good routine.",
+      "translation_vi": "Giấc ngủ là nền tảng của mọi thói quen tốt."
+    },
+    {
+      "source_en": "A resilient mind recovers quickly from setbacks.",
+      "translation_vi": "Một tâm trí kiên cường hồi phục nhanh sau những vấp ngã."
+    },
+    {
+      "source_en": "Discipline matters most on the days you feel like quitting.",
+      "translation_vi": "Kỷ luật quan trọng nhất vào những ngày bạn muốn bỏ cuộc."
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "setback",
+      "pos": "noun",
+      "ipa": "ˈsetbæk",
+      "meaning_vi": "sự vấp ngã, trở ngại",
+      "cefr": "B2",
+      "example": "A resilient mind recovers quickly from setbacks."
+    },
+    {
+      "term": "quitting",
+      "pos": "verb",
+      "ipa": "ˈkwɪtɪŋ",
+      "meaning_vi": "việc từ bỏ, bỏ cuộc",
+      "cefr": "B1",
+      "example": "Discipline matters most on the days you feel like quitting."
+    }
+  ],
+  "summary_vi": "Đoạn demo về thói quen và kỷ luật — fixture verify-nav-r1 T2, không phải nội dung thật, dùng để agent chụp màn Duyệt & lưu từ vựng."
+}

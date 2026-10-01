@@ -8,14 +8,18 @@
 #   scripts/sim_screens.sh --no-build      # dùng bản build gần nhất trong DerivedData/
 #   scripts/sim_screens.sh shot <tên>      # chụp <tên>-light.png + <tên>-dark.png màn hiện tại
 #   scripts/sim_screens.sh size <cỡ>       # Dynamic Type: extra-extra-large | large | ... (xcrun simctl ui)
-#   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system] [--fresh] [--no-build]
+#   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system]
+#                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
+#                                      [--fresh] [--no-build]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
 #                                           # (home, kho, review, review-extra, collection:<id|tên>,
-#                                           # settings, streak, data, capture, analysis-fixture*,
-#                                           # encounter-sheet* — hai cái cuối chưa wiring, verify-nav-r1 T2).
+#                                           # settings, streak, data, capture, analysis-fixture, encounter-sheet).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
+#                                           # `--seed` chỉ có tác dụng khi kho ĐANG TRỐNG (seed-once, như CSV cũ)
+#                                           # — đổi seed thì luôn kèm `--fresh`. `demo-reviewed` dựng lịch ôn giả
+#                                           # (`DevSeed.gradeHistory`) cho CTA "Ôn thêm" + heatmap nhiều mức màu.
 #
 # Bẫy: alert xin quyền camera đã hiện một lần thì kẹt qua cả uninstall/relaunch và che
 # ảnh chụp; cấp quyền sau đó không tắt được. Xử lý: `xcrun simctl shutdown <udid>` rồi
@@ -30,6 +34,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIM_NAME="iPhone Air"
 BUNDLE_ID="${READO_BUNDLE_ID:-com.readoluca.app}"
 FIXTURE="$ROOT/scripts/fixtures/demo-vocab.csv"
+ANALYSIS_FIXTURE="$ROOT/scripts/fixtures/analysis-demo.json"
 OUT="$ROOT/.tmp/screens"
 
 UDID="$(xcrun simctl list devices available -j | python3 -c '
@@ -67,16 +72,23 @@ case "${1:-}" in
     SCREEN="${2:?Thiếu tên màn — vd: scripts/sim_screens.sh open home (xem DebugLaunch.Screen)}"
     shift 2
     THEME=""
+    SEED=""
+    ALERT=""
     OPEN_FRESH=0
     OPEN_BUILD=1
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
+        --seed) SEED="${2:?Thiếu giá trị cho --seed}"; shift 2 ;;
+        --alert) ALERT="${2:?Thiếu giá trị cho --alert}"; shift 2 ;;
         --fresh) OPEN_FRESH=1; shift ;;
         --no-build) OPEN_BUILD=0; shift ;;
         *) echo "Tham số lạ: $1" >&2; exit 2 ;;
       esac
     done
+    if [[ -n "$SEED" && "$OPEN_FRESH" == 0 ]]; then
+      echo "Lưu ý: --seed chỉ áp khi kho trống — kèm --fresh nếu muốn chắc seed mới." >&2
+    fi
 
     if [[ "$OPEN_BUILD" == 1 ]]; then
       "$ROOT/scripts/test.sh" build
@@ -100,12 +112,20 @@ case "${1:-}" in
     if [[ -n "$THEME" ]]; then
       LAUNCH_ARGS+=(-ReadoTheme "$THEME")
     fi
+    if [[ -n "$SEED" ]]; then
+      LAUNCH_ARGS+=(-ReadoSeed "$SEED")
+    fi
+    if [[ -n "$ALERT" ]]; then
+      LAUNCH_ARGS+=(-ReadoAlert "$ALERT")
+    fi
     # --terminate-running-process: launch trước đó (nếu còn sống) không đọc argv
     # mới — phải buộc khởi động lại để `-ReadoScreen` mới có hiệu lực.
-    SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" xcrun simctl launch \
+    SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" \
+    SIMCTL_CHILD_READO_DEV_ANALYSIS_FIXTURE="$ANALYSIS_FIXTURE" \
+      xcrun simctl launch \
       --terminate-running-process "$UDID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}" >/dev/null
     sleep 4  # đợi app mở + điều hướng xong trước khi `shot`
-    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
+    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
     exit 0
     ;;
 esac
@@ -138,5 +158,7 @@ xcrun simctl install "$UDID" "$APP"
 # Cấp sẵn quyền để hộp thoại hệ thống không che màn khi chụp (không test luồng từ chối).
 xcrun simctl privacy "$UDID" grant camera "$BUNDLE_ID" || true
 xcrun simctl privacy "$UDID" grant photos "$BUNDLE_ID" || true
-SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" xcrun simctl launch "$UDID" "$BUNDLE_ID" >/dev/null
+SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" \
+SIMCTL_CHILD_READO_DEV_ANALYSIS_FIXTURE="$ANALYSIS_FIXTURE" \
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" >/dev/null
 echo "Đã mở Reado trên $SIM_NAME kèm dữ liệu mẫu (36 từ, 3 bộ Demo). Điều hướng tới màn cần chụp rồi: scripts/sim_screens.sh shot before-<màn>"

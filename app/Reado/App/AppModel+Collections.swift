@@ -234,6 +234,19 @@ extension AppModel {
         reloadOverview()
     }
 
+    #if DEBUG
+    /// verify-nav-r1 T2 — `-ReadoAlert pin-limit`: ép lỗi `HomePinError.tooMany`
+    /// để agent chụp alert không cần tay ghim đủ 5 bộ trước. 6 id giả là đủ —
+    /// `HomePinService.set` kiểm `count > maxPins` TRƯỚC khi validate từng id
+    /// tồn tại, nên không cần 6 collection thật.
+    func debugTriggerPinLimitAlert() {
+        guard let database else { return }
+        attempt("ghim bộ") {
+            try HomePinService.set(on: database, ids: (1...6).map { "debug-pin-\($0)" })
+        }
+    }
+    #endif
+
     // MARK: — Ôn nhanh (port UI lab: scope ôn mặc định 1–3 bộ / tất cả)
 
     /// Bật/tắt một collection trong "Ôn nhanh" (tối đa 3). Bật → `reviewAll` tắt.
