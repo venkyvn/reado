@@ -253,7 +253,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         let now = Fixtures.fixedNow
         let outcome = try scheduler.grade(.good, snapshot: before, now: now)
         let logID = try ReviewService.record(
-            on: db, cardID: cardID, before: before, outcome: outcome, now: now)
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
 
         // cards đã cập nhật.
         let cardRow = try XCTUnwrap(
@@ -303,7 +304,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         let now = Fixtures.fixedNow
         let outcome = try scheduler.grade(.again, snapshot: before, now: now)
         let logID = try ReviewService.record(
-            on: db, cardID: cardID, before: before, outcome: outcome, now: now)
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
 
         XCTAssertEqual(
             try db.scalarInt64(
@@ -357,6 +359,67 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(
             try db.scalarInt64("SELECT COUNT(*) FROM review_logs;"), 0,
             "log không được rơi rớt sau rollback")
+    }
+
+    func testRecordWritesLastReviewAtEqualToLogReviewedAt() throws {
+        // review.md §4.1: `reviewed_at` thắng — cards.last_review_at và
+        // review_logs.reviewed_at phải CÙNG một giá trị (giờ bấm).
+        let db = try Fixtures.seededDB()
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: try defaultCollectionID(db), term: "same-now")
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, dueIso: "2026-09-15T00:00:00Z")
+        let before = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+        let now = Fixtures.fixedNow
+        let outcome = try scheduler.grade(.good, snapshot: before, now: now)
+
+        let logID = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome, now: now
+        ).logID
+
+        let lastReview = try XCTUnwrap(db.scalarString(
+            "SELECT last_review_at FROM cards WHERE id = ?;", [.text(cardID)]))
+        let reviewedAt = try XCTUnwrap(db.scalarString(
+            "SELECT reviewed_at FROM review_logs WHERE id = ?;", [.text(logID)]))
+        XCTAssertEqual(lastReview, reviewedAt)
+        XCTAssertEqual(lastReview, ISOTimestamp.string(from: now))
+    }
+
+    func testPreviewedOutcomeIsCommittedEvenWhenTappedLater() throws {
+        // D-2 fsrs-queue-fix-r1: nhãn hiện lúc t0, bấm lúc t0+10' → lịch ghi
+        // == lịch đã hiện (due tính từ t0), còn reviewed_at/last_review_at = giờ bấm.
+        let db = try Fixtures.seededDB()
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: try defaultCollectionID(db), term: "preview")
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, state: "review",
+            dueIso: "2026-09-17T00:00:00Z", stability: 4, difficulty: 5,
+            reps: 2, lastReviewIso: "2026-09-12T02:00:00Z", scheduledDays: 5)
+        let before = try XCTUnwrap(ReviewService.fetchSnapshot(on: db, cardID: cardID))
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+
+        let shownAt = Fixtures.fixedNow
+        let preview = try GradePreview.make(scheduler: scheduler, snapshot: before, now: shownAt)
+        let tappedAt = shownAt.addingTimeInterval(10 * 60)
+        let outcome = try XCTUnwrap(preview.outcome(
+            for: .good, cardID: cardID, snapshot: before, now: tappedAt))
+
+        let logID = try ReviewService.record(
+            on: db, cardID: cardID, before: before, outcome: outcome, now: tappedAt
+        ).logID
+
+        let card = try XCTUnwrap(db.rows(
+            "SELECT scheduled_days, due_at, last_review_at FROM cards WHERE id = ?;",
+            [.text(cardID)]).first)
+        XCTAssertEqual(card[0].intValue, Int64(preview.outcomes[.good]?.scheduledDays ?? -1),
+                       "scheduled_days ghi == nhãn đã hiện")
+        XCTAssertEqual(card[1].textValue, ISOTimestamp.string(from: outcome.due))
+        XCTAssertEqual(card[2].textValue, ISOTimestamp.string(from: tappedAt),
+                       "last_review_at = giờ bấm thật")
+        let logged = try XCTUnwrap(db.scalarString(
+            "SELECT reviewed_at FROM review_logs WHERE id = ?;", [.text(logID)]))
+        XCTAssertEqual(logged, ISOTimestamp.string(from: tappedAt))
     }
 
     // MARK: — FR-11 façade: loadFullQueue (ROADMAP 2.5)

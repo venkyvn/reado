@@ -48,6 +48,7 @@
 - **Xong 2026-09-30:** 277 test (275 chạy + 2 skip opt-in) xanh, `** TEST SUCCEEDED **`. Chi tiết: `docs/journal/2026-09-30.md` mục "fsrs-queue-fix-r1 — T1 due-window".
 
 ### T2 — grade-atomic (preview = thật, một `now`, leech trong transaction)
+- **Trạng thái 2026-10-01:** code + test đã viết trên nhánh `claude/friendly-lovelace-oz77e5` (cloud, **chưa build/chạy test**) — chờ fen chạy `scripts/test.sh` + `scripts/test.sh kit`, xanh mới `/rhandoff` (journal, session-brief, đóng T2). Lệch plan: `ReviewService.record` trả `RecordResult(logID, becameLeech)` (struct, không tuple); `evaluateAfterGrade` giữ vì `LeechTests` còn gọi; dedupe `INSERT review_logs` (srs+cram) gộp vào đây (refactor-r2 mục 5).
 - **Files:**
   - Mới `app/ReadoKit/Sources/ReadoKit/Review/GradePreview.swift`: giữ `cardID`, `snapshot`, `computedAt`, 4 `ReviewOutcome`; `outcome(for:cardID:snapshot:now:)` trả cache khi đúng thẻ + đúng snapshot + `now - computedAt < 30 phút`, ngược lại `nil` (caller tính lại).
   - `AppModel`: `intervalLabels` điền cache; `grade` lấy `let now = SystemClock().now` **một lần**, ưu tiên outcome cache (D-2), `reviewed_at` = `now`; `gradeCram` cũng một `now`.

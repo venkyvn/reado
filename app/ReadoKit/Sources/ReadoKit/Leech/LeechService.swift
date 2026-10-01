@@ -28,9 +28,11 @@ public enum LeechService {
         return v > 0 ? Int(v) : nil
     }
 
-    /// Sau một lần chấm: nếu `lapses` của card đạt/ngưỡng thì suspend.
-    /// Gọi SAU `ReviewService.record` (cùng transaction cha hoặc ngay sau đó).
-    /// Trả về outcome để caller báo UI ("Card này đã bị đánh dấu leech").
+    /// Sau một lần chấm: đọc ngưỡng từ settings rồi `suspendIfNeeded`. Đường
+    /// tách rời (ngoài transaction chấm) — production đi qua
+    /// `ReviewService.record(leechThreshold:)` để leech cùng transaction với
+    /// UPDATE cards + INSERT review_logs. Trả về outcome để caller báo UI
+    /// ("Card này đã bị đánh dấu leech").
     @discardableResult
     public static func evaluateAfterGrade(
         on db: SQLiteDatabase,
@@ -42,6 +44,21 @@ public enum LeechService {
             let lapses = try currentLapses(on: db, cardID: cardID)
             return Outcome(becameLeech: false, lapses: lapses, threshold: nil)
         }
+        return try suspendIfNeeded(on: db, cardID: cardID, threshold: threshold, now: now)
+    }
+
+    /// Nếu `lapses` hiện tại của card đạt/vượt `threshold` thì suspend (set
+    /// `suspended_at = now`, chỉ khi chưa suspend). KHÔNG tự mở transaction —
+    /// `inTransaction` không lồng được (BEGIN trong BEGIN lỗi), nên hàm này chạy
+    /// được trong thân transaction của caller (`ReviewService.record`) và thấy
+    /// `lapses` vừa UPDATE trên cùng kết nối.
+    @discardableResult
+    public static func suspendIfNeeded(
+        on db: SQLiteDatabase,
+        cardID: String,
+        threshold: Int,
+        now: Date
+    ) throws -> Outcome {
         let lapses = try currentLapses(on: db, cardID: cardID)
         guard lapses >= threshold else {
             return Outcome(becameLeech: false, lapses: lapses, threshold: threshold)

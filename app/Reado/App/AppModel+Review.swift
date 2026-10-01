@@ -44,44 +44,61 @@ extension AppModel {
     }
 
     /// Chấm thẻ hiện tại (FR-11): snapshot TRƯỚC + strict rating → outcome;
-    /// UPDATE cards + INSERT review_logs cùng transaction (FR-12 undo cần
-    /// logID). Trả `GradeResult` để view giữ logID cho undo nổi 1 bước, và
-    /// biết thẻ vừa vượt ngưỡng "đã thuộc" (ADR-038) để bật toast.
+    /// UPDATE cards + INSERT review_logs + leech suspend (FR-19) cùng MỘT
+    /// transaction (FR-12 undo cần logID). Trả `GradeResult` để view giữ logID
+    /// cho undo nổi 1 bước, và biết thẻ vừa vượt ngưỡng "đã thuộc" (ADR-038)
+    /// để bật toast.
+    ///
+    /// Một `now` cho cả lần chấm. Nếu nhãn 4 nút đã tính cho đúng thẻ + snapshot
+    /// này trong 30 phút (`GradePreview`), dùng lại outcome đó → `scheduled_days`
+    /// ghi == nhãn đã hiện (fuzz seed theo timestamp nên tính lại có thể lệch).
+    /// `reviewed_at`/`last_review_at` luôn là `now` (giờ bấm thật).
     func grade(
         cardID: String,
         snapshot: CardSnapshot,
         rating: ReadoRating
     ) throws -> GradeResult {
         guard let database else { throw ReviewError.modelUnavailable }
-        let settings = try ReadoFSRS.readSettings(on: database)
-        let scheduler = try ReviewScheduler(settings: settings)
-        // Một `now` cho cả tính lịch lẫn ghi log: `last_review_at`/`reviewed_at`
-        // phải khớp đúng thời điểm scheduler dùng để tính `due`.
         let now = clock.now
-        let outcome = try scheduler.grade(rating, snapshot: snapshot, now: now)
-        let logID = try ReviewService.record(
-            on: database, cardID: cardID, before: snapshot,
-            outcome: outcome, now: now)
-        // FR-19: kiểm tra leech SAU khi đã ghi log + update cards.
-        // Nếu lapses >= ngưỡng → suspend card (ra khỏi hàng đợi).
-        _ = try LeechService.evaluateAfterGrade(on: database, cardID: cardID)
+        let outcome: ReviewOutcome
+        if let previewed = gradePreview?.outcome(
+            for: rating, cardID: cardID, snapshot: snapshot, now: now)
+        {
+            outcome = previewed
+        } else {
+            let settings = try ReadoFSRS.readSettings(on: database)
+            let scheduler = try ReviewScheduler(settings: settings)
+            outcome = try scheduler.grade(rating, snapshot: snapshot, now: now)
+        }
+        let recorded = try ReviewService.record(
+            on: database, cardID: cardID, before: snapshot, outcome: outcome,
+            leechThreshold: LeechService.readThreshold(on: database), now: now)
+        // Thẻ đã đổi → cache cũ vô nghĩa; thẻ kế tiếp nạp lại qua `intervalLabels`.
+        gradePreview = nil
+        if recorded.becameLeech {
+            DebugTrace.event("review", "leech", ["cardID": cardID, "lapses": outcome.lapses])
+        }
         // ADR-038: tính từ before/after đã có sẵn — không query DB thêm.
         let crossedMastery = Mastery.crossed(
             before: snapshot.stability, after: outcome.stability, stateAfter: outcome.state)
-        return GradeResult(logID: logID, crossedMastery: crossedMastery)
+        return GradeResult(logID: recorded.logID, crossedMastery: crossedMastery)
     }
 
     /// U1 ux-polish-r1: nhãn nhịp ôn kế tiếp cho 4 mức chấm (preview
-    /// `swift-fsrs` thật qua `IntervalPreview` — không tự tính). Lỗi (DB đóng,
-    /// settings hỏng) → rỗng, nút chấm vẫn hoạt động bình thường, chỉ ẩn nhãn.
+    /// `swift-fsrs` thật qua `GradePreview`/`IntervalPreview` — không tự tính).
+    /// Kết quả được giữ lại để `grade` ghi đúng lịch đã hiện. Lỗi (DB đóng,
+    /// settings hỏng) → rỗng + xoá cache, nút chấm vẫn hoạt động bình thường
+    /// (tính lại lúc bấm), chỉ ẩn nhãn.
     func intervalLabels(for snapshot: CardSnapshot) -> [ReadoRating: String] {
+        gradePreview = nil
         guard let database,
               let settings = try? ReadoFSRS.readSettings(on: database),
               let scheduler = try? ReviewScheduler(settings: settings),
-              let outcomes = try? IntervalPreview.outcomes(
+              let preview = try? GradePreview.make(
                   scheduler: scheduler, snapshot: snapshot, now: clock.now)
         else { return [:] }
-        return outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
+        gradePreview = preview
+        return preview.outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
     }
 
     /// Cram (ADR-043): nạp tối đa 20 thẻ đã học nhưng chưa đến hạn trong phạm vi.

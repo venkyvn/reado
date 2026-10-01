@@ -104,6 +104,9 @@ final class AppModel {
     var reviewItems: [ReviewQueue.ReviewItem] = []
     var reviewSnapshots: [String: CardSnapshot] = [:]
     var currentReviewSnapshot: CardSnapshot?
+    /// Lịch 4 nút của thẻ đang hiện — `grade` dùng lại để nhãn == lịch ghi
+    /// (T2 fsrs-queue-fix-r1). Chỉ cache nội bộ, UI không quan sát.
+    @ObservationIgnored var gradePreview: GradePreview?
 
     // FR-18: phạm vi ôn hiện tại (nil = tất cả collection) + nợ due ngoài phạm
     // vi (phải nhìn thấy — research/vocabulary.md 4.2).
