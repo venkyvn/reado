@@ -3,68 +3,76 @@ import SwiftUI
 
 // Tách từ RootView.swift (repo-hygiene-r1 B3).
 
-/// Kho tab — toàn bộ collection (kho tạm + named) + tạo mới từ `+` nav.
-struct KhoTabView: View {
+/// Thư viện (ux-redesign-r1 T4) — Kho tạm đầu màn, rồi các bộ có tên; tạo bộ bằng `+`, nhập/xuất
+/// dữ liệu qua menu ⋯. Phạm vi ôn mặc định không còn chỉnh ở đây (chuyển vào `ScopePickerSheet`);
+/// vuốt một bộ để ưu tiên/ghim vẫn như cũ.
+struct LibraryTabView: View {
     @Environment(AppModel.self) private var model
+
+    /// Đẩy `.data` lên stack Thư viện — RootView giữ path.
+    let onData: () -> Void
 
     @State private var showNewCollection = false
     @State private var newCollectionName = ""
-    // Lỗi từ swipe ghim/ôn nhanh hoặc ô "Ôn nhanh" — hiện alert thay vì nuốt.
+    // Lỗi từ swipe ghim/ưu tiên — hiện alert thay vì nuốt.
     @State private var actionError: String?
+
+    private var inbox: AppModel.CollectionOverview? {
+        model.collections.first(where: \.isDefault)
+    }
+    private var namedCollections: [AppModel.CollectionOverview] {
+        model.collections.filter { !$0.isDefault }
+    }
 
     var body: some View {
         List {
-            // Ôn nhanh — "tất cả" hoặc 1–3 bộ ưu tiên; nhãn phản ánh trạng thái.
-            Section("Ôn nhanh") {
-                Button {
-                    run { try model.setReviewAll(!model.reviewScopeDefault.reviewAll) }
-                } label: {
-                    HStack {
-                        Label(
-                            model.reviewScopeDefault.reviewAll
-                                ? "Tất cả kho"
-                                : (model.reviewScopeDefault.priorityIDs.isEmpty
-                                    ? "Tất cả kho"
-                                    : "\(model.reviewScopeDefault.priorityIDs.count)/3 bộ ưu tiên"),
-                            systemImage: "square.stack.3d.up")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if model.reviewScopeDefault.reviewAll {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
+            if let inbox {
+                Section {
+                    inboxRow(inbox)
                 }
             }
 
             Section("Bộ") {
-                ForEach(model.collections) { collection in
-                    NavigationLink(value: ShellRoute.hub(collection.id)) {
-                        collectionRow(collection)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        reviewSwipe(collection)
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        pinSwipe(collection)
+                if namedCollections.isEmpty {
+                    emptyNamedHint
+                } else {
+                    ForEach(namedCollections) { collection in
+                        NavigationLink(value: ShellRoute.hub(collection.id)) {
+                            collectionRow(collection)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            reviewSwipe(collection)
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            pinSwipe(collection)
+                        }
                     }
                 }
             }
         }
         .shellScrollChrome()
-        .navigationTitle("Kho")
+        .navigationTitle("Thư viện")
         .toolbar {
-            // ux-redesign-r1 T1b: cửa Dữ liệu vừa rời Home — tạm đứng ở đây, T4 gom vào menu ⋯.
-            ToolbarItem(placement: .topBarLeading) {
-                NavigationLink(value: ShellRoute.data) {
-                    Label("Dữ liệu", systemImage: "externaldrive")
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                // J-R1-D (ADR-052): cửa Dữ liệu là việc của thư viện. Hai mục cùng mở màn Dữ liệu
+                // (có sẵn cả mục Xuất lẫn Nhập) — chưa tách luồng nhập riêng.
+                Menu {
+                    Button {
+                        onData()
+                    } label: {
+                        Label("Nhập CSV", systemImage: "square.and.arrow.down")
+                    }
+                    Button {
+                        onData()
+                    } label: {
+                        Label("Xuất dữ liệu", systemImage: "square.and.arrow.up")
+                    }
+                } label: {
+                    Label("Thêm", systemImage: "ellipsis.circle")
                 }
-                .accessibilityLabel("Dữ liệu")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
+                .accessibilityLabel("Thêm")
                 Button {
-                    newCollectionName = ""
-                    showNewCollection = true
+                    openNewCollection()
                 } label: {
                     Label("Tạo bộ", systemImage: "plus")
                 }
@@ -100,7 +108,53 @@ struct KhoTabView: View {
         .refreshable { model.reloadOverview() }
     }
 
-    /// Chạy một hành động ném lỗi (ghim/ôn nhanh) — lỗi đổ vào `actionError` để
+    private func openNewCollection() {
+        newCollectionName = ""
+        showNewCollection = true
+    }
+
+    /// Kho tạm = card đầu màn ("N từ chưa xếp") mở thẳng Hub kho tạm. Vẫn vuốt được để ưu tiên ôn
+    /// (không ghim — kho tạm không có Ghim).
+    @ViewBuilder
+    private func inboxRow(_ inbox: AppModel.CollectionOverview) -> some View {
+        let priorityOrder = model.reviewScopeDefault.priorityIDs.firstIndex(of: inbox.id)
+        NavigationLink(value: ShellRoute.hub(inbox.id)) {
+            HStack(spacing: Spacing.row) {
+                IconTile(systemImage: "tray.fill")
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text(inbox.name)
+                        .font(Typo.rowTitle)
+                    Text((priorityOrder.map { "Ưu tiên \($0 + 1) · " } ?? "")
+                        + "\(inbox.totalItems) từ chưa xếp")
+                        .font(Typo.rowSubtitle)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if inbox.dueNow > 0 {
+                    Pill(text: "\(inbox.dueNow)", tone: .due)
+                }
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            reviewSwipe(inbox)
+        }
+    }
+
+    /// Chưa có bộ nào có tên (chỉ có kho tạm) — gợi ý tạo bộ theo sách, kèm nút.
+    private var emptyNamedHint: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Tạo bộ theo tên sách")
+                .font(Typo.rowTitle)
+            Text("Gom từ theo sách hoặc ngữ cảnh để ôn riêng từng bộ.")
+                .font(Typo.rowSubtitle)
+                .foregroundStyle(.secondary)
+            Button("Tạo bộ") { openNewCollection() }
+                .buttonStyle(.borderedProminent)
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+
+    /// Chạy một hành động ném lỗi (ghim/ưu tiên) — lỗi đổ vào `actionError` để
     /// alert hiện, không nuốt im (port UI lab: "không thêm toast framework").
     private func run(_ action: () throws -> Void) {
         do {
@@ -145,7 +199,7 @@ struct KhoTabView: View {
         }
     }
 
-    /// Vuốt trái → bật/tắt "Ôn nhanh" (tối đa 3). Đủ 3 mà chưa chọn → vô hiệu.
+    /// Vuốt trái → bật/tắt ưu tiên ôn (tối đa 3). Đủ 3 mà chưa chọn → vô hiệu.
     @ViewBuilder
     private func reviewSwipe(_ collection: AppModel.CollectionOverview) -> some View {
         let isPriority = model.reviewScopeDefault.priorityIDs.contains(collection.id)

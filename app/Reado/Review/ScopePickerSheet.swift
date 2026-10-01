@@ -4,7 +4,8 @@ import SwiftUI
 // Tách từ ReviewQueueView.swift (repo-hygiene-r1 B3).
 
 /// FR-18: picker phạm vi ôn — tất cả / một / vài collection (multi-select).
-/// nil = tất cả; Set 1 phần tử = một; Set nhiều = trộn (J5).
+/// nil = tất cả; Set 1 phần tử = một; Set nhiều = trộn (J5). Phần cuối chỉnh phạm vi MẶC ĐỊNH khi
+/// bấm Ôn (ux-redesign-r1 T4 — trước ở Kho, mục "Ôn nhanh"); phần trên chỉ áp cho phiên này.
 struct ScopePickerSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -70,6 +71,28 @@ struct ScopePickerSheet: View {
                         }
                     }
                 }
+                Section {
+                    Button {
+                        model.attempt("đổi phạm vi ôn mặc định") {
+                            try model.setReviewAll(!model.reviewScopeDefault.reviewAll)
+                        }
+                        Haptics.selection()
+                    } label: {
+                        HStack {
+                            Label(defaultScopeLabel, systemImage: "square.stack.3d.up")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if model.reviewScopeDefault.reviewAll {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Mặc định khi bấm Ôn")
+                } footer: {
+                    Text("Vuốt một bộ trong Thư viện để ưu tiên.")
+                }
             }
             .navigationTitle("Phạm vi ôn")
             .navigationBarTitleDisplayMode(.inline)
@@ -87,5 +110,14 @@ struct ScopePickerSheet: View {
                 }
             }
         }
+        // Gốc sheet — alert của RootView không hiện được khi sheet đang che.
+        .appErrorAlert()
+    }
+
+    /// "Tất cả kho" hoặc "N/3 bộ ưu tiên" — phản ánh phạm vi mặc định đang lưu.
+    private var defaultScopeLabel: String {
+        let scope = model.reviewScopeDefault
+        if scope.reviewAll || scope.priorityIDs.isEmpty { return "Tất cả kho" }
+        return "\(scope.priorityIDs.count)/\(ReviewScopeService.maxPriority) bộ ưu tiên"
     }
 }

@@ -74,7 +74,7 @@ struct RootView: View {
             .tag(AppTab.today)
 
             NavigationStack(path: $libraryPath) {
-                KhoTabView()
+                LibraryTabView(onData: { libraryPath.append(.data) })
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
                     }

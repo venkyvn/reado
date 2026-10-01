@@ -81,7 +81,6 @@ struct HomeTabView: View {
                         hasScopeOverride = true
                     }),
                 onApply: {})
-                .appErrorAlert()
         }
     }
 
