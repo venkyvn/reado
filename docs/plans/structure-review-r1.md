@@ -1,5 +1,7 @@
 # Plan: structure-review-r1 — review cấu trúc code + roadmap refactor/enhance
 
+> **Trạng thái:** open (2026-09-30) - review tĩnh cấu trúc code + roadmap refactor/enhance; T1 fen OK nhưng chưa code, còn lại đề xuất
+
 > Nguồn: fen nhờ "ngó cách cấu trúc code, xem có gì refactor/enhance" (2026-09-30). Review **tĩnh** (grep + đọc có chọn lọc) tại HEAD `3e8b0c2` trong session cloud không có Xcode — **chưa build/test gì**. Mọi `file:dòng` đúng tại HEAD đó; tới lượt task nào thì kiểm lại bằng `grep -n` trước khi sửa.
 > Trạng thái (2026-09-30): **T1 fen đã OK nhưng chưa code** (session cloud không build được → bàn giao local, xem `docs/journal/2026-09-30.md`); các task còn lại: đề xuất, chưa OK. 1 task = 1 session (CLAUDE.md §7); task đụng hợp đồng phải `/rplan` riêng.
 > Quy mô lúc review: `app/Reado` 6.2k dòng / 19 file · `ReadoKit` 6.1k / 45 file · `ReadoTests` 5.0k / 25 file (~256 hàm `test…`) · `proxy` 264 dòng Python.
@@ -36,7 +38,7 @@ Vấn đề gom ở **ranh giới app↔Kit bị mòn khi tính năng dồn vào
 | A5 | **Xử lý `database == nil` thiếu nhất quán:** 28× `guard let database` trả ≥ 6 kiểu (`0`, `nil`, `false`, `[]`, silent, throw); `importRows` ném `.emptyFile` ("File rỗng…") sai ngữ nghĩa | `AppModel.swift:745` (+27 chỗ) |
 | A6 | **Code chết/trùng:** `AppModel.reviewQueue` (0 ref), `currentReviewSnapshot` (chỉ ghi, không ai đọc), `saveLearningSettings(cefrLevel:)` (0 caller); `CollectionOverview` = bản sao 1-1 `VocabRepository.CollectionSummary`; `ShutterPressStyle` khai báo 2 lần; `addAgent` viết 2 lần; key `"appTheme"` literal 2 nơi; 11× `SystemClock()` rải trong `AppModel` | `AppModel.swift:97,113,115-124,403,512` · `RootView.swift:240` = `CaptureView.swift:444` · `SettingsView.swift:15,319` · `ReadoApp.swift:176` |
 | A7 | **Concurrency — cần kiểm chứng:** `AppModel` là `@Observable` không `@MainActor`, app target `SWIFT_VERSION = 5.0`; `analyzeCurrentImage()`/`loadReviewQueue()` async non-isolated mà ghi state → có thể ghi off-main | `AppModel.swift:23-24,225-271,332-360` · `project.pbxproj:511` |
-| A8 | **Doc lệch code:** conventions §2 liệt kê 3 thư mục Kit (Time/Database/Review) trong khi thực tế 14, dòng "KHÔNG chạy SQL trực tiếp?" còn dấu hỏi; `proxy/prompt.py` `VERSION = 1` ghi "Khớp Prompt.swift" trong khi app v5; `docs/session-brief.md` §1 dừng ở 2026-09-26 (227/228, "T2/T3 chưa làm") trong khi HEAD đã có motivation-r1 T1–T3 và ux-polish-r1 T1–T5 (`docs/plans/ux-polish-r1.md` ghi 244/245) — hook SessionStart nạp đúng bản cũ này vào mỗi session | `coding-conventions.md:19-34` · `proxy/prompt.py:1,5` ↔ `Prompt.swift:13` · `session-brief.md:19` |
+| A8 | **Doc lệch code:** conventions §2 liệt kê 3 thư mục Kit (Time/Database/Review) trong khi thực tế 14, dòng "KHÔNG chạy SQL trực tiếp?" còn dấu hỏi; `proxy/prompt.py` `VERSION = 1` ghi "Khớp Prompt.swift" trong khi app v5; `docs/session-brief.md` §1 dừng ở 2026-09-26 (227/228, "T2/T3 chưa làm") trong khi HEAD đã có motivation-r1 T1–T3 và ux-polish-r1 T1–T5 (`docs/plans/done/ux-polish-r1.md` ghi 244/245) — hook SessionStart nạp đúng bản cũ này vào mỗi session | `coding-conventions.md:19-34` · `proxy/prompt.py:1,5` ↔ `Prompt.swift:13` · `session-brief.md:19` |
 
 ### Phát hiện B — cấu trúc (refactor có kế hoạch, mỗi mục cần `/rplan` riêng)
 
@@ -84,7 +86,7 @@ Không `unique` trên `vocab_items` · FSRS chỉ qua swift-fsrs `defaultWv6` ·
 
 Thứ tự khuyên: **Phase 1** (T1 → T2 → T3 → T4) · **Phase 2** (T5 → T6 → T7 → T8 → T9) · **Phase 3** (T10 → T11 → T12) · **Phase 4** (T13 → T14 → T15 → T16). Phụ thuộc: T11 cần T10; T12 cần T11; T9 nên sau T5–T8; T13 cần `AppModel.init(database:)`.
 
-**Baseline test:** không tin số trong file này. Trước mỗi task chạy `scripts/test.sh` một lần để lấy số thật (số ghi gần nhất là 244/245 ở `docs/plans/ux-polish-r1.md`; T5 của plan đó còn "chờ full suite"; `docs/session-brief.md` §1 đã cũ). "Xanh" = `** TEST SUCCEEDED **`, số pass không giảm so với baseline vừa đo + test mới của task.
+**Baseline test:** không tin số trong file này. Trước mỗi task chạy `scripts/test.sh` một lần để lấy số thật (số ghi gần nhất là 244/245 ở `docs/plans/done/ux-polish-r1.md`; T5 của plan đó còn "chờ full suite"; `docs/session-brief.md` §1 đã cũ). "Xanh" = `** TEST SUCCEEDED **`, số pass không giảm so với baseline vừa đo + test mới của task.
 
 ### Phase 1 — đúng luật, hết nuốt lỗi
 

@@ -1,5 +1,7 @@
 # Plan: fsrs-queue-fix-r1
 
+> **Trạng thái:** open (2026-09-30) - T1/T2 xong; T3 (elapsed_days) hết chặn D-3, chưa làm
+
 > Fen save 2026-09-30. Nguồn: review "FSRS đã best practice chưa" (session cloud, đối chiếu `swift-fsrs` @`4fbaf20`).
 > 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T3**. T1 ✅ T2 ✅; T3 **chặn** tới khi chốt D-3 (dưới).
 > Chưa code. Test phải chạy ở máy có Xcode (`scripts/test.sh`) — container cloud không build được.

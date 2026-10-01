@@ -1,5 +1,7 @@
 # Plan `ux-polish-r1` — cải thiện UX/UI Reado (5 task, 0 dependency)
 
+> **Trạng thái:** closed (2026-09-26) - 5 task UX/UI: nhịp ôn trên nút, TTS, Liquid Glass, onboarding checklist (ADR-040/041)
+
 > Plan này thay cho `/rplan`: owner đã chọn phạm vi + 2 quyết định non-goal (2026-09-26).
 > Người code (Sonnet) làm **đúng 1 task / session** theo thứ tự T1→T5, mỗi task đóng bằng `/rhandoff`.
 > Việc đầu tiên của session T1: chép file này thành `docs/plans/ux-polish-r1.md` (commit cùng T1).

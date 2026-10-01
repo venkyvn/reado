@@ -1,6 +1,8 @@
 # Plan — reencounter-r1: gặp lại từ cũ khi đọc + mức "Đã thấm"
 
-> **Trạng thái 2026-10-01:** fen OK (go) cả schema `encounters` và FR-22 mới. 3 task: **T1 ✅ T2 ✅ T3 ✅(tạm)** — T1/T2 fen xác nhận test xanh + xem tay UI; T3 fen chốt "tạm xem như xong" 2026-10-01 (xem ghi chú ở T3).
+> **Trạng thái:** open (2026-10-01) - gặp lại từ cũ khi đọc + mức "Đã thấm"; T1 T2 xong, T3 tạm — còn chờ fen xem tay UI
+
+> Chi tiết: fen OK (go) cả schema `encounters` và FR-22 mới. 3 task: **T1 ✅ T2 ✅ T3 ✅(tạm)** — T1/T2 fen xác nhận test xanh + xem tay UI; T3 fen chốt "tạm xem như xong" 2026-10-01 (xem ghi chú ở T3).
 
 ## Spec
 - FR / journey: **FR-22 mới "Gặp lại từ cũ khi đọc"** (thêm vào PRD ở T1); lấp criterion 3 của FR-05 (chạm vocab trong đoạn → nghĩa + IPA — chưa làm ở `ReadingSessionView`). Thước đo trực tiếp **M-06**. J2.

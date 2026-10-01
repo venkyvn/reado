@@ -1,5 +1,7 @@
 # Plan: motivation-r1 — động lực ôn hằng ngày (ý 1 + 2 + 3 + 4 + 7)
 
+> **Trạng thái:** closed (2026-09-26) - session-celebration + learn-more + book-progress/streak-nudge (3/3 task)
+
 > Nguồn: brainstorm 2026-09-26 (session-brief/journal). Ý còn lại (6, 8, 9, 10, 11) nằm ở
 > `ROADMAP.md` Phase 4 — "Động lực học (brainstorm, chưa chốt)".
 

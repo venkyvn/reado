@@ -1,5 +1,7 @@
 # Plan: repo-hygiene-r1 — dọn repo, pbxproj đồng bộ thư mục, tách code UI, lane test nhanh
 
+> **Trạng thái:** closed (2026-09-28) - dọn repo, pbxproj đồng bộ thư mục, tách code UI, lane test kit (Phase A+B1–B3; B4/B5 hoãn)
+
 > Lưu thành `docs/plans/repo-hygiene-r1.md` ở bước đầu A1 (fen đã OK plan).
 > Người implement: Sonnet, **mỗi task 1 session**, mở bằng `/rstart`, đóng bằng `/rhandoff`.
 > CI: để sau, không nằm trong plan này.

@@ -1,6 +1,8 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
-> **Trạng thái 2026-09-30:** fen OK (go). 3 task, T1 làm chen lúc nào cũng được; T3 sau `reencounter-r1` T2.
+> **Trạng thái:** open (2026-09-30) - dịch hay + cặp cụm EN↔VI + chọn sẵn top 5; fen go, chưa code
+
+> 3 task, T1 làm chen lúc nào cũng được; T3 sau `reencounter-r1` T2.
 
 ## Spec
 - FR / journey: FR-02 (output schema), FR-05 (hiển thị cặp cụm), **FR-09 criterion 1 "mặc định tất cả" → "chọn sẵn top 5"** (sửa PRD). J1, J2.

@@ -12,15 +12,15 @@
 - verify-nav-r1 (2026-10-01, T1 ✅, T2/T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`) + `sim_screens.sh open` để agent mở thẳng một màn và chụp không cần chạm tay. → `docs/plans/verify-nav-r1.md`
 - extra-review-r1 (2026-10-01, ✅ KHÉP, ADR-050) — gộp Cram + "Học thêm" thành "Ôn thêm" 20 thẻ ghi lịch FSRS thật, LIFO thật cho thẻ mới, heatmap theo phân vị. → `docs/journal/2026-10-01.md`
 - remove-proxy-r1 (2026-10-01, ✅ KHÉP, ADR-049) — xoá proxy Reado, FR-02 chỉ còn BYOK. → `docs/journal/2026-10-01.md`
-- refactor-r4 (2026-10-01, ✅ KHÉP) — tách `CaptureView`, B5 chuyển test sang `ReadoKitTests`, tách `AnalysisTests.swift`. → `docs/plans/refactor-r4.md`
+- refactor-r4 (2026-10-01, ✅ KHÉP) — tách `CaptureView`, B5 chuyển test sang `ReadoKitTests`, tách `AnalysisTests.swift`. → `docs/plans/done/refactor-r4.md`
 - refactor-r2 + refactor-r3 (2026-10-01, ✅) — `AppModel.clock`, facade DB cho Settings/Export, đọc cột theo tên (`SQLRow`), chia state `AppModel` 4 nhóm, dọn `try?` nuốt lỗi thật. → `docs/journal/2026-10-01.md`
 - Audit nhỏ sau refactor-r4 (2026-10-01, ✅) — gộp SQL rời vào `VocabRepository.defaultCollectionID`. → `docs/journal/2026-10-01.md`
 - fsrs-queue-fix-r1 (T1 ✅ T2 ✅, **T3 hết chặn — chưa làm**) — queue so `due_at` với cửa sổ ngày học, `GradePreview` tái dùng nhãn trong 30'. → `docs/plans/fsrs-queue-fix-r1.md`
 - reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, 2026-10-01, ADR-048) — FR-22 gặp lại từ cũ khi đọc, thang Mới/Đang học/Đã nhớ/Đã thấm. → `docs/plans/reencounter-r1.md`
 - new-order-r1 (2026-09-30, ✅ KHÉP, ADR-047) — thẻ mới ưu tiên bộ vừa thêm (LIFO trong bộ đảo tiếp ở extra-review-r1). → `docs/journal/2026-09-30.md`
 - vision-refresh-r2 (2026-09-30, ✅, docs-only) — `vision.md` chỉ giữ luật hiện hành, thang 4 mức Mới/Đang học/Đã nhớ/Đã thấm. → `docs/journal/2026-09-30.md`
-- shell-chrome-r1 (2026-09-30, ✅ KHÉP) — ô nhập Settings, nút Ôn hết bị tab bar che, hết giật kéo thẻ, ẩn/hiện tab khi cuộn. → `docs/plans/shell-chrome-r1.md`
-- repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/repo-hygiene-r1.md`
+- shell-chrome-r1 (2026-09-30, ✅ KHÉP) — ô nhập Settings, nút Ôn hết bị tab bar che, hết giật kéo thẻ, ẩn/hiện tab khi cuộn. → `docs/plans/done/shell-chrome-r1.md`
+- repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
 - **Hàng đợi chưa bắt đầu:** prompt-v6 (fen đã go) — dịch hay, `phrases` chạm-sáng, chọn sẵn top 5. → `docs/plans/prompt-v6.md`

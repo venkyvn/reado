@@ -1,5 +1,7 @@
 # Plan: shell-chrome-r1
 
+> **Trạng thái:** closed (2026-09-30) - ô nhập Settings, nút "Ôn hết" bị tab bar che, hết giật kéo thẻ, ẩn/hiện tab khi cuộn (267/269 xanh)
+
 > Fen confirm 2026-09-28 (T1–T3b); T4 thêm 2026-09-30 (fen góp ý lần 2). 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T4 → T3a → T3b**.
 >
 > **Khép 2026-09-30 — cả 5 task ✅, build+test xanh (267/269, 2 skip opt-in).** Lệch so với HLD lúc lập:

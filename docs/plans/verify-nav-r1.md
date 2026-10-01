@@ -1,6 +1,6 @@
 # Plan: verify-nav-r1
 
-> **Trạng thái:** T1 ✅ (2026-10-01, xem `docs/journal/2026-10-01.md`). T2/T3 chưa làm.
+> **Trạng thái:** open (2026-10-01) - launch argument mở thẳng màn cho agent chụp simulator; T1 xong (`docs/journal/2026-10-01.md`), T2/T3 chưa làm
 
 ## Context
 Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp được màn mở đầu (Home). Vì vậy brief §2.7 còn treo nhiều mục "chưa xem tay" (Ôn thêm, alert lỗi, reencounter, Capture, Settings, accent lệch). Mục tiêu: chỉ bằng launch argument của bản DEBUG, agent mở thẳng được một màn (kèm theme và seed), chụp light/dark rồi tự đọc PNG, không cần ai chạm tay.

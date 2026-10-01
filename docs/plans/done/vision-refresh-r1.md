@@ -1,6 +1,6 @@
 # Plan: vision-refresh-r1
 
-> **T1 ✅ T2 ✅** — 2026-09-30, docs-only, không build.
+> **Trạng thái:** closed (2026-09-30) - gọn nguyên lý 5, làm rõ #6, nối vision vào /rplan (docs-only)
 
 > Fen confirm 2026-09-30. Docs-only, **1 session, 2 task** (T1 → T2), đóng bằng `/rhandoff`.
 > Người thực hiện: Sonnet. Làm đúng các thay đổi dưới đây, không mở rộng scope.

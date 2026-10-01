@@ -1,6 +1,6 @@
 # Plan — new-order-r1: thứ tự thẻ mới ưu tiên bộ đang đọc
 
-> **Trạng thái 2026-09-30 — ĐÓNG:** T1 ✅, 271/273 xanh. Chi tiết: journal 2026-09-30, ADR-047.
+> **Trạng thái:** closed (2026-09-30) - thẻ mới ưu tiên bộ đang đọc (LIFO), 271/273 xanh, ADR-047
 
 ## Spec
 - FR / journey: FR-11 (thêm 1 criterion "thứ tự chọn thẻ mới trong hạn mức"), FR-14 criterion 3 (tồn "nếu hiện" → bỏ khỏi Home hợp lệ, không sửa PRD). J3 (Học từ mới), J4.

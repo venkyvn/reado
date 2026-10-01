@@ -1,6 +1,8 @@
 # Plan: visual-polish-r1 — nâng cấp visual theo hướng "Native iOS tinh chỉnh"
 
-> **Trạng thái 2026-09-28:** T0–T5 đã code + commit (ADR-045), build xanh, full suite 263/265
+> **Trạng thái:** open (2026-09-28) - "Native iOS tinh chỉnh": T0–T5 code+commit xong (ADR-045), còn chờ fen xem tay nhiều màn
+
+> Chi tiết: build xanh, full suite 263/265
 > (2 skip opt-in; gồm 7 test của luồng `cram-collection-r1` chạy song song). **Plan còn mở** cho tới khi fen xem tay các màn chưa kiểm. Đã xem thực
 > tế trên simulator: Home (light + dark). **Chưa xem tay:** Ôn (2 mặt thẻ), SessionDone,
 > Kho, CollectionDetail, Streak, Analysis — cần fen điều hướng simulator + chụp
