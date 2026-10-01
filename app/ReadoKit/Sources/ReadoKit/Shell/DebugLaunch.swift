@@ -43,6 +43,8 @@ public struct DebugLaunch: Equatable, Sendable {
         case capture
         case analysisFixture
         case encounterSheet
+        /// ux-redesign-r1 T2 — banner "Đã lưu … · Xem" mẫu (`ShellBanner`) trên Home, chưa cần luồng lưu thật.
+        case saveBanner
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -133,6 +135,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "capture": return .capture
         case "analysis-fixture": return .analysisFixture
         case "encounter-sheet": return .encounterSheet
+        case "save-banner": return .saveBanner
         default: return nil
         }
     }

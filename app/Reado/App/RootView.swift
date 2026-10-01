@@ -57,6 +57,9 @@ struct RootView: View {
     @State private var showAnalysis = false
     // ux-redesign-r1 T1a: phiên ôn toàn màn — nil = đóng.
     @State private var reviewRequest: ReviewRequest?
+    // ux-redesign-r1 T2: banner không chặn ở đáy (ADR-053). Tạm chỉ có `-ReadoScreen save-banner`
+    // đặt nó; luồng Lưu thật (T5a) gắn vào sau.
+    @State private var banner: ShellBannerItem?
     // T3a shell-chrome-r1: ẩn thanh tab + shutter khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
@@ -119,6 +122,17 @@ struct RootView: View {
                     .safeAreaPadding(.bottom)
                     // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt lên như nội dung.
                     .transition(.opacity.combined(with: .scale(scale: 0.88)))
+            }
+        }
+        .overlay(alignment: .bottom) {
+            // Banner nằm trên shutter nổi (cao `FloatShutter.size` + khe) để không đè lên nó; cùng
+            // cách đọc safe area môi trường như overlay shutter ở trên (đã gồm ShellTabBar).
+            if let banner {
+                ShellBanner(item: banner, onAction: dismissBanner, onDismiss: dismissBanner)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, ShellTabBar.shutterGap + FloatShutter.size + Spacing.sm)
+                    .safeAreaPadding(.bottom)
+                    .revealTransition()
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: showShutter)
@@ -186,6 +200,10 @@ struct RootView: View {
             #endif
         }
         .appErrorAlert()
+    }
+
+    private func dismissBanner() {
+        banner = nil
     }
 
     /// Bấm lại tab đang đứng → pop stack về root (Home / Kho). Tab Ôn không có path.
@@ -271,6 +289,12 @@ struct RootView: View {
         case .encounterSheet:
             model.shell.debugOpenFirstEncounter = true
             openDebugAnalysisFixture()
+        case .saveBanner:
+            selectedTab = .home
+            Motion.run(reduceMotion: reduceMotion) {
+                banner = ShellBannerItem(
+                    message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem", autoHides: false)
+            }
         }
         if let alert = launch.alert {
             Task { @MainActor in

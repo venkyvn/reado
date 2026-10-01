@@ -15,7 +15,8 @@
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
 #                                           # (home, kho, review, review-extra, collection:<id|tên>,
-#                                           # settings, streak, data, capture, analysis-fixture, encounter-sheet).
+#                                           # settings, streak, data, capture, analysis-fixture, encounter-sheet,
+#                                           # save-banner).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
 #                                           # `--seed` chỉ có tác dụng khi kho ĐANG TRỐNG (seed-once, như CSV cũ)
 #                                           # — đổi seed thì luôn kèm `--fresh`. `demo-reviewed` dựng lịch ôn giả

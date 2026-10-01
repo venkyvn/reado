@@ -26,6 +26,7 @@ final class DebugLaunchTests: XCTestCase {
             ("capture", .capture),
             ("analysis-fixture", .analysisFixture),
             ("encounter-sheet", .encounterSheet),
+            ("save-banner", .saveBanner),
         ]
         for (raw, expected) in cases {
             let launch = DebugLaunch.parse(["-ReadoScreen", raw])
