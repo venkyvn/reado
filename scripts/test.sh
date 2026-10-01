@@ -6,12 +6,25 @@
 #   scripts/test.sh test-without-building              # chạy lại test, không build lại
 #   scripts/test.sh kit                                # ReadoKit trên macOS — không simulator, chạy nhanh
 # Log đầy đủ: /tmp/build.log (kit: /tmp/build-kit.log) · xcresult: .tmp/results/last.xcresult (kit: kit.xcresult)
+# Tóm tắt máy đọc: .tmp/results/last-summary.txt (kit: kit-summary.txt) — thời điểm, HEAD, action, RESULT, exit.
 set -euo pipefail
 
 ACTION="${1:-test}"
 [[ $# -gt 0 ]] && shift
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# write_summary <file> <action> <exit_code> [result_line] — thời điểm + HEAD + action + RESULT + exit.
+write_summary() {
+  local file="$1" action="$2" status="$3" result_line="${4:-}"
+  {
+    echo "time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "head: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    echo "action: $action"
+    echo "${result_line:-RESULT: n/a (không chạy test)}"
+    echo "exit: $status"
+  } > "$file"
+}
 
 # summarize_result <xcresult> — in "RESULT: passed x/y" + danh sách test hỏng.
 summarize_result() {
@@ -53,7 +66,13 @@ if [[ "$ACTION" == "kit" ]]; then
   KIT_STATUS=$?
   set -e
   grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" /tmp/build-kit.log | tail -n 40
-  [[ -d "$KIT_RESULT" ]] && summarize_result "$KIT_RESULT"
+  KIT_RESULT_LINE=""
+  if [[ -d "$KIT_RESULT" ]]; then
+    KIT_SUMMARY_OUT="$(summarize_result "$KIT_RESULT")"
+    echo "$KIT_SUMMARY_OUT"
+    KIT_RESULT_LINE="$(echo "$KIT_SUMMARY_OUT" | grep '^RESULT:' | head -1)"
+  fi
+  write_summary "$ROOT/.tmp/results/kit-summary.txt" "kit" "$KIT_STATUS" "$KIT_RESULT_LINE"
   exit $KIT_STATUS
 fi
 
@@ -95,8 +114,12 @@ set -e
 
 grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" /tmp/build.log | tail -n 40
 
+RESULT_LINE=""
 if [[ "$ACTION" != "build" && -d "$RESULT" ]]; then
-  summarize_result "$RESULT"
+  SUMMARY_OUT="$(summarize_result "$RESULT")"
+  echo "$SUMMARY_OUT"
+  RESULT_LINE="$(echo "$SUMMARY_OUT" | grep '^RESULT:' | head -1)"
 fi
+write_summary "$ROOT/.tmp/results/last-summary.txt" "$ACTION" "$STATUS" "$RESULT_LINE"
 
 exit $STATUS
