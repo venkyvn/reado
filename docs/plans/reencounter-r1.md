@@ -1,6 +1,6 @@
 # Plan — reencounter-r1: gặp lại từ cũ khi đọc + mức "Đã thấm"
 
-> **Trạng thái 2026-09-30:** fen OK (go) cả schema `encounters` và FR-22 mới. 3 task, làm sau `new-order-r1`.
+> **Trạng thái 2026-10-01:** fen OK (go) cả schema `encounters` và FR-22 mới. 3 task: **T1 ✅ T2 ✅** (fen xác nhận test xanh + xem tay UI 2026-10-01), T3 chưa.
 
 ## Spec
 - FR / journey: **FR-22 mới "Gặp lại từ cũ khi đọc"** (thêm vào PRD ở T1); lấp criterion 3 của FR-05 (chạm vocab trong đoạn → nghĩa + IPA — chưa làm ở `ReadingSessionView`). Thước đo trực tiếp **M-06**. J2.
@@ -44,15 +44,15 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 
 ## Tầng 2 — Tasks
 
-### T1 — dữ liệu
-- **Trạng thái 2026-10-01:** code + test + docs đã viết trên nhánh `claude/friendly-lovelace-oz77e5` (cloud, **chưa build/chạy test**) — chờ fen chạy `scripts/test.sh` + `scripts/test.sh kit`, xanh mới đóng T1. Chi tiết: `EncounterRepository.insertSeen` **không** tự mở transaction (T2 gọi trong transaction lưu trang); `recordRecognized` tự mở một transaction; matcher thêm luật `'s` là ranh giới; export giữ `version: 1`, thêm khoá `encounters`. Docs đã cập nhật: `db.md` A.2, `solution-design.md` §5/§6, PRD v0.10 + FR-22, ADR-048, ROADMAP 3.16.
+### T1 — dữ liệu ✅ xong 2026-10-01
+- **Xong 2026-10-01** (fen xác nhận `scripts/test.sh` + `kit` xanh, không kèm số; commit `42c949f`). Chi tiết: `EncounterRepository.insertSeen` **không** tự mở transaction (T2 gọi trong transaction lưu trang); `recordRecognized` tự mở một transaction; matcher thêm luật `'s` là ranh giới; export giữ `version: 1`, thêm khoá `encounters`. Docs đã cập nhật: `db.md` A.2, `solution-design.md` §5/§6, PRD v0.10 + FR-22, ADR-048, ROADMAP 3.16.
 - Migration v4, `EncounterRepository` (insert seen/recognized idempotent theo ngày, đếm tuần), `EncounterMatcher`, export thêm `encounters`.
 - Test: migration từ v3, matcher (cụm, biên từ, hoa/thường, chồng nhau), cascade, recognized 1 lần/ngày.
 - Docs: `db.md`, DDL `solution-design.md`, PRD FR-22, ADR-048.
 - DoD: `scripts/test.sh kit` + full xanh.
 
-### T2 — màn đọc
-- **Trạng thái 2026-10-01:** code + test đã viết (cloud, **chưa build/chạy test, UI chưa xem tay**). `VocabRepository.saveCapture` ghi `seen` cùng transaction (matcher dựng TRƯỚC khi chèn item mới; ghi cả khi đích là kho tạm; không có đoạn gốc thì không ghi; từ có thẻ leech bị loại). UI: `Shared/EncounterText.swift` (`EncounterText` gạch chân chấm + link qua `openURL`; `EncounterSheet` popover nghĩa/IPA/"Đã gặp ở ‹collection›"/"Nhận ra ✓" mỗi dòng vocab); `AppModel+Encounter.swift`; `SegmentBlock` và `ReadingSessionView` đổi `Button` → `onTapGesture` (Button nuốt chạm link). Popover làm bằng sheet `.medium/.large` (trên iPhone `.popover` cũng tự thành sheet). Chờ fen xem tay: gạch chân hiện đúng, chạm từ mở sheet, chạm ngoài từ vẫn lật dịch, "Nhận ra" một lần/ngày.
+### T2 — màn đọc ✅ xong 2026-10-01
+- **Xong 2026-10-01** (commit `ec091ef`; fen xác nhận test xanh + đã xem tay UI: gạch chân, popover, "Nhận ra", lưu trang, export). `VocabRepository.saveCapture` ghi `seen` cùng transaction (matcher dựng TRƯỚC khi chèn item mới; ghi cả khi đích là kho tạm; không có đoạn gốc thì không ghi; từ có thẻ leech bị loại). UI: `Shared/EncounterText.swift` (`EncounterText` gạch chân chấm + link qua `openURL`; `EncounterSheet` popover nghĩa/IPA/"Đã gặp ở ‹collection›"/"Nhận ra ✓" mỗi dòng vocab); `AppModel+Encounter.swift`; `SegmentBlock` và `ReadingSessionView` đổi `Button` → `onTapGesture` (Button nuốt chạm link). Popover làm bằng sheet `.medium/.large` (trên iPhone `.popover` cũng tự thành sheet).
 - Gạch chân + popover (nghĩa, IPA, "đã gặp ở ‹collection›", nút "Nhận ra ✓") ở `AnalysisView` và `ReadingSessionView`; ghi `seen` khi lưu trang.
 - Test: `seen` ghi đúng transaction lưu; UI test/preview tối thiểu.
 - DoD: full xanh + fen xem tay trên simulator.
