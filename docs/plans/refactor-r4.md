@@ -1,6 +1,6 @@
 # Plan: refactor-r4 — tách CaptureView, dọn try?, B5 chuyển test sang ReadoKitTests
 
-> **Trạng thái:** T1 ✅ 2026-10-01 (306/308 xanh, commit tới). T2/T3 chưa làm — T2 cần fen bật `ReadoKitTests` trong scheme `Reado` (Xcode → Edit Scheme → Test → +) trước khi Sonnet làm tiếp.
+> **Trạng thái:** T1 ✅ · T2 ✅ 2026-10-01 (355/357 xanh). T3 chưa làm.
 
 > Viết cho **Sonnet** thực thi: **1 task = 1 session**, làm đúng thứ tự T1 → T2 → T3.
 > Khi fen duyệt plan: lưu nguyên văn vào `docs/plans/refactor-r4.md` (commit chung với T1).

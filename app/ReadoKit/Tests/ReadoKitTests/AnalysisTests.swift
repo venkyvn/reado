@@ -4,7 +4,25 @@ import ReadoKit
 
 /// FR-02: decoder schema (prompt-spec #4), verify engine (mục 6), factory (FR-21),
 /// proxy client wire (SD 4.1). Chạy offline — stub URLProtocol, không mạng thật.
+/// `OpenAICompatClient`/`ReadoProxyClient` gọi `DebugTrace.event` — override thư
+/// mục tạm (như `DebugTraceTests`) để không ghi vào `Documents/Diagnostics` thật.
 final class AnalysisTests: XCTestCase {
+    private var tempRoot: URL!
+
+    override func setUp() {
+        super.setUp()
+        tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AnalysisTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        DebugTrace.documentsDirectoryOverride = tempRoot
+    }
+
+    override func tearDown() {
+        DebugTrace.documentsDirectoryOverride = nil
+        try? FileManager.default.removeItem(at: tempRoot)
+        tempRoot = nil
+        super.tearDown()
+    }
 
     // MARK: - Response JSON fixtures
 
@@ -1116,7 +1134,7 @@ private func sseLine(content: String? = nil, reasoning: String? = nil) throws ->
 }
 
 final class StubURLProtocol: URLProtocol {
-    static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
     static func makeSession() -> URLSession {
         let config = URLSessionConfiguration.ephemeral

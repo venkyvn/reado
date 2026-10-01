@@ -13,6 +13,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		49910C4A306E4D5D00EBCE48 /* Reado.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = Reado.xctestplan; sourceTree = "<group>"; };
 		5A0000000000000000000005 /* ReadoKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ReadoKit; sourceTree = "<group>"; };
 		5A0000000000000000000020 /* Reado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reado.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A0000000000000000000021 /* ReadoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReadoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -47,6 +48,7 @@
 		5A0000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				49910C4A306E4D5D00EBCE48 /* Reado.xctestplan */,
 				5A0000000000000000000005 /* ReadoKit */,
 				493AC313306AB33B00C79FEF /* Reado */,
 				493AC29C306AB33400C79FEF /* ReadoTests */,

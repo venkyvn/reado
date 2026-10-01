@@ -1,0 +1,36 @@
+{
+  "configurations" : [
+    {
+      "id" : "8C1F9FC4-FA27-45BB-83F9-487000D2504D",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Reado.xcodeproj",
+      "identifier" : "5A0000000000000000000011",
+      "name" : "Reado"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Reado.xcodeproj",
+        "identifier" : "5A0000000000000000000012",
+        "name" : "ReadoTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:ReadoKit",
+        "identifier" : "ReadoKitTests",
+        "name" : "ReadoKitTests"
+      }
+    }
+  ],
+  "version" : 1
+}

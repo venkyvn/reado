@@ -39,8 +39,11 @@ app/
       Database/           — SQLiteDatabase (wrapping C API), Migration, Seeder
       Review/             — ReviewScheduler (FSRS), CardSnapshot, ReviewService,
                             ReviewQueue
-    Tests/ReadoKitTests/  — smoke nhanh, chạy bằng `scripts/test.sh kit` (macOS)
-  ReadoTests/            — bộ test hành vi chính, chạy iOS Simulator qua xcodebuild
+    Tests/ReadoKitTests/  — bộ test hành vi chính (logic thuần); chạy macOS qua
+                            `scripts/test.sh kit` LẪN iOS Simulator qua scheme
+                            `Reado` (`Reado.xctestplan`, refactor-r4 T2)
+  ReadoTests/            — chỉ 4 file cần UIKit/Vision (OCR, ảnh) — không build
+                            được trên macOS, chạy iOS Simulator qua xcodebuild
 ```
 
 - **ReadoKit là adapter cô lập thư viện ngoài:** kiểu của swift-fsrs (`Card`,
@@ -91,17 +94,24 @@ app/
 
 ## 7. Kiểm thử
 
-- Acceptance criteria của FR = test case (rulebook mục 4). Test hành vi ở
-  `app/ReadoTests`, chạy iOS Simulator: `xcodebuild -project Reado.xcodeproj
-  -scheme Reado -destination 'platform=iOS Simulator,name=iPhone Air' test`.
-- **ReadoTests KHÔNG có `TEST_HOST` — chỉ link `ReadoKit` (local package), KHÔNG
-  link app target.** Hệ quả: `AppModel`/SwiftUI view KHÔNG unit-test được. Test
-  logic ở ReadoKit (enum error, queue/service/decoder, repository); hành vi của
-  AppModel/view verify bằng owner e2e, không bằng unit test.
+- Acceptance criteria của FR = test case (rulebook mục 4). Test hành vi logic
+  thuần ở `app/ReadoKit/Tests/ReadoKitTests` — chạy nhanh bằng `scripts/test.sh
+  kit` (macOS) khi đang sửa, scheme `Reado` (xcodebuild iOS Simulator) chạy lại
+  full trước `/rhandoff`. 4 file cần UIKit/Vision (OCR, nén ảnh) ở `app/ReadoTests`,
+  chỉ chạy được iOS Simulator.
+- **Không có target nào link app (`TEST_HOST`).** Hệ quả: `AppModel`/SwiftUI view
+  KHÔNG unit-test được dù ở target nào. Test logic ở ReadoKit (enum error,
+  queue/service/decoder, repository); hành vi của AppModel/view verify bằng
+  owner e2e, không bằng unit test.
 - DB trong test dùng `SQLiteDatabase(inMemory:)`; fixtures qua enum `Fixtures`
   (time + timezone cố định, không phụ thuộc đồng hồ thật).
-- Test file mới chỉ cần tạo trong `app/ReadoTests/` (synchronized folders, ADR-046). Tin cột
-  `Executed N tests` / dòng `RESULT` của `scripts/test.sh`, không tin số trong commit cũ.
+- Test logic mới tạo trong `app/ReadoKit/Tests/ReadoKitTests/` (SPM tự nhận);
+  chỉ test cần UIKit/Vision mới vào `app/ReadoTests/` (synchronized folders,
+  ADR-046). Test chạy trên macOS (`kit`) ghi vào `~/Documents` THẬT (không
+  sandbox) — class nào gọi `DebugTrace`/code ghi Documents phải override
+  `DebugTrace.documentsDirectoryOverride` sang thư mục tạm ở `setUp`/`tearDown`
+  (mẫu: `DebugTraceTests`, `AnalysisTests`). Tin cột `Executed N tests` / dòng
+  `RESULT` của `scripts/test.sh`, không tin số trong commit cũ.
 - "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào ROADMAP.
 
 ## 7b. Commit message — bắt buộc (owner chốt 2026-09-19)
