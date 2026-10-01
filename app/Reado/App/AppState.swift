@@ -91,6 +91,9 @@ final class ShellSignals {
     /// đọc ở `.task` để tự mở `EncounterSheet` của match đầu tiên (demo gạch chân
     /// chấm) rồi dọn sạch, giống các cờ `pending*` khác ở trên.
     var debugOpenFirstEncounter = false
+    /// ux-redesign-r1 T5b — `-ReadoScreen analysis-fixture-page` bật cờ này; AnalysisView đọc ở
+    /// `onAppear` để mở thẳng tab "Trang" rồi dọn sạch.
+    var debugShowAnalysisPage = false
     #endif
 }
 

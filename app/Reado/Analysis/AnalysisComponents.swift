@@ -3,7 +3,8 @@ import ReadoKit
 
 // Tách từ AnalysisView.swift (repo-hygiene-r1 B3).
 
-/// Đoạn gốc song ngữ (port UI lab §5.3) — EN luôn; VI mờ tới khi tap mở.
+/// Đoạn gốc song ngữ (port UI lab §5.3, ADR-030) — EN luôn hiện; VI hiện sẵn theo
+/// `isRevealed` (nút đáy của `AnalysisView` bật/tắt toàn bộ, chạm đoạn lật riêng).
 /// FR-22: từ đã có trong kho gạch chân, chạm mở popover. Chạm ngoài từ vẫn lật
 /// bản dịch — dùng `onTapGesture` thay `Button` vì `Button` nuốt chạm của link.
 struct SegmentBlock: View {
@@ -36,6 +37,42 @@ struct SegmentBlock: View {
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(named: isRevealed ? "Ẩn bản dịch" : "Hiện bản dịch", onTap)
+    }
+}
+
+/// "Ý chính" (FR-06) thu gọn mặc định, chạm mở — cùng cơ chế với phần Ý chính của
+/// `ReadingSessionView` (ux-redesign-r1 T5b).
+struct SummaryCard: View {
+    let summary: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Button {
+                Motion.run(reduceMotion: reduceMotion) { isExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("Ý chính")
+                        .font(Typo.rowTitle)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                Text(summary)
+                    .font(.body)
+                    .revealTransition()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .card()
     }
 }
 

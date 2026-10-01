@@ -278,6 +278,9 @@ struct RootView: View {
             openShutterCapture()
         case .analysisFixture:
             openDebugAnalysisFixture()
+        case .analysisFixturePage:
+            model.shell.debugShowAnalysisPage = true
+            openDebugAnalysisFixture()
         case .encounterSheet:
             model.shell.debugOpenFirstEncounter = true
             openDebugAnalysisFixture()

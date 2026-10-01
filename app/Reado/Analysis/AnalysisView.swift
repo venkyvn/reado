@@ -10,11 +10,22 @@ struct AnalysisView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// ux-redesign-r1 T5b: danh sách từ (việc chính) tách khỏi trang gốc — không còn "Đoạn gốc" dài
+    /// đẩy việc duyệt từ xuống dưới. Mặc định mở "Từ vựng" (Q-d).
+    private enum AnalysisTab: Hashable {
+        case vocab, page
+    }
 
     @State private var drafts: [ReviewDraft] = []
     @State private var expandedIDs: Set<String> = []
-    // port UI lab §5.3: bản dịch đoạn ẩn tới khi tap (EN luôn hiện).
-    @State private var revealedSegments: Set<Int> = []
+    @State private var tab: AnalysisTab = .vocab
+    // ADR-030 (cơ chế y hệt `ReadingSessionView`): bản dịch mặc định HIỆN, một nút đáy bật/tắt
+    // toàn bộ; chạm một đoạn lật riêng đoạn đó. Bấm nút đáy xoá hết lật riêng — nếu không, sau vài
+    // lần chạm lẻ thì nút không còn nói đúng trạng thái đang thấy.
+    @State private var showTranslations = true
+    @State private var overriddenSegments: Set<Int> = []
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
     // FR-22: từ đã có trong kho gạch chân ở đoạn gốc; chạm mở popover.
@@ -92,7 +103,7 @@ struct AnalysisView: View {
                 .frame(maxWidth: .infinity)
                 .transition(.opacity)
             } else if let result = model.capture.analysisResult {
-                resultList(result)
+                resultView(result)
                     .transition(.opacity)
             } else {
                 ContentUnavailableView(
@@ -119,10 +130,14 @@ struct AnalysisView: View {
                 }
             }
         }
-        // ux-redesign-r1 T5a: CTA chính là nút prominent ghim đáy (không còn chữ nhỏ trên toolbar).
+        // ux-redesign-r1 T5a/T5b: nút ghim đáy theo tab — "Từ vựng" là Lưu (CTA chính), "Trang" là
+        // ẩn/hiện bản dịch (ADR-030).
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsSaveBar {
-                saveBar
+            if showsResult {
+                switch tab {
+                case .vocab: saveBar
+                case .page: translationBar
+                }
             }
         }
         // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
@@ -153,6 +168,13 @@ struct AnalysisView: View {
             }
         }
         #if DEBUG
+        .onAppear {
+            // ux-redesign-r1 T5b — `-ReadoScreen analysis-fixture-page`: mở thẳng tab Trang.
+            if model.shell.debugShowAnalysisPage {
+                model.shell.debugShowAnalysisPage = false
+                tab = .page
+            }
+        }
         .task {
             // verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` (RootView bật
             // `debugOpenFirstEncounter`): tự mở popover của match đầu tiên để
@@ -259,8 +281,8 @@ struct AnalysisView: View {
         }
     }
 
-    /// Nút Lưu chỉ hiện khi đang xem kết quả (không phải lỗi/đang phân tích/chưa có trang).
-    private var showsSaveBar: Bool {
+    /// Nút đáy chỉ hiện khi đang xem kết quả (không phải lỗi/đang phân tích/chưa có trang).
+    private var showsResult: Bool {
         model.capture.analysisFailure == nil
             && !model.capture.isAnalyzing
             && model.capture.analysisResult != nil
@@ -276,6 +298,29 @@ struct AnalysisView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .disabled(selectedCount == 0)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    /// ADR-030: MỘT nút cố định dưới đáy bật/tắt toàn bộ bản dịch (mặc định hiện).
+    private var translationBar: some View {
+        Button {
+            Motion.run(reduceMotion: reduceMotion) {
+                showTranslations.toggle()
+                overriddenSegments.removeAll()
+            }
+        } label: {
+            Label(
+                showTranslations ? "Ẩn bản dịch" : "Hiện bản dịch",
+                systemImage: showTranslations ? "eye.slash" : "eye")
+                .contentTransition(.symbolEffect(.replace))
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.row)
+        }
+        .buttonStyle(.bordered)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(.background)
@@ -322,49 +367,75 @@ struct AnalysisView: View {
 
     // MARK: - Kết quả
 
-    private func resultList(_ result: PageAnalysis) -> some View {
+    private func resultView(_ result: PageAnalysis) -> some View {
+        VStack(spacing: 0) {
+            resultHeader
+            switch tab {
+            case .vocab:
+                vocabList
+            case .page:
+                pageView(result)
+            }
+        }
+    }
+
+    /// Đích lưu + chuyển tab — luôn hiện ở đầu màn, dù đang ở tab nào.
+    private var resultHeader: some View {
+        VStack(spacing: Spacing.sm) {
+            destinationRow
+            tabPicker
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    /// ADR-053: đổi đích ngay ở đầu màn duyệt (trước: chỉ đọc, "Đổi bộ ở màn chụp" là ngõ cụt).
+    private var destinationRow: some View {
+        CollectionDestinationPicker {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "tray.and.arrow.down")
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
+                Text("Lưu vào")
+                    .foregroundStyle(.secondary)
+                Text(destinationName)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: Spacing.sm)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .font(.subheadline)
+            .padding(.horizontal, Spacing.md)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .card()
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Đổi nơi lưu, hiện \(destinationName)")
+    }
+
+    /// Segmented; cỡ chữ accessibility thì đổi sang menu (nhãn "Từ vựng · 12" không vừa ô segmented).
+    @ViewBuilder
+    private var tabPicker: some View {
+        let picker = Picker("Hiển thị", selection: $tab) {
+            Text("Từ vựng · \(drafts.count)").tag(AnalysisTab.vocab)
+            Text("Trang").tag(AnalysisTab.page)
+        }
+        if dynamicTypeSize.isAccessibilitySize {
+            picker.pickerStyle(.menu)
+        } else {
+            picker.pickerStyle(.segmented)
+        }
+    }
+
+    // MARK: - Tab Từ vựng
+
+    /// FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
+    private var vocabList: some View {
         List {
-            // ADR-053: đổi đích ngay ở đầu màn duyệt (trước: chỉ đọc, "Đổi bộ ở màn chụp" là ngõ cụt).
-            Section {
-                CollectionDestinationPicker {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "tray.and.arrow.down")
-                            .foregroundStyle(Color.accentColor)
-                            .accessibilityHidden(true)
-                        Text("Lưu vào")
-                            .foregroundStyle(.secondary)
-                        Text(destinationName)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Spacer(minLength: Spacing.sm)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityHidden(true)
-                    }
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel("Đổi nơi lưu, hiện \(destinationName)")
-            }
-
-            // FR-05 (ADR-007): song ngữ — EN luôn hiện, VI mở khi tap (port §5.3).
-            if !result.segments.isEmpty {
-                Section("Đoạn gốc") {
-                    ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
-                        SegmentBlock(
-                            segment: seg,
-                            isRevealed: revealedSegments.contains(index),
-                            matcher: encounterMatcher,
-                            onSelect: { encounterSelection = $0 },
-                            onTap: { toggleSegment(index) })
-                    }
-                }
-            }
-
-            // FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
             if !drafts.isEmpty {
                 Section {
                     // Chọn/bỏ tất cả — để trong Section (header List nuốt tap).
@@ -400,21 +471,37 @@ struct AnalysisView: View {
                             }
                     }
                 } header: {
-                    HStack {
-                        Text("Từ vựng")
-                        Spacer()
-                        Text("Đã chọn \(selectedCount)/\(drafts.count)")
-                            .foregroundStyle(.secondary)
-                            .contentTransition(.numericText())
-                            .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
-                    }
+                    Text("Đã chọn \(selectedCount)/\(drafts.count)")
+                        .contentTransition(.numericText())
+                        .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
                 }
             }
+        }
+    }
 
-            if !result.summaryVI.isEmpty {
-                Section("Ý chính") {
-                    Text(result.summaryVI)
+    // MARK: - Tab Trang
+
+    /// FR-05/06 (ADR-007/030): song ngữ xen kẽ — EN + VI hiện sẵn từng đoạn, "Ý chính" thu gọn cuối.
+    @ViewBuilder
+    private func pageView(_ result: PageAnalysis) -> some View {
+        if result.segments.isEmpty && result.summaryVI.isEmpty {
+            ContentUnavailableView("Không có đoạn văn nào", systemImage: "text.alignleft")
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
+                        SegmentBlock(
+                            segment: seg,
+                            isRevealed: isRevealed(index),
+                            matcher: encounterMatcher,
+                            onSelect: { encounterSelection = $0 },
+                            onTap: { toggleSegment(index) })
+                    }
+                    if !result.summaryVI.isEmpty {
+                        SummaryCard(summary: result.summaryVI)
+                    }
                 }
+                .padding(Spacing.md)
             }
         }
     }
@@ -429,13 +516,18 @@ struct AnalysisView: View {
         }
     }
 
+    private func isRevealed(_ index: Int) -> Bool {
+        overriddenSegments.contains(index) ? !showTranslations : showTranslations
+    }
+
     private func toggleSegment(_ index: Int) {
         Motion.run(reduceMotion: reduceMotion) {
-            if revealedSegments.contains(index) {
-                revealedSegments.remove(index)
+            if overriddenSegments.contains(index) {
+                overriddenSegments.remove(index)
             } else {
-                revealedSegments.insert(index)
+                overriddenSegments.insert(index)
             }
         }
+        Haptics.selection()
     }
 }
