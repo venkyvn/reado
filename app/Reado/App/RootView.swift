@@ -169,7 +169,12 @@ struct RootView: View {
         }) {
             NavigationStack { AnalysisView() }
         }
-        .onAppear { model.reloadOverview() }
+        .onAppear {
+            model.reloadOverview()
+            #if DEBUG
+            applyDebugScreenIfNeeded()
+            #endif
+        }
         .appErrorAlert()
     }
 
@@ -209,6 +214,56 @@ struct RootView: View {
         if path.count == 1, case .hub = path[0] { return true }
         return false
     }
+
+    #if DEBUG
+    /// verify-nav-r1 — `-ReadoScreen …` (`DebugLaunch`, `scripts/sim_screens.sh
+    /// open`) để agent mở thẳng một màn và chụp, không cần chạm tay. `problems`
+    /// (key lạ/thiếu value) hoặc `collection:` không khớp bộ nào → alert, không
+    /// bao giờ âm thầm đứng im ở Home.
+    private func applyDebugScreenIfNeeded() {
+        let launch = DebugLaunch.parse(ProcessInfo.processInfo.arguments)
+        guard let screen = launch.screen else {
+            if let problem = launch.problems.first {
+                model.alertMessage = "Launch arg lạ: \(problem)"
+            }
+            return
+        }
+        switch screen {
+        case .home:
+            selectedTab = .home
+        case .kho:
+            selectedTab = .kho
+        case .review:
+            selectedTab = .review
+        case .reviewExtra:
+            model.shell.pendingReviewMode = .extra
+            selectedTab = .review
+        case let .collection(key):
+            guard let match = model.collections.first(where: { $0.id == key || $0.name == key })
+            else {
+                model.alertMessage = "Launch arg lạ: không thấy bộ '\(key)'"
+                return
+            }
+            selectedTab = .kho
+            khoPath = [.hub(match.id)]
+        case .settings:
+            selectedTab = .home
+            homePath = [.settings]
+        case .streak:
+            selectedTab = .home
+            homePath = [.streak]
+        case .data:
+            selectedTab = .home
+            homePath = [.data]
+        case .capture:
+            openShutterCapture()
+        case .analysisFixture, .encounterSheet:
+            // verify-nav-r1 T2: cần fixture phân tích + đọc encounterMatcher —
+            // chưa gán được chỉ với DebugLaunch, để task sau.
+            break
+        }
+    }
+    #endif
 
     /// Đích chung cho cả hai stack Home & Kho.
     @ViewBuilder

@@ -19,6 +19,6 @@ paths: app/Reado/**/*.swift
 
 ## Verify trước khi báo xong
 1. `scripts/test.sh build` phải xanh.
-2. `scripts/sim_screens.sh` (hoặc `--fresh`) để cài và mở app với dữ liệu mẫu. Điều hướng tới màn vừa sửa rồi chạy `scripts/sim_screens.sh shot after-<màn>`.
+2. `scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system] [--fresh]` (verify-nav-r1 — launch argument DEBUG-only, xem `DebugLaunch.Screen` cho danh sách màn) để mở THẲNG màn vừa sửa, không cần chạm tay. Rồi `scripts/sim_screens.sh shot after-<màn>`.
 3. Đọc cả hai PNG light và dark trong `.tmp/screens/`, đối chiếu từng dòng checklist cuối MASTER (accent thứ hai, Dynamic Type `accessibility-extra-large`, không bị ShellTabBar che, diff không có hex hay số lẻ mới).
-4. Màn nào không tới được bằng script (cần chạm, cần trạng thái đặc biệt) thì ghi rõ "chưa xem tay", không được báo là xong.
+4. Màn nào `open` không tới được (cần chạm, cần trạng thái đặc biệt chưa có cờ debug) thì ghi rõ "chưa xem tay", không được báo là xong.

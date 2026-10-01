@@ -7,8 +7,9 @@
 
 ## 1. Tình trạng hiện tại (mục lục — chi tiết ở journal/plan, không lặp lại ở đây)
 
-> **Test chính thức mới nhất:** 348/350 xanh suite đầy đủ (2 skip opt-in `LiveAIBoxTests`/`OCRProbeTests`), kit 329/329 — HEAD `f1460b5` (extra-review-r1), `** TEST SUCCEEDED **` trên máy có Xcode+simulator. **Chưa xem tay UI** trên nhiều màn (Ôn thêm, alert lỗi, reencounter, state chia AppModel…) — danh sách đầy đủ ở §2.7.
+> **Test chính thức mới nhất:** 360/362 xanh suite đầy đủ (2 skip opt-in `LiveAIBoxTests`/`OCRProbeTests`), kit 341/341 — HEAD = `git log -1 --oneline` (verify-nav-r1 T1, commit tự tham chiếu nên không ghi hash cứng), `** TEST SUCCEEDED **` trên máy có Xcode+simulator. **Chưa xem tay UI** trên nhiều màn — §2.7 giờ mở được phần lớn bằng `scripts/sim_screens.sh open <màn>` (verify-nav-r1 T1), còn chụp/đọc ảnh thật (T3) chưa chạy.
 
+- verify-nav-r1 (2026-10-01, T1 ✅, T2/T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`) + `sim_screens.sh open` để agent mở thẳng một màn và chụp không cần chạm tay. → `docs/plans/verify-nav-r1.md`
 - extra-review-r1 (2026-10-01, ✅ KHÉP, ADR-050) — gộp Cram + "Học thêm" thành "Ôn thêm" 20 thẻ ghi lịch FSRS thật, LIFO thật cho thẻ mới, heatmap theo phân vị. → `docs/journal/2026-10-01.md`
 - remove-proxy-r1 (2026-10-01, ✅ KHÉP, ADR-049) — xoá proxy Reado, FR-02 chỉ còn BYOK. → `docs/journal/2026-10-01.md`
 - refactor-r4 (2026-10-01, ✅ KHÉP) — tách `CaptureView`, B5 chuyển test sang `ReadoKitTests`, tách `AnalysisTests.swift`. → `docs/plans/refactor-r4.md`

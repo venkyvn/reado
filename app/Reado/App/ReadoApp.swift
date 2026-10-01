@@ -189,7 +189,12 @@ struct ReadoApp: App {
                 // 3.12: khôi phục lịch nhắc từ settings lúc khởi động. Tắt →
                 // dọn pending (không hỏi quyền); bật → đặt lại trigger hằng ngày.
                 .task { await model.syncReminderSchedule(requestPermission: true) }
-                .onAppear { applyForestDefaultIfNeeded() }
+                .onAppear {
+                    applyForestDefaultIfNeeded()
+                    #if DEBUG
+                    applyDebugThemeIfNeeded()
+                    #endif
+                }
         }
     }
 
@@ -202,4 +207,19 @@ struct ReadoApp: App {
             appTheme = AppTheme.forest.rawValue
         }
     }
+
+    #if DEBUG
+    /// verify-nav-r1 — `-ReadoTheme forest|sepia|indigo|system` (`DebugLaunch`,
+    /// `scripts/sim_screens.sh open`) để agent chụp ảnh đúng theme không cần
+    /// chạm Settings. Set cờ `appliedForestDefault` CÙNG LÚC để
+    /// `applyForestDefaultIfNeeded()` ở trên không ghi đè `system` về rừng.
+    /// Theme lạ → bỏ qua, không crash (app vẫn dùng theme đã lưu).
+    private func applyDebugThemeIfNeeded() {
+        guard let raw = DebugLaunch.parse(ProcessInfo.processInfo.arguments).theme,
+              AppTheme(rawValue: raw) != nil
+        else { return }
+        appliedForestDefault = true
+        appTheme = raw
+    }
+    #endif
 }

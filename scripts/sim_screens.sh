@@ -8,6 +8,14 @@
 #   scripts/sim_screens.sh --no-build      # dùng bản build gần nhất trong DerivedData/
 #   scripts/sim_screens.sh shot <tên>      # chụp <tên>-light.png + <tên>-dark.png màn hiện tại
 #   scripts/sim_screens.sh size <cỡ>       # Dynamic Type: extra-extra-large | large | ... (xcrun simctl ui)
+#   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system] [--fresh] [--no-build]
+#                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
+#                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
+#                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
+#                                           # (home, kho, review, review-extra, collection:<id|tên>,
+#                                           # settings, streak, data, capture, analysis-fixture*,
+#                                           # encounter-sheet* — hai cái cuối chưa wiring, verify-nav-r1 T2).
+#                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
 #
 # Bẫy: alert xin quyền camera đã hiện một lần thì kẹt qua cả uninstall/relaunch và che
 # ảnh chụp; cấp quyền sau đó không tắt được. Xử lý: `xcrun simctl shutdown <udid>` rồi
@@ -53,6 +61,51 @@ case "${1:-}" in
   size)
     SIZE="${2:?Thiếu cỡ chữ — vd: extra-extra-large hoặc large}"
     xcrun simctl ui "$UDID" content_size "$SIZE"
+    exit 0
+    ;;
+  open)
+    SCREEN="${2:?Thiếu tên màn — vd: scripts/sim_screens.sh open home (xem DebugLaunch.Screen)}"
+    shift 2
+    THEME=""
+    OPEN_FRESH=0
+    OPEN_BUILD=1
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
+        --fresh) OPEN_FRESH=1; shift ;;
+        --no-build) OPEN_BUILD=0; shift ;;
+        *) echo "Tham số lạ: $1" >&2; exit 2 ;;
+      esac
+    done
+
+    if [[ "$OPEN_BUILD" == 1 ]]; then
+      "$ROOT/scripts/test.sh" build
+    fi
+    APP="$(find "$ROOT/DerivedData/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name "Reado.app" | head -1)"
+    if [[ -z "$APP" ]]; then
+      echo "Không thấy Reado.app đã build — chạy lại không kèm --no-build." >&2
+      exit 1
+    fi
+
+    xcrun simctl bootstatus "$UDID" -b >/dev/null
+    if [[ "$OPEN_FRESH" == 1 ]]; then
+      xcrun simctl uninstall "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+    fi
+    xcrun simctl install "$UDID" "$APP"
+    # Cấp sẵn quyền để hộp thoại hệ thống không che màn khi chụp.
+    xcrun simctl privacy "$UDID" grant camera "$BUNDLE_ID" || true
+    xcrun simctl privacy "$UDID" grant photos "$BUNDLE_ID" || true
+
+    LAUNCH_ARGS=(-ReadoScreen "$SCREEN")
+    if [[ -n "$THEME" ]]; then
+      LAUNCH_ARGS+=(-ReadoTheme "$THEME")
+    fi
+    # --terminate-running-process: launch trước đó (nếu còn sống) không đọc argv
+    # mới — phải buộc khởi động lại để `-ReadoScreen` mới có hiệu lực.
+    SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" xcrun simctl launch \
+      --terminate-running-process "$UDID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}" >/dev/null
+    sleep 4  # đợi app mở + điều hướng xong trước khi `shot`
+    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
     exit 0
     ;;
 esac
