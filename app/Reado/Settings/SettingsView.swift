@@ -4,12 +4,13 @@ import SwiftUI
 /// FR-15 — J-R1-S: núm học tập (CEFR, hạn mức thẻ mới, giờ chuyển ngày) +
 /// 3.12 nhắc ôn tập (toggle + giờ). FSRS không mở núm cho user (R1 dùng tham
 /// số mặc định — tránh tự bắn chân). FR-21: nhiều key, một agent đang chọn.
+/// ux-redesign-r1 T8 (Q-c): TỰ LƯU — không còn nút "Lưu", mọi núm lưu ngay khi đổi (ô số khi xong
+/// nhập), nhất quán với chủ đề vốn đã áp ngay. Đổi giá trị không đóng màn.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dismiss) private var dismiss
 
-    /// Chủ đề màu nhấn — đổi ngay (UserDefaults), KHÔNG nằm trong luồng "Lưu".
+    /// Chủ đề màu nhấn — đổi ngay (UserDefaults).
     /// Mặc định mới là rừng (không còn "Hệ thống"); user cũ được migrate một
     /// lần ở ReadoApp.
     @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
@@ -22,49 +23,80 @@ struct SettingsView: View {
     @State private var reminderEnabled = false
     @State private var reminderMinutes = 20 * 60
     @State private var didLoad = false
-    @State private var saveError: String?
-    @State private var saved = false
+    /// Agent lên đầu danh sách khi VÀO màn mà chưa có agent chạy được (không có nó thì chụp không
+    /// phân tích được). Chốt một lần lúc mở (`load`): thêm key xong section không nhảy xuống cuối.
+    @State private var pinnedAgentFirst: Bool?
+    /// Ảnh chụp giá trị đã nằm trong DB — chỉ lưu khi khác (đổi giá trị do `load()` không kéo theo
+    /// lần lưu thừa) và để biết còn thay đổi chưa lưu lúc rời màn.
+    @State private var lastSaved: Snapshot?
+    @State private var autosaveTask: Task<Void, Never>?
+    /// Lỗi lưu hiện inline ngay dưới section vừa đổi; giá trị trên UI giữ nguyên để sửa lại.
+    @State private var learningError: String?
+    @State private var reminderError: String?
     @State private var agents: [AnalysisAgent] = []
     @State private var activeAgentID = ""
     @State private var showAddAgent = false
     @State private var editingAgent: AnalysisAgent?
     @State private var agentError: String?
 
+    /// Các giá trị lưu chung một lần ghi (`saveLearningSettings` nhận cả năm).
+    private struct Snapshot: Equatable {
+        var cefrLevels: [CEFRLevel]
+        var dailyNewLimit: Int
+        var dayCutoffHour: Int
+        var reminderEnabled: Bool
+        var reminderMinutes: Int
+    }
+
+    /// Nhóm núm vừa đổi — quyết định lỗi lưu hiện dưới section nào.
+    private enum SettingsGroup {
+        case learning, reminder
+    }
+
+    private var agentFirst: Bool { pinnedAgentFirst ?? !model.activeAgentReady }
+
+    private var current: Snapshot {
+        Snapshot(
+            cefrLevels: cefrLevels,
+            dailyNewLimit: Self.clampNewLimit(dailyNewLimit),
+            dayCutoffHour: dayCutoffHour,
+            reminderEnabled: reminderEnabled,
+            reminderMinutes: reminderMinutes)
+    }
+
     var body: some View {
         List {
+            if agentFirst {
+                agentSection
+            }
             learningSection
             reminderSection
             themeSection
-            agentSection
-            if let message = saveError {
-                Section {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Theme.danger)
-                }
+            if !agentFirst {
+                agentSection
             }
         }
         .shellScrollChrome()
-        // Chỉ bốn giá trị này: List không animate mỗi lần ô nhập/Picker đổi.
-        .animation(reduceMotion ? nil : Motion.reveal, value: saveError)
-        .animation(reduceMotion ? nil : Motion.reveal, value: saved)
+        // Chỉ các giá trị này: List không animate mỗi lần ô nhập/Picker đổi.
+        .animation(reduceMotion ? nil : Motion.reveal, value: learningError)
+        .animation(reduceMotion ? nil : Motion.reveal, value: reminderError)
         .animation(reduceMotion ? nil : Motion.reveal, value: reminderEnabled)
         .animation(reduceMotion ? nil : Motion.reveal, value: agentError)
         .navigationTitle("Cài đặt")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Lưu") { save() }
-                    .disabled(!didLoad)
-            }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Xong") { limitFieldFocused = false }
             }
         }
         .onAppear { load() }
-        // Push (không còn sheet) — reload Home khi pop, kể cả khi không bấm Lưu
-        // (theme / agent đổi sống). `saveLearningSettings` cũng reload sẵn.
-        .onDisappear { model.reloadOverview() }
+        // Push (không còn sheet) — rời màn thì lưu nốt phần còn chờ rồi reload Home (theme / agent
+        // đổi sống). `saveLearningSettings` cũng reload sẵn.
+        .onDisappear {
+            saveNow()
+            model.reloadOverview()
+        }
         .sheet(isPresented: $showAddAgent) {
             AgentFormSheet(agent: nil) { name, base, modelName, key in
                 finishAgentEdit(
@@ -78,15 +110,18 @@ struct SettingsView: View {
                         agent, name: name, baseURL: base, model: modelName, apiKey: key))
             }
         }
-        .onChange(of: cefrLevels) { saved = false }
+        .onChange(of: cefrLevels) { scheduleAutosave(.learning) }
         .onChange(of: dailyNewLimit) { _, newValue in
-            saved = false
+            // Ô số: chỉ kẹp khi gõ, lưu lúc xong nhập (onSubmit / mất focus) — không lưu từng chữ số.
             let clamped = Self.clampNewLimit(newValue)
             if clamped != newValue { dailyNewLimit = clamped }
         }
-        .onChange(of: dayCutoffHour) { saved = false }
-        .onChange(of: reminderEnabled) { saved = false }
-        .onChange(of: reminderMinutes) { saved = false }
+        .onChange(of: limitFieldFocused) { _, focused in
+            if !focused { saveNow(.learning) }
+        }
+        .onChange(of: dayCutoffHour) { scheduleAutosave(.learning) }
+        .onChange(of: reminderEnabled) { scheduleAutosave(.reminder) }
+        .onChange(of: reminderMinutes) { scheduleAutosave(.reminder) }
     }
 
     /// Giờ nhắc chọn được — bước 15' từ 00:00 tới 23:45 (khớp `reminderMinutes`).
@@ -124,6 +159,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 80)
                     .focused($limitFieldFocused)
+                    .onSubmit { saveNow(.learning) }
             }
 
             // Giờ chuyển ngày (FR-11/14) — streak & hạn mức quy theo giờ này.
@@ -142,16 +178,25 @@ struct SettingsView: View {
             Label("Học tập", systemImage: "book.closed")
         } footer: {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("Streak và hạn mức thẻ mới tính từ giờ này, không phải nửa đêm.")
-                if saved {
-                    Text("Đã lưu · có hiệu lực từ lần chụp / ôn kế tiếp.")
-                        .revealTransition()
-                }
+                Text("Trình độ áp cho lần chụp kế tiếp. Streak và hạn mức thẻ mới tính từ giờ chuyển ngày, không phải nửa đêm.")
+                errorLine(learningError)
             }
         }
     }
 
-    /// Chip CEFR — bật/tắt; level đang chọn tô accent. Giữ tối thiểu 1 level.
+    /// Dòng lỗi đỏ inline dưới section vừa đổi (không alert chặn).
+    @ViewBuilder
+    private func errorLine(_ message: String?) -> some View {
+        if let message {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(Typo.meta)
+                .foregroundStyle(Theme.danger)
+                .revealTransition()
+        }
+    }
+
+    /// Chip CEFR — bật/tắt; level đang chọn tô accent. Bỏ hết chip thì không lưu và hiện
+    /// "Chọn ít nhất 1 mức" (FR-15 cần ≥ 1 mức) — xem `saveNow`.
     private func levelChip(_ level: CEFRLevel) -> some View {
         let isSelected = cefrLevels.contains(level)
         return Button {
@@ -176,7 +221,6 @@ struct SettingsView: View {
 
     private func toggleLevel(_ level: CEFRLevel) {
         if cefrLevels.contains(level) {
-            guard cefrLevels.count > 1 else { return }  // giữ tối thiểu 1
             cefrLevels.removeAll { $0 == level }
         } else {
             cefrLevels.append(level)
@@ -200,9 +244,12 @@ struct SettingsView: View {
         } header: {
             Label("Nhắc ôn tập", systemImage: "bell")
         } footer: {
-            Text(reminderEnabled
-                 ? "Nhận thông báo mỗi ngày lúc \(ReminderService.describe(minutes: reminderMinutes))."
-                 : "Bật để nhận lời nhắc ôn từ vựng hằng ngày.")
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(reminderEnabled
+                     ? "Nhận thông báo mỗi ngày lúc \(ReminderService.describe(minutes: reminderMinutes))."
+                     : "Bật để nhận lời nhắc ôn từ vựng hằng ngày.")
+                errorLine(reminderError)
+            }
         }
     }
 
@@ -271,21 +318,23 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Label("Chủ đề", systemImage: "paintpalette")
+            Label("Giao diện", systemImage: "paintpalette")
         } footer: {
-            Text("Màu nhấn toàn app — áp ngay, không cần bấm Lưu.")
+            Text("Màu nhấn toàn app — áp ngay.")
         }
     }
 
     // MARK: — Load / save
 
     private func load() {
+        if pinnedAgentFirst == nil { pinnedAgentFirst = !model.activeAgentReady }
         if let settings = model.loadLearningSettings() {
             cefrLevels = settings.cefrLevels
             dailyNewLimit = settings.dailyNewLimit
             dayCutoffHour = settings.dayCutoffHour
             reminderEnabled = settings.reminderEnabled
             reminderMinutes = settings.reminderMinutes
+            lastSaved = current
             didLoad = true
         }
         reloadAgents()
@@ -333,23 +382,48 @@ struct SettingsView: View {
         return error
     }
 
-    private func save() {
-        saveError = nil
+    /// Lưu sau một nhịp ngắn không đổi thêm — bánh xe giờ/giờ nhắc đổi liên tục lúc cuộn, mỗi lần lưu
+    /// lại nạp overview + xếp lại lịch thông báo; chỉ giá trị cuối mới đáng ghi.
+    private func scheduleAutosave(_ group: SettingsGroup) {
+        autosaveTask?.cancel()
+        autosaveTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            saveNow(group)
+        }
+    }
+
+    /// Ghi các núm vào DB nếu có thay đổi chưa lưu. Lỗi → dòng đỏ dưới section `group`, giá trị trên UI
+    /// GIỮ NGUYÊN (`lastSaved` không đổi nên lần đổi kế tiếp tự thử lại). Không bao giờ đóng màn.
+    /// `group` nil (rời màn) → lỗi không có chỗ hiện, vẫn ghi DebugTrace qua model.
+    private func saveNow(_ group: SettingsGroup? = nil) {
+        autosaveTask?.cancel()
+        autosaveTask = nil
+        guard didLoad else { return }
         dailyNewLimit = Self.clampNewLimit(dailyNewLimit)
+        learningError = nil
+        reminderError = nil
+        guard !cefrLevels.isEmpty else {
+            learningError = "Chọn ít nhất 1 mức"
+            return
+        }
+        let snapshot = current
+        guard snapshot != lastSaved else { return }
         do {
             try model.saveLearningSettings(
-                cefrLevels: cefrLevels,
-                dailyNewLimit: dailyNewLimit,
-                dayCutoffHour: dayCutoffHour,
-                reminderEnabled: reminderEnabled,
-                reminderMinutes: reminderMinutes)
-            saved = true
-            Haptics.success()
-            dismiss()
+                cefrLevels: snapshot.cefrLevels,
+                dailyNewLimit: snapshot.dailyNewLimit,
+                dayCutoffHour: snapshot.dayCutoffHour,
+                reminderEnabled: snapshot.reminderEnabled,
+                reminderMinutes: snapshot.reminderMinutes)
+            lastSaved = snapshot
         } catch {
-            saveError =
-                (error as? LocalizedError)?.errorDescription
+            let message = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
+            switch group {
+            case .reminder: reminderError = message
+            case .learning, nil: learningError = message
+            }
             Haptics.error()
         }
     }
