@@ -264,21 +264,6 @@ struct RootView: View {
             openDebugAnalysisFixture()
         }
         if let alert = launch.alert {
-            guard screen != .analysisFixture, screen != .encounterSheet else {
-                // BUG CÓ SẴN (phát hiện lúc verify-nav-r1 T2, không phải lỗi
-                // DebugLaunch): `RootView` và sheet (`AnalysisView`) cùng gắn
-                // `.appErrorAlert()` trên CÙNG `model.alertMessage`. Set alert
-                // trong lúc sheet đang mở — bất kể đồng bộ hay trễ bao lâu
-                // (đã thử 0ms và 1.5s, cùng kết quả) — UIKit coi RootView
-                // "already presenting" (log `com.apple.UIKit:Presentation`,
-                // "Attempt to present ... which is already presenting ..."),
-                // huỷ CẢ sheet lẫn alert vì cả hai cùng mount trên một Binding —
-                // kể cả set CHÍNH alertMessage cảnh báo này cũng dính cùng lỗi
-                // (đã thử, sheet biến mất) nên bỏ qua trong im lặng, không set
-                // alertMessage ở đây. Ghi vào `docs/session-brief.md` §2 cho
-                // owner — KHÔNG sửa `ErrorAlert.swift` ở task này (ngoài scope).
-                return
-            }
             Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 700_000_000)
                 applyDebugAlert(alert)

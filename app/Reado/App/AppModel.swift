@@ -30,6 +30,11 @@ final class AppModel {
     /// Lỗi người dùng cần thấy (alert ở `RootView` + sheet) — xem `AppModel+Errors`.
     /// Đặt về nil khi người dùng đóng alert.
     var alertMessage: String?
+    /// fix-alert-sheet-dismiss-r1 — thứ tự mount của mọi `.appErrorAlert()` đang
+    /// sống (RootView + sheet con); chỉ layer trên cùng mới thật sự present
+    /// `.alert()`. Không cần `@Observable` track riêng — luôn đọc trong cùng lần
+    /// re-render do `alertMessage` kích hoạt.
+    @ObservationIgnored var alertHosts = AlertHostStack()
     /// Các lần đọc đang lỗi (`read`) — để chỉ alert một lần tới khi đọc lại được.
     @ObservationIgnored var failingReads: Set<String> = []
     /// Đồng hồ duy nhất của app target — mọi `now` đi qua đây (một lần chấm /
