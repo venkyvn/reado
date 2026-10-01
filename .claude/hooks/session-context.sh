@@ -15,5 +15,11 @@ fi
 
 echo
 if [[ -f docs/session-brief.md ]]; then
+  SECTION1="$(awk '/^## 1\./{p=1} /^## 2\./{p=0} p' docs/session-brief.md)"
+  SIZE1="$(printf '%s' "$SECTION1" | wc -c | tr -d ' ')"
+  if (( SIZE1 > 4096 )); then
+    echo "⚠️ docs/session-brief.md §1 đã ${SIZE1} byte (ngân sách ~4096) — gọn lại, chuyển nội dung khớp sang docs/journal/ (xem /raudit)."
+    echo
+  fi
   awk '/^## 1\./{p=1} /^## 3\./{p=0} p' docs/session-brief.md
 fi
