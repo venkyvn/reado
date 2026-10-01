@@ -15,6 +15,9 @@ struct ReadingSessionView: View {
     /// chạm lẻ thì nút không còn nói đúng trạng thái đang thấy trên màn hình.
     @State private var overriddenSegments: Set<Int> = []
     @State private var summaryExpanded = false
+    // FR-22: từ đã có trong kho gạch chân; chạm mở popover + "Nhận ra".
+    @State private var encounterMatcher = EncounterMatcher(lexicon: [])
+    @State private var encounterSelection: EncounterSelection?
 
     var body: some View {
         ScrollView {
@@ -31,8 +34,12 @@ struct ReadingSessionView: View {
         .safeAreaInset(edge: .bottom) { translationToggle }
         // Phiên đọc push bên trong Hub (không vào ShellRoute) → tắt shutter nổi
         // FloatShutter của RootView khi đang đọc (port UI lab §10).
-        .onAppear { model.suppressFloatShutter = true }
+        .onAppear {
+            model.suppressFloatShutter = true
+            encounterMatcher = model.makeEncounterMatcher()
+        }
         .onDisappear { model.suppressFloatShutter = false }
+        .sheet(item: $encounterSelection) { EncounterSheet(selection: $0) }
     }
 
     // MARK: — Ý chính (FR-06, thu gọn mặc định)
@@ -70,26 +77,27 @@ struct ReadingSessionView: View {
     private var segmentsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             ForEach(Array(session.segments.enumerated()), id: \.offset) { index, seg in
-                Button {
-                    toggleSegment(index)
-                } label: {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(seg.sourceEN)
-                            .font(.title3)
-                        if isRevealed(index) {
-                            Text(seg.translationVI)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .revealTransition()
-                        }
+                // `onTapGesture` thay `Button`: Button nuốt chạm của link từ cũ (FR-22).
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    EncounterText(
+                        text: seg.sourceEN, matcher: encounterMatcher,
+                        onSelect: { encounterSelection = $0 })
+                        .font(.title3)
+                    if isRevealed(index) {
+                        Text(seg.translationVI)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .revealTransition()
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(seg.sourceEN)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture { toggleSegment(index) }
+                .accessibilityElement(children: .contain)
+                .accessibilityAddTraits(.isButton)
                 .accessibilityValue(isRevealed(index) ? seg.translationVI : "Bản dịch đang ẩn")
                 .accessibilityHint(isRevealed(index) ? "Ẩn bản dịch đoạn này" : "Hiện bản dịch đoạn này")
+                .accessibilityAction { toggleSegment(index) }
             }
         }
     }

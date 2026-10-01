@@ -18,6 +18,9 @@ struct AnalysisView: View {
     @State private var saveAlert: SaveAlert?
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
+    // FR-22: từ đã có trong kho gạch chân ở đoạn gốc; chạm mở popover.
+    @State private var encounterMatcher = EncounterMatcher(lexicon: [])
+    @State private var encounterSelection: EncounterSelection?
 
     private enum SaveAlert: Identifiable {
         case success(Int)
@@ -112,6 +115,8 @@ struct AnalysisView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: model.isAnalyzing)
+        .onAppear { encounterMatcher = model.makeEncounterMatcher() }
+        .sheet(item: $encounterSelection) { EncounterSheet(selection: $0) }
         .navigationTitle("Duyệt & lưu từ vựng")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -318,6 +323,8 @@ struct AnalysisView: View {
                         SegmentBlock(
                             segment: seg,
                             isRevealed: revealedSegments.contains(index),
+                            matcher: encounterMatcher,
+                            onSelect: { encounterSelection = $0 },
                             onTap: { toggleSegment(index) })
                     }
                 }

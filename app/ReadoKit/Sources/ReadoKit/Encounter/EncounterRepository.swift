@@ -39,19 +39,24 @@ public enum EncounterRepository {
     ) throws -> Bool {
         let window = ReviewQueue.currentDayWindow(on: db, now: now)
         return try db.inTransaction { () throws -> Bool in
-            let already = try db.scalarInt64(
-                """
-                SELECT COUNT(*) FROM encounters
-                WHERE vocab_item_id = ? AND kind = 'recognized'
-                  AND created_at >= ? AND created_at < ?;
-                """,
-                [.text(vocabItemID), .text(window.start), .text(window.end)]) ?? 0
-            guard already == 0 else { return false }
+            guard try !recognized(on: db, vocabItemID: vocabItemID, in: window) else {
+                return false
+            }
             try insert(
                 on: db, vocabItemID: vocabItemID, kind: .recognized,
                 createdAt: ISOTimestamp.string(from: now))
             return true
         }
+    }
+
+    /// Hôm nay (ngày học hiện tại) đã "nhận ra" từ này chưa — popover dùng để
+    /// tắt nút "Nhận ra ✓".
+    public static func recognizedToday(
+        on db: SQLiteDatabase, vocabItemID: String, now: Date
+    ) throws -> Bool {
+        try recognized(
+            on: db, vocabItemID: vocabItemID,
+            in: ReviewQueue.currentDayWindow(on: db, now: now))
     }
 
     /// Số dòng `kind` của một vocab.
@@ -104,6 +109,19 @@ public enum EncounterRepository {
     }
 
     // MARK: — private
+
+    private static func recognized(
+        on db: SQLiteDatabase, vocabItemID: String, in window: DayBoundary.DayWindow
+    ) throws -> Bool {
+        let count = try db.scalarInt64(
+            """
+            SELECT COUNT(*) FROM encounters
+            WHERE vocab_item_id = ? AND kind = 'recognized'
+              AND created_at >= ? AND created_at < ?;
+            """,
+            [.text(vocabItemID), .text(window.start), .text(window.end)]) ?? 0
+        return count > 0
+    }
 
     private static func insert(
         on db: SQLiteDatabase, vocabItemID: String, kind: EncounterKind, createdAt: String

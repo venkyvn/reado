@@ -188,6 +188,13 @@ public enum VocabRepository {
             [.text(targetID)]) ?? 1) == 0
         var count = 0
         try db.inTransaction {
+            // FR-22: dựng matcher TRƯỚC khi chèn item mới — từ vừa lưu ở trang này
+            // không phải "gặp lại". Không có đoạn gốc thì không có gì để dò.
+            var seenMatcher: EncounterMatcher?
+            if !segments.isEmpty {
+                seenMatcher = EncounterMatcher(
+                    lexicon: try EncounterRepository.loadLexicon(on: db))
+            }
             for item in items {
                 let vocabID = Identifier.uuid()
                 try db.run(
@@ -234,6 +241,12 @@ public enum VocabRepository {
                     createdAt: now,
                     segments: segments,
                     summary: summaryVI.isEmpty ? nil : summaryVI)
+            }
+            // FR-22 / SD §6 khối #8 — `seen` CÙNG transaction (kể cả kho tạm: trang vẫn
+            // được đọc dù không lưu phiên).
+            if let seenMatcher {
+                let ids = seenMatcher.vocabItemIDs(in: segments.map(\.sourceEN))
+                try EncounterRepository.insertSeen(on: db, vocabItemIDs: ids, now: now)
             }
         }
         return count

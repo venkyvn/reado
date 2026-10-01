@@ -100,4 +100,29 @@ final class EncounterMatcherTests: XCTestCase {
     func testUnicodeLettersAreWordCharacters() {
         XCTAssertEqual(found(["café"], in: "A café nearby."), ["café"])
     }
+
+    // MARK: — vocabItemIDs (ghi `seen` khi lưu trang)
+
+    func testVocabItemIDsAreUniqueInFirstSeenOrderAcrossTexts() {
+        let matcher = EncounterMatcher(lexicon: [
+            entry("alpha", id: "a"), entry("beta", id: "b"), entry("gamma", id: "g"),
+        ])
+        let ids = matcher.vocabItemIDs(in: [
+            "beta, then alpha and beta again.", "Alpha once more. Delta is unknown.",
+        ])
+        XCTAssertEqual(ids, ["b", "a"])
+    }
+
+    func testVocabItemIDsIncludeEveryRowOfAMultiRowTerm() {
+        let matcher = EncounterMatcher(lexicon: [
+            entry("bank", id: "b1"), entry("bank", id: "b2"),
+        ])
+        XCTAssertEqual(matcher.vocabItemIDs(in: ["The bank."]), ["b1", "b2"])
+    }
+
+    func testVocabItemIDsEmptyWhenNothingMatches() {
+        let matcher = EncounterMatcher(lexicon: [entry("alpha", id: "a")])
+        XCTAssertEqual(matcher.vocabItemIDs(in: ["nothing here", ""]), [])
+        XCTAssertEqual(matcher.vocabItemIDs(in: []), [])
+    }
 }

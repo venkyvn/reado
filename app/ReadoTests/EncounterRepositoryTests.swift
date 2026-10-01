@@ -172,4 +172,101 @@ final class EncounterRepositoryTests: XCTestCase {
         XCTAssertEqual(lexicon.first { $0.vocabItemID == inInbox }?.collectionName, "Kho tạm")
         XCTAssertNotNil(lexicon.first { $0.vocabItemID == noCard })
     }
+
+    // MARK: recognizedToday
+
+    func testRecognizedTodayFollowsTheLearningDay() throws {
+        let db = try Fixtures.seededDB()
+        let a = try vocab(db, "alpha")
+        let t0 = Fixtures.fixedNow
+        XCTAssertFalse(try EncounterRepository.recognizedToday(on: db, vocabItemID: a, now: t0))
+        try EncounterRepository.recordRecognized(on: db, vocabItemID: a, now: t0)
+        XCTAssertTrue(try EncounterRepository.recognizedToday(on: db, vocabItemID: a, now: t0.addingTimeInterval(3600)))
+        XCTAssertFalse(
+            try EncounterRepository.recognizedToday(
+                on: db, vocabItemID: a, now: t0.addingTimeInterval(24 * 3600)),
+            "ngày học kế tiếp → chưa nhận ra")
+    }
+
+    // MARK: T2 — `seen` ghi cùng transaction lưu trang
+
+    private func item(_ term: String) -> PageAnalysis.VocabularyItemIn {
+        PageAnalysis.VocabularyItemIn(
+            term: term, pos: "noun", ipa: nil, meaningVI: "nghĩa", cefr: nil,
+            example: "ví dụ", verification: .verified)
+    }
+
+    private func segments(_ texts: String...) -> [PageAnalysis.Segment] {
+        texts.map { PageAnalysis.Segment(sourceEN: $0, translationVI: "dịch") }
+    }
+
+    func testSaveCaptureWritesSeenForExistingWordsInSegmentsOnly() throws {
+        let db = try Fixtures.seededDB()
+        let bookA = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let bookB = try Fixtures.insertCollection(in: db, name: "Sách B")
+        let old = try vocab(db, "serendipity", in: bookA)
+        let unrelated = try vocab(db, "zebra", in: bookA)
+
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [item("novel")], collectionID: bookB,
+            segments: segments("Pure Serendipity struck him."), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(saved, 1)
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: old, kind: .seen), 1,
+                       "từ cũ ở collection khác, xuất hiện trong đoạn → seen")
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: unrelated, kind: .seen), 0)
+        let newID = try XCTUnwrap(db.scalarString(
+            "SELECT id FROM vocab_items WHERE term = 'novel';"))
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: newID, kind: .seen), 0,
+                       "từ vừa lưu không phải gặp lại")
+    }
+
+    func testSaveCaptureSameTermSavedAgainOnlyMarksTheOldRowSeen() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let old = try vocab(db, "bank", in: book)
+
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("bank")], collectionID: book,
+            segments: segments("The bank was closed."), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: old, kind: .seen), 1)
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 1,
+                       "dòng mới thêm (nghĩa khác) không tự có seen")
+    }
+
+    func testSaveCaptureWithoutSegmentsWritesNoSeen() throws {
+        let db = try Fixtures.seededDB()
+        _ = try vocab(db, "alpha")
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("beta")], collectionID: nil, segments: [],
+            now: Fixtures.fixedNow)
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 0)
+    }
+
+    func testSaveCaptureToInboxStillWritesSeenEvenWithoutSavingASession() throws {
+        let db = try Fixtures.seededDB()
+        let old = try vocab(db, "alpha")
+
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("beta")], collectionID: nil,
+            segments: segments("Alpha and beta."), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM reading_sessions;"), 0,
+                       "kho tạm không lưu phiên (ADR-029)")
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: old, kind: .seen), 1)
+    }
+
+    func testSaveCaptureSkipsSeenForLeechedWords() throws {
+        let db = try Fixtures.seededDB()
+        let leech = try vocab(db, "stubborn")
+        _ = try Fixtures.insertCard(
+            in: db, vocabItemID: leech, state: "review", suspendedIso: "2026-09-17T00:00:00Z")
+
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("other")], collectionID: nil,
+            segments: segments("A stubborn page."), now: Fixtures.fixedNow)
+
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: leech, kind: .seen), 0)
+    }
 }

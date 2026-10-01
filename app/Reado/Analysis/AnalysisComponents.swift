@@ -4,33 +4,38 @@ import ReadoKit
 // Tách từ AnalysisView.swift (repo-hygiene-r1 B3).
 
 /// Đoạn gốc song ngữ (port UI lab §5.3) — EN luôn; VI mờ tới khi tap mở.
+/// FR-22: từ đã có trong kho gạch chân, chạm mở popover. Chạm ngoài từ vẫn lật
+/// bản dịch — dùng `onTapGesture` thay `Button` vì `Button` nuốt chạm của link.
 struct SegmentBlock: View {
     let segment: PageAnalysis.Segment
     let isRevealed: Bool
+    let matcher: EncounterMatcher
+    let onSelect: (EncounterSelection) -> Void
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(segment.sourceEN)
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            EncounterText(text: segment.sourceEN, matcher: matcher, onSelect: onSelect)
+                .font(.callout)
+                .foregroundStyle(.primary)
+            if isRevealed {
+                Text(segment.translationVI)
                     .font(.callout)
-                    .foregroundStyle(.primary)
-                if isRevealed {
-                    Text(segment.translationVI)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .revealTransition()
-                } else {
-                    Label("Dịch", systemImage: "globe")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor)
-                }
+                    .foregroundStyle(.secondary)
+                    .revealTransition()
+            } else {
+                Label("Dịch", systemImage: "globe")
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, Spacing.tight)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, Spacing.tight)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: isRevealed ? "Ẩn bản dịch" : "Hiện bản dịch", onTap)
     }
 }
 

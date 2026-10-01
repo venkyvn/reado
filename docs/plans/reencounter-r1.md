@@ -52,6 +52,7 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 - DoD: `scripts/test.sh kit` + full xanh.
 
 ### T2 — màn đọc
+- **Trạng thái 2026-10-01:** code + test đã viết (cloud, **chưa build/chạy test, UI chưa xem tay**). `VocabRepository.saveCapture` ghi `seen` cùng transaction (matcher dựng TRƯỚC khi chèn item mới; ghi cả khi đích là kho tạm; không có đoạn gốc thì không ghi; từ có thẻ leech bị loại). UI: `Shared/EncounterText.swift` (`EncounterText` gạch chân chấm + link qua `openURL`; `EncounterSheet` popover nghĩa/IPA/"Đã gặp ở ‹collection›"/"Nhận ra ✓" mỗi dòng vocab); `AppModel+Encounter.swift`; `SegmentBlock` và `ReadingSessionView` đổi `Button` → `onTapGesture` (Button nuốt chạm link). Popover làm bằng sheet `.medium/.large` (trên iPhone `.popover` cũng tự thành sheet). Chờ fen xem tay: gạch chân hiện đúng, chạm từ mở sheet, chạm ngoài từ vẫn lật dịch, "Nhận ra" một lần/ngày.
 - Gạch chân + popover (nghĩa, IPA, "đã gặp ở ‹collection›", nút "Nhận ra ✓") ở `AnalysisView` và `ReadingSessionView`; ghi `seen` khi lưu trang.
 - Test: `seen` ghi đúng transaction lưu; UI test/preview tối thiểu.
 - DoD: full xanh + fen xem tay trên simulator.

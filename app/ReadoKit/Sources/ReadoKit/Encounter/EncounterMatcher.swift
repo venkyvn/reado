@@ -124,6 +124,22 @@ public struct EncounterMatcher: Sendable {
         }
     }
 
+    /// Id của mọi vocab có từ/cụm xuất hiện trong `texts` (mỗi id một lần, theo thứ
+    /// tự gặp đầu tiên). Một term nhiều dòng → cả các dòng. Dùng khi lưu trang để
+    /// ghi `seen` (FR-22).
+    public func vocabItemIDs(in texts: [String]) -> [String] {
+        var seen = Set<String>()
+        var ordered: [String] = []
+        for text in texts {
+            for match in matches(in: text) {
+                for entry in match.entries where seen.insert(entry.vocabItemID).inserted {
+                    ordered.append(entry.vocabItemID)
+                }
+            }
+        }
+        return ordered
+    }
+
     // MARK: — Tokenizer
 
     struct Token: Equatable {
