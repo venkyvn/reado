@@ -2,10 +2,11 @@
 
 > **FROZEN 2026-09-14 (quyết định look):** glass trên chrome nổi, nội dung đọc đặc.
 > Quyết định này không đổi nếu fen chưa đồng ý. Phần chữ bên dưới được sửa cho khớp code (ADR-051).
-> Đối chiếu code lần cuối: `7f051af`.
+> Đối chiếu code lần cuối: `fe571bf`.
 
 Mỗi luật kiểm được bằng diff hoặc ảnh chụp. Dòng `→` là lý do.
-Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036) và `FloatShutter` (glass tô accent, `.interactive()`).
+Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `FloatShutter` (glass tô accent, `.interactive()`),
+lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo góc/khe/frame số riêng, không `.continuous`, có comment tại chỗ).
 
 ## Nguồn token
 - `app/Reado/Shared/DesignSystem.swift`: `Spacing`, `Radius`, `Typo`, `Pill`, `IconTile`, `VocabSummary`, `cardShadow()`.
@@ -14,11 +15,13 @@ Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036) và
   → Chép số thì sẽ lệch: bản cũ ghi tint và font cứng, trong khi code đã đổi.
 
 ## Màu
-- Màu nhấn = `Color.accentColor` (thừa hưởng `.tint` ở `ReadoApp`). View không tự gọi `.tint(...)` cho màu nhấn, cũng không dùng `Color.blue`.
+- Màu nhấn = `Color.accentColor` (thừa hưởng `.tint` ở `ReadoApp`). Không dùng `Color.blue`.
   → Fen chọn accent trong `AppTheme` (Xanh rừng mặc định · Chàm · Nâu giấy · Hệ thống). Ghi cứng một màu là bỏ qua lựa chọn đó.
+- Không dùng `.tint(...)` để đổi màu nhãn, chữ hay icon — màu chữ đi qua `.foregroundStyle`. `.tint` chỉ hợp lệ khi tô nền control hệ thống bằng token, ví dụ swipe action `.tint(Color.accentColor)` / `.tint(Theme.danger)` / `Color(.systemGray)` cho trạng thái tắt (`SettingsView`, `KhoTabView`, `AnalysisView`).
+  → Swipe action không có cách tô nào khác. Dùng `.tint` cho chữ thì màu chỉ ăn ở một số control, chỗ khác vẫn là accent.
 - Hex chỉ được xuất hiện trong `AppTheme.accent`.
   → Mỗi accent cần hai sắc độ light/dark, đặt một chỗ thì mới chỉnh được.
-- Màu trạng thái chỉ đi qua `Theme.due` / `ok` / `warn` / `danger` / `level`. Không dùng `.orange`/`.red` trần trong view.
+- Màu trạng thái chỉ đi qua `Theme.due` / `Theme.ok` / `Theme.warn` / `Theme.danger` / `Theme.level`. Không dùng `.orange`/`.red` trần trong view.
   → Hue mang nghĩa (đến hạn, lỗi, CEFR). Đổi nghĩa thì đổi đúng một chỗ.
 - Nền phụ (pill, ô nhập, card) dùng `Theme.surface` / `Theme.surfaceStrong`, không dùng `.secondary.opacity(...)`.
   → Alpha cố định gần như tàng hình trên nền tối. System fill thì tự đổi theo dark mode.
@@ -50,7 +53,7 @@ Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036) và
   → Cùng cỡ thì mép trái các row thẳng hàng.
 
 ## Bố cục
-- Khoảng cách dùng `Spacing.*`, bo góc dùng `Radius.*` kèm `style: .continuous`. Không viết số lẻ.
+- Khoảng cách dùng `Spacing.*`, bo góc dùng `Radius.*` kèm `style: .continuous`. Không viết số lẻ. Ngoại lệ đã liệt kê ở đầu file.
   → Một thang duy nhất thì các màn khớp nhau mà không cần đo.
 - Nhãn nhỏ (due, CEFR, POS, trạng thái) dùng `Pill`. Khối một từ dùng `VocabSummary`.
   → Kho và màn duyệt từ giữ cùng thứ tự dòng, không có capsule copy tay.
