@@ -32,6 +32,8 @@ public struct ExportBundle: Codable, Equatable, Sendable {
     public let vocabItems: [ExportVocabItem]
     public let cards: [ExportCard]
     public let reviewLogs: [ExportReviewLog]
+    /// FR-22 (schema v4): lần "thấy"/"nhận ra" từ cũ khi đọc. Thêm khoá, `version` giữ 1.
+    public let encounters: [ExportEncounter]
 }
 
 /// Phạm vi xuất — TSV lọc được, JSON luôn toàn máy (prd.md FR-16; J-R1-D #4).
@@ -47,6 +49,7 @@ public struct ExportCounts: Codable, Equatable, Sendable {
     public let vocabItems: Int
     public let cards: Int
     public let reviewLogs: Int
+    public let encounters: Int
 }
 
 public struct ExportSettings: Codable, Equatable, Sendable {
@@ -111,6 +114,14 @@ public struct ExportReviewLog: Codable, Equatable, Sendable {
     public let elapsedDays: Int
     public let scheduledDays: Int
     public let reviewedAt: String
+}
+
+public struct ExportEncounter: Codable, Equatable, Sendable {
+    public let id: String
+    public let vocabItemID: String
+    /// `seen` | `recognized`.
+    public let kind: String
+    public let createdAt: String
 }
 
 // MARK: - TSV builder (Anki-compatible)
@@ -294,6 +305,19 @@ public enum ExportService {
             )
         }
 
+        // Encounters (FR-22) — gặp lại từ cũ khi đọc, ngoài FSRS
+        let encounterRows = try db.rows(
+            "SELECT id, vocab_item_id, kind, created_at FROM encounters ORDER BY created_at, id;")
+        let encounters: [ExportEncounter] = encounterRows.compactMap { r in
+            guard r.count >= 4 else { return nil }
+            return ExportEncounter(
+                id: r[0].textValue ?? "",
+                vocabItemID: r[1].textValue ?? "",
+                kind: r[2].textValue ?? "seen",
+                createdAt: r[3].textValue ?? ""
+            )
+        }
+
         // Settings — whitelist, KHÔNG xuất key (NFR-07)
         let settings = try fetchExportSettings(on: db)
 
@@ -312,13 +336,15 @@ public enum ExportService {
                 collections: collections.count,
                 vocabItems: vocabItems.count,
                 cards: cards.count,
-                reviewLogs: reviewLogs.count
+                reviewLogs: reviewLogs.count,
+                encounters: encounters.count
             ),
             settings: settings,
             collections: collections,
             vocabItems: vocabItems,
             cards: cards,
-            reviewLogs: reviewLogs
+            reviewLogs: reviewLogs,
+            encounters: encounters
         )
     }
 

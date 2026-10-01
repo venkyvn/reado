@@ -45,6 +45,7 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 ## Tầng 2 — Tasks
 
 ### T1 — dữ liệu
+- **Trạng thái 2026-10-01:** code + test + docs đã viết trên nhánh `claude/friendly-lovelace-oz77e5` (cloud, **chưa build/chạy test**) — chờ fen chạy `scripts/test.sh` + `scripts/test.sh kit`, xanh mới đóng T1. Chi tiết: `EncounterRepository.insertSeen` **không** tự mở transaction (T2 gọi trong transaction lưu trang); `recordRecognized` tự mở một transaction; matcher thêm luật `'s` là ranh giới; export giữ `version: 1`, thêm khoá `encounters`. Docs đã cập nhật: `db.md` A.2, `solution-design.md` §5/§6, PRD v0.10 + FR-22, ADR-048, ROADMAP 3.16.
 - Migration v4, `EncounterRepository` (insert seen/recognized idempotent theo ngày, đếm tuần), `EncounterMatcher`, export thêm `encounters`.
 - Test: migration từ v3, matcher (cụm, biên từ, hoa/thường, chồng nhau), cascade, recognized 1 lần/ngày.
 - Docs: `db.md`, DDL `solution-design.md`, PRD FR-22, ADR-048.

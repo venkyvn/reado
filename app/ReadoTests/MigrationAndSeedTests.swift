@@ -19,7 +19,7 @@ final class MigrationAndSeedTests: XCTestCase {
         XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
     }
 
-    func testAllSevenTablesExist() throws {
+    func testAllEightTablesExist() throws {
         let db = try Fixtures.seededDB()
         let rows = try db.rows(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';"
@@ -30,7 +30,49 @@ final class MigrationAndSeedTests: XCTestCase {
             Set([
                 "collections", "vocab_items", "cards", "review_logs",
                 "analysis_agents", "reading_sessions", "settings",
+                "encounters",
             ]))
+    }
+
+    // MARK: — v4 encounters (reencounter-r1, FR-22)
+
+    func testMigrationV3ToV4CreatesEncountersAndKeepsData() throws {
+        // DB đã ở v3 (đủ 7 bảng, chưa có `encounters`) + dữ liệu thật → chạy lại
+        // Migration.run phải thêm bảng mà không mất vocab.
+        let db = try Fixtures.seededDB()
+        let collectionID = try XCTUnwrap(
+            db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "keep")
+        try db.exec("DROP INDEX idx_encounters_item;")
+        try db.exec("DROP TABLE encounters;")
+        try db.exec("PRAGMA user_version = 3;")
+
+        try Migration.run(on: db)
+
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 4)
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'encounters';"), 1)
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'idx_encounters_item';"), 1)
+        XCTAssertEqual(
+            try db.scalarString("SELECT term FROM vocab_items WHERE id = ?;", [.text(vocabID)]),
+            "keep")
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 0)
+    }
+
+    func testEncountersKindCheckRejectsUnknownKind() throws {
+        let db = try Fixtures.seededDB()
+        let collectionID = try XCTUnwrap(
+            db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "kind")
+        XCTAssertThrowsError(
+            try db.run(
+                "INSERT INTO encounters (id, vocab_item_id, kind, created_at) VALUES (?, ?, 'bogus', ?);",
+                [.text(Identifier.uuid()), .text(vocabID), .text("2026-09-18T02:00:00Z")]))
     }
 
     func testForeignKeysEnforced() throws {

@@ -2,9 +2,9 @@ import Foundation
 
 /// Migration DDL — dialect SQLite R1 đúng từng dòng của docs/db.md tầng A.
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
-/// Bảy bảng + index; seed nằm ở Seeder chứ không phải migration.
+/// Bảy bảng v1 + `encounters` (v4) + index; seed nằm ở Seeder chứ không phải migration.
 public enum Migration {
-    public static let currentVersion: Int64 = 3
+    public static let currentVersion: Int64 = 4
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
@@ -28,6 +28,22 @@ public enum Migration {
         "ALTER TABLE settings ADD COLUMN home_pin_ids TEXT NOT NULL DEFAULT '[]';",
         "ALTER TABLE settings ADD COLUMN review_priority_ids TEXT NOT NULL DEFAULT '[]';",
         "ALTER TABLE settings ADD COLUMN review_all INTEGER NOT NULL DEFAULT 0;",
+    ]
+
+    /// reencounter-r1 T1 (FR-22, ADR-048) — gặp lại từ cũ khi đọc. Bảng RIÊNG, không
+    /// dùng `review_logs` (CHECK `mode`, bắt buộc `rating` + snapshot FSRS): lần
+    /// "thấy"/"nhận ra" khi đọc KHÔNG đổi lịch ôn. Khoá theo `vocab_item_id` nên
+    /// chuyển collection giữ nguyên, xoá vocab thì cascade.
+    static let v4Statements: [String] = [
+        """
+        CREATE TABLE encounters (
+          id            TEXT NOT NULL PRIMARY KEY,
+          vocab_item_id TEXT NOT NULL REFERENCES vocab_items(id) ON DELETE CASCADE,
+          kind          TEXT NOT NULL CHECK (kind IN ('seen', 'recognized')),
+          created_at    TEXT NOT NULL
+        );
+        """,
+        "CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);",
     ]
 
     /// v2 → v3: chuyển 2 slot ghim cũ (`home_shortcut_1/2`) sang JSON `home_pin_ids`,
@@ -200,6 +216,13 @@ public enum Migration {
                     }
                     try migrateLegacyHomePins(db)
                     try db.exec("PRAGMA user_version = 3;")
+                }
+            case 3:
+                try db.inTransaction {
+                    for statement in v4Statements {
+                        try db.exec(statement)
+                    }
+                    try db.exec("PRAGMA user_version = 4;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

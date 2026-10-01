@@ -5,11 +5,11 @@
 | Field | Value |
 |---|---|
 | Product | Reado |
-| Version | 0.9 |
+| Version | 0.10 |
 | Status | Draft |
 | Owner | fen |
 | Created | 2026-09-07 |
-| Last updated | 2026-09-18 |
+| Last updated | 2026-10-01 |
 | Source | [docs/idea.md](docs/idea.md) |
 | Related | [vision.md](docs/specs/vision.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [research/tech-stack.md](docs/research/tech-stack.md) |
 
@@ -79,6 +79,13 @@ song.
 > [research/tech-stack.md](docs/research/tech-stack.md) mục 2.1. NFR-03 **không** hoãn
 > sang R2. Dashboard web sản phẩm thuộc Later. Solution design viết được sau bản
 > này; file đó **vẫn chưa có**.
+
+> **v0.10 — FR-22 gặp lại từ cũ khi đọc.** Vòng lặp của vision (đọc → khựng → giữ → ôn →
+> *nhận ra khi đọc tiếp*) thiếu mắt xích cuối: Reado chưa biết, và chưa cho người dùng
+> ghi lại, lúc họ gặp lại một từ đã có trong kho. M-06 là thước đo trực tiếp. FR-22 thêm
+> bảng `encounters` **ngoài FSRS** (schema v4, ADR-048): "thấy" tự ghi khi lưu trang,
+> "nhận ra" do người dùng chạm — cả hai **không đổi lịch ôn**. Q-06 (không lemmatize)
+> giữ nguyên; Q-09 chỉ cho FR-10, FR-22 so khớp **xuyên collection**.
 
 > **v0.9 — Q-03 hybrid BYOK.** Chốt 2026-09-17 *“app không gọi Gemini thẳng”*
 > **không bị xoá** — bia mộ tại chỗ ở mục 12. Thay bằng: proxy Reado (key `.env`
@@ -258,6 +265,12 @@ thứ tự số trong tài liệu không còn liên tục.
 | FR-21 | **Mới** — analysis agents (proxy mặc định + BYOK OpenAI-compat), Epic E5 |
 | Còn lại | Không đổi |
 
+| FR | Trạng thái ở v0.10 |
+|---|---|
+| FR-22 | **Mới** — gặp lại từ cũ khi đọc (gạch chân + "Nhận ra", bảng `encounters`), Epic E2 |
+| FR-05 | Criterion 3 (chạm từ trong đoạn → nghĩa + IPA) được FR-22 mở rộng sang từ cũ trong kho |
+| Còn lại | Không đổi |
+
 ### Epic E1 — Capture & Analyze
 
 #### FR-01 — Page Capture
@@ -380,6 +393,38 @@ nhất của epic sau v0.3.
   (design principle 6 trong [vision.md](docs/specs/vision.md)).
 - **Given** phiên đã trôi khỏi danh sách 10, **when** người dùng tìm lại summary của nó,
   **then** nó không còn — đây là hành vi đúng, không phải lỗi.
+
+#### FR-22 — Gặp lại từ cũ khi đọc
+
+Mới ở v0.10 (reencounter-r1, ADR-048). Lấp criterion 3 của FR-05 cho từ đã có trong kho;
+thước đo trực tiếp **M-06**.
+
+- **Given** một trang đang xem (vừa phân tích hoặc phiên đọc đã lưu), **when** văn bản
+  chứa từ hoặc cụm đã có trong kho — **xuyên mọi collection**, kể cả kho tạm, trừ từ có
+  thẻ đang bị leech suspend (FR-19) — **then** từ/cụm đó được **gạch chân**. So khớp theo
+  chữ nguyên (biên từ), không phân biệt hoa/thường, **không lemmatize** (Q-06), cụm nhiều
+  chữ phải liền nhau (dấu câu cắt cụm), chồng nhau thì cụm dài thắng.
+- **Given** một từ đang gạch chân, **when** người dùng chạm, **then** popover hiện nghĩa,
+  IPA và "đã gặp ở ‹collection›"; một term có nhiều dòng (nhiều nghĩa/collection) thì liệt
+  kê đủ.
+- **Given** popover đang mở, **when** người dùng chạm "Nhận ra ✓", **then** hệ thống ghi
+  **một** lần `recognized` cho từ đó — tối đa một lần mỗi từ mỗi **ngày học** (giờ chuyển
+  ngày FR-11) — và **không** đổi `cards` hay `review_logs` (lần nhận ra khi đọc không đổi
+  lịch ôn).
+- **Given** người dùng lưu một trang có từ đã có trong kho, **when** lưu, **then** mỗi từ
+  đó nhận một lần `seen` **trong cùng transaction** với lưu vocab + phiên đọc; lưu lỗi thì
+  không có `seen` nào.
+- **Given** một từ đã có lần gặp lại, **when** nó được chuyển sang collection khác, **then**
+  lịch sử gặp lại giữ nguyên; **when** từ bị xoá, **then** lịch sử đi theo.
+- **Given** một từ đạt "Đã nhớ" (Q-08) **và** có ≥ 1 lần `recognized`, **when** xem tiến độ,
+  **then** nó ở mức **Đã thấm**; nếu `stability` tụt dưới ngưỡng Q-08 thì tự về Đang học
+  (mức tính lúc đọc, không lưu cột).
+- **Given** trong tuần có từ được gặp lại, **when** mở Home, **then** thấy dòng
+  "Gặp lại N từ tuần này" (N = số từ khác nhau có `seen` hoặc `recognized` trong 7 ngày).
+
+Triển khai theo ba task: T1 dữ liệu (migration v4, `EncounterRepository`, `EncounterMatcher`,
+export) · T2 màn đọc (gạch chân, popover, ghi `seen`) · T3 thang tiến độ + Home.
+Plan: [plans/reencounter-r1.md](docs/plans/reencounter-r1.md).
 
 #### FR-07 — Book & Page Organization — BỎ ở v0.3
 
@@ -786,6 +831,7 @@ dashboard web đọc kho từ (Later). FR-21 (BYOK) không thay proxy mặc đ�
 |---|---|
 | FR-01, FR-02, FR-03, FR-04 | — |
 | FR-05, FR-06 | Lưu 10 phiên đọc gần nhất mỗi collection có tên (text + dịch); **cảnh báo trước khi phiên trôi** có thể để R2 |
+| FR-22 | — |
 | FR-08, FR-09, FR-10, FR-17 | FR-08 chỉ cần lọc theo collection; **bỏ lọc theo CEFR và trạng thái** sang R2 |
 | FR-11, FR-12, FR-14, FR-18 | FR-14 chỉ cần số card đến hạn và streak. FR-18 chỉ cần ba chế độ phạm vi; **chế độ cram** để R2 |
 | FR-15, FR-16, FR-20, FR-21 | FR-15 chỉ cần `cefr_level`, `daily_new_limit` và `day_cutoff_hour` chỉnh được; `request_retention` để mặc định, **không** mở cho người dùng ở R1. FR-16 xuất CSV theo collection + JSON FSRS; **không** xuất key. FR-20 nhập CSV gộp, không nhập JSON. FR-21: proxy mặc định + list agent OpenAI-compat; làm **sau** walking skeleton |

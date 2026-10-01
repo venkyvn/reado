@@ -55,7 +55,7 @@ App **bật** `PRAGMA foreign_keys = ON` mỗi connection. SQLite mặc định 
 
 Id do **client sinh** lúc insert (kể cả khi đang online) — cửa sync Later không phải đánh số lại.
 
-### A.2 Bảy bảng trên máy
+### A.2 Tám bảng trên máy
 
 Không có `user_id`, `usn`, `graves`. Không có `tags` / `synonyms` / `antonyms` trên item. **Không** cột API key.
 
@@ -158,6 +158,22 @@ CREATE INDEX idx_sessions_collection
   ON reading_sessions (collection_id, created_at DESC);
 -- Trim con 10 moi nhat/collection TRONG CUNG transaction voi insert.
 
+-- FR-22 / ADR-048 (migration v4, reencounter-r1): lan "gap lai" mot tu da co trong kho
+-- khi doc. Bang RIENG, KHONG dung review_logs (CHECK mode, bat buoc rating + snapshot) —
+-- nhan ra khi doc KHONG doi lich on, FSRS khong bi dong.
+CREATE TABLE encounters (
+  id            TEXT NOT NULL PRIMARY KEY,
+  vocab_item_id TEXT NOT NULL REFERENCES vocab_items(id) ON DELETE CASCADE,
+  kind          TEXT NOT NULL CHECK (kind IN ('seen', 'recognized')),
+  created_at    TEXT NOT NULL
+);
+
+CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
+-- seen: app tu ghi khi luu mot trang co tu da co trong kho — CUNG transaction luu vocab +
+--       phien doc; moi vocab mot dong moi lan luu.
+-- recognized: nguoi dung cham "Nhan ra"; toi da 1 dong / vocab / ngay hoc (gio chuyen
+--       ngay FR-11) — app-rule, khong CHECK SQL.
+
 CREATE TABLE settings (
   id                 INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   cefr_level         TEXT NOT NULL DEFAULT 'B2',
@@ -179,7 +195,7 @@ CREATE TABLE settings (
   home_shortcut_2_id TEXT REFERENCES collections(id) ON DELETE SET NULL, -- deprecate, cùng lý do
   active_agent_id    TEXT NOT NULL REFERENCES analysis_agents(id),
   -- Các cột dưới KHÔNG có trong DDL v1. Migration v2/v3 ALTER thêm.
-  -- Shape này là bảng sau currentVersion = 3.
+  -- Shape này là bảng sau currentVersion = 3 (v4 chỉ thêm bảng `encounters`, `settings` không đổi).
   reminder_enabled    INTEGER NOT NULL DEFAULT 0,          -- v2. 0 = tắt
   reminder_minutes    INTEGER NOT NULL DEFAULT 1200,       -- v2. phút từ nửa đêm; 1200 = 20:00
   cefr_levels         TEXT NOT NULL DEFAULT '["B2"]',     -- v3. JSON array A2–C1. cefr_level đơn deprecate
@@ -189,7 +205,7 @@ CREATE TABLE settings (
 );
 ```
 
-Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi.
+Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi. `encounters` khoá theo `vocab_item_id` (`ON DELETE CASCADE`): chuyển collection giữ nguyên, xoá vocab thì lần gặp lại đi theo.
 
 `review_logs`: R1 chỉ ghi `mode = 'srs'`. Ba giá trị kia giữ đường R2, không đụng FSRS state.
 
