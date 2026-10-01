@@ -82,6 +82,7 @@ struct EncounterSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .appErrorAlert()
         .onAppear {
             recognized = Set(selection.entries.map(\.vocabItemID).filter {
                 model.hasRecognizedToday($0)

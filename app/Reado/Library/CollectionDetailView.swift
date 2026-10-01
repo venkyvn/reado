@@ -99,8 +99,7 @@ struct CollectionDetailView: View {
         .alert("Đổi tên bộ", isPresented: $showRename) {
             TextField("Tên mới", text: $renameText)
             Button("Lưu") {
-                _ = try? model.renameCollection(
-                    id: collectionID, name: renameText)
+                model.renameCollectionOrAlert(id: collectionID, name: renameText)
             }
             Button("Huỷ", role: .cancel) {}
         }
@@ -112,9 +111,9 @@ struct CollectionDetailView: View {
                 Button("Huỷ", role: .cancel) {}
             } else {
                 Button("Xoá", role: .destructive) {
-                    _ = try? model.deleteCollection(
-                        id: collectionID, moveTo: nil)
-                    dismiss()
+                    if model.deleteCollectionOrAlert(id: collectionID, moveTo: nil) {
+                        dismiss()
+                    }
                 }
                 Button("Huỷ", role: .cancel) {}
             }
@@ -299,17 +298,20 @@ struct CollectionDetailView: View {
     private func commitMove(to targetID: String, intention: MoveIntention) {
         switch intention {
         case let .batch(itemIDs):
-            _ = try? model.moveItems(
+            // Chuyển lỗi → giữ nguyên lựa chọn để thử lại (đã báo người dùng).
+            if model.moveItemsOrAlert(
                 fromCollectionID: collectionID,
                 itemIDs: itemIDs,
                 toCollectionID: targetID)
-            isSelecting = false
-            selectedIDs = []
+            {
+                isSelecting = false
+                selectedIDs = []
+            }
             reloadList()
         case .deleteCollection:
-            _ = try? model.deleteCollection(
-                id: collectionID, moveTo: targetID)
-            dismiss()
+            if model.deleteCollectionOrAlert(id: collectionID, moveTo: targetID) {
+                dismiss()
+            }
         }
     }
 }

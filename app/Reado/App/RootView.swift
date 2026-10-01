@@ -166,6 +166,7 @@ struct RootView: View {
             NavigationStack { AnalysisView() }
         }
         .onAppear { model.reloadOverview() }
+        .appErrorAlert()
     }
 
     /// Bấm lại tab đang đứng → pop stack về root (Home / Kho). Tab Ôn không có path.

@@ -67,7 +67,7 @@ struct KhoTabView: View {
         .alert("Tạo bộ", isPresented: $showNewCollection) {
             TextField("Tên bộ", text: $newCollectionName)
             Button("Tạo") {
-                _ = try? model.createCollection(name: newCollectionName)
+                _ = model.createCollectionOrAlert(name: newCollectionName)
             }
             Button("Huỷ", role: .cancel) {}
         } message: {

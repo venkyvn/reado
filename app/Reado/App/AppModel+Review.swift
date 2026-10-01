@@ -19,7 +19,7 @@ extension AppModel {
         reviewError = nil
         defer { isLoadingReview = false }
         do {
-            let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
+            let dailyNewLimit = try SettingsService.load(on: database).dailyNewLimit
             let now = clock.now
             let windowEnd = ReviewQueue.currentDayWindow(on: database, now: now).end
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
@@ -91,12 +91,15 @@ extension AppModel {
     /// (tính lại lúc bấm), chỉ ẩn nhãn.
     func intervalLabels(for snapshot: CardSnapshot) -> [ReadoRating: String] {
         gradePreview = nil
-        guard let database,
-              let settings = try? ReadoFSRS.readSettings(on: database),
-              let scheduler = try? ReviewScheduler(settings: settings),
-              let preview = try? GradePreview.make(
-                  scheduler: scheduler, snapshot: snapshot, now: clock.now)
-        else { return [:] }
+        guard let database else { return [:] }
+        // Nhãn xem trước là phụ trợ: lỗi chỉ ghi trace, nút chấm vẫn dùng được.
+        let now = clock.now
+        guard let preview = readQuietly("nhãn xem trước", fallback: nil, {
+            () throws -> GradePreview? in
+            let settings = try ReadoFSRS.readSettings(on: database)
+            let scheduler = try ReviewScheduler(settings: settings)
+            return try GradePreview.make(scheduler: scheduler, snapshot: snapshot, now: now)
+        }) else { return [:] }
         gradePreview = preview
         return preview.outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
     }

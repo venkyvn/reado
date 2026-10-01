@@ -41,8 +41,10 @@ struct HomePinToggle: View {
             ) {
                 ForEach(currentShortcuts) { existing in
                     Button(existing.name) {
-                        _ = try? model.replaceHomePin(
-                            existingID: existing.id, with: collectionID)
+                        model.attempt("thay bộ ghim") {
+                            try model.replaceHomePin(
+                                existingID: existing.id, with: collectionID)
+                        }
                     }
                 }
                 Button("Huỷ", role: .cancel) {}
@@ -55,11 +57,11 @@ struct HomePinToggle: View {
         if model.homePinIDs.count >= HomePinService.maxPins {
             showChooser = true
         } else {
-            _ = try? model.addHomePin(collectionID)
+            model.attempt("ghim bộ") { try model.addHomePin(collectionID) }
         }
     }
 
     private func turnOff() {
-        _ = try? model.removeHomePin(collectionID)
+        model.attempt("bỏ ghim bộ") { try model.removeHomePin(collectionID) }
     }
 }

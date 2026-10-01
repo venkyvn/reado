@@ -27,6 +27,11 @@ struct GradeResult: Equatable {
 final class AppModel {
     private(set) var database: SQLiteDatabase?
     private(set) var failure: String?
+    /// Lỗi người dùng cần thấy (alert ở `RootView` + sheet) — xem `AppModel+Errors`.
+    /// Đặt về nil khi người dùng đóng alert.
+    var alertMessage: String?
+    /// Các lần đọc đang lỗi (`read`) — để chỉ alert một lần tới khi đọc lại được.
+    @ObservationIgnored var failingReads: Set<String> = []
     /// Đồng hồ duy nhất của app target — mọi `now` đi qua đây (một lần chấm /
     /// một lần nạp dùng đúng một giá trị), không gọi `SystemClock()` rải rác.
     /// Qualify `ReadoKit.Clock` để không nhầm với `Swift.Clock`.
@@ -215,21 +220,32 @@ final class AppModel {
     func reloadOverview() {
         guard let database else { return }
         let now = clock.now
-        collections = (try? Self.loadOverview(db: database, now: now)) ?? []
-        dailyProgress = (try? Self.loadDailyProgress(
-            db: database, now: now, extraNew: effectiveExtraNew))
-        reencounteredThisWeek = (try? EncounterRepository.distinctWordsEncountered(
-            on: database, since: now.addingTimeInterval(-7 * 86_400))) ?? 0
-        homePinIDs = (try? HomePinService.ids(on: database)) ?? []
-        reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
+        collections = read("danh sách bộ", fallback: []) {
+            try Self.loadOverview(db: database, now: now)
+        }
+        dailyProgress = read("tiến độ hôm nay", fallback: nil) { () throws -> DailyProgress? in
+            try Self.loadDailyProgress(db: database, now: now, extraNew: effectiveExtraNew)
+        }
+        reencounteredThisWeek = read("số từ gặp lại", fallback: 0) {
+            try EncounterRepository.distinctWordsEncountered(
+                on: database, since: now.addingTimeInterval(-7 * 86_400))
+        }
+        homePinIDs = read("bộ ghim ở Home", fallback: []) {
+            try HomePinService.ids(on: database)
+        }
+        reviewScopeDefault = read("phạm vi ôn", fallback: .empty) {
+            try ReviewScopeService.load(on: database)
+        }
         // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới
         // tính "sẵn sàng" cho checklist onboarding.
-        if let list = try? AnalysisAgentStore.list(on: database) {
-            activeAgentReady = list.agents.first { $0.id == list.activeID }
-                .map { !$0.isBuiltinProxy && $0.hasKey } ?? false
-        } else {
-            activeAgentReady = false
-        }
+        let agents: (agents: [AnalysisAgent], activeID: String)? =
+            read("danh sách agent", fallback: nil) {
+                try AnalysisAgentStore.list(on: database)
+            }
+        activeAgentReady = agents.flatMap { list in
+            list.agents.first { $0.id == list.activeID }
+                .map { !$0.isBuiltinProxy && $0.hasKey }
+        } ?? false
         dataRevision &+= 1
     }
 

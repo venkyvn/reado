@@ -116,6 +116,7 @@ struct AnalysisView: View {
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: model.isAnalyzing)
         .onAppear { encounterMatcher = model.makeEncounterMatcher() }
+        .appErrorAlert()
         .sheet(item: $encounterSelection) { EncounterSheet(selection: $0) }
         .navigationTitle("Duyệt & lưu từ vựng")
         .navigationBarTitleDisplayMode(.inline)

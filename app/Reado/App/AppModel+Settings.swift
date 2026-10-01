@@ -11,7 +11,9 @@ extension AppModel {
     /// hoặc đọc lỗi (view giữ nguyên danh sách cũ).
     func loadAgents() -> (agents: [AnalysisAgent], activeID: String)? {
         guard let database else { return nil }
-        return try? AnalysisAgentStore.list(on: database)
+        return read("danh sách agent", fallback: nil) {
+            try AnalysisAgentStore.list(on: database)
+        }
     }
 
     /// Đặt agent active. `knownHasKey` lấy từ `list()` — không hỏi Keychain lần
@@ -60,22 +62,13 @@ extension AppModel {
         }
     }
 
-    private static func userMessage(for error: Error) -> String {
-        (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-    }
-
-    /// FR-15: đọc 3 núm học tập — fallback về seed default khi chưa seed.
-    static func currentSettings(_ db: SQLiteDatabase) -> LearningSettings {
-        (try? SettingsService.load(on: db)) ?? .defaults
-    }
-
     /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
     /// `dailyNewLimit` đã đọc từ settings. `extraNew` (ý 3): phần nới "Học
     /// thêm" còn hiệu lực hôm nay để số Home khớp đúng hàng đợi thật.
     static func loadDailyProgress(
         db: SQLiteDatabase, now: Date, extraNew: Int = 0
     ) throws -> DailyProgress {
-        let dailyNewLimit = currentSettings(db).dailyNewLimit
+        let dailyNewLimit = try SettingsService.load(on: db).dailyNewLimit
         return try DailyProgressService.load(
             on: db, dailyNewLimit: dailyNewLimit, now: now, extraNew: extraNew)
     }
@@ -87,8 +80,10 @@ extension AppModel {
             streakHeatmap = nil
             return
         }
-        streakHeatmap = try? StreakCalendarService.load(
-            on: database, now: clock.now)
+        let now = clock.now
+        streakHeatmap = read("lịch streak", fallback: nil) { () throws -> StreakHeatmap? in
+            try StreakCalendarService.load(on: database, now: now)
+        }
     }
 
     // MARK: — FR-15 Settings
@@ -96,22 +91,27 @@ extension AppModel {
     /// Đọc núm học tập cho SettingsView hiển thị; nil khi chưa mở được DB.
     func loadLearningSettings() -> LearningSettings? {
         guard let database else { return nil }
-        return try? SettingsService.load(on: database)
+        return read("cài đặt học tập", fallback: nil) { () throws -> LearningSettings? in
+            try SettingsService.load(on: database)
+        }
     }
 
     /// FR-10: term+pos đã thuộc (stability >= 21, state review) trong collection
     /// đang chụp. Chưa chọn bộ → kho tạm. Lỗi DB → tập rỗng, không giấu từ.
     func matureKeysForCapture() -> Set<String> {
         guard let database else { return [] }
-        let collectionID: String?
-        if let analysisTargetCollectionID {
-            collectionID = analysisTargetCollectionID
-        } else {
-            collectionID = try? database.scalarString(
-                "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+        let target = analysisTargetCollectionID
+        return read("từ đã thuộc của bộ", fallback: []) {
+            let collectionID: String?
+            if let target {
+                collectionID = target
+            } else {
+                collectionID = try database.scalarString(
+                    "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+            }
+            guard let collectionID else { return [] }
+            return try VocabRepository.matureKeys(on: database, collectionID: collectionID)
         }
-        guard let collectionID else { return [] }
-        return (try? VocabRepository.matureKeys(on: database, collectionID: collectionID)) ?? []
     }
 
     /// Lưu các núm (CEFR đa level + 3 học tập + 2 nhắc ôn) + reload overview để số
@@ -141,7 +141,9 @@ extension AppModel {
     /// Gọi lúc khởi động (ReadoApp `.task`) + sau khi lưu Settings.
     func syncReminderSchedule(requestPermission: Bool = false) async {
         guard let database else { return }
-        let settings = (try? SettingsService.load(on: database)) ?? .defaults
+        let settings = read("cài đặt nhắc ôn", fallback: LearningSettings.defaults) {
+            try SettingsService.load(on: database)
+        }
         await NotificationScheduler.apply(
             enabled: settings.reminderEnabled,
             minutes: settings.reminderMinutes,

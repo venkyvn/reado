@@ -97,6 +97,7 @@ struct CaptureView: View {
                 step = .crop(image)
             }
         }
+        .appErrorAlert()
         .sheet(isPresented: $showDestPicker) {
             destPickerSheet(close: { showDestPicker = false })
         }
@@ -372,7 +373,7 @@ struct CaptureView: View {
                 TextField("Tên bộ", text: $newCollectionName)
                 Button {
                     let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if let id = try? model.createCollection(name: name) {
+                    if let id = model.createCollectionOrAlert(name: name) {
                         selectDest(id)
                     }
                     close()

@@ -45,8 +45,10 @@ extension AppModel {
             vocabulary = []
             return
         }
-        vocabulary = (try? VocabRepository.listVocabulary(
-            on: database, collectionID: collectionID, order: order)) ?? []
+        vocabulary = read("danh sách từ", fallback: []) {
+            try VocabRepository.listVocabulary(
+                on: database, collectionID: collectionID, order: order)
+        }
     }
 
     /// Nạp lần ôn kế tiếp của một collection cho ô "Lần ôn tiếp" ở header hub.
@@ -55,8 +57,11 @@ extension AppModel {
             collectionNextDue = nil
             return
         }
-        collectionNextDue = try? VocabRepository.nextDue(
-            on: database, collectionID: collectionID, now: clock.now)
+        let now = clock.now
+        collectionNextDue = read("lần ôn kế tiếp", fallback: nil) {
+            () throws -> VocabRepository.NextDue? in
+            try VocabRepository.nextDue(on: database, collectionID: collectionID, now: now)
+        }
     }
 
     /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).
@@ -65,8 +70,10 @@ extension AppModel {
             sessions = []
             return
         }
-        sessions = (try? ReadingSessionRepository.listSessions(
-            on: database, collectionID: collectionID)) ?? []
+        sessions = read("phiên đọc", fallback: []) {
+            try ReadingSessionRepository.listSessions(
+                on: database, collectionID: collectionID)
+        }
     }
 
     // MARK: — FR-17 Collection Management
@@ -116,6 +123,50 @@ extension AppModel {
             toCollectionID: toCollectionID)
         reloadOverview()
         return moved
+    }
+
+    // MARK: — Cho UI: báo lỗi / tên trùng thay vì im lặng (refactor-r3 #1)
+
+    private static let badNameMessage = "Tên bộ để trống hoặc đã có bộ khác dùng tên này."
+
+    /// Tạo bộ; `nil` = không tạo được và ĐÃ báo người dùng (tên trống/trùng, lỗi DB).
+    func createCollectionOrAlert(name: String) -> String? {
+        guard let outcome = attempt("tạo bộ", { try createCollection(name: name) }) else {
+            return nil
+        }
+        guard let id = outcome else {
+            alertMessage = Self.badNameMessage
+            return nil
+        }
+        return id
+    }
+
+    /// Đổi tên bộ; `false` = chưa đổi và ĐÃ báo người dùng.
+    @discardableResult
+    func renameCollectionOrAlert(id: String, name: String) -> Bool {
+        guard let renamed = attempt("đổi tên bộ", { try renameCollection(id: id, name: name) }) else {
+            return false
+        }
+        if !renamed { alertMessage = Self.badNameMessage }
+        return renamed
+    }
+
+    /// Xoá bộ (có thể chuyển từ sang `moveTo`); `false` = chưa xoá và ĐÃ báo.
+    @discardableResult
+    func deleteCollectionOrAlert(id: String, moveTo: String?) -> Bool {
+        attempt("xoá bộ") { try deleteCollection(id: id, moveTo: moveTo) } != nil
+    }
+
+    /// Chuyển một lô từ; `false` = chưa chuyển và ĐÃ báo.
+    @discardableResult
+    func moveItemsOrAlert(
+        fromCollectionID: String, itemIDs: [String], toCollectionID: String
+    ) -> Bool {
+        attempt("chuyển từ") {
+            try moveItems(
+                fromCollectionID: fromCollectionID, itemIDs: itemIDs,
+                toCollectionID: toCollectionID)
+        } != nil
     }
 
     // MARK: — FR-17 Home pin
@@ -221,7 +272,9 @@ extension AppModel {
     /// Đánh dấu dòng trùng term so với `term_normalized` hiện có — không tự loại.
     func markDuplicateTerms(_ rows: [CSVImport.CSVRow]) -> [CSVImport.CSVRow] {
         guard let database else { return rows }
-        let existing = (try? CSVImport.existingTermNormalizedSet(on: database)) ?? []
+        let existing = read("từ đã có trong kho", fallback: Set<String>()) {
+            try CSVImport.existingTermNormalizedSet(on: database)
+        }
         return CSVImport.markDuplicateTerms(rows, existing: existing)
     }
 

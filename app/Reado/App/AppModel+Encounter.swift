@@ -7,17 +7,22 @@ extension AppModel {
     /// Matcher dựng từ kho hiện tại (xuyên collection, bỏ vocab có thẻ leech).
     /// Rỗng khi chưa mở được DB hoặc đọc lỗi — màn đọc khi đó không gạch chân gì.
     func makeEncounterMatcher() -> EncounterMatcher {
-        guard let database,
-              let lexicon = try? EncounterRepository.loadLexicon(on: database)
-        else { return EncounterMatcher(lexicon: []) }
+        guard let database else { return EncounterMatcher(lexicon: []) }
+        // Gạch chân là phụ trợ: lỗi → không gạch gì, chỉ ghi trace.
+        let lexicon = readQuietly("từ điển gặp lại", fallback: []) {
+            try EncounterRepository.loadLexicon(on: database)
+        }
         return EncounterMatcher(lexicon: lexicon)
     }
 
     /// Hôm nay (ngày học hiện tại) đã "nhận ra" từ này chưa.
     func hasRecognizedToday(_ vocabItemID: String) -> Bool {
         guard let database else { return false }
-        return (try? EncounterRepository.recognizedToday(
-            on: database, vocabItemID: vocabItemID, now: clock.now)) ?? false
+        let now = clock.now
+        return readQuietly("đã nhận ra hôm nay", fallback: false) {
+            try EncounterRepository.recognizedToday(
+                on: database, vocabItemID: vocabItemID, now: now)
+        }
     }
 
     /// Ghi một lần "nhận ra" khi đọc. `true` = vừa ghi; `false` = hôm nay đã ghi
@@ -25,15 +30,13 @@ extension AppModel {
     @discardableResult
     func recognizeWord(_ vocabItemID: String) -> Bool {
         guard let database else { return false }
-        do {
-            let recorded = try EncounterRepository.recordRecognized(
-                on: database, vocabItemID: vocabItemID, now: clock.now)
-            // Đã thấm / "Gặp lại N từ" đổi theo → nạp lại số liệu Home + Hub.
-            if recorded { reloadOverview() }
-            return recorded
-        } catch {
-            DebugTrace.event("encounter", "recognizeFailed", ["error": String(describing: error)])
-            return false
-        }
+        let now = clock.now
+        let recorded = attempt("ghi lần nhận ra") {
+            try EncounterRepository.recordRecognized(
+                on: database, vocabItemID: vocabItemID, now: now)
+        } ?? false
+        // Đã thấm / "Gặp lại N từ" đổi theo → nạp lại số liệu Home + Hub.
+        if recorded { reloadOverview() }
+        return recorded
     }
 }
