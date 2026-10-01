@@ -213,7 +213,14 @@ struct RootView: View {
         case let .hub(collectionID):
             CollectionDetailView(collectionID: collectionID)
         case .streak:
-            StreakCalendarView()
+            // J1: CTA "Chụp trang" ở màn này đích ngầm kho tạm — không set
+            // `shutterTargetCollectionID` như `openShutterCapture` (đó là cho
+            // FloatShutter trên Hub, muốn đích = hub đang mở).
+            StreakCalendarView(onCapture: {
+                Haptics.action()
+                model.capture.analysisTargetCollectionID = nil
+                showCapture = true
+            })
         case .settings:
             SettingsView()
         case .data:

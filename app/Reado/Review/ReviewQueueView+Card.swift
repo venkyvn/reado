@@ -57,6 +57,12 @@ extension ReviewQueueView {
                         .id(item.cardID)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                        // Rasterize MẶT THẺ (bóng + 2 mặt chữ) thành 1 layer trước khi
+                        // overlay/xoay/kéo — không có dòng này, `swipeStamp` đổi mỗi
+                        // frame kéo (60–120Hz) kéo theo vẽ lại cả `cardShadow()` (tốn
+                        // nhất trong SwiftUI khi animate) mỗi lần, rớt frame nhìn như
+                        // chữ nhoè lúc quẹt nhanh.
+                        .drawingGroup()
                         .overlay(swipeStamp)
                         // Xoay trước, kéo sau. Ngược lại rotationEffect xoay quanh tâm
                         // gốc (chưa offset) và thẻ đi theo cung tròn, lệch khỏi tay.

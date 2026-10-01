@@ -106,8 +106,7 @@ extension AppModel {
             if let target {
                 collectionID = target
             } else {
-                collectionID = try database.scalarString(
-                    "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+                collectionID = try VocabRepository.defaultCollectionID(on: database)
             }
             guard let collectionID else { return [] }
             return try VocabRepository.matureKeys(on: database, collectionID: collectionID)

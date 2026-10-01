@@ -28,6 +28,11 @@ extension VocabRepository {
         }
     }
 
+    /// Id kho tạm (is_default=1, 2.4) — dùng khi chưa chọn collection đích.
+    public static func defaultCollectionID(on db: SQLiteDatabase) throws -> String? {
+        try db.scalarString("SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
+    }
+
     public static func allCollections(on db: SQLiteDatabase) throws -> [Collection] {
         let rows = try db.rows(
             """

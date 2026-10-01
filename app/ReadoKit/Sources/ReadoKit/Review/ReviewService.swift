@@ -9,14 +9,31 @@ public enum ReviewService {
     public static func fetchSnapshot(
         on db: SQLiteDatabase, cardID: String
     ) throws -> CardSnapshot? {
+        try fetchSnapshots(on: db, cardIDs: [cardID])[cardID]
+    }
+
+    /// Đọc nhiều dòng cards → CardSnapshot cùng lúc (1 query `IN (...)`) — dùng
+    /// ở nơi cần snapshot cho cả hàng đợi, tránh N+1 (`ReviewQueue.hydrate`).
+    public static func fetchSnapshots(
+        on db: SQLiteDatabase, cardIDs: [String]
+    ) throws -> [String: CardSnapshot] {
+        guard !cardIDs.isEmpty else { return [:] }
+        let placeholders = cardIDs.map { _ in "?" }.joined(separator: ",")
         let rows = try db.rows(
             """
             SELECT id, due_at, stability, difficulty, learning_steps,
                    reps, lapses, state, last_review_at, scheduled_days,
                    suspended_at
-            FROM cards WHERE id = ?;
-            """, [.text(cardID)])
-        guard let row = rows.first else { return nil }
+            FROM cards WHERE id IN (\(placeholders));
+            """, cardIDs.map { .text($0) })
+        var snapshots: [String: CardSnapshot] = [:]
+        for row in rows {
+            snapshots[row["id"].textValue ?? ""] = try snapshot(from: row)
+        }
+        return snapshots
+    }
+
+    private static func snapshot(from row: SQLRow) throws -> CardSnapshot {
         guard
             let state = row["state"].textValue,
             CardStateCode.toState(state) != nil

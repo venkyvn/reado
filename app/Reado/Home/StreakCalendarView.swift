@@ -10,10 +10,14 @@ struct StreakCalendarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    /// Mở Capture→Analysis qua RootView (xem RootView.swift) — KHÔNG tự giữ
+    /// state/sheet riêng ở đây nữa: bản riêng từng thiếu `pendingHubNavigationID`
+    /// và không thật sự đưa đi Cài đặt khi `pendingSettingsNavigation` bật
+    /// (hai bản dismiss lệch nhau, bug đã xác nhận 2026-10-01).
+    let onCapture: () -> Void
+
     @State private var selectedDay: StreakDay?
     @State private var showReview = false
-    @State private var showCapture = false
-    @State private var showAnalysis = false
 
     private var heatmap: StreakHeatmap? { model.streakHeatmap }
     private var hasDue: Bool { (model.dailyProgress?.dueToday ?? 0) > 0 }
@@ -34,25 +38,9 @@ struct StreakCalendarView: View {
         .sheet(isPresented: $showReview, onDismiss: { reload() }) {
             NavigationStack { ReviewQueueView() }
         }
-        // ADR-036: fullScreenCover — xem RootView cho lý do.
-        .fullScreenCover(isPresented: $showCapture, onDismiss: {
-            // J1: chụp xong (đã có ảnh) → mở phân tích, đích ngầm kho tạm.
-            if model.capture.lastCapturedImage != nil { showAnalysis = true }
-        }) {
-            CaptureView()
-        }
-        .sheet(isPresented: $showAnalysis, onDismiss: {
-            if model.capture.pendingRecapture {
-                model.capture.pendingRecapture = false
-                showCapture = true
-            }
-            // FR-21: màn này không có đường push Settings riêng — chỉ dọn cờ,
-            // RootView (nơi mở lại từ Home/Kho) mới thật sự đưa đi Cài đặt.
-            model.shell.pendingSettingsNavigation = false
-            reload()
-        }) {
-            NavigationStack { AnalysisView() }
-        }
+        // Lưu xong (qua sheet Analysis của RootView) bump `dataRevision` —
+        // heatmap riêng của màn này không nằm trong `reloadOverview()`.
+        .onChange(of: model.dataRevision) { model.loadStreakHeatmap() }
         .safeAreaInset(edge: .bottom) { cta }
     }
 
@@ -276,7 +264,7 @@ struct StreakCalendarView: View {
 
     private var cta: some View {
         Button {
-            if hasDue { showReview = true } else { showCapture = true }
+            if hasDue { showReview = true } else { onCapture() }
         } label: {
             Label(
                 hasDue ? "Ôn ngay" : "Chụp trang",

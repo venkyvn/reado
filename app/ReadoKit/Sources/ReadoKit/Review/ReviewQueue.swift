@@ -306,22 +306,18 @@ public enum ReviewQueue {
             """, params)
 
         var items: [ReviewItem] = []
-        var snapshots: [String: CardSnapshot] = [:]
         for row in rows {
-            let cardID = row["card_id"].textValue ?? ""
-            let item = ReviewItem(
-                cardID: cardID,
+            items.append(ReviewItem(
+                cardID: row["card_id"].textValue ?? "",
                 term: row["term"].textValue ?? "",
                 pos: row["pos"].textValue ?? "other",
                 meaningVI: row["meaning_vi"].textValue ?? "",
                 ipa: row["ipa"].textValue,
                 example: row["example"].textValue ?? "",
-                collectionName: row["collection_name"].textValue ?? "")
-            items.append(item)
-            if let snap = try ReviewService.fetchSnapshot(on: db, cardID: cardID) {
-                snapshots[cardID] = snap
-            }
+                collectionName: row["collection_name"].textValue ?? ""))
         }
+        // 1 query thêm cho snapshot cả lô — tránh N+1 (trước: 1 fetchSnapshot/card).
+        let snapshots = try ReviewService.fetchSnapshots(on: db, cardIDs: cardIDs)
         return (items, snapshots)
     }
 }

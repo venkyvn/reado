@@ -175,10 +175,7 @@ public enum VocabRepository {
             targetID = collectionID
         } else {
             // 2.4 — chưa chọn → kho tạm (is_default=1).
-            guard
-                let inboxID = try db.scalarString(
-                    "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;")
-            else {
+            guard let inboxID = try defaultCollectionID(on: db) else {
                 throw DatabaseError.failed("thiếu kho tạm seed", statement: nil)
             }
             targetID = inboxID
