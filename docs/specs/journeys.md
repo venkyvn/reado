@@ -101,7 +101,7 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 | Kho tạm đổi tên được, **không xoá được**; move collection **không** reset FSRS | FR-17 |
 | Home hiện tối đa **hai named collection do user chọn**; tap mở Collection Hub; collection thứ ba phải chọn shortcut để thay | FR-17 |
 | Settings R1 = một hàng `settings`: `cefr_level`, `daily_new_limit`, `day_cutoff_hour` (mặc định 04:00); `request_retention` mặc định, **không** mở user | FR-15, FR-11, ADR-031 |
-| Agent phân tích: builtin proxy mặc định; user thêm OpenAI-compat; **một** active cho cả FR-02; key không SQLite / không export | FR-21, NFR-07 |
+| Agent phân tích: ~~builtin proxy mặc định~~ (bỏ, ADR-049) — user **phải** thêm OpenAI-compat trước khi dùng; **một** active cho cả FR-02; key không SQLite / không export | FR-21, NFR-07 |
 | Multi-user / authentication = **Later**, không R1, không R2 | NG-05, PRD mục 10 |
 | R1 **không tự chặn đường** Later: đừng hardcode "chỉ một người trên máy này" vào copy hay schema khiến tách user phải viết lại | PRD mục 10 Later |
 
@@ -117,7 +117,7 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 
 1. Home hoặc FAB → Camera / chọn ảnh từ thư viện.
 2. Không bước collection picker. Đích ngầm = kho tạm.
-3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). Mặc định = proxy Reado. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
+3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). ~~Mặc định = proxy Reado~~ — bỏ, ADR-049: chưa thêm agent BYOK thì lỗi, không chạy được bước này. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
 4. Vocab picker: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn (FR-09). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn (FR-03).
 5. Confirm → lưu vào kho tạm, card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2).
 6. Toast / về Home. Số new trên Home đã áp `daily_new_limit` (FR-14).
@@ -328,7 +328,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 **Trigger:** Khối lượng ôn không hợp, capture đang trả từ quá dễ / quá khó, hoặc muốn quản lý shortcut collection đang đọc.  
 **Job:** không JTBD mới; núm của JTBD-02 (FR-15), quản lý đường vào J2 (FR-17), và chọn agent phân tích trang (FR-21).  
-**Bắt buộc trên R1:** có. Không có màn này thì `cefr_level` và `daily_new_limit` hardcode — phá FR-10 / FR-11. Không có chỗ chọn agent thì FR-21 không thi hành được — nhưng walking skeleton vẫn chạy vì seed = proxy.
+**Bắt buộc trên R1:** có. Không có màn này thì `cefr_level` và `daily_new_limit` hardcode — phá FR-10 / FR-11. Không có chỗ chọn agent thì FR-21 không thi hành được. ~~walking skeleton vẫn chạy vì seed = proxy~~ — bỏ, ADR-049: walking skeleton giờ cũng cần thêm agent BYOK trước, seed chỉ là placeholder báo lỗi.
 
 Đây **không** phải account settings. Không email, không mật khẩu, không avatar.
 
@@ -340,7 +340,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 4. Đặt **giờ chuyển ngày** `day_cutoff_hour` (mặc định 04:00, 0–23) — streak và số đếm "hôm nay" tính theo giờ này (FR-11, FR-14).
 5. Mục **Đang đọc trên Home** liệt kê named collections và trạng thái hiện tại; bật/tắt ở đây dùng cùng rule tối đa hai và chooser thay thế của J2 (FR-17).
 6. `request_retention` và tham số FSRS: **không** hiện cho user ở R1 (PRD mục 10).
-7. Mục **Agent phân tích trang** (FR-21): list radio active; subtitle = `model` hoặc “Proxy Reado”. Thêm agent: tên, base URL, model, key (ô bảo mật). Sửa / xoá được agent user; **không** xoá proxy. Hint một dòng: OCR trên máy, agent dịch+từ (một lần gọi phân tích; không phải agent OCR riêng). Capture **tiếp theo** dùng agent mới; trang đã phân tích không chạy lại.
+7. Mục **Agent phân tích trang** (FR-21): list radio active, subtitle = `model`. ~~“Proxy Reado”~~ — bỏ, ADR-049: placeholder không hiện trong list. Thêm agent: tên, base URL, model, key (ô bảo mật). Sửa / xoá được agent user; agent nào cũng sửa/xoá được (placeholder không hiện nên không có ca "không xoá" trong UI). Hint một dòng: OCR trên máy, agent dịch+từ (một lần gọi phân tích; không phải agent OCR riêng). Capture **tiếp theo** dùng agent mới; trang đã phân tích không chạy lại.
 8. **Không** đặt export/import trên màn này. Cửa dữ liệu là J-R1-D. Export **không** kèm key.
 
 ### Empty / error (J-R1-S)
@@ -355,8 +355,8 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 → ADR-041: checklist 3 bước ở đầu Home (CEFR/agent/chụp) đóng dòng "CEFR trống lần đầu" — bước 1 hiện CEFR đang lọc, không trang mẫu (NG-03).
 | Thiếu tên / URL / model / key khi thêm agent | Không lưu; báo field thiếu |
 | `base_url` không HTTPS (trừ loopback / RFC1918) | Không lưu |
-| Đòi xoá agent `reado_proxy` | Không cho |
-| Xoá agent đang active | Fallback về proxy |
+| Đòi xoá agent `reado_proxy` (placeholder, ADR-049) | Không cho — nhưng không hiện trong UI nên không có ca này thực tế |
+| Xoá agent đang active | Fallback về placeholder "chưa chọn agent" |
 | Agent BYOK thiếu key | Không cho chọn active; bắt sửa |
 
 ---

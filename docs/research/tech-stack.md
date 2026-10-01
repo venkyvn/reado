@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft, mục 11 đã chốt 2026-09-17; Q-03 hybrid vá cùng ngày (v2.1) |
+| Status | Draft, mục 11 đã chốt 2026-09-17; Q-03 hybrid vá cùng ngày (v2.1). **Toàn bộ nội dung proxy (mục 6, 9, 10.1, …) là bia mộ từ 2026-10-01 — ADR-049 bỏ proxy, Q-03 đảo thành BYOK-only. Không viết lại, chỉ ghi chú này** |
 | Created | 2026-09-08 |
-| Last updated | 2026-09-17 |
-| Revision | v2.1 — Q-03 hybrid BYOK (proxy mặc định + agent OpenAI-compat trên máy). v2 = native iOS + local-first + proxy-only. v1 (PWA + BE đầy) nằm dưới dạng bia mộ ở mục 2.1 |
+| Last updated | 2026-10-01 (ghi chú ADR-049 — nội dung proxy phía dưới không còn hiệu lực) |
+| Revision | v2.1 — Q-03 hybrid BYOK (proxy mặc định + agent OpenAI-compat trên máy). v2 = native iOS + local-first + proxy-only. v1 (PWA + BE đầy) nằm dưới dạng bia mộ ở mục 2.1. **v2.2 (ADR-049): proxy bỏ, BYOK-only — xem [decisions-log.md](docs/decisions-log.md)** |
 | Related | [prd.md](docs/specs/prd.md), [CLAUDE.md](CLAUDE.md), [prompt-spec.md](docs/agent/prompt-spec.md), [vocabulary.md](docs/research/vocabulary.md), [review.md](docs/research/review.md) |
 | Phạm vi | Trả lời câu hỏi: R1 dựng bằng ngôn ngữ nào, DB nào, chạy ở đâu — và những ràng buộc nào **buộc** ra lựa chọn đó thay vì để nó thành sở thích |
 

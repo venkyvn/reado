@@ -18,8 +18,8 @@ struct GradeResult: Equatable {
 }
 
 /// Model mở SQLite, migration, seed và chịu trách nhiệm đọc overview.
-/// Scaffold (ROADMAP task 1.2): đồng bộ trên main, dữ liệu nhỏ — màn hình
-/// thật (FR-01..03…) sẽ chuyển qua actor/URLSession khi có proxy.
+/// Scaffold (ROADMAP task 1.2): đồng bộ trên main, dữ liệu nhỏ — phần gọi
+/// agent AI (FR-02) đã qua `URLSession`/`async` riêng (`AnalyzerFactory`).
 /// `@MainActor`: state `@Observable` cho UI và một kết nối SQLite dùng chung —
 /// mọi truy cập đi qua main actor, không còn hàm async chạy ngoài main thread.
 @MainActor
@@ -50,9 +50,9 @@ final class AppModel {
     /// FR-22 / Home: số TỪ khác nhau được gặp lại (`seen` hoặc `recognized`) trong 7
     /// ngày gần nhất — dòng "Gặp lại N từ tuần này" (ẩn khi 0).
     private(set) var reencounteredThisWeek = 0
-    /// ADR-041: agent đang active chạy được thật — proxy mặc định chưa deploy
-    /// nên chỉ agent BYOK có key mới tính "sẵn sàng". TODO: khi proxy deploy
-    /// xong, đổi điều kiện thành `hasKey` (proxy luôn `hasKey = true`).
+    /// ADR-041/ADR-049: chỉ agent BYOK có key mới tính "sẵn sàng" — hàng
+    /// placeholder bị `AnalysisAgentStore.list()` lọc khỏi `agents`, nên
+    /// activeID trỏ vào nó (chưa chọn agent) tự rơi về false ở `.first` dưới.
     private(set) var activeAgentReady = false
 
     // Chia theo chức năng — xem `AppState.swift`.
@@ -172,15 +172,15 @@ final class AppModel {
         reviewScopeDefault = read("phạm vi ôn", fallback: .empty) {
             try ReviewScopeService.load(on: database)
         }
-        // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới
-        // tính "sẵn sàng" cho checklist onboarding.
+        // ADR-041/ADR-049: chưa chọn agent BYOK → chưa "sẵn sàng" cho checklist
+        // onboarding. `list().agents` đã lọc placeholder (ADR-049) nên activeID
+        // trỏ vào nó không khớp `.first` nào → `?? false`.
         let agents: (agents: [AnalysisAgent], activeID: String)? =
             read("danh sách agent", fallback: nil) {
                 try AnalysisAgentStore.list(on: database)
             }
         activeAgentReady = agents.flatMap { list in
-            list.agents.first { $0.id == list.activeID }
-                .map { !$0.isBuiltinProxy && $0.hasKey }
+            list.agents.first { $0.id == list.activeID }?.hasKey
         } ?? false
         dataRevision &+= 1
     }

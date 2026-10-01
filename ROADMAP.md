@@ -88,7 +88,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | Tracker: thay MVP_PLAN bằng ROADMAP (file này) | ✅ 2026-09-18 | Bản PWA-gen đã vào `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) |
 | ADR cho pivot Q-01/Q-02/Q-03 | ✅ 2026-09-18 — owner duyệt OK hết (task 0.2 đóng) | `docs/decisions-log.md` cuối file có **ADR-026..028** (ghi bổ sung sau 029..031) — bản ghi pivot v2 hoàn chỉnh |
 | Solution design v2 (proxy contract, DDL, transaction, adapter) | ✅ 2026-09-18 — owner duyệt **6/6 đề xuất 12.1** (task 0.6) | File v2 tại chỗ `docs/specs/solution-design.md` (status v1.0); bản PWA → `docs/archive/solution-design-pwa-gen.md` (đã xoá, ADR-044); mọi chỗ MỞ gắn nhãn kèm mốc chốt (mục 12.2) |
-| Proxy Reado (Python hosted) | ⬜ Chưa có | Task 0.7; chưa chốt hosting vendor + model |
+| Proxy Reado (Python hosted) | ❌ Huỷ 2026-10-01 (ADR-049) | Task 0.7 bỏ hẳn — chưa bao giờ deploy, FR-02 chuyển sang chỉ BYOK. Xem `docs/decisions-log.md` ADR-049 |
 | Kiểm chứng A-01/A-02 trên kiến trúc v2 (ảnh thật qua proxy) | ⛔ Chưa chạy — chờ prompt baseline | Task 0.8; prompt baseline owner còn trống (kho luật mục 8) |
 | Code iOS (Xcode project + SwiftUI) | ✅ Nền móng 2026-09-18 — 1.1–1.4 | `app/` = `Reado.xcodeproj` + `ReadoKit` (Swift package) + `ReadoTests`; PWA cũ đã xoá theo lệnh owner; 51/51 test xanh (2026-09-19, Simulator) |
 | Walking skeleton ngoài nền móng (1.5 adapter FR-21, FR-01/02/03/09 shell UI) | 🔄 FR-01 ✅ (`8a743f8`) · FR-02 phần local ✅ mock (`e5fba85`) · FR-03/09 ✅ (`cd85123`, 56/56) | 1.5 chờ code — owner giao agent khác (2026-09-18); FR-02 bỏ được rào "proxy chưa có" nhờ mock (owner chốt 19-09), bằng chứng thật vẫn chờ 0.7 |

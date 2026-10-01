@@ -217,7 +217,7 @@ struct SettingsView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: Spacing.tight) {
                             Text(agent.name)
-                            Text(agent.isBuiltinProxy ? "Proxy Reado" : (agent.model ?? ""))
+                            Text(agent.model ?? "")
                                 .font(Typo.meta)
                                 .foregroundStyle(.secondary)
                         }
@@ -231,19 +231,19 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    if !agent.isBuiltinProxy {
-                        Button {
-                            editingAgent = agent
-                        } label: {
-                            Label("Sửa", systemImage: "pencil")
-                        }
-                        .tint(Color.accentColor)
-
-                        Button(role: .destructive) { remove(agent) } label: {
-                            Label("Xoá", systemImage: "trash")
-                        }
-                        .tint(Theme.danger)
+                    // ADR-049: `agents` chỉ chứa agent BYOK thật — hàng placeholder
+                    // đã bị `AnalysisAgentStore.list()` lọc, không cần check ở đây.
+                    Button {
+                        editingAgent = agent
+                    } label: {
+                        Label("Sửa", systemImage: "pencil")
                     }
+                    .tint(Color.accentColor)
+
+                    Button(role: .destructive) { remove(agent) } label: {
+                        Label("Xoá", systemImage: "trash")
+                    }
+                    .tint(Theme.danger)
                 }
             }
             Button("Thêm key") { showAddAgent = true }

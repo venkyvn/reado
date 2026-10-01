@@ -9,7 +9,9 @@ public struct AnalysisAgent: Equatable, Sendable, Identifiable {
     public let model: String?
     public let hasKey: Bool
 
-    public var isBuiltinProxy: Bool { kind == "reado_proxy" }
+    /// ADR-049: hàng seed "chưa chọn agent" — `AnalysisAgentStore.list()` lọc
+    /// khỏi danh sách hiển thị; giữ property để store tự nhận diện hàng này.
+    public var isPlaceholder: Bool { kind == "reado_proxy" }
 }
 
 /// Save/xoá secret. Production = Keychain. Test truyền bản nhớ để không đụng Keychain máy.
@@ -35,7 +37,8 @@ public struct KeychainAgentSecrets: AgentSecretStore, Sendable {
     }
 }
 
-/// FR-21 — nhiều agent OpenAI-compat, đúng một cái active. Proxy seed không xoá được.
+/// FR-21 — nhiều agent OpenAI-compat, đúng một cái active. Hàng seed placeholder
+/// (ADR-049) không xoá được, không hiện trong `list()`.
 /// Login sau này phải namespace key theo tài khoản và xoá key lúc logout; không upload key.
 public enum AnalysisAgentStore {
     public static let geminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -48,7 +51,7 @@ public enum AnalysisAgentStore {
     public enum StoreError: Error, LocalizedError {
         case missingField(String)
         case insecureURL
-        case cannotDeleteProxy
+        case cannotDeletePlaceholder
         case missingKey
         case notFound
 
@@ -56,35 +59,40 @@ public enum AnalysisAgentStore {
             switch self {
             case let .missingField(name): "Thiếu \(name)"
             case .insecureURL: "Base URL phải là HTTPS (HTTP chỉ cho localhost hoặc mạng LAN)"
-            case .cannotDeleteProxy: "Không xoá được proxy mặc định"
+            case .cannotDeletePlaceholder: "Không xoá được agent mặc định"
             case .missingKey: "Agent này chưa có API key"
             case .notFound: "Không tìm thấy agent"
             }
         }
     }
 
+    /// `agents` bỏ hàng placeholder (ADR-049) — UI chỉ thấy agent BYOK thật.
+    /// `activeID` KHÔNG lọc: lúc cài mới/vừa xoá agent, nó trỏ về placeholder
+    /// — caller (AppModel.activeAgentReady, SettingsView) tự suy "chưa có agent"
+    /// khi không tìm thấy activeID trong `agents`.
     public static func list(
         on db: SQLiteDatabase,
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws -> (agents: [AnalysisAgent], activeID: String) {
         let activeID = try db.scalarString(
-            "SELECT active_agent_id FROM settings WHERE id = 1;") ?? Seeder.readoProxyAgentID
+            "SELECT active_agent_id FROM settings WHERE id = 1;") ?? Seeder.placeholderAgentID
         let rows = try db.rows(
             """
             SELECT id, kind, name, base_url, model
             FROM analysis_agents
             ORDER BY created_at;
             """)
-        let agents = rows.map { row in
+        let agents = rows.compactMap { row -> AnalysisAgent? in
             let id = row["id"].textValue ?? ""
             let kind = row["kind"].textValue ?? ""
+            guard kind != "reado_proxy" else { return nil }
             return AnalysisAgent(
                 id: id,
                 kind: kind,
                 name: row["name"].textValue ?? "",
                 baseURL: row["base_url"].textValue,
                 model: row["model"].textValue,
-                hasKey: kind == "reado_proxy" || secrets.contains(agentID: id))
+                hasKey: secrets.contains(agentID: id))
         }
         return (agents, activeID)
     }
@@ -144,7 +152,7 @@ public enum AnalysisAgentStore {
         apiKey: String? = nil,
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws {
-        guard id != Seeder.readoProxyAgentID else { throw StoreError.notFound }
+        guard id != Seeder.placeholderAgentID else { throw StoreError.notFound }
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         let replacementKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -198,13 +206,13 @@ public enum AnalysisAgentStore {
             [.text(id)])
     }
 
-    /// Xoá agent user. Đang active thì trỏ về proxy trước, rồi mới xoá key.
+    /// Xoá agent user. Đang active thì trỏ về placeholder trước, rồi mới xoá key.
     public static func delete(
         on db: SQLiteDatabase,
         id: String,
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws {
-        guard id != Seeder.readoProxyAgentID else { throw StoreError.cannotDeleteProxy }
+        guard id != Seeder.placeholderAgentID else { throw StoreError.cannotDeletePlaceholder }
         let rows = try db.rows(
             "SELECT id FROM analysis_agents WHERE id = ? LIMIT 1;",
             [.text(id)])
@@ -215,7 +223,7 @@ public enum AnalysisAgentStore {
             if activeID == id {
                 try db.run(
                     "UPDATE settings SET active_agent_id = ? WHERE id = 1;",
-                    [.text(Seeder.readoProxyAgentID)])
+                    [.text(Seeder.placeholderAgentID)])
             }
             try db.run("DELETE FROM analysis_agents WHERE id = ?;", [.text(id)])
         }

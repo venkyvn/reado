@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 import ReadoKit
 
-/// Fixtures + helper dùng chung cho các file `Analysis*Tests`/`ReadoProxyClientTests`/
+/// Fixtures + helper dùng chung cho các file `Analysis*Tests`/`AnalyzerFactoryTests`/
 /// `ReviewDraftBuilderTests` (refactor-r4 T3, tách khỏi `AnalysisTests.swift` cũ).
 enum AnalysisFixtures {
     static func validResponseJSON() -> [String: Any] {
@@ -32,8 +32,8 @@ enum AnalysisFixtures {
     }
 }
 
-/// `OpenAICompatClient`/`ReadoProxyClient` gọi `DebugTrace.event` — override thư
-/// mục tạm (như `DebugTraceTests`) để không ghi vào `Documents/Diagnostics` thật.
+/// `OpenAICompatClient` gọi `DebugTrace.event` — override thư mục tạm (như
+/// `DebugTraceTests`) để không ghi vào `Documents/Diagnostics` thật.
 class AnalysisNetworkTestCase: XCTestCase {
     private var tempRoot: URL!
 

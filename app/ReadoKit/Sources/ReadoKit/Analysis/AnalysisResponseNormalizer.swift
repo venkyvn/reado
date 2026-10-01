@@ -1,8 +1,9 @@
 import Foundation
 
-/// Cùng luật với `proxy/normalize.py`. Một từ lệch không huỷ cả trang:
-/// `pos` lạ → `other`, CEFR lạ bị bỏ, từ thiếu term/nghĩa/câu bị loại.
-/// Cả trang trống (không đoạn, không từ) → `notEnglishText`.
+/// Luật chuẩn hoá response (ADR-049: trước có bản song song ở `proxy/normalize.py`,
+/// giờ chỉ còn ở đây). Một từ lệch không huỷ cả trang: `pos` lạ → `other`, CEFR lạ
+/// bị bỏ, từ thiếu term/nghĩa/câu bị loại. Cả trang trống (không đoạn, không từ)
+/// → `notEnglishText`.
 public enum AnalysisResponseNormalizer {
     private static let validPOS: Set<String> = ["noun", "verb", "adj", "adv", "phrase", "other"]
     private static let validCEFR: Set<String> = ["A2", "B1", "B2", "C1"]

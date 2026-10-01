@@ -6,8 +6,8 @@
 ## 1. Reado là gì
 
 - iOS native (SwiftUI), app **học từ vựng từ sách thật**: chụp trang → trích xuất từ mới theo ngữ cảnh → ôn tập bằng FSRS.
-- Local-first: SQLite on-device (Q-02), một người dùng (NG-05). AI qua **proxy hybrid** (Q-03):
-  proxy Gemini mặc định, BYOK OpenAI-compat ở Keychain khi cần.
+- Local-first: SQLite on-device (Q-02), một người dùng (NG-05). AI qua **BYOK OpenAI-compat**
+  ở Keychain (Q-03, đảo ADR-049 2026-10-01 — bỏ proxy Reado, không còn "hybrid").
 - Scheduling dùng thư viện `swift-fsrs` pin commit `4fbaf20`, `FSRSDefaults.defaultWv6` (21 trọng số).
 - Owner = fen. R1 là MVP một user; success metric M-07: bỏ luồng chat Gemini thủ công.
 
@@ -22,7 +22,6 @@
   scripts/test.sh kit                                        # chỉ ReadoKit trên macOS (~10s, không simulator) — logic thuần
   ```
   Log đầy đủ ở `/tmp/build.log`, kết quả ở `.tmp/results/last.xcresult` (lane `kit`: `/tmp/build-kit.log`, `.tmp/results/kit.xcresult`) — cần chi tiết thì đọc các file đó, không đọc nguyên.
-- Proxy: `cd proxy && python3 -m unittest -q`.
 - **Cấm `swift build`** (đụng cache `~/Library`).
 - Số test xanh / HEAD gần nhất: `docs/session-brief.md` §1 — không ghi vào file này.
 
@@ -68,8 +67,9 @@
 
 Danh sách này là nguồn duy nhất. Agent và command không chép lại số Q.
 
-- **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 proxy hybrid · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp theo collection · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
+- **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 BYOK-only (ADR-049 2026-10-01 — "proxy hybrid" cũ là bia mộ) · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp theo collection · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
 - **Chốt thêm 2026-09-24:** ngưỡng leech FR-19 = **6** lần Again. Không gộp với Q-08.
+- **Chốt thêm 2026-10-01:** bỏ proxy Reado — ADR-049.
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ

@@ -2,7 +2,7 @@ import Foundation
 
 /// Cổng giao tiếp với AI (FR-02). UI chỉ thấy protocol này — đổi provider
 /// không đụng SwiftUI (ADR-028). Input vẫn là ảnh (NG-07). `openai_compat`
-/// OCR trên máy rồi **một** lần gọi text (dịch + vocab); proxy vẫn gửi ảnh.
+/// OCR trên máy rồi **một** lần gọi text (dịch + vocab).
 public protocol PageAnalyzer: Sendable {
     func analyze(
         image: Data,
@@ -14,16 +14,6 @@ public protocol PageAnalyzer: Sendable {
 
 /// Nhà máy chọn analyzer theo agent đang active (FR-21).
 public enum AnalyzerFactory {
-    public static let proxyBaseURL = "https://proxy.reado.app"
-
-    /// URL thật lúc chạy. Scheme Xcode có thể đặt `READO_PROXY_BASE_URL`
-    /// (HTTPS mà iPhone mở được). Trống thì dùng `proxyBaseURL`.
-    public static var resolvedProxyBaseURL: String {
-        let fromEnv = ProcessInfo.processInfo.environment["READO_PROXY_BASE_URL"]?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return fromEnv.isEmpty ? proxyBaseURL : fromEnv
-    }
-
     /// Tạo analyzer cho agent. `openai_compat` thiếu id/url/model thì mock (cấu hình hỏng).
     /// `session` injectable cho test (default URLSession.shared ở production).
     /// `onProgress`: chỉ `openai_compat` (stream) phát ra `.thinking`/`.writing`.
@@ -47,7 +37,9 @@ public enum AnalyzerFactory {
                 agentID: agentID,
                 onProgress: onProgress)
         case "reado_proxy":
-            return ReadoProxyClient(session: session, baseURL: baseURL ?? resolvedProxyBaseURL)
+            // ADR-049: kind này giờ chỉ là hàng placeholder "chưa chọn agent"
+            // (Seeder) — không còn client thật nào gọi được, báo lỗi rõ.
+            return NoAgentAnalyzer()
         default:
             return MockAnalyzer()
         }
@@ -81,8 +73,8 @@ public enum AnalyzerFactory {
                     cefrLevel)
             }
         }
-        // Fallback: agent seed luôn tồn tại (reado_proxy) — không bao giờ tới đây.
-        return (ReadoProxyClient(session: session, baseURL: resolvedProxyBaseURL), cefrLevel)
+        // Fallback: agent seed luôn tồn tại (placeholder) — không bao giờ tới đây.
+        return (NoAgentAnalyzer(), cefrLevel)
     }
 
     /// Ghép các CEFR level đã chọn thành chuỗi cho prompt; cột JSON rỗng/cài cũ
@@ -101,7 +93,25 @@ public enum AnalyzerFactory {
     }
 }
 
-/// Analyzer giả cho walking skeleton (FR-02 loẹt step UI trước khi proxy 0.7 có).
+/// ADR-049: agent đang active là hàng seed placeholder (`kind = reado_proxy`,
+/// ý nghĩa cũ "proxy Reado" đã bỏ) — chưa có agent BYOK nào được chọn. Báo lỗi
+/// rõ thay vì gọi mạng; cùng câu/case `AnalysisError.networkError` ReadoProxyClient
+/// cũ dùng khi `proxy.reado.app` không resolve được, để UI không phải đổi.
+public struct NoAgentAnalyzer: PageAnalyzer {
+    public init() {}
+
+    public func analyze(
+        image _: Data,
+        imageMime _: String,
+        cefr _: String,
+        imageHash _: String
+    ) async throws -> PageAnalysis {
+        throw AnalysisError.networkError(
+            "Chưa có agent phân tích — thêm agent (vd AI-Box) trong Cài đặt")
+    }
+}
+
+/// Analyzer giả cho walking skeleton (FR-02 loẹt step UI trước khi có agent BYOK).
 /// KHÔNG phải bằng chứng A-01/A-02 — prompt baseline chưa dán (rulebook mục 8).
 /// Trả về dữ liệu mẫu để owner xem flow UI: segments + vocab + summary.
 public struct MockAnalyzer: PageAnalyzer {

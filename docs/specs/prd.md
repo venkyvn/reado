@@ -94,6 +94,16 @@ song.
 > (một lần gọi multimodal — không tách OCR). Key user: Keychain, không SQLite,
 > không FR-16. **FR-21 mới**, Epic E5. Walking skeleton vẫn đi proxy.
 
+> **v0.11 — ADR-049: bỏ proxy Reado, Q-03 đảo thành BYOK-only.** Chốt 2026-10-01.
+> v0.9 "hybrid" **không bị xoá** — bia mộ tại chỗ ngay trên. Thay bằng: `proxy/`
+> và `ReadoProxyClient` xoá hẳn; agent mặc định `kind = reado_proxy` chỉ còn là
+> hàng placeholder "chưa chọn agent" (không hiện trong UI, không gọi mạng). FR-02
+> **chỉ** còn agent BYOK OpenAI-compat (FR-21) — không còn "mặc định sẵn dùng",
+> user phải thêm agent trước khi chụp trang đầu. Lý do: `proxy.reado.app` chưa
+> bao giờ deploy (ADR-041), app đã OCR trên máy từ ADR-034 — proxy chỉ còn là
+> code chết. NFR-07 chỉ còn vế key user ở Keychain, vế "key sản phẩm `.env` proxy"
+> là bia mộ. Chi tiết: [decisions-log.md ADR-049](docs/decisions-log.md).
+
 ---
 
 ## 1. Problem Statement
@@ -733,6 +743,12 @@ hàng đang dùng. Key user **không** là cột SQLite — Keychain theo `id`. 
 - **Given** agent `kind = reado_proxy`, **when** người dùng đòi xoá, **then**
   không cho. **Given** họ xoá agent user đang active, **when** xoá xong, **then**
   `active_agent_id` fallback về proxy.
+
+> **ADR-049 (2026-10-01):** đoạn trên là bia mộ — proxy Reado đã bỏ, `kind =
+> reado_proxy` giờ chỉ là hàng placeholder "chưa chọn agent" (ẩn khỏi UI, không
+> gọi mạng). Cài mới **không** có agent active chạy được; user phải thêm agent
+> BYOK (`openai_compat`) trước khi capture trang đầu — không còn ca "builtin
+> Reado chạy sẵn, không cần dán key".
 - **Given** BYOK trả 401, timeout, hoặc JSON không khớp schema, **when** đang
   processing (J1/J2), **then** lỗi rõ kèm CTA về Settings; **không** lưu vocab dở.
 
@@ -786,7 +802,7 @@ PDF, ebook, hay ảnh.
 | NFR-04 | Privacy & copyright | **Ảnh gốc không lưu.** Toàn văn trang chỉ được giữ tạm cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, bảng `reading_sessions` — cập nhật 2026-09-18 theo Q-10/ADR-029), rồi trôi dần; thứ giữ lâu dài từ một trang vẫn chỉ là **một câu trích cho mỗi từ vựng**. Bề mặt bản quyền vì thế nhỏ và có giới hạn rõ |
 | NFR-05 | Data portability | FR-16 phải luôn hoạt động; FR-20 là chiều ngược cho vocabulary CSV. Người dùng không bị lock-in — đây là điều kiện để owner tin tưởng dồn dữ liệu học tập nhiều năm vào đây |
 | NFR-06 | Durability of saved data | Card và review history không được mất khi app crash hay khi analysis lỗi. Dữ liệu đã confirm là dữ liệu đã an toàn |
-| NFR-07 | Secret management | **Đã được thoả bằng thiết kế ở v0.9 (Q-03 hybrid), không còn là rủi ro mở theo nghĩa cũ “không có key nào trên máy”.** (1) Key **sản phẩm** Reado chỉ nằm `.env` proxy — không nhúng app bundle. (2) Key **của user** (FR-21) nằm Keychain, không plaintext SQLite, không FR-16, không `analysis_events`, không lên server Reado. Network trace máy người dùng **có thể** thấy gọi tới `base_url` họ tự khai khi active là BYOK — đó là hệ quả đã chấp nhận của hybrid, không phải lộ key Reado |
+| NFR-07 | Secret management | **Đã được thoả bằng thiết kế ở v0.9 (Q-03 hybrid), không còn là rủi ro mở theo nghĩa cũ “không có key nào trên máy”.** (1) Key **sản phẩm** Reado chỉ nằm `.env` proxy — không nhúng app bundle. (2) Key **của user** (FR-21) nằm Keychain, không plaintext SQLite, không FR-16, không `analysis_events`, không lên server Reado. Network trace máy người dùng **có thể** thấy gọi tới `base_url` họ tự khai khi active là BYOK — đó là hệ quả đã chấp nhận của hybrid, không phải lộ key Reado. **ADR-049 (2026-10-01):** vế (1) là bia mộ — không còn proxy/key sản phẩm nào để thoả. Chỉ còn vế (2) |
 | NFR-08 | Cold start to capture | Từ lúc mở app tới lúc chụp được trang: ≤ 3 thao tác. Ma sát ở bước này giết thói quen nhanh nhất |
 
 ---
@@ -828,6 +844,10 @@ một **proxy Gemini** hosted (mặc định). Không PWA sản phẩm, không A
 dashboard web đọc kho từ (Later). FR-21 (BYOK) không thay proxy mặc định và
 **không** nằm trên walking skeleton.
 
+> **ADR-049 (2026-10-01):** đoạn trên là bia mộ — proxy Gemini hosted đã bỏ.
+> FR-02 chỉ còn FR-21 (BYOK), và FR-21 **không còn hoãn được** sau walking
+> skeleton — nó LÀ cách duy nhất để chạy được FR-02.
+
 | Bao gồm | Loại trừ |
 |---|---|
 | FR-01, FR-02, FR-03, FR-04 | — |
@@ -835,7 +855,7 @@ dashboard web đọc kho từ (Later). FR-21 (BYOK) không thay proxy mặc đ�
 | FR-22 | — |
 | FR-08, FR-09, FR-10, FR-17 | FR-08 chỉ cần lọc theo collection; **bỏ lọc theo CEFR và trạng thái** sang R2 |
 | FR-11, FR-12, FR-14, FR-18 | FR-14 chỉ cần số card đến hạn và streak. FR-18 chỉ cần ba chế độ phạm vi; **chế độ cram** để R2 |
-| FR-15, FR-16, FR-20, FR-21 | FR-15 chỉ cần `cefr_level`, `daily_new_limit` và `day_cutoff_hour` chỉnh được; `request_retention` để mặc định, **không** mở cho người dùng ở R1. FR-16 xuất CSV theo collection + JSON FSRS; **không** xuất key. FR-20 nhập CSV gộp, không nhập JSON. FR-21: proxy mặc định + list agent OpenAI-compat; làm **sau** walking skeleton |
+| FR-15, FR-16, FR-20, FR-21 | FR-15 chỉ cần `cefr_level`, `daily_new_limit` và `day_cutoff_hour` chỉnh được; `request_retention` để mặc định, **không** mở cho người dùng ở R1. FR-16 xuất CSV theo collection + JSON FSRS; **không** xuất key. FR-20 nhập CSV gộp, không nhập JSON. FR-21: ~~proxy mặc định + list agent OpenAI-compat; làm **sau** walking skeleton~~ — bia mộ, ADR-049 (2026-10-01): proxy bỏ, chỉ còn list agent OpenAI-compat, **không** hoãn được |
 | FR-19 | — |
 | NFR-03, NFR-04, NFR-05, NFR-06, NFR-07, NFR-08 | NFR-01 và NFR-02 chỉ **đo và ghi nhận** ở R1, chưa chốt ngưỡng |
 
@@ -899,6 +919,11 @@ implementation gọi proxy Reado, một implementation gọi OpenAI-compatible
 không biết schema wire của Google hay của OpenAI. Proxy **không còn** là lớp cô
 lập duy nhất — nó là một backend của adapter.
 
+> **ADR-049 (2026-10-01):** đoạn trên là bia mộ — proxy Reado đã bỏ hẳn, không
+> còn là một backend của adapter nữa. Adapter (`PageAnalyzer`) giờ chỉ còn một
+> implementation thật: `OpenAICompatClient` (BYOK). Lớp cô lập AI vẫn đúng như
+> thiết kế — đổi provider vẫn không đụng SwiftUI.
+
 ---
 
 ## 12. Open Questions
@@ -927,7 +952,7 @@ Chốt số riêng, đừng gộp nhầm với Q-08 (Q-08 = stability "đã thu�
 |---|---|---|
 | Q-01 | PWA hay native? | **Native iOS** (Swift / SwiftUI), 2026-09-17. R1 không ship Android, không ship PWA sản phẩm. `web/` là prototype. Xem [tech-stack.md](docs/research/tech-stack.md) |
 | Q-02 | Local hay cloud? | **Local-first**, SQLite trên máy, 2026-09-17. Dashboard sản phẩm (kho từ, stats) = Later — lúc đó mới sync. Chốt 2026-09-08 (BE đầy) **đã đảo** |
-| Q-03 | API key ở đâu? | **Hybrid**, 2026-09-17 (chiều). ~~Proxy-only: app không gọi Gemini thẳng; key chỉ `.env` server~~ — bia mộ, cùng ngày buổi sáng. **Mặc định** vẫn proxy Reado, key sản phẩm `.env` server. User thêm agent OpenAI-compat + key riêng (Keychain), chọn một cái active cho FR-02. NFR-07 viết lại: key sản phẩm không trên client; key user không plaintext / không lên server Reado. FR-21 |
+| Q-03 | API key ở đâu? | ~~**Hybrid**, 2026-09-17 (chiều). Proxy-only: app không gọi Gemini thẳng; key chỉ `.env` server — bia mộ, cùng ngày buổi sáng. **Mặc định** vẫn proxy Reado, key sản phẩm `.env` server. User thêm agent OpenAI-compat + key riêng (Keychain), chọn một cái active cho FR-02. NFR-07 viết lại: key sản phẩm không trên client; key user không plaintext / không lên server Reado. FR-21~~ — bia mộ, đảo bởi ADR-049 (2026-10-01). **BYOK-only:** không còn proxy/key sản phẩm. User **phải** thêm agent OpenAI-compat + key riêng (Keychain) trước khi dùng được FR-02; không còn "mặc định sẵn dùng". NFR-07 chỉ còn vế key user |
 | Q-04 | Có lưu ảnh gốc của trang không? | **Không.** Ảnh gốc không lưu. Toàn văn trang chỉ giữ tạm cho 10 phiên đọc gần nhất mỗi collection có tên (Q-10, 2026-09-18 — xem NFR-04); lâu dài chỉ còn một câu trích cho mỗi từ vựng. v0.3 cập nhật 2026-09-18 |
 | Q-05 | Segment chia theo đoạn văn hay theo câu? | **Hạ cấp, không còn là quyết định chặn đường.** Segment chỉ lưu trong `reading_sessions` (10 phiên/named collection) nên chọn sai chỉ ảnh hưởng vài phiên đọc, sửa được bằng prompt bất cứ lúc nào. v0.3 cập nhật 2026-09-18 |
 | Q-07 | Một `term` mang được mấy nghĩa? | **Bao nhiêu cũng được — mỗi nghĩa một dòng.** Ràng buộc `unique` bị bỏ khỏi schema, nên "một dòng một nghĩa" thành lời khai trung thực và không cần tầng `senses`. Xem [research/vocabulary.md mục 6.3](docs/research/vocabulary.md#63-vì-sao-không-có-ràng-buộc-unique). v0.3 |

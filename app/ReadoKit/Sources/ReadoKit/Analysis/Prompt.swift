@@ -1,11 +1,12 @@
 import Foundation
 
 /// Prompt cho FR-02 (SD 7.5: prompt sống trong ReadoKit kèm `PROMPT_VERSION`).
-/// Proxy ghi `prompt_version` vào `analysis_events` (SD 4.1/4.3) để đối chiếu chất
-/// lượng khi prompt đổi (M-03). ĐÂY LÀ BẢN DỰNG LẠI từ prompt-spec mục 3 — KHÔNG phải
+/// `meta.promptVersion` đi kèm mỗi `PageAnalysis` để đối chiếu chất lượng khi
+/// prompt đổi (M-03) — `analysis_events` là bia mộ proxy (ADR-049), không còn
+/// nơi ghi tập trung. ĐÂY LÀ BẢN DỰNG LẠI từ prompt-spec mục 3 — KHÔNG phải
 /// bằng chứng A-02 (baseline owner chưa dán, rulebook mục 8). Chỉ dùng để chạy thử A-01.
 public enum Prompt {
-    /// Bump mỗi lần đổi prompt — proxy ghi vào analysis_events; app không tự suy ra.
+    /// Bump mỗi lần đổi prompt — app không tự suy ra, chỉ đọc `meta.promptVersion`.
     /// v5 (ADR-037): OCR (`PageOCR.linesWithBreaks`) giờ tự dò ranh giới đoạn bằng
     /// hình học (khoảng trống dọc, thụt đầu dòng, hàng ngắn kết câu) thay vì chỉ
     /// tách theo cột — `\n\n` đáng tin hơn v4, nên đổi luật từ "đoán hộ" sang

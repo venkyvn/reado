@@ -20,7 +20,7 @@ extension AppModel {
 
     // MARK: — FR-02 AI Analysis
 
-    /// Gọi analyzer cho ảnh hiện tại (proxy khi deploy, mock khi chưa — SD 2.1).
+    /// Gọi analyzer cho agent BYOK đang active, mock khi walking skeleton (SD 2.1).
     /// FR-02: hiện progress, nhận 3 nhóm dữ liệu; lỗi → báo + cho retry.
     func analyzeCurrentImage() async {
         guard let image = capture.lastCapturedImage, let database else {
@@ -39,8 +39,8 @@ extension AppModel {
 
         let startedAt = Date()
         do {
-            // FR-02: agent seed là reado_proxy → ReadoProxyClient. URL lấy từ
-            // READO_PROXY_BASE_URL nếu có, không thì AnalyzerFactory.proxyBaseURL.
+            // FR-02/ADR-049: agent active đọc từ settings — placeholder (chưa
+            // chọn agent) rơi vào NoAgentAnalyzer, báo lỗi rõ ở catch dưới.
             let (analyzer, cefrLevel) = try AnalyzerFactory.active(
                 db: database,
                 onProgress: { [weak self] progress in

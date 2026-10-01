@@ -57,8 +57,9 @@ public enum AnalysisResponseDecoder {
             } else {
                 cefr = nil
             }
-            // Proxy có thể gửi kèm `verification` (SD 4.1). Nếu thiếu (BYOK,
-            // openai_compat) → VerifyEngine cục bộ (SD 7.3). KHÔNG verify hai lần.
+            // `verification` optional trong wire schema (bia mộ proxy — ADR-049).
+            // openai_compat không gửi field này → VerifyEngine cục bộ (SD 7.3).
+            // KHÔNG verify hai lần.
             let verification: PageAnalysis.VerificationStatus
             if let rawStatus = item.verification,
                let parsed = PageAnalysis.VerificationStatus(rawValue: rawStatus) {
@@ -89,9 +90,10 @@ public enum AnalysisResponseDecoder {
 
     // MARK: - Raw JSON shapes (theo prompt-spec #4)
 
-    /// Envelope lỗi proxy nằm ở ReadoProxyClient (SD 4.1) — chỗ này chỉ parse
-    /// thành công. `verification` optional: proxy gửi kèm thì giữ nguyên,
-    /// thiếu thì VerifyEngine cục bộ (SD 7.3, không verify hai lần).
+    /// Chỗ này chỉ parse thành công — lỗi HTTP map ở client (OpenAICompatClient).
+    /// `verification` optional: wire schema bia mộ proxy (ADR-049) để lại field
+    /// này; openai_compat không gửi, VerifyEngine cục bộ lo (SD 7.3, không verify
+    /// hai lần).
     struct RawResponse: Decodable {
         let segments: [RawSegment]
         let vocabulary: [RawVocabulary]

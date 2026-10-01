@@ -149,7 +149,7 @@ final class MigrationAndSeedTests: XCTestCase {
         // Q-12 CHỐT: learning steps tắt.
         XCTAssertEqual(row[0].intValue, 0, "enable_short_term phải = 0")
         XCTAssertEqual(row[1].textValue, "fsrs-6")
-        XCTAssertEqual(row[2].textValue, Seeder.readoProxyAgentID)
+        XCTAssertEqual(row[2].textValue, Seeder.placeholderAgentID)
         XCTAssertEqual(row[3].textValue, Fixtures.timezoneID)
         XCTAssertEqual(row[4].intValue, 4, "day_cutoff_hour mặc định 4")
         XCTAssertEqual(row[5].intValue, 10, "daily_new_limit mặc định 10")

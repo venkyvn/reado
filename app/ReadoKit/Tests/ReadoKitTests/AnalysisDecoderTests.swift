@@ -132,7 +132,8 @@ final class AnalysisDecoderTests: XCTestCase {
     }
 
     func testDecoderWithoutVerificationUsesVerifyEngine() throws {
-        // Proxy contract cộng thêm `verification`; decode raw không có field đó
+        // Wire schema có field `verification` (bia mộ proxy — ADR-049) nhưng
+        // openai_compat không gửi; decode raw không có field đó
         // → VerifyEngine đối chiếu example với segments (SD 7.3, không verify hai lần).
         let json = AnalysisFixtures.validResponseJSON()
         let bytes = try JSONSerialization.data(withJSONObject: json)

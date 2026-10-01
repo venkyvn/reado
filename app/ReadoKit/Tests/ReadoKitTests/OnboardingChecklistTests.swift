@@ -38,7 +38,7 @@ final class OnboardingChecklistTests: XCTestCase {
     }
 
     func testFirstPageWithoutAgentStillVisible() {
-        // Proxy lỗi/agent bị xoá sau khi đã có trang — vẫn nhắc kết nối lại.
+        // Agent lỗi/bị xoá sau khi đã có trang — vẫn nhắc kết nối lại.
         let checklist = OnboardingChecklist(
             cefrConfirmed: false, agentReady: false, hasFirstPage: true, dismissed: false)
         XCTAssertTrue(checklist.isVisible)

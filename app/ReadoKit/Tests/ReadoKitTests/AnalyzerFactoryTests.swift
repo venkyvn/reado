@@ -2,16 +2,31 @@ import Foundation
 import XCTest
 import ReadoKit
 
-/// FR-21 — proxy mặc định, agent OpenAI-compat (list/add/edit/delete/setActive).
+/// FR-21 — agent OpenAI-compat BYOK (list/add/edit/delete/setActive). ADR-049:
+/// bỏ proxy mặc định — cài mới chưa thêm agent thì analyzer báo lỗi rõ.
 final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
 
-    // MARK: - AnalyzerFactory (FR-21 — proxy mặc định)
+    // MARK: - AnalyzerFactory (ADR-049 — chưa chọn agent)
 
-    func testFactoryActiveReturnsProxyAnalyzerAndSeededCEFR() throws {
+    func testFactoryActiveWithoutAgentReturnsNoAgentAnalyzerAndSeededCEFR() async throws {
         let db = try Fixtures.seededDB()
         let (analyzer, cefrLevel) = try AnalyzerFactory.active(db: db)
         XCTAssertEqual(cefrLevel, "B2")
-        XCTAssertTrue(analyzer is ReadoProxyClient)
+        XCTAssertTrue(analyzer is NoAgentAnalyzer)
+        await assertThrowsNetworkError(analyzer)
+    }
+
+    /// `analyze()` của placeholder phải ném lỗi rõ, không im lặng/không gọi mạng.
+    private func assertThrowsNetworkError(_ analyzer: PageAnalyzer) async {
+        do {
+            _ = try await analyzer.analyze(
+                image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi lỗi chưa có agent")
+        } catch {
+            guard case AnalysisError.networkError = error else {
+                return XCTFail("mong đợi networkError, nhận \(error)")
+            }
+        }
     }
 
     func testFactoryUnknownKindFallsBackToMock() {
@@ -48,9 +63,11 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
         XCTAssertEqual(AgentURLRule.storedBase("https://example.com"), "https://example.com")
     }
 
-    func testAgentStoreAddEditDeleteFallsBackToProxy() throws {
+    func testAgentStoreAddEditDeleteFallsBackToPlaceholder() throws {
         let db = try Fixtures.seededDB()
         let secrets = MemorySecrets()
+        // Cài mới chưa thêm agent nào — placeholder bị lọc khỏi `agents`.
+        XCTAssertTrue(try AnalysisAgentStore.list(on: db, secrets: secrets).agents.isEmpty)
         let id = try AnalysisAgentStore.add(
             on: db,
             name: "Gemini",
@@ -60,7 +77,7 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
             secrets: secrets)
         let listed = try AnalysisAgentStore.list(on: db, secrets: secrets)
         XCTAssertEqual(listed.activeID, id)
-        XCTAssertEqual(listed.agents.count, 2)
+        XCTAssertEqual(listed.agents.count, 1)
         let added = try XCTUnwrap(listed.agents.first { $0.id == id })
         XCTAssertEqual(added.baseURL, "https://generativelanguage.googleapis.com/v1beta/openai")
         XCTAssertTrue(added.hasKey)
@@ -101,11 +118,11 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
 
         try AnalysisAgentStore.delete(on: db, id: id, secrets: secrets)
         let after = try AnalysisAgentStore.list(on: db, secrets: secrets)
-        XCTAssertEqual(after.activeID, Seeder.readoProxyAgentID)
-        XCTAssertEqual(after.agents.count, 1)
+        XCTAssertEqual(after.activeID, Seeder.placeholderAgentID)
+        XCTAssertTrue(after.agents.isEmpty)
         XCTAssertFalse(secrets.contains(agentID: id))
         XCTAssertThrowsError(
-            try AnalysisAgentStore.delete(on: db, id: Seeder.readoProxyAgentID, secrets: secrets))
+            try AnalysisAgentStore.delete(on: db, id: Seeder.placeholderAgentID, secrets: secrets))
     }
 
     /// `setActive(knownHasKey:)` bỏ qua Keychain khi caller đã biết sẵn (từ

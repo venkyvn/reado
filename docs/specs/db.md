@@ -216,8 +216,8 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 `timezone` không có SQL default. **Một** transaction lúc cài:
 
 1. `INSERT` collection kho tạm, `is_default = 1`.
-2. `INSERT` `analysis_agents`: `id = '00000000-0000-4000-a000-000000000001'`, `kind = 'reado_proxy'`, `name = 'Reado'`, `base_url` / `model` null, `created_at` now UTC `Z`. Hàng này **không xoá được**.
-3. `INSERT` `settings` (`id = 1`): `timezone` = IANA của device, `fsrs_version = 'fsrs-6'`, `fsrs_params` null (default thư viện + `defaultWv6` lúc gọi FSRS), `home_shortcut_*` null, `known_stability` null, `leech_lapses` = 6 (**owner chốt 2026-09-24** — không phải Q-08), `active_agent_id` = id proxy ở bước 2. Cột v2/v3 lấy DEFAULT của ALTER (`reminder` tắt, `cefr_levels` `["B2"]`, pin và priority rỗng).
+2. `INSERT` `analysis_agents`: `id = '00000000-0000-4000-a000-000000000001'`, `kind = 'reado_proxy'`, `name = 'Chưa chọn agent'`, `base_url` / `model` null, `created_at` now UTC `Z`. Hàng này **không xoá được** — ADR-049 (2026-10-01): placeholder "chưa chọn agent", không còn nghĩa proxy; `name` trước đó là `'Reado'`.
+3. `INSERT` `settings` (`id = 1`): `timezone` = IANA của device, `fsrs_version = 'fsrs-6'`, `fsrs_params` null (default thư viện + `defaultWv6` lúc gọi FSRS), `home_shortcut_*` null, `known_stability` null, `leech_lapses` = 6 (**owner chốt 2026-09-24** — không phải Q-08), `active_agent_id` = id ở bước 2. Cột v2/v3 lấy DEFAULT của ALTER (`reminder` tắt, `cefr_levels` `["B2"]`, pin và priority rỗng).
 
 ### A.2.2 App-rule — không CHECK SQL
 
@@ -229,8 +229,8 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | `leech_lapses` = 6 lúc seed | Owner chốt 2026-09-24. Không gộp với Q-08 |
 | Trim `collections.name` trước ghi | Unique `COLLATE NOCASE` không thay trim |
 | Key user (FR-21) chỉ Keychain theo `analysis_agents.id`; không cột SQLite | NFR-07 hybrid |
-| Không `DELETE` hàng `kind = reado_proxy` | FR-21; seed bắt buộc |
-| Xoá agent đang `active_agent_id` → gán lại proxy builtin | FR-21 |
+| Không `DELETE` hàng `kind = reado_proxy` | FR-21; seed bắt buộc (ADR-049: hàng này là placeholder, không phải proxy) |
+| Xoá agent đang `active_agent_id` → gán lại hàng placeholder | FR-21, ADR-049 |
 | `openai_compat`: `base_url` + `model` không null; HTTPS trừ loopback / RFC1918 | Self-host LAN |
 | Client POST `{base_url}/chat/completions` (prefix kiểu `https://openrouter.ai/api/v1`) | Wire OpenAI-compat |
 
@@ -238,8 +238,8 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 
 | Chỗ | Ở đâu |
 |---|---|
-| `analysis_events` | **Proxy** — [tech-stack 10.1](docs/research/tech-stack.md#101-telemetry--analysis_events-trên-proxy) |
-| API key Gemini **sản phẩm** | **Proxy `.env`** — Q-03 / NFR-07. Không cột trên máy |
+| `analysis_events` | ~~**Proxy**~~ — bia mộ (ADR-049: proxy bỏ, bảng này chưa bao giờ tồn tại ngoài kế hoạch) — [tech-stack 10.1](docs/research/tech-stack.md#101-telemetry--analysis_events-trên-proxy) |
+| API key Gemini **sản phẩm** | ~~**Proxy `.env`**~~ — bia mộ (ADR-049). Không còn key sản phẩm nào — chỉ còn key user (dưới) |
 | API key **user** (FR-21) | **Keychain** theo `analysis_agents.id`. Metadata agent ở SQLite; key không |
 | `word_relations` | **R2** — structure mục 5.1 |
 | Buffer bản song ngữ (FR-05) | Bảng `reading_sessions`: tối đa 10 phiên / collection có tên, JSON segments + summary. Kho tạm không ghi. Không ảnh |
@@ -419,7 +419,7 @@ Pull: `where user_id = me and usn > cursor order by usn` — chỉ khi đã có 
 | Id 32 hex + `check (id ~ '...')` | Dialect đã chốt gạch nối; SQLite không có `~` |
 | Bỏ `is_default` | FR-17 / `collection_id` never null |
 | `tags` / `synonyms` / `antonyms` JSON trên item | Không có trong schema đã chốt. R2 = `word_relations` |
-| ~~BYOK `ai_api_key` plaintext trên device / SQLite~~ | Cột key **cấm**. User key = Keychain (FR-21). Key sản phẩm = proxy `.env` |
+| ~~BYOK `ai_api_key` plaintext trên device / SQLite~~ | Cột key **cấm**. User key = Keychain (FR-21). ~~Key sản phẩm = proxy `.env`~~ — bia mộ, ADR-049: không còn key sản phẩm |
 | `user_id` / `usn` / `graves` / RLS | Một máy; lần sync đầu = full upload |
 | Default `cefr_level` `B1` | Docs: **B2** |
 | `session_id` trên `vocab_items` | Không cần — phiên đọc có bảng riêng `reading_sessions` (Q-10, ADR-029). Chữ cũ ở FR-20 là mồ của bảng `pages` |

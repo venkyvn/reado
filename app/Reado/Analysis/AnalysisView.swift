@@ -38,8 +38,8 @@ struct AnalysisView: View {
         drafts.filter(\.isSelected).count
     }
 
-    /// Dòng chữ theo tiến độ agent (FR-02) — model.capture.analysisProgress nil (proxy
-    /// không stream, hoặc chưa kịp báo) rơi về câu chung.
+    /// Dòng chữ theo tiến độ agent (FR-02) — model.capture.analysisProgress nil
+    /// (chưa kịp báo) rơi về câu chung.
     private var progressTitle: String {
         switch model.capture.analysisProgress {
         case nil, .readingPage:

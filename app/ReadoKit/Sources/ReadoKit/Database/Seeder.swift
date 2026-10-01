@@ -2,12 +2,16 @@ import Foundation
 
 /// Seed lúc cài đặt — MỘT transaction (db.md A.2.1):
 /// 1. collection kho tạm `is_default = 1`
-/// 2. analysis_agent `reado_proxy` builtin (id cố định, không xoá được)
+/// 2. analysis_agent placeholder "chưa chọn agent" (id cố định, không xoá được)
 /// 3. settings id = 1 với timezone IANA của device
 public enum Seeder {
     /// db.md A.2.1 — id cố định, hàng này không xoá được (FR-21 app-rule).
-    public static let readoProxyAgentID = "00000000-0000-4000-a000-000000000001"
-    public static let readoProxyAgentName = "Reado"
+    /// ADR-049: kind lưu DB vẫn là chuỗi `reado_proxy` (CHECK cột, đổi = migration)
+    /// nhưng không còn nghĩa "proxy" — chỉ giữ chỗ cho `active_agent_id` NOT NULL
+    /// trước khi user thêm agent BYOK thật. `AnalysisAgentStore`/`AnalyzerFactory`
+    /// lọc/ẩn hàng này khỏi UI và báo lỗi rõ nếu lọt vào `analyze()`.
+    public static let placeholderAgentID = "00000000-0000-4000-a000-000000000001"
+    public static let placeholderAgentName = "Chưa chọn agent"
     /// PRD FR-17 gọi collection mặc định là "kho tạm" — chọn tên hiển thị đơn giản.
     public static let defaultCollectionName = "Kho tạm"
     /// db.md A.2.1: ghi 'fsrs-6' kể cả khi fsrs_params null (default = defaultWv6 lúc gọi FSRS).
@@ -48,8 +52,8 @@ public enum Seeder {
                 VALUES (?, 'reado_proxy', ?, NULL, NULL, ?);
                 """,
                 [
-                    .text(readoProxyAgentID),
-                    .text(readoProxyAgentName),
+                    .text(placeholderAgentID),
+                    .text(placeholderAgentName),
                     .text(nowIso),
                 ])
             // Q-12 CHỐT: enable_short_term = 0 (learning steps tắt).
@@ -70,7 +74,7 @@ public enum Seeder {
                     .text(timezone),
                     .int(Int64(defaultLeechLapses)),
                     .text(fsrsVersionValue),
-                    .text(readoProxyAgentID),
+                    .text(placeholderAgentID),
                 ])
         }
     }
