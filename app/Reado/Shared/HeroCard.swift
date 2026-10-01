@@ -18,28 +18,33 @@ struct HeroCard: View {
     }
 
     let title: String
+    /// Symbol nhỏ đứng trước title (vd checkmark ở trạng thái xong) — tô `titleTint`.
+    var titleSystemImage: String?
+    var titleTint: Color = Color.accentColor
     var subtitle: String?
-    let primary: Action
+    /// nil = không có nút chính (trạng thái xong chỉ còn link phụ).
+    var primary: Action?
     var secondary: Action?
     var warning: Warning?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.row) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .font(.title3.weight(.semibold))
+                titleView
                 if let subtitle {
                     Text(subtitle)
                         .font(Typo.meta)
                         .foregroundStyle(.secondary)
                 }
             }
-            Button(action: primary.handler) {
-                label(for: primary)
-                    .frame(maxWidth: .infinity)
+            if let primary {
+                Button(action: primary.handler) {
+                    label(for: primary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             if let secondary {
                 Button(action: secondary.handler) {
                     label(for: secondary)
@@ -57,6 +62,22 @@ struct HeroCard: View {
         .padding(Spacing.md)
         .card()
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var titleView: some View {
+        if let titleSystemImage {
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: titleSystemImage)
+                    .foregroundStyle(titleTint)
+            }
+            .font(.title3.weight(.semibold))
+        } else {
+            Text(title)
+                .font(.title3.weight(.semibold))
+        }
     }
 
     @ViewBuilder
@@ -95,14 +116,16 @@ struct HeroCard: View {
         HeroCard(
             title: "10 thẻ đến hạn",
             subtitle: "Phạm vi: Tất cả bộ",
-            primary: .init(title: "Ôn ngay", handler: {}),
-            secondary: .init(title: "Đổi phạm vi", systemImage: "chevron.down", handler: {}),
-            warning: .init(
+            primary: HeroCard.Action(title: "Ôn ngay", handler: {}),
+            secondary: HeroCard.Action(title: "Đổi phạm vi", systemImage: "chevron.down", handler: {}),
+            warning: HeroCard.Warning(
                 text: "Agent chưa chạy được — chụp sẽ không phân tích được.",
-                fix: .init(title: "Sửa", handler: {})))
+                fix: HeroCard.Action(title: "Sửa", handler: {})))
         HeroCard(
-            title: "Trình độ đọc: B2",
-            primary: .init(title: "Đúng", handler: {}))
+            title: "Xong phần hôm nay",
+            titleSystemImage: "checkmark.circle.fill",
+            titleTint: Theme.ok,
+            secondary: HeroCard.Action(title: "Chụp trang mới", systemImage: "camera", handler: {}))
     }
     .padding(Spacing.md)
 }

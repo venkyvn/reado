@@ -22,6 +22,9 @@ struct ShellTabBar: View {
     /// dữ liệu, phiên đọc) thì ẩn, capsule giãn ra chiếm cả hàng.
     var showsCapture: Bool = true
     var onCapture: () -> Void = {}
+    /// Tab có chấm báo (Q-e: chấm khi có thẻ đến hạn, không ghi số — số đỏ tạo áp lực, lệch
+    /// Retention "không cần học hết").
+    var badgedTabs: Set<AppTab> = []
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -65,6 +68,7 @@ struct ShellTabBar: View {
 
     private func tabButton(_ tab: AppTab) -> some View {
         let selected = selection == tab
+        let badged = badgedTabs.contains(tab)
         return Button {
             Haptics.selection()
             if selected {
@@ -77,14 +81,10 @@ struct ShellTabBar: View {
         } label: {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
-                    Image(systemName: selected ? tab.selectedIcon : tab.icon)
-                        .font(.title2)
-                        .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+                    tabIcon(tab, selected: selected, badged: badged)
                 } else {
                     VStack(spacing: Spacing.tight) {
-                        Image(systemName: selected ? tab.selectedIcon : tab.icon)
-                            .font(.title2)
-                            .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+                        tabIcon(tab, selected: selected, badged: badged)
                         Text(tab.title)
                             .font(.caption2)
                     }
@@ -104,6 +104,22 @@ struct ShellTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
+        .accessibilityValue(badged ? "Có thẻ đến hạn" : "")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
+    private func tabIcon(_ tab: AppTab, selected: Bool, badged: Bool) -> some View {
+        Image(systemName: selected ? tab.selectedIcon : tab.icon)
+            .font(.title2)
+            .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+            .overlay(alignment: .topTrailing) {
+                if badged {
+                    Circle()
+                        .fill(Theme.due)
+                        .frame(width: Spacing.sm, height: Spacing.sm)
+                        .offset(x: Spacing.xs, y: -Spacing.tight)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 }

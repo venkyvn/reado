@@ -111,7 +111,8 @@ struct RootView: View {
                 onReselect: popSelectedTabToRoot,
                 isHidden: chrome.isHidden,
                 showsCapture: showsCaptureButton,
-                onCapture: openShutterCapture)
+                onCapture: openShutterCapture,
+                badgedTabs: (model.dailyProgress?.dueToday ?? 0) > 0 ? [.today] : [])
         }
         // ADR-036: fullScreenCover (không sheet) — CaptureView tự vẽ full-bleed
         // đen; sheet để lộ viền bo góc + không che hết status bar, không hợp

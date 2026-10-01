@@ -3,16 +3,27 @@ import SwiftUI
 
 // Tách từ RootView.swift (repo-hygiene-r1 B3).
 
-/// Home tab — tổng quan: Ôn hôm nay → kho tạm (shortcut) → Streak → Đang đọc.
-/// Không còn CTA "Chụp trang" to dưới đáy (đã chuyển thành shutter nổi).
+/// Màn Hôm nay (ux-redesign-r1 T3) — một hero cho việc cần làm lúc này (`HomeHero`, ADR-054),
+/// hàng chỉ số gọn, rồi "Đang đọc" (pin). Kho tạm nằm ở Thư viện, onboarding gộp vào hero.
+/// Không còn CTA "Chụp trang" to dưới đáy (nút chụp nằm trong thanh tab).
 struct HomeTabView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// ux-redesign-r1 T1a: "Ôn tập hôm nay" / "Ôn thêm" mở phiên ôn toàn màn qua `RootView`,
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// ux-redesign-r1 T1a: "Ôn ngay" / "Ôn thêm" mở phiên ôn toàn màn qua `RootView`,
     /// không còn đổi sang tab Ôn.
     @Environment(\.startReview) private var startReview
+    @AppStorage("reado.onboarding.cefrConfirmed") private var cefrConfirmed = false
     let onSettings: () -> Void
     let onCapture: () -> Void
+
+    @State private var showAgentForm = false
+    @State private var showScopePicker = false
+    /// Phạm vi chọn riêng cho phiên sắp ôn — chỉ có hiệu lực khi `hasScopeOverride`, còn không thì
+    /// theo mặc định đã lưu. Hết hiệu lực sau khi mở phiên (không ghi đè mặc định).
+    @State private var scopeOverride: Set<String>?
+    @State private var hasScopeOverride = false
+    @State private var cefrLabel = "B2"
 
     var body: some View {
         Group {
@@ -29,7 +40,7 @@ struct HomeTabView: View {
                 homeList
             }
         }
-        .navigationTitle("Reado")
+        .navigationTitle("Hôm nay")
         .toolbar {
             // ux-redesign-r1 T1b: chỉ còn ⚙ ở góc phải (quy ước iOS) — cửa Dữ liệu chuyển sang Thư viện.
             ToolbarItem(placement: .topBarTrailing) {
@@ -43,158 +54,168 @@ struct HomeTabView: View {
 
     private var homeList: some View {
         List {
-            OnboardingChecklistSection(onOpenSettings: onSettings, onCapture: onCapture)
-            Section("Hôm nay") {
-                dailyProgressRows
-                reencounterRow
-                inboxRow
-                streakRow
+            Section {
+                heroCard(hero)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
+            statsSection
             homePinRows
         }
         .refreshable { model.reloadOverview() }
         .shellScrollChrome()
+        .onAppear { loadCefrLabel() }
+        .sheet(isPresented: $showAgentForm) {
+            AgentFormSheet(agent: nil) { name, base, modelName, key in
+                model.addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
+            }
+            .appErrorAlert()
+        }
+        .sheet(isPresented: $showScopePicker) {
+            ScopePickerSheet(
+                scope: Binding(
+                    get: { reviewScope },
+                    set: {
+                        scopeOverride = $0
+                        hasScopeOverride = true
+                    }),
+                onApply: {})
+                .appErrorAlert()
+        }
     }
 
-    // FR-14: tổng quan Daily Progress — "sẽ ôn hôm nay" theo hạn mức (FR-11),
-    // tồn đọng RIÊNG, streak theo giờ chuyển ngày. Không tổng due_at thô.
+    // MARK: — Hero (ADR-054)
+
+    private var hero: HomeHero {
+        let progress = model.dailyProgress
+        return HomeHero.resolve(
+            cefrConfirmed: cefrConfirmed,
+            agentReady: model.activeAgentReady,
+            hasFirstPage: model.hasFirstPage,
+            dueToday: progress?.dueToday ?? 0,
+            extraAvailable: model.homeExtraAvailableCount,
+            backlog: progress?.backlog ?? 0)
+    }
+
+    /// Phạm vi của lần bấm Ôn kế tiếp: lựa chọn riêng nếu có, không thì mặc định đã lưu (Ôn nhanh).
+    private var reviewScope: Set<String>? {
+        hasScopeOverride ? scopeOverride : model.reviewScopeDefault.scopeSet
+    }
+
+    private var scopeAction: HeroCard.Action {
+        let label = reviewScope.map { "Phạm vi: \($0.count) bộ" } ?? "Phạm vi: Tất cả bộ"
+        return HeroCard.Action(
+            title: label, systemImage: "line.3.horizontal.decrease.circle",
+            handler: { showScopePicker = true })
+    }
+
+    private func start(_ mode: ReviewMode) {
+        startReview(ReviewRequest(scope: reviewScope, mode: mode))
+        hasScopeOverride = false
+    }
+
+    private func heroCard(_ hero: HomeHero) -> HeroCard {
+        // Agent hỏng ở người dùng đã có trang: chỉ là dòng cảnh báo, không che thẻ đến hạn.
+        let warning: HeroCard.Warning? = hero.agentWarning
+            ? HeroCard.Warning(
+                text: "Agent chưa chạy được — chụp sẽ không phân tích được.",
+                fix: HeroCard.Action(title: "Sửa", handler: onSettings))
+            : nil
+        switch hero.state {
+        case .confirmCefr:
+            return HeroCard(
+                title: "Trình độ đọc: \(cefrLabel)",
+                subtitle: "Reado lọc từ theo mức này khi phân tích trang.",
+                primary: HeroCard.Action(title: "Đúng", handler: { cefrConfirmed = true }),
+                secondary: HeroCard.Action(title: "Đổi", handler: {
+                    cefrConfirmed = true
+                    onSettings()
+                }))
+        case .connectAgent:
+            return HeroCard(
+                title: "Kết nối agent phân tích",
+                subtitle: "Mặc định AI-Box — dán API key một lần.",
+                primary: HeroCard.Action(title: "Thêm agent", handler: { showAgentForm = true }))
+        case .firstCapture:
+            return HeroCard(
+                title: "Chụp trang sách đầu tiên",
+                subtitle: "Trang giấy hoặc màn hình đều chụp được.",
+                primary: HeroCard.Action(
+                    title: "Chụp trang", systemImage: "camera.fill", handler: onCapture))
+        case let .review(count):
+            return HeroCard(
+                title: "\(count) thẻ đến hạn",
+                primary: HeroCard.Action(title: "Ôn ngay", handler: { start(.srs) }),
+                secondary: scopeAction,
+                warning: warning)
+        case let .extra(count):
+            return HeroCard(
+                title: "Xong phần hôm nay",
+                titleSystemImage: "checkmark.circle.fill",
+                titleTint: Theme.ok,
+                subtitle: "Bạn vẫn có thể ôn thêm từ mới hoặc ôn sớm.",
+                primary: HeroCard.Action(title: "Ôn thêm \(count) thẻ", handler: { start(.extra) }),
+                secondary: scopeAction,
+                warning: warning)
+        case .done:
+            return HeroCard(
+                title: "Xong phần hôm nay",
+                titleSystemImage: "checkmark.circle.fill",
+                titleTint: Theme.ok,
+                secondary: HeroCard.Action(
+                    title: "Chụp trang mới", systemImage: "camera", handler: onCapture),
+                warning: warning)
+        }
+    }
+
+    private func loadCefrLabel() {
+        let levels = model.loadLearningSettings()?.cefrLevels ?? [.b2]
+        cefrLabel = levels.map(\.rawValue).joined(separator: ", ")
+    }
+
+    // MARK: — Chỉ số gọn
+
+    /// Streak bấm được → Lịch streak (heatmap 18 tuần); "Gặp lại N từ tuần này" (FR-22) chỉ để
+    /// đọc, ẩn khi 0 (0 trông như lỗi, không phải tiến bộ). Ý 7 motivation-r1: streak > 0 mà hôm
+    /// nay CHƯA ôn thẻ nào thì thêm lời nhắc giữ streak (không nhắc người mới).
     @ViewBuilder
-    private var dailyProgressRows: some View {
+    private var statsSection: some View {
         if let progress = model.dailyProgress {
-            if progress.dueToday > 0 {
-                Button {
-                    // Phạm vi mặc định đã lưu (Ôn nhanh ở Kho) — như tab Ôn cũ vẫn đọc.
-                    startReview(ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .srs))
-                } label: {
-                    HStack(spacing: Spacing.row) {
-                        IconTile(systemImage: "brain.head.profile")
-                        VStack(alignment: .leading, spacing: Spacing.tight) {
-                            Text("Ôn tập hôm nay")
-                                .font(Typo.rowTitle)
-                                .foregroundStyle(.primary)
-                            Text("\(progress.dueToday) thẻ sẽ ôn")
-                                .font(Typo.rowSubtitle)
-                                .foregroundStyle(.secondary)
-                                .contentTransition(.numericText())
+            Section {
+                NavigationLink(value: ShellRoute.streak) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        let layout = dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+                            : AnyLayout(HStackLayout(spacing: Spacing.md))
+                        layout {
+                            Label {
+                                Text("\(progress.streak) ngày liên tục")
+                                    .contentTransition(.numericText())
+                            } icon: {
+                                Image(systemName: "flame.fill")
+                                    .foregroundStyle(Theme.due)
+                                    .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
+                            }
+                            if model.reencounteredThisWeek > 0 {
+                                Label {
+                                    Text("Gặp lại \(model.reencounteredThisWeek) từ tuần này")
+                                        .contentTransition(.numericText())
+                                } icon: {
+                                    Image(systemName: "eye")
+                                        .foregroundStyle(Theme.ok)
+                                }
+                            }
                         }
-                        Spacer()
-                        // Nút hành động (mở phiên ôn), không phải push → không vẽ chevron điều hướng.
-                        Image(systemName: "play.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color.accentColor)
-                            .accessibilityHidden(true)
-                    }
-                    .animation(reduceMotion ? nil : Motion.reveal, value: progress.dueToday)
-                }
-                // Plain: Button trong List tô cả label theo tint → chữ mờ xanh, lệch các row khác.
-                .buttonStyle(.plain)
-            } else if model.homeExtraAvailableCount > 0 {
-                // extra-review-r1 B2: xong phần hôm nay nhưng vẫn còn từ mới/ôn
-                // sớm toàn kho — CTA "Ôn thêm" thay cho nhãn trung tính cũ.
-                Button {
-                    startReview(ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .extra))
-                } label: {
-                    HStack(spacing: Spacing.row) {
-                        IconTile(systemImage: "arrow.clockwise")
-                        VStack(alignment: .leading, spacing: Spacing.tight) {
-                            Text("Xong phần hôm nay")
-                                .font(Typo.rowTitle)
-                                .foregroundStyle(.primary)
-                            Text(
-                                "Ôn thêm "
-                                    + "\(min(model.homeExtraAvailableCount, ReviewQueue.extraBatchSize))"
-                                    + " thẻ")
-                                .font(Typo.rowSubtitle)
+                        .font(.subheadline.weight(.semibold))
+                        if progress.streak > 0 && !progress.reviewedToday {
+                            Text("Hôm nay chưa ôn — 1 thẻ là giữ streak")
+                                .font(Typo.meta)
                                 .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.footnote)
-                            .foregroundStyle(.tertiary)
-                            .accessibilityHidden(true)
                     }
+                    .animation(reduceMotion ? nil : Motion.reveal, value: progress.streak)
                 }
-                .buttonStyle(.plain)
-            } else if progress.backlog > 0 {
-                // FR-14: hết hạn mức hôm nay, không còn gì Ôn thêm được — không
-                // CTA giả. new-order-r1: bỏ con số tồn (vision Retention "không
-                // cần học hết"); FR-14 cho phép không hiện tồn.
-                Label("Xong phần hôm nay", systemImage: "checkmark.circle.fill")
-                    .font(Typo.rowSubtitle)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    /// FR-22: "Gặp lại N từ tuần này" — số từ khác nhau được gặp lại khi đọc
-    /// (7 ngày gần nhất). Ẩn khi 0 (0 trông như lỗi, không phải tiến bộ).
-    @ViewBuilder
-    private var reencounterRow: some View {
-        if model.reencounteredThisWeek > 0 {
-            HStack(spacing: Spacing.row) {
-                IconTile(systemImage: "eye", tint: Theme.ok)
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text("Gặp lại \(model.reencounteredThisWeek) từ tuần này")
-                        .font(Typo.rowTitle)
-                        .contentTransition(.numericText())
-                    Text("Từ đã lưu xuất hiện lại khi bạn đọc")
-                        .font(Typo.rowSubtitle)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .accessibilityElement(children: .combine)
-        }
-    }
-
-    /// Kho tạm luôn hiện trên Home (kể cả khi `dailyProgress` nil) — mở thẳng hub
-    /// kho tạm. Không nằm trong `homePins` và không tính vào k/5 (không nút ghim).
-    @ViewBuilder
-    private var inboxRow: some View {
-        if let inbox = model.collections.first(where: \.isDefault) {
-            NavigationLink(value: ShellRoute.hub(inbox.id)) {
-                HStack(spacing: Spacing.row) {
-                    IconTile(systemImage: "tray.fill")
-                    VStack(alignment: .leading, spacing: Spacing.tight) {
-                        Text(inbox.name)
-                            .font(Typo.rowTitle)
-                        Text("\(inbox.totalItems) từ · trang chưa phân loại")
-                            .font(Typo.rowSubtitle)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if inbox.dueNow > 0 {
-                        Pill(text: "\(inbox.dueNow)", tone: .due)
-                    }
-                }
-            }
-        }
-    }
-
-    /// Ô Streak bấm được → Lịch streak (heatmap 18 tuần). Tách khỏi
-    /// `dailyProgressRows` để đứng sau hàng kho tạm; vẫn cần `dailyProgress`
-    /// nên ẩn khi nil. Ý 7 motivation-r1: khi streak > 0 và hôm nay CHƯA ôn thẻ
-    /// nào, dòng phụ đổi thành lời nhắc giữ streak (gộp từ row nhắc riêng cũ);
-    /// đã ôn hoặc streak = 0 thì hiện số trang đã phân tích (không nhắc người mới).
-    @ViewBuilder
-    private var streakRow: some View {
-        if let progress = model.dailyProgress {
-            NavigationLink(value: ShellRoute.streak) {
-                HStack(spacing: Spacing.row) {
-                    IconTile(systemImage: "flame.fill", tint: Theme.due)
-                        .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
-                    VStack(alignment: .leading, spacing: Spacing.tight) {
-                        Text("\(progress.streak) ngày ôn liên tục")
-                            .font(Typo.rowTitle)
-                            .contentTransition(.numericText())
-                        Text(
-                            progress.streak > 0 && !progress.reviewedToday
-                                ? "Hôm nay chưa ôn — 1 thẻ là giữ streak"
-                                : "\(progress.pagesAnalyzed) trang đã phân tích")
-                            .font(Typo.rowSubtitle)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .animation(reduceMotion ? nil : Motion.reveal, value: progress.streak)
             }
         }
     }
