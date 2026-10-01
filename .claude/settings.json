@@ -28,7 +28,9 @@
     ],
     "deny": [
       "Read(./DerivedData/**)",
-      "Read(./.xcode-packages/**)"
+      "Read(./.xcode-packages/**)",
+      "Read(./app/Reado.xcodeproj/project.pbxproj)",
+      "Read(./.env)"
     ],
     "additionalDirectories": ["/tmp"]
   },
@@ -43,7 +45,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|Bash",
+        "matcher": "Read|Grep|Edit|Write|MultiEdit|Bash",
         "hooks": [
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.py" }
         ]

@@ -15,6 +15,35 @@ PBXPROJ_MSG = (
     "Xcode (CLAUDE.md §7)."
 )
 
+ENV_MSG = (
+    "Cấm đọc/sửa .env thật qua tool này — chỉ .env.example (placeholder, được track) là hợp lệ. "
+    "Secret nằm trong .env, không được lộ qua Read/Grep/Edit/Write/Bash (CLAUDE.md §7)."
+)
+
+# Khớp basename ".env" hoặc ".env.<suffix>" — ".env.example" được loại trừ riêng (so chuỗi,
+# không nhồi vào regex bằng lookahead — lookahead từng bắt sai ".env.example.bak" khi test).
+_ENV_PATH_RE = re.compile(r"\.env(?:\.[\w.-]+)?$")
+# Khớp token dạng ".env"/".env.<suffix>" đứng sau biên (đầu dòng, khoảng trắng, /, nháy, =, <)
+# trong một dòng lệnh Bash.
+_ENV_TOKEN_RE = re.compile(r"""(?:^|[\s/"'=<])(\.env(?:\.[\w.-]+)?)\b""")
+
+
+def _is_env_secret_name(name: str) -> bool:
+    if name == ".env.example":
+        return False
+    return bool(_ENV_PATH_RE.fullmatch(name))
+
+
+def _path_has_env_secret(path: str) -> bool:
+    if not path:
+        return False
+    name = path.rsplit("/", 1)[-1]
+    return _is_env_secret_name(name)
+
+
+def _bash_has_env_secret(cmd: str) -> bool:
+    return any(tok != ".env.example" for tok in _ENV_TOKEN_RE.findall(cmd))
+
 
 def block(msg: str) -> None:
     print(msg, file=sys.stderr)
@@ -34,6 +63,13 @@ def main() -> None:
         path = inp.get("file_path", "") or ""
         if path.endswith("project.pbxproj"):
             block(PBXPROJ_MSG)
+        if _path_has_env_secret(path):
+            block(ENV_MSG)
+
+    if tool in ("Read", "Grep"):
+        for key in ("file_path", "path", "glob"):
+            if _path_has_env_secret(inp.get(key, "") or ""):
+                block(ENV_MSG)
 
     if tool == "Bash":
         cmd = inp.get("command", "") or ""
@@ -41,6 +77,8 @@ def main() -> None:
             r"sed\s+-i|perl\s+-[a-z]*i|>\s*\S*project\.pbxproj", cmd
         ):
             block(PBXPROJ_MSG)
+        if _bash_has_env_secret(cmd):
+            block(ENV_MSG)
         if re.search(r"(^|[;&|]\s*)swift\s+(build|test)\b", cmd):
             block(
                 "Cấm `swift build`/`swift test` (đụng cache ~/Library) — "

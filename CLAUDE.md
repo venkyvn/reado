@@ -103,7 +103,7 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - Chạy xcodebuild tự re-sort pbxproj → trước commit chỉ giữ hunk thật.
 
 **Hooks** (`.claude/hooks/`)
-- `guard.py` (PreToolUse) chặn: edit tay `project.pbxproj`, `swift build`/`swift test`, `xcodebuild` gọi trần (không qua `scripts/test.sh`).
+- `guard.py` (PreToolUse) chặn: edit tay `project.pbxproj`, `swift build`/`swift test`, `xcodebuild` gọi trần (không qua `scripts/test.sh`), và Read/Grep/Edit/Write/MultiEdit/Bash chạm file secret dạng `.env`/`.env.<suffix>` (chỉ `.env.example` lọt qua).
 - `session-context.sh` (SessionStart) tự nạp HEAD + thay đổi chưa commit + `docs/session-brief.md` §1–2 vào context khi mở/`/clear`/`/compact` — đỡ phải tự đọc lại.
 
 **Bẫy build**
