@@ -45,7 +45,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTab: AppTab = .today
-    // port UI lab §5.7: sau Lưu → push Hub bộ vừa lưu lên stack Hôm nay.
+    // Stack riêng mỗi tab: Hôm nay (Cài đặt, Lịch streak, Hub) và Thư viện (Hub, Dữ liệu).
     @State private var todayPath: [ShellRoute] = []
     @State private var libraryPath: [ShellRoute] = []
     @State private var showCapture = false
@@ -119,7 +119,7 @@ struct RootView: View {
         }
         // ADR-036: fullScreenCover (không sheet) — CaptureView tự vẽ full-bleed
         // đen; sheet để lộ viền bo góc + không che hết status bar, không hợp
-        // camera. Không bọc NavigationStack: CaptureView tự có chrome (X/dest/+).
+        // camera. Không bọc NavigationStack: CaptureView tự có chrome (X + chọn bộ).
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
             chrome.reveal()
             // FR-02: chụp xong (đã có ảnh trong model) → mở màn phân tích.
@@ -204,15 +204,15 @@ struct RootView: View {
         dismissBanner()
         guard let hubID else { return }
         switch selectedTab {
-        case .today: todayPath = path(showing: hubID, in: todayPath)
-        case .library: libraryPath = path(showing: hubID, in: libraryPath)
+        case .today: todayPath = pathShowingHub(hubID, in: todayPath)
+        case .library: libraryPath = pathShowingHub(hubID, in: libraryPath)
         }
     }
 
     /// Đang ở đúng Hub đó → giữ nguyên (đã tự refresh qua `dataRevision`). Đang ở Hub của bộ khác
     /// (path đúng 1 phần tử) → thay bằng Hub mới, không chồng hub lên hub (nút chụp chỉ hiện khi
     /// path rỗng hoặc đúng 1 Hub). Còn lại thì đẩy thêm.
-    private func path(showing hubID: String, in path: [ShellRoute]) -> [ShellRoute] {
+    private func pathShowingHub(_ hubID: String, in path: [ShellRoute]) -> [ShellRoute] {
         if let last = path.last, last == .hub(hubID) { return path }
         if path.count == 1, case .hub = path[0] { return [.hub(hubID)] }
         return path + [.hub(hubID)]

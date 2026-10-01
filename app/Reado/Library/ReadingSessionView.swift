@@ -32,8 +32,8 @@ struct ReadingSessionView: View {
         .navigationTitle("Phiên đọc")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { translationToggle }
-        // Phiên đọc push bên trong Hub (không vào ShellRoute) → tắt shutter nổi
-        // FloatShutter của RootView khi đang đọc (port UI lab §10).
+        // Phiên đọc push bên trong Hub (không vào ShellRoute) → tắt nút chụp trong thanh tab của
+        // RootView khi đang đọc (port UI lab §10).
         .onAppear {
             model.shell.suppressFloatShutter = true
             encounterMatcher = model.makeEncounterMatcher()
