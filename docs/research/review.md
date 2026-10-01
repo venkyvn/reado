@@ -3,6 +3,12 @@ Gộp từ review-scheduling.md + multi-client-sync.md + rich-vocab-cram-ddl.md 
 ## TL;DR — đã chốt (đọc trước; chi tiết ở các mục được trỏ tới)
 
 > Tóm tắt 2026-09-28 (repo-hygiene-r1, ADR-044). **Nguồn sự thật vẫn là bảng "Đã chốt" ở Phần 1 mục 9, `CLAUDE.md` §4–5 và code.** Phần 2–3 viết thời PWA (đường dẫn `domain/verify.ts`, `listAllTags()` không còn) — mâu thuẫn với code → code thắng.
+>
+> **Cập nhật 2026-10-01 (ADR-050, extra-review-r1):** mọi câu dưới đây nói `cram`
+> "không đụng state" đã **đảo** — R1 không còn ghi `mode='cram'`; "Ôn thêm" (tên mới
+> của cram) giờ ghi `mode='srs'` và CẬP NHẬT state như ôn bình thường, đúng hướng
+> "chấm thẻ sớm, không phải chấm-mà-không-ghi" (trả lời D-3, phần đã từng bỏ ngỏ ở
+> mục 8.1). `mode` ở R1 vẫn chỉ mang giá trị `srs` — còn đúng hơn trước.
 
 - **Thư viện tính, Reado lưu.** Dùng `swift-fsrs` (pin `4fbaf20`, `defaultWv6` 21 trọng số) — không tự viết; DB lưu lịch, không suy ra: `due_at` ghi nguyên giá trị thư viện trả (mục 1, 2.1).
 - **"Đã thuộc" = `stability`** (Q-08, `>= 21`), không dùng `reps`/`lapses` (mục 2).

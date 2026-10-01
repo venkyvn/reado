@@ -12,6 +12,9 @@ struct HomeTabView: View {
     let onSettings: () -> Void
     let onData: () -> Void
     let onCapture: () -> Void
+    /// extra-review-r1 B2: mở tab Ôn thẳng vào Ôn thêm (set `pendingReviewMode`
+    /// rồi đổi tab — `onReview` đổi tab không cũng không đủ, tab mặc định `.srs`).
+    let onReviewExtra: () -> Void
 
     var body: some View {
         Group {
@@ -92,10 +95,35 @@ struct HomeTabView: View {
                 }
                 // Plain: Button trong List tô cả label theo tint → chữ mờ xanh, lệch các row khác.
                 .buttonStyle(.plain)
+            } else if model.homeExtraAvailableCount > 0 {
+                // extra-review-r1 B2: xong phần hôm nay nhưng vẫn còn từ mới/ôn
+                // sớm toàn kho — CTA "Ôn thêm" thay cho nhãn trung tính cũ.
+                Button(action: onReviewExtra) {
+                    HStack(spacing: Spacing.row) {
+                        IconTile(systemImage: "arrow.clockwise")
+                        VStack(alignment: .leading, spacing: Spacing.tight) {
+                            Text("Xong phần hôm nay")
+                                .font(Typo.rowTitle)
+                                .foregroundStyle(.primary)
+                            Text(
+                                "Ôn thêm "
+                                    + "\(min(model.homeExtraAvailableCount, ReviewQueue.extraBatchSize))"
+                                    + " thẻ")
+                                .font(Typo.rowSubtitle)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
             } else if progress.backlog > 0 {
-                // FR-14: hết hạn mức hôm nay — không CTA giả. new-order-r1: bỏ con
-                // số tồn (vision Retention "không cần học hết"); FR-14 cho phép
-                // không hiện tồn. "Học thêm 10 từ" vẫn ở SessionDoneView.
+                // FR-14: hết hạn mức hôm nay, không còn gì Ôn thêm được — không
+                // CTA giả. new-order-r1: bỏ con số tồn (vision Retention "không
+                // cần học hết"); FR-14 cho phép không hiện tồn.
                 Label("Xong phần hôm nay", systemImage: "checkmark.circle")
                     .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)

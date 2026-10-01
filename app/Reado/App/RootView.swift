@@ -63,7 +63,11 @@ struct RootView: View {
                     onReview: { selectedTab = .review },
                     onSettings: { homePath.append(.settings) },
                     onData: { homePath.append(.data) },
-                    onCapture: openShutterCapture)
+                    onCapture: openShutterCapture,
+                    onReviewExtra: {
+                        model.shell.pendingReviewMode = .extra
+                        selectedTab = .review
+                    })
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
                     }

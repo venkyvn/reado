@@ -1,7 +1,7 @@
 import Foundation
 import ReadoKit
 
-// Hàng đợi ôn, chấm/undo, Cram và "Học thêm" (FR-11/12/18).
+// Hàng đợi ôn, chấm/undo, Ôn thêm (FR-11/12/18 — extra-review-r1 đảo ADR-011/043).
 // Tách từ AppModel.swift (refactor): logic giữ nguyên, chỉ đổi file.
 
 extension AppModel {
@@ -23,8 +23,7 @@ extension AppModel {
             let now = clock.now
             let windowEnd = ReviewQueue.currentDayWindow(on: database, now: now).end
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
-                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope,
-                extraNew: effectiveExtraNew)
+                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope)
             review.items = items
             review.snapshots = snapshots
             review.currentSnapshot = items.first.flatMap { snapshots[$0.cardID] }
@@ -33,8 +32,8 @@ extension AppModel {
                     on: database,
                     dueBeforeIso: windowEnd,
                     scope: scope))
-            review.crammableCount = try Int(
-                ReviewQueue.crammableCount(on: database, now: now, scope: scope))
+            review.extraAvailableCount = try Int(
+                ReviewQueue.extraAvailableCount(on: database, now: now, scope: scope))
         } catch {
             review.error = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
@@ -43,11 +42,12 @@ extension AppModel {
         }
     }
 
-    /// Chấm thẻ hiện tại (FR-11): snapshot TRƯỚC + strict rating → outcome;
-    /// UPDATE cards + INSERT review_logs + leech suspend (FR-19) cùng MỘT
-    /// transaction (FR-12 undo cần logID). Trả `GradeResult` để view giữ logID
-    /// cho undo nổi 1 bước, và biết thẻ vừa vượt ngưỡng "đã thuộc" (ADR-038)
-    /// để bật toast.
+    /// Chấm thẻ hiện tại (FR-11, và Ôn thêm — extra-review-r1 đảo ADR-011: MỌI
+    /// lượt chấm đều ghi lịch thật, không còn đường `mode='cram'` chỉ-log):
+    /// snapshot TRƯỚC + strict rating → outcome; UPDATE cards + INSERT
+    /// review_logs + leech suspend (FR-19) cùng MỘT transaction (FR-12 undo cần
+    /// logID). Trả `GradeResult` để view giữ logID cho undo nổi 1 bước, và biết
+    /// thẻ vừa vượt ngưỡng "đã thuộc" (ADR-038) để bật toast.
     ///
     /// Một `now` cho cả lần chấm. Nếu nhãn 4 nút đã tính cho đúng thẻ + snapshot
     /// này trong 30 phút (`GradePreview`), dùng lại outcome đó → `scheduled_days`
@@ -104,10 +104,12 @@ extension AppModel {
         return preview.outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
     }
 
-    /// Cram (ADR-043): nạp tối đa 20 thẻ đã học nhưng chưa đến hạn trong phạm vi.
-    /// Ghi đè `review.items`/`review.snapshots` như `loadReviewQueue`; `dueOutsideScope`
-    /// về 0 vì banner nợ chỉ thuộc đường srs.
-    func loadCramQueue(scope: Set<String>? = nil) async throws {
+    /// Ôn thêm (extra-review-r1, đảo ADR-011/043): nạp tối đa 20 thẻ trộn mới +
+    /// ôn sớm trong phạm vi. Ghi đè `review.items`/`review.snapshots` như
+    /// `loadReviewQueue`; `dueOutsideScope` về 0 vì banner nợ chỉ thuộc đường
+    /// hàng đợi chính. Chấm/undo dùng chung `grade`/`undoReview` — Ôn thêm
+    /// KHÔNG còn đường ghi-log-riêng.
+    func loadExtraQueue(scope: Set<String>? = nil) async throws {
         guard let database else { throw ReviewError.modelUnavailable }
         review.scope = scope
         review.isLoading = true
@@ -115,61 +117,28 @@ extension AppModel {
         defer { review.isLoading = false }
         do {
             let now = clock.now
-            let (items, snapshots) = try ReviewQueue.loadCramQueue(
+            let (items, snapshots) = try ReviewQueue.loadExtraQueue(
                 on: database, now: now, scope: scope)
             review.items = items
             review.snapshots = snapshots
             review.currentSnapshot = items.first.flatMap { snapshots[$0.cardID] }
             review.dueOutsideScope = 0
-            review.crammableCount = try Int(
-                ReviewQueue.crammableCount(on: database, now: now, scope: scope))
+            review.extraAvailableCount = try Int(
+                ReviewQueue.extraAvailableCount(on: database, now: now, scope: scope))
         } catch {
             review.error = (error as? LocalizedError)?.errorDescription
                 ?? String(describing: error)
-            DebugTrace.event("review", "loadCramQueueFailed", ["error": String(describing: error)])
+            DebugTrace.event("review", "loadExtraQueueFailed", ["error": String(describing: error)])
             throw error
         }
     }
 
-    /// Chấm một thẻ ở chế độ Cram: chỉ ghi `review_logs mode='cram'`, KHÔNG đổi
-    /// `cards`, KHÔNG kiểm leech (lapses không đổi). `crossedMastery` luôn false.
-    func gradeCram(
-        cardID: String, snapshot: CardSnapshot, rating: ReadoRating
-    ) throws -> GradeResult {
-        guard let database else { throw ReviewError.modelUnavailable }
-        let logID = try ReviewService.recordCram(
-            on: database, cardID: cardID, before: snapshot,
-            rating: rating, now: clock.now)
-        return GradeResult(logID: logID, crossedMastery: false)
-    }
-
-    /// Undo Cram: xoá đúng log cram vừa ghi (`cards` chưa từng đổi).
-    func undoCram(cardID: String, logID: String) throws {
-        guard let database else { throw ReviewError.modelUnavailable }
-        try ReviewService.undoCram(on: database, cardID: cardID, logID: logID)
-    }
-
     /// Undo một bước (FR-12): trả card về snapshot TRƯỚC + xoá đúng log vừa
-    /// ghi — cùng transaction (không UPDATE log cũ).
+    /// ghi — cùng transaction (không UPDATE log cũ). Dùng chung cho cả hàng đợi
+    /// chính lẫn Ôn thêm (extra-review-r1: cùng một đường ghi/undo).
     func undoReview(cardID: String, logID: String, snapshot: CardSnapshot) throws {
         guard let database else { throw ReviewError.modelUnavailable }
         try ReviewService.undo(
             on: database, cardID: cardID, logID: logID, before: snapshot)
-    }
-
-    /// Ý 3 motivation-r1 — user chủ động bấm "Học thêm 10 từ" trên
-    /// `SessionDoneView` sau khi hàng đợi hết: nới hạn mức new RIÊNG ngày học
-    /// hiện tại (Q-B: N=10 cố định), rồi nạp lại overview đã có (số Home).
-    /// Hệ thống KHÔNG bao giờ tự nới — chỉ chạy khi user bấm. Hàng đợi
-    /// (`review.items`) do caller nạp lại qua `loadReviewQueue`/`loadQueue` của
-    /// view — tránh hai tác vụ async cùng ghi `review.items` một lúc.
-    func learnMore() {
-        guard let database else { return }
-        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
-        // Khác ngày với lần nới trước → `effectiveExtra` trả 0, không cộng dồn
-        // từ ngày cũ (Q-A đã chốt).
-        let current = ReviewQueue.effectiveExtra(stored: review.extraNewQuota, currentDayStart: dayStart)
-        review.extraNewQuota = (dayStart: dayStart, count: current + Self.learnMoreBatchSize)
-        reloadOverview()
     }
 }

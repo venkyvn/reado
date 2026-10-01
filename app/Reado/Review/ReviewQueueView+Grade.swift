@@ -79,17 +79,14 @@ extension ReviewQueueView {
         guard let snapshot = lastSnapshot else { return }
         let gradedSnapshot = snapshot
         do {
-            let result = mode == .cram
-                ? try model.gradeCram(
-                    cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
-                : try model.grade(
-                    cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
+            // extra-review-r1: Ôn thêm giờ chấm y hệt hàng đợi chính (ghi lịch
+            // thật) — một đường duy nhất, không còn `gradeCram`.
+            let result = try model.grade(
+                cardID: item.cardID, snapshot: gradedSnapshot, rating: rating)
             // Lưu snapshot/log của thẻ vừa chấm để undo (FR-12) — tách khỏi lastSnapshot.
             lastLogID = result.logID
             undoSnapshot = gradedSnapshot
-            if mode == .srs {
-                tally.record(rating: rating, crossed: result.crossedMastery, term: item.term)
-            }
+            tally.record(rating: rating, crossed: result.crossedMastery, term: item.term)
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = true
             }
@@ -140,11 +137,7 @@ extension ReviewQueueView {
         guard prevIndex >= 0, prevIndex < items.count else { return }
         let item = items[prevIndex]
         do {
-            if mode == .cram {
-                try model.undoCram(cardID: item.cardID, logID: logID)
-            } else {
-                try model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
-            }
+            try model.undoReview(cardID: item.cardID, logID: logID, snapshot: snapshot)
             // Quay lại thẻ trước.
             withAnimation(.spring(response: 0.3)) {
                 currentIndex = prevIndex
@@ -152,7 +145,7 @@ extension ReviewQueueView {
                 dragOffset = .zero
                 didPassThreshold = false
             }
-            if mode == .srs { tally.undoLast() }
+            tally.undoLast()
             Motion.run(reduceMotion: reduceMotion) {
                 showUndoToast = false
                 showMasteredToast = false

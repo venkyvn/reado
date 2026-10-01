@@ -68,15 +68,23 @@ Mọi journey **R1** dưới đây phải truy được về một trong hai. J1
 
 ## 2. Ánh xạ "học / ôn / trộn"
 
-Đây là hợp đồng ngôn ngữ với UI. "Ôn" **không** tự biến thành Cram — Cram chỉ vào bằng nút riêng ở màn hết thẻ hoặc CTA "Ôn thêm" ở header collection hub (ADR-043).
+Đây là hợp đồng ngôn ngữ với UI. "Ôn" **không** tự biến thành "Ôn thêm" — Ôn thêm
+chỉ vào bằng nút riêng ở màn hết thẻ, CTA ở header collection hub, hoặc Home khi đã
+xong phần hôm nay (extra-review-r1 ADR-050).
 
 | Câu owner | Nghĩa trong Reado | Không phải |
 |---|---|---|
-| **Học** | Thẻ `new` trong hạn `daily_new_limit` (FR-11, FR-14) | Cram thẻ chưa đến hạn |
+| **Học** | Thẻ `new` trong hạn `daily_new_limit` (FR-11, FR-14) | Ôn thêm thẻ chưa đến hạn (đường riêng, không đi qua `daily_new_limit`) |
 | **Ôn** | Thẻ đến hạn FSRS; một collection hoặc tất cả | Tự đẩy thẻ chưa due để "lấp chỗ" |
-| **Trộn** | FR-18: chọn **vài** collection; queue = due ∩ phạm vi; **vẫn** ghi FSRS | Trộn semantic set (R2); Cram |
+| **Trộn** | FR-18: chọn **vài** collection; queue = due ∩ phạm vi; **vẫn** ghi FSRS | Trộn semantic set (R2); Ôn thêm |
 
-Cram (`mode = cram`, không đụng FSRS state) có trong FR-18 và [structure §4.2](docs/research/vocabulary.md#42-lọc-hàng-đợi-có-thể-phá-vỡ-hợp-đồng-của-scheduler). **Owner chốt 2026-09-28 (ADR-043):** kéo về R1, chỉ vào từ màn hết thẻ (J4/J5): thẻ đã học, chưa due, sắp due trước, tối đa 20/lượt.
+"Ôn thêm" có trong FR-18 và [structure §4.2](docs/research/vocabulary.md#42-lọc-hàng-đợi-có-thể-phá-vỡ-hợp-đồng-của-scheduler).
+**Owner chốt 2026-09-28 (ADR-043):** kéo về R1, chỉ vào từ màn hết thẻ (J4/J5).
+**Owner chốt tiếp 2026-10-01 (ADR-050, đảo ADR-011/039/043):** một lượt tối đa 20
+thẻ, **trộn** tối đa 10 từ mới (LIFO, bỏ qua `daily_new_limit`) + tối đa 10 thẻ đã
+học chưa due ("ôn sớm", sắp due trước) — bên nào thiếu thì bên kia bù đủ 20, xen kẽ
+nhau trong lượt. MỌI mức chấm **ghi lịch FSRS thật** (`mode='srs'`) — không còn
+đường chấm-không-đổi-lịch của R1; thay cho "Học thêm 10 từ" cũ (ADR-039, đã xoá).
 
 ---
 
@@ -179,7 +187,7 @@ Một **session** = một lần capture thành công đã confirm picker (một 
    - Control **Hiện trên Home** cho named collection này. Nếu Home đã đủ hai shortcut, mở chooser chọn collection bị thay; không tự thay ngầm.
    - CTA Capture (camera / thư viện — cùng path J1).
    - **Header thống kê** (cram-collection-r1 Phiên B): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) và 3 ô số — Đến hạn, "+N từ" trong 7 ngày (kèm "thêm lần cuối …"), Lần ôn tiếp ("Ngay bây giờ" nếu đang có due, không thì mốc tương đối + số thẻ cùng ngày học).
-   - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn thẻ đã học chưa due → **"Ôn thêm N thẻ"** (Cram ADR-043, không đổi lịch — mở thẳng chế độ Ôn thêm theo phạm vi bộ này); không còn gì → không nút, chỉ gợi ý dùng nút chụp nổi. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (ở màn ôn).
+   - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn từ mới/thẻ ôn sớm → **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, CÓ ghi lịch FSRS thật — mở thẳng chế độ Ôn thêm theo phạm vi bộ này); không còn gì → không nút, chỉ gợi ý dùng nút chụp nổi. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (ở màn ôn).
    - Danh sách **tối đa 10 session** gần nhất, **chọn được** từng cái.
    - Cửa **kho từ vựng theo collection** (mọi từ đã lưu vào collection này, kể cả từ session đã trôi).
 
@@ -247,7 +255,7 @@ Leech (FR-19) không đếm vào số Home và không vào queue — badge, khô
 | State | Hành vi |
 |---|---|
 | Hết new trong hạn mức, backlog > 0 | Home: "Xong phần hôm nay", không hiện số backlog, không CTA giả "học tiếp" cùng nhánh |
-| Hết new trong hạn mức, backlog > 0, vừa chấm ≥1 thẻ trong phiên | `SessionDoneView` (J4 bước 4) thêm CTA "Học thêm 10 từ" — nới hạn mức new **riêng ngày học hiện tại** (Q-A bộ nhớ app, Q-B N=10 cố định, ADR-039); bấm → nạp lại đúng hàng đợi (vẫn áp toàn cục trước lọc phạm vi). Backlog = 0 (không còn thẻ new nào tồn) → **ẩn** CTA, không nới hạn mức vô nghĩa. Hệ thống không bao giờ tự nới. |
+| Hết hàng đợi, vừa chấm ≥1 thẻ trong phiên, còn từ mới/thẻ ôn sớm trong phạm vi | `SessionDoneView` (J4 bước 4) thêm CTA "Ôn thêm N thẻ" (extra-review-r1 ADR-050, đảo ADR-039 "Học thêm 10 từ" — đã xoá) — bấm → nạp lượt Ôn thêm 20 thẻ trộn mới + ôn sớm, cùng scope. Không còn gì Ôn thêm được → **ẩn** CTA. Hệ thống không bao giờ tự mở. |
 | Hết new và backlog = 0 | CTA sang J1/J2 |
 | 0 new vì chưa capture | Cùng CTA capture; không empty-state chết |
 
@@ -273,7 +281,8 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 | State | Hành vi |
 |---|---|
-| 0 due | Home nói rõ đã xong ôn hôm nay. CTA J1/J2, **không** CTA Cram ở Home. Màn ôn hiện "Không có gì cần ôn" + nút **"Ôn thêm N thẻ"** (Cram, ADR-043) khi còn thẻ đã học chưa due |
+| 0 due, còn từ mới/thẻ ôn sớm toàn kho | Home đổi dòng "Xong phần hôm nay" thành CTA **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, scope mặc định tab Ôn). Màn ôn hiện "Không có gì cần ôn" + cùng nút |
+| 0 due, không còn gì Ôn thêm được | Home nói rõ đã xong ôn hôm nay, không CTA. CTA khác vẫn là J1/J2 |
 | Due > 0 nhưng user đang ở J5 hẹp | Không phải empty J4 — xem J5 "nợ ngoài phạm vi" |
 
 ---
@@ -282,7 +291,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 **Trigger:** "Chỉ ôn cuốn đang đọc" hoặc "trộn collection công việc + sách".  
 **Job:** JTBD-02.  
-**FR:** FR-18. Vẫn filtered study; Cram chỉ là nhánh riêng ở màn hết thẻ (ADR-043).
+**FR:** FR-18. Vẫn filtered study; Ôn thêm chỉ là nhánh riêng ở màn hết thẻ (ADR-043/050).
 
 ### Happy path
 
@@ -298,7 +307,7 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 |---|---|
 | Phạm vi không có due, ngoài phạm vi vẫn còn due | "Không còn trong phạm vi này" + số nợ ngoài + CTA nới phạm vi hoặc ôn tất cả |
 | Chỉ còn kho tạm / một collection | Trộn vài collection disable hoặc ẩn — đừng hiện picker 2-slot rỗng |
-| User muốn ôn chưa due | Nút "Ôn thêm N thẻ" ở màn hết thẻ (cả nhánh "Không còn trong phạm vi này") → Cram theo phạm vi đang chọn: chấm + log `mode='cram'`, **không đổi lịch**, không ăn `daily_new_limit`, không ăn mừng/leech; đổi phạm vi thì về hàng đợi đến hạn |
+| User muốn ôn chưa due / học thêm từ mới | Nút "Ôn thêm N thẻ" ở màn hết thẻ (cả nhánh "Không còn trong phạm vi này") → lượt Ôn thêm theo phạm vi đang chọn: trộn mới + ôn sớm, chấm `mode='srs'` **ghi lịch thật**, ăn mừng/leech bình thường (extra-review-r1 ADR-050); đổi phạm vi thì về hàng đợi đến hạn |
 
 ---
 
@@ -510,7 +519,7 @@ Nhét vào từng J ở trên. **Không** tạo journey riêng cho lỗi. Tóm t
 - Vocab 0 sau CEFR / đã thuộc (FR-10)
 - Unverified không preselect, không ẩn (FR-02)
 - Leech: badge, loại khỏi count (FR-19)
-- 0 due: CTA capture, không Cram
+- 0 due: CTA "Ôn thêm" nếu còn từ mới/thẻ ôn sớm (ADR-050), ngược lại CTA capture
 
 ### Gesture (mock UI R1)
 
@@ -741,7 +750,7 @@ create index idx_logs_card_time on review_logs (card_id, reviewed_at);
 
 - ⚠️ **Log là ảnh chụp TRƯỚC khi chấm** — không có nó thì mất undo và mất training data
   FSRS (điều cấm #1). Mọi cột `*_before` đều đọc từ card trước khi áp kết quả chấm.
-- `mode` ở R1 hiện chỉ mang giá trị `srs` — 3 giá trị còn lại để sẵn cho R2. **Cập nhật 2026-09-08:** `cram` được kéo sớm về cuối R1 (task 3.13 — log `mode='cram'` KHÔNG đụng state, xem `docs/research/review.md` Phần 3); sau 3.13 chỉ `distinguish`/`recall` còn thuộc R2. Thấy code ghi mode khác ngoài hai đường đó → bug (solution-design mục 5).
+- `mode` ở R1 hiện chỉ mang giá trị `srs` — 3 giá trị còn lại để sẵn cho R2. **Cập nhật 2026-09-08:** `cram` được kéo sớm về cuối R1 (task 3.13 — log `mode='cram'` KHÔNG đụng state, xem `docs/research/review.md` Phần 3). **Đảo lại 2026-10-01 (ADR-050, extra-review-r1):** R1 KHÔNG còn ghi `mode='cram'` — Ôn thêm giờ ghi `mode='srs'` như hàng đợi chính (có đụng state). `cram`/`distinguish`/`recall` cả ba để sẵn cho R2. Thấy code ghi `mode='cram'` ở R1 → bug (solution-design mục 5).
 - Nguồn đếm của hạn mức thẻ mới (FR-11): `state_before='new'` trong ngày học.
 
 ### 4.5 `settings`

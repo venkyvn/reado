@@ -5,9 +5,10 @@ import SwiftUI
 /// Lật card: `term` + `pos` → `meaning_vi` + IPA + câu gốc + tên collection.
 typealias ReviewItem = ReviewQueue.ReviewItem
 
-/// `.srs` = hàng đợi đến hạn (đổi lịch FSRS). `.cram` = ôn thêm thẻ đã học mà
-/// CHƯA đến hạn (ADR-011/043) — chấm + log `mode='cram'`, không đổi lịch.
-enum ReviewMode { case srs, cram }
+/// `.srs` = hàng đợi đến hạn (new quota + due). `.extra` = Ôn thêm
+/// (extra-review-r1, đảo ADR-011/043) — trộn thẻ mới + ôn sớm, MỌI lượt chấm
+/// vẫn ghi lịch thật qua `AppModel.grade`/`undoReview`, chỉ khác nguồn hàng đợi.
+enum ReviewMode { case srs, extra }
 
 struct ReviewQueueView: View {
     @Environment(AppModel.self) var model
@@ -49,7 +50,8 @@ struct ReviewQueueView: View {
     @State var masteredToastTerm = ""
     @State var masteredToastTask: Task<Void, Never>?
 
-    /// ADR-043: Cram chỉ vào từ màn hết thẻ; đổi phạm vi thì về `.srs`.
+    /// Ôn thêm vào từ CTA (màn hết thẻ / header collection / Home); đổi phạm
+    /// vi thì về `.srs`.
     @State var mode: ReviewMode = .srs
 
     // FR-18: phạm vi ôn (nil = tất cả) + popover picker.
@@ -64,7 +66,7 @@ struct ReviewQueueView: View {
 /// false khi nhúng làm TAB (không nút "Đóng"); sheet "Ôn bộ này" để true.
     private let showsCloseButton: Bool
 
-    /// Chế độ khi vào màn — `.cram` chỉ từ nút "Ôn thêm" ở header collection.
+    /// Chế độ khi vào màn — `.extra` từ nút "Ôn thêm" ở header collection / Home.
     private let initialMode: ReviewMode
 
     init(
@@ -90,21 +92,16 @@ struct ReviewQueueView: View {
             } else if currentIndex < items.count {
                 cardView
                     .transition(.opacity)
-            } else if mode == .cram {
-                // Cram không có ăn mừng tiến bộ (không đổi lịch) — màn kết thúc riêng.
-                doneView
-                    .transition(.opacity)
             } else if tally.reviewed > 0 {
-                // ADR-038: vừa chấm hết phiên → màn ăn mừng tiến bộ đo được.
+                // ADR-038: vừa chấm hết phiên (srs hoặc extra — cả hai đều ghi
+                // lịch thật, extra-review-r1) → màn ăn mừng tiến bộ đo được.
                 SessionDoneView(
                     tally: tally,
                     streak: model.dailyProgress?.streak ?? 0,
-                    canLearnMore: (model.dailyProgress?.totalNewRemaining ?? 0) > 0,
-                    onLearnMore: {
-                        // Ý 3: nới hạn mức riêng hôm nay rồi nạp lại đúng hàng
-                        // đợi (scope hiện tại) — quay lại cardView, không phải
-                        // dismiss sheet, để thẻ new vừa nới hiện ra.
-                        model.learnMore()
+                    extraAvailable: model.review.extraAvailableCount,
+                    onExtra: {
+                        // Lượt Ôn thêm kế tiếp — cùng scope, không dismiss sheet.
+                        mode = .extra
                         Task { await loadQueue() }
                     }
                 ) {
@@ -119,7 +116,7 @@ struct ReviewQueueView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: isLoading)
-        .navigationTitle(mode == .cram ? "Ôn thêm" : "Ôn tập")
+        .navigationTitle(mode == .extra ? "Ôn thêm" : "Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if showsCloseButton {
@@ -154,9 +151,15 @@ struct ReviewQueueView: View {
             Text(actionError ?? "")
         }
         .onAppear {
-            // Vào lại màn (đổi tab) về chế độ khởi tạo (mặc định `.srs`) — Cram chỉ đi
-            // từ màn hết thẻ hoặc nút "Ôn thêm" ở header collection (initialMode).
-            mode = initialMode
+            // Vào lại màn (đổi tab) về chế độ khởi tạo (mặc định `.srs`) — trừ khi
+            // Home vừa xin mở thẳng Ôn thêm (`pendingReviewMode`, chỉ tab Ôn đọc —
+            // sheet "Ôn bộ này" dùng initialMode riêng của nó).
+            if !showsCloseButton, let pending = model.shell.pendingReviewMode {
+                mode = pending
+                model.shell.pendingReviewMode = nil
+            } else {
+                mode = initialMode
+            }
             // Tab Ôn đọc scope mặc định đã lưu (Ôn nhanh ở Kho). Sheet "Ôn bộ này"
             // (showsCloseButton) giữ scope truyền vào thay vì ghi đè.
             if !showsCloseButton {
@@ -170,11 +173,11 @@ struct ReviewQueueView: View {
 
     @ViewBuilder
     private var emptyView: some View {
-        if mode == .cram {
+        if mode == .extra {
             ContentUnavailableView {
                 Label("Không còn thẻ để ôn thêm", systemImage: "checkmark.circle")
             } description: {
-                Text("Chưa có thẻ nào đã học mà chưa đến hạn trong phạm vi này.")
+                Text("Chưa có từ mới hay thẻ nào đã học mà chưa đến hạn trong phạm vi này.")
             }
         } else if model.review.dueOutsideScope > 0, let scope = model.review.scope, !scope.isEmpty {
             // J5: hết due trong phạm vi nhưng ngoài vẫn còn — nợ phải hiện rõ.
@@ -190,29 +193,29 @@ struct ReviewQueueView: View {
                 .buttonStyle(.borderedProminent)
                 Button("Đổi phạm vi") { showScopePicker = true }
                     .buttonStyle(.bordered)
-                cramButton
+                extraButton
             }
         } else {
             ContentUnavailableView {
                 Label("Không có gì cần ôn", systemImage: "checkmark.circle")
             } description: {
-                Text(model.review.crammableCount > 0
-                    ? "Chưa có thẻ nào đến hạn. Bạn vẫn có thể ôn thêm — lịch ôn không bị thay đổi."
+                Text(model.review.extraAvailableCount > 0
+                    ? "Chưa có thẻ nào đến hạn. Bạn vẫn có thể ôn thêm từ mới hoặc ôn sớm."
                     : "Tất cả thẻ đã được ôn rồi. Bạn có thể chụp trang mới.")
             } actions: {
-                cramButton
+                extraButton
                     .buttonStyle(.borderedProminent)
             }
         }
     }
 
-    /// ADR-043: vào Cram khi hết thẻ đến hạn mà phạm vi còn thẻ đã học. Không có
-    /// thẻ để cram → không hiện gì (nút vô nghĩa).
+    /// extra-review-r1: hiện khi còn từ mới hoặc thẻ ôn sớm trong phạm vi.
+    /// Không còn gì → không hiện (nút vô nghĩa).
     @ViewBuilder
-    private var cramButton: some View {
-        if model.review.crammableCount > 0 {
-            Button("Ôn thêm \(min(model.review.crammableCount, ReviewQueue.cramBatchSize)) thẻ") {
-                mode = .cram
+    private var extraButton: some View {
+        if model.review.extraAvailableCount > 0 {
+            Button("Ôn thêm \(min(model.review.extraAvailableCount, ReviewQueue.extraBatchSize)) thẻ") {
+                mode = .extra
                 Task { await loadQueue() }
             }
         }
@@ -223,10 +226,10 @@ struct ReviewQueueView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(Typo.heroSymbol)
                 .foregroundStyle(Theme.ok)
-            Text(mode == .cram ? "Đã ôn thêm xong" : "Hết thẻ hôm nay")
+            Text(mode == .extra ? "Đã ôn thêm xong" : "Hết thẻ hôm nay")
                 .font(.title2.bold())
-            Text(mode == .cram
-                ? "Bạn đã ôn thêm \(items.count) thẻ. Lịch ôn không bị thay đổi."
+            Text(mode == .extra
+                ? "Bạn đã ôn thêm \(items.count) thẻ."
                 : "Bạn đã ôn hết \(items.count) thẻ hôm nay.")
                 .foregroundStyle(.secondary)
             debtBanner
@@ -305,8 +308,8 @@ struct ReviewQueueView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            if mode == .cram {
-                try await model.loadCramQueue(scope: scope)
+            if mode == .extra {
+                try await model.loadExtraQueue(scope: scope)
             } else {
                 try await model.loadReviewQueue(scope: scope)
             }

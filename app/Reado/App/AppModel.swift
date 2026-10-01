@@ -39,6 +39,11 @@ final class AppModel {
     private(set) var collections: [CollectionOverview] = []
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
+    /// extra-review-r1 B2: số thẻ Ôn thêm lấy được TOÀN KHO (scope nil) — Home
+    /// hiện CTA "Ôn thêm" khi đã xong phần hôm nay (`dailyProgress.dueToday == 0`)
+    /// nhưng vẫn còn từ mới/ôn sớm. Riêng với `review.extraAvailableCount`
+    /// (gắn đúng scope của hàng đợi đang mở trong `ReviewQueueView`).
+    private(set) var homeExtraAvailableCount = 0
     // J-R1-P: lịch streak (lens FR-14) — streak hiện tại + dài nhất + heatmap 18×7.
     var streakHeatmap: StreakHeatmap?
     /// Pin Home — id collection "đang đọc" (thứ tự user thêm, ≤ 5). Port UI lab
@@ -65,9 +70,6 @@ final class AppModel {
     /// (từ/phiên) sau khi lưu mà không cần push hub trùng.
     private(set) var dataRevision = 0
 
-    /// Q-B đã chốt: N = 10 từ cố định, một nút "Học thêm 10 từ".
-    static let learnMoreBatchSize = 10
-
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
         let name: String
@@ -84,7 +86,8 @@ final class AppModel {
         /// "Đã thấm" (FR-22): từ Q-08 + ≥1 lần nhận ra — tập con của `masteredCount`.
         let absorbedCount: Int
         let addedLast7Days: Int
-        /// Thẻ Cram được (đếm thẻ) — quyết định CTA "Ôn thêm".
+        /// Thẻ đã học, chưa đến hạn — quyết định CTA "Ôn thêm" ở header (xấp xỉ:
+        /// chỉ phần ôn sớm, không gồm từ mới — xem `CollectionStatsHeader`).
         let crammableCount: Int
     }
 
@@ -160,7 +163,10 @@ final class AppModel {
             try Self.loadOverview(db: database, now: now)
         }
         dailyProgress = read("tiến độ hôm nay", fallback: nil) { () throws -> DailyProgress? in
-            try Self.loadDailyProgress(db: database, now: now, extraNew: effectiveExtraNew)
+            try Self.loadDailyProgress(db: database, now: now)
+        }
+        homeExtraAvailableCount = read("số thẻ ôn thêm", fallback: 0) {
+            try Int(ReviewQueue.extraAvailableCount(on: database, now: now))
         }
         reencounteredThisWeek = read("số từ gặp lại", fallback: 0) {
             try EncounterRepository.distinctWordsEncountered(
@@ -189,14 +195,5 @@ final class AppModel {
     /// dùng để ẩn checklist onboarding cho user cũ (không đếm riêng).
     var hasFirstPage: Bool {
         (dailyProgress?.pagesAnalyzed ?? 0) > 0 || collections.contains { $0.totalItems > 0 }
-    }
-
-    /// Phần nới "Học thêm" còn hiệu lực HÔM NAY (0 nếu qua ngày mới hoặc chưa
-    /// bấm) — hàm thuần `ReviewQueue.effectiveExtra` test riêng, ở đây chỉ nối
-    /// với `dayStart` thật của DB đang mở.
-    var effectiveExtraNew: Int {
-        guard let database else { return 0 }
-        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
-        return ReviewQueue.effectiveExtra(stored: review.extraNewQuota, currentDayStart: dayStart)
     }
 }

@@ -221,19 +221,17 @@ struct StreakCalendarView: View {
         guard let day, day.reviewCount > 0 else {
             return Color(.systemGray5)
         }
-        let level = Self.intensity(for: day.reviewCount)
+        let level = StreakIntensity.level(
+            count: day.reviewCount, thresholds: intensityThresholds)
         return Theme.due.opacity(0.25 + 0.15 * Double(level))
     }
 
-    /// Cường độ màu 1…5 theo số thẻ ôn (1 / 2 / 3–4 / 5–6 / 7+).
-    static func intensity(for reviewCount: Int) -> Int {
-        switch reviewCount {
-        case 1: 1
-        case 2: 2
-        case 3...4: 3
-        case 5...6: 4
-        default: 5
-        }
+    /// B4 (owner chốt 2026-10-01): ngưỡng tứ phân vị tính từ CHÍNH lưới 18 tuần
+    /// đang hiện — < 4 ngày có ôn thì `StreakIntensity` tự rơi về mốc cố định cũ.
+    private var intensityThresholds: [Int] {
+        let counts = (heatmap?.weeks.flatMap { $0 }.compactMap { $0 } ?? [])
+            .map(\.reviewCount)
+        return StreakIntensity.thresholds(from: counts)
     }
 
     // MARK: — Dòng chi tiết ngay dưới lưới (không popover)

@@ -46,7 +46,7 @@ struct CollectionDetailView: View {
                             showReview = true
                         },
                         onCram: {
-                            reviewMode = .cram
+                            reviewMode = .extra
                             showReview = true
                         })
                 }

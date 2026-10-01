@@ -785,3 +785,72 @@
 - **Quyết định:** Xoá `proxy/` và `ReadoProxyClient.swift`. FR-02 chỉ còn đi qua agent BYOK (`openai_compat`) user tự thêm. Hàng seed `analysis_agents` (`kind = 'reado_proxy'`, id cố định) **không xoá** — đổi nghĩa thành placeholder "chưa chọn agent": `AnalysisAgentStore.list()` lọc khỏi danh sách hiển thị, `AnalyzerFactory` trả `NoAgentAnalyzer` ném lỗi rõ ("Chưa có agent phân tích — thêm agent trong Cài đặt") nếu lọt vào `analyze()`. Không migration — `settings.active_agent_id` vẫn NOT NULL + khoá ngoại, CHECK cột `kind` vẫn nhận literal `'reado_proxy'` (đổi value này mới cần migration, không đáng cho một cách gọi tên).
 - **Lý do:** Rebuild bảng `settings` để bỏ NOT NULL chỉ để xoá một hàng seed là rủi ro không cần — đổi nghĩa tại tầng Swift (list lọc, factory báo lỗi) đạt cùng mục đích (ẩn khỏi UI, không gọi mạng chết) mà không đụng DDL hay dữ liệu máy fen đang có.
 - **Hệ quả:** `AnalysisAgent.isBuiltinProxy` → `isPlaceholder`; `Seeder.readoProxyAgentID/-Name` → `placeholderAgentID/-Name`; `StoreError.cannotDeleteProxy` → `cannotDeletePlaceholder`. `SettingsView` bỏ hẳn nhánh hiển thị "Proxy Reado" (list đã lọc, không còn ca này). `AppModel.activeAgentReady` suy trực tiếp từ `hasKey` (không cần loại trừ builtin nữa). NFR-07 chỉ còn vế key user ở Keychain — vế "key sản phẩm ở `.env` proxy" là bia mộ. `CLAUDE.md`, `prd.md` (Q-03, FR-21, NFR-07), `solution-design.md`, `db.md`, `tech-stack.md`, `journeys.md` ghi chú trỏ ADR này tại các đoạn nhắc proxy cũ — không xoá bia mộ. Test: xoá 4 test `ReadoProxyClientTests`, sửa `AnalyzerFactoryTests` theo hành vi mới — 351/353 xanh (từ 355/357, giữ 2 skip cũ).
+
+## ADR-050 — "Ôn thêm 20": trộn mới + ôn sớm thật, LIFO, heatmap theo phân vị — đảo ADR-011/039, sửa ADR-043/047 (extra-review-r1)
+
+- **Ngày:** 2026-10-01
+- **Bối cảnh:** Owner thêm từ thoải mái mỗi ngày, học kiểu "cuốn chiếu" (từ vừa
+  thêm học trước). Ba vấn đề của Cram/"Học thêm" cũ: (1) Cram chỉ ghi
+  `review_logs mode='cram'`, không đổi `cards` (ADR-011) — Quên lúc cram bị bỏ
+  qua, Được lúc cram làm FSRS thổi phồng `stability` ở lần srs sau (lỗi Q-11 đã
+  ghi ở ADR-032/PRD mục 12); (2) Cram luôn ra đúng 20 thẻ cũ (lịch không đổi —
+  ADR-043 đã ghi nhận); (3) "Học thêm 10 từ" (ADR-039, nới `daily_new_limit`
+  riêng ngày) và "Ôn thêm" (ADR-043, cram) là hai nút tách rời dù cùng mục đích
+  "chủ động học/ôn thêm khi rảnh". Thứ tự thẻ mới (ADR-047) cũng chỉ ưu tiên
+  **bộ** vừa thêm, trong bộ vẫn FIFO theo trang — không phải "cuốn chiếu" thật.
+- **Quyết định (owner chốt qua hội thoại 2026-10-01, không qua `/rplan` lưu
+  file riêng — plan nằm trong phiên chat):**
+  - **B1 — một lượt "Ôn thêm" 20 thẻ, MỌI mức chấm đều ghi lịch thật.** Trộn
+    tối đa 10 từ mới (LIFO, bỏ qua `daily_new_limit`) + tối đa 10 thẻ đã học
+    chưa đến hạn ("ôn sớm" — `due_at > window.end`); bên nào thiếu thì bên kia
+    bù đủ 20 (`ReviewQueue.extraCardIDs`). Hai nhóm **xen kẽ** (cũ, mới, cũ,
+    mới…, dư dồn cuối — `ReviewQueue.interleave`), không xếp hết nhóm này rồi
+    mới nhóm kia. Chấm bằng đúng `ReviewService.record`/`ReviewQueue` của hàng
+    đợi chính — không còn đường `recordCram`/`undoCram` chỉ-ghi-log. Ôn sớm mà
+    chấm Được không thổi phồng `stability` vì FSRS tính theo `retrievability`
+    thật tại thời điểm ôn (R cao do ôn sớm → S tăng ít) — sửa đúng gốc lỗi Q-11
+    thay vì né nó. Loại thẻ đã có `review_logs` trong ngày học hiện tại khỏi cả
+    hai nhánh — "mỗi lượt Ôn thêm ra một nhóm khác", không lôi lại thẻ vừa ôn.
+  - **B2 — gộp CTA, bỏ "Học thêm 10 từ".** Một nút "Ôn thêm N thẻ" ở: màn hết
+    thẻ (`ReviewQueueView`/`SessionDoneView`), header collection (chỉ hiện khi
+    bộ đó hết thẻ đến hạn), và Home (dòng "Xong phần hôm nay" đổi thành CTA khi
+    toàn kho còn thẻ Ôn thêm được). Xoá `AppModel.learnMore()`,
+    `ReviewState.extraNewQuota`, `ReviewQueue.effectiveExtra`, tham số
+    `extraNew` của `loadFullQueue`/`DailyProgressService.load`.
+  - **B3 — LIFO thật trong `newCardIDs` (đảo phần "giữ thứ tự trang" của
+    ADR-047).** `ORDER BY` đổi khoá cuối từ `v.created_at ASC, due_at, id`
+    sang `v.created_at DESC, v.rowid ASC` — lần chụp GẦN ĐÂY NHẤT lên trước,
+    kể cả giữa các lần chụp trong CÙNG một collection; cùng một lần chụp (cùng
+    `created_at`) vẫn giữ thứ tự trang qua `rowid` (bảng có rowid thường, không
+    `WITHOUT ROWID`). Khoá (1) "bộ vừa thêm từ gần nhất" và khoá (2) "gặp lại"
+    (`seen`/trùng dòng) giữ nguyên, đứng TRƯỚC LIFO — một từ vừa gặp lại vẫn
+    thắng dù trang của nó cũ hơn.
+  - **B4 — heatmap chia theo tứ phân vị của chính user.** Thang cũ bão hoà ở 7
+    thẻ (mức 5 = "7+"); `StreakIntensity.thresholds(from:)` tính p25/p50/p75/max
+    từ các ngày CÓ ôn trong lưới 18 tuần — dưới 4 ngày có ôn thì dùng lại thang
+    cố định cũ (chưa đủ dữ liệu chia phân vị có nghĩa).
+  - **Chấp nhận có chủ đích:** Ôn thêm học từ mới không trần — `newIntroducedCount`
+    có thể vượt `daily_new_limit` trong ngày, các phép "còn X từ mới hôm nay"
+    kẹp `max(0, …)` chứ không báo lỗi. Owner: "overload quá thì thôi" — đây là
+    lựa chọn chủ động của user, không phải bug.
+- **Lý do:** Cùng một hành động chấm thẻ không nên có hai luật (ghi lịch thật
+  / chỉ ghi log) tuỳ vào cửa vào — khó nhớ, dễ sai, và chính hai luật đó là
+  nguồn gốc ba lỗi ở trên. Một đường chấm duy nhất (đã có sẵn, test kỹ ở
+  `ReviewService`) rẻ hơn và đúng hơn so với vá riêng từng lỗi của đường cram.
+- **Hệ quả:** `ReviewQueue` thêm `extraBatchSize`/`extraNewShare`/
+  `extraReviewCardIDs`/`interleave`/`extraCardIDs`/`extraAvailableCount`/
+  `loadExtraQueue`; xoá `cramBatchSize`/`cramCardIDs`/`crammableCount`/
+  `loadCramQueue`/`effectiveExtra`. `hydrate` thêm `preserveOrder` (Ôn thêm giữ
+  đúng thứ tự xen kẽ, không sắp lại theo `due_at` như hàng đợi chính).
+  `ReviewService` xoá `recordCram`/`undoCram` — cột `review_logs.mode` + CHECK
+  giữ nguyên `'srs'`/`'cram'` cho R2 (Q-11 distinguish/recall), không migration.
+  `ReviewMode.cram` → `.extra` trong app target; `AppModel` xoá
+  `gradeCram`/`undoCram`/`learnMore`/`effectiveExtraNew`/`learnMoreBatchSize`.
+  `VocabRepository.CollectionSummary.crammableCount` giữ nguyên định nghĩa SQL
+  cũ (xấp xỉ, không lọc "đã ôn hôm nay") — chỉ dùng để quyết định HIỆN CTA ở
+  header, không phải nguồn thật của hàng đợi Ôn thêm. FR-11/FR-18 (prd.md),
+  Cram/"Học thêm" (journeys.md) cập nhật theo B1/B2. Test: xoá
+  `CramReviewTests`/`LearnMoreTests`, thêm `ExtraReviewTests` (15 test), sửa
+  `ReviewQueueAndServiceTests` (3 test đổi theo LIFO B3, thêm 1 test rowid
+  cùng-lần-chụp), `VocabularyListTests` (1 chỗ đối chiếu `crammableCount`) —
+  329/329 xanh ở `kit`, 348/350 xanh ở suite đầy đủ (giữ 2 skip cũ).

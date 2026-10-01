@@ -486,10 +486,14 @@ final class VocabularyListTests: XCTestCase {
         let summaries = try VocabRepository.allCollectionSummaries(
             on: db, now: Fixtures.fixedNow)
         let summary = try XCTUnwrap(summaries.first { $0.id == col })
-        let queueCount = try ReviewQueue.crammableCount(
-            on: db, now: Fixtures.fixedNow, scope: [col])
+        // Không có review_logs nào hôm nay trong fixture này → bộ lọc "chưa ôn
+        // hôm nay" của extraReviewCardIDs không loại gì, nên hai định nghĩa
+        // (CollectionSummary.crammableCount / ReviewQueue.extraReviewCardIDs)
+        // khớp nhau ở đây dù khác điều kiện.
+        let queueCount = try ReviewQueue.extraReviewCardIDs(
+            on: db, now: Fixtures.fixedNow, scope: [col], limit: 1000)
         XCTAssertEqual(summary.crammableCount, 2)
-        XCTAssertEqual(Int64(summary.crammableCount), queueCount)
+        XCTAssertEqual(summary.crammableCount, queueCount.count)
     }
 
     /// `nextDue` — MIN(due_at) sau now + số thẻ trong cùng ngày học (Asia/Ho_Chi_Minh,

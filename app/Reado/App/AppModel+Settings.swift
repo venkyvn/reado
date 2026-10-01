@@ -63,14 +63,13 @@ extension AppModel {
     }
 
     /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
-    /// `dailyNewLimit` đã đọc từ settings. `extraNew` (ý 3): phần nới "Học
-    /// thêm" còn hiệu lực hôm nay để số Home khớp đúng hàng đợi thật.
+    /// `dailyNewLimit` đã đọc từ settings.
     static func loadDailyProgress(
-        db: SQLiteDatabase, now: Date, extraNew: Int = 0
+        db: SQLiteDatabase, now: Date
     ) throws -> DailyProgress {
         let dailyNewLimit = try SettingsService.load(on: db).dailyNewLimit
         return try DailyProgressService.load(
-            on: db, dailyNewLimit: dailyNewLimit, now: now, extraNew: extraNew)
+            on: db, dailyNewLimit: dailyNewLimit, now: now)
     }
 
     /// J-R1-P: nạp lịch streak (heatmap 18 tuần + streak hiện tại/dài nhất).

@@ -65,19 +65,40 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(ids, [fresh], "bộ vừa thêm từ gần nhất chiếm hạn mức trước")
     }
 
-    func testNewBranchKeepsPageOrderAcrossCollections() throws {
+    /// B3 extra-review-r1 (owner chốt 2026-10-01, đảo phần "giữ thứ tự trang"
+    /// của ADR-047): LIFO cả GIỮA các lần chụp trong cùng một collection — trang
+    /// chụp gần đây nhất lên trước, không còn ascending theo thời điểm thêm.
+    func testNewBranchLIFOAcrossCollectionsAndWithinCollection() throws {
         let db = try Fixtures.seededDB()
         let old = try Fixtures.insertCollection(in: db, name: "B")
         let current = try Fixtures.insertCollection(in: db, name: "A")
-        let b1 = try insertNewAt(db, collectionID: old, term: "b1", createdAt: "2026-08-01T00:00:00Z")
-        try insertNewAt(db, collectionID: old, term: "b2", createdAt: "2026-08-02T00:00:00Z")
+        try insertNewAt(db, collectionID: old, term: "b1", createdAt: "2026-08-01T00:00:00Z")
+        let b2 = try insertNewAt(db, collectionID: old, term: "b2", createdAt: "2026-08-02T00:00:00Z")
         let a1 = try insertNewAt(db, collectionID: current, term: "a1", createdAt: "2026-09-05T00:00:00Z")
         let a2 = try insertNewAt(db, collectionID: current, term: "a2", createdAt: "2026-09-06T00:00:00Z")
         let a3 = try insertNewAt(db, collectionID: current, term: "a3", createdAt: "2026-09-07T00:00:00Z")
 
         let ids = try ReviewQueue.newCardIDs(on: db, quota: 4)
-        XCTAssertEqual(ids, [a1, a2, a3, b1],
-                       "hết bộ mới rồi mới tới bộ cũ; trong bộ giữ thứ tự trang")
+        XCTAssertEqual(ids, [a3, a2, a1, b2],
+                       "hết bộ mới rồi mới tới bộ cũ; trong bộ, trang gần đây nhất trước (LIFO) — kể cả b1/b2")
+    }
+
+    /// Cùng MỘT lần chụp (cùng `created_at`) thì vẫn giữ thứ tự trang
+    /// (`v.rowid ASC`) — LIFO chỉ áp GIỮA các lần chụp khác nhau.
+    func testNewBranchKeepsPageOrderWithinSameCapture() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "A")
+        let sameCapture = "2026-09-10T00:00:00Z"
+        let p1 = try insertNewAt(db, collectionID: book, term: "p1", createdAt: sameCapture)
+        let p2 = try insertNewAt(db, collectionID: book, term: "p2", createdAt: sameCapture)
+        let p3 = try insertNewAt(db, collectionID: book, term: "p3", createdAt: sameCapture)
+        // Lần chụp SAU (mới hơn) — phải lên trước cả ba item ở trên (LIFO).
+        let newer = try insertNewAt(db, collectionID: book, term: "newer", createdAt: "2026-09-11T00:00:00Z")
+
+        let ids = try ReviewQueue.newCardIDs(on: db, quota: 4)
+        XCTAssertEqual(
+            ids, [newer, p1, p2, p3],
+            "lần chụp mới hơn lên trước; cùng lần chụp giữ thứ tự trang (rowid)")
     }
 
     func testNewBranchRepeatedTermFirstWithinCollection() throws {
@@ -103,20 +124,21 @@ final class ReviewQueueAndServiceTests: XCTestCase {
 
     func testNewBranchWordSeenAgainComesFirstWithinCollection() throws {
         // FR-22 (reencounter-r1 T3): từ chưa học mà trang mới lại có nó (`seen`)
-        // lên trước, dù theo thứ tự trang nó đứng sau.
+        // lên trước — kể cả khi LIFO (B3) đã xếp nó SAU (trang CŨ hơn), `seen`
+        // vẫn thắng vì đứng ở khoá (2), trước LIFO ở khoá (3).
         let db = try Fixtures.seededDB()
         let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
         let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
         let later = try insertNewAt(db, collectionID: book, term: "later", createdAt: "2026-09-02T00:00:00Z")
 
-        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later],
-                       "chưa có seen → giữ thứ tự trang")
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [later, first],
+                       "chưa có seen → LIFO, trang gần đây nhất (later) trước")
 
         try EncounterRepository.insertSeen(
-            on: db, vocabItemIDs: [try vocabID(of: later, db)], now: Fixtures.fixedNow)
+            on: db, vocabItemIDs: [try vocabID(of: first, db)], now: Fixtures.fixedNow)
 
-        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [later, first],
-                       "từ vừa gặp lại khi đọc lên trước")
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later],
+                       "từ vừa gặp lại khi đọc lên trước, thắng cả LIFO")
     }
 
     func testNewBranchSeenCountAddsToRepeatedTermCount() throws {
@@ -139,7 +161,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
     }
 
     func testNewBranchRecognizedDoesNotBoostOrder() throws {
-        // Chỉ `seen` cộng điểm: nhận ra = đã biết từ, không cần học trước.
+        // Chỉ `seen` cộng điểm: nhận ra = đã biết từ, không cần học trước —
+        // `recognized` không đổi khoá (2), nên thứ tự vẫn là LIFO thuần (B3).
         let db = try Fixtures.seededDB()
         let book = try Fixtures.insertCollection(in: db, name: "Đang đọc")
         let first = try insertNewAt(db, collectionID: book, term: "first", createdAt: "2026-09-01T00:00:00Z")
@@ -147,7 +170,8 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         try EncounterRepository.recordRecognized(
             on: db, vocabItemID: try vocabID(of: later, db), now: Fixtures.fixedNow)
 
-        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [first, later])
+        XCTAssertEqual(try ReviewQueue.newCardIDs(on: db, quota: 2), [later, first],
+                       "recognized không boost — vẫn LIFO: later (gần đây nhất) trước")
     }
 
     func testNewBranchScopeStillFiltersWithNewOrder() throws {

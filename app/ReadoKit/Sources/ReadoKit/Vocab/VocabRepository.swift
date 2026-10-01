@@ -86,8 +86,10 @@ public enum VocabRepository {
         public let absorbedCount: Int
         /// Số từ có `created_at` trong 7 ngày gần nhất tính tới `now`.
         public let addedLast7Days: Int
-        /// Số THẻ Cram được — điều kiện y hệt `ReviewQueue.crammableCount`
-        /// (state ≠ new, chưa suspend, `due_at > window.end` — hạn ngày học).
+        /// Số thẻ đã học, chưa suspend, chưa đến hạn (`due_at > window.end`) —
+        /// phần "ôn sớm" của Ôn thêm (extra-review-r1), KHÔNG gồm từ mới. Dùng
+        /// cho CTA header; hàng đợi Ôn thêm thật sự tính qua
+        /// `ReviewQueue.extraAvailableCount` (có thêm bộ lọc "chưa ôn hôm nay").
         public let crammableCount: Int
     }
 

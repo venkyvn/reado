@@ -540,11 +540,13 @@ dọn, và toàn bộ giá trị của FR-18 mất theo.
   collection đang hoạt động vẫn chỉ ra tổng cộng `daily_new_limit` card mới mỗi
   ngày, không phải bốn lần con số đó. Phạm vi quyết định *card nào* được chọn trong
   hạn mức, không nới hạn mức.
-- **Given** hàng đợi hôm nay đã hết, **when** người dùng chủ động bấm "Học thêm 10
-  từ", **then** hạn mức new **riêng ngày học hiện tại** tăng 10, vẫn áp **toàn cục
-  trước khi lọc phạm vi** như criterion trên; hệ thống **không bao giờ tự nới** —
-  phần nới này chỉ tồn tại trong bộ nhớ app, mất khi qua ngày mới hoặc thoát app
-  (motivation-r1 ý 3, ADR-039).
+- **Given** hàng đợi hôm nay đã hết (hoặc bộ/collection đã hết thẻ đến hạn),
+  **when** người dùng chủ động bấm "Ôn thêm", **then** hệ thống dựng một lượt tối
+  đa 20 thẻ **trộn** từ mới (tối đa 10, bỏ qua `daily_new_limit`) với thẻ đã học
+  mà chưa đến hạn (tối đa 10, "ôn sớm") — bên nào thiếu thì bên kia bù đủ 20; mọi
+  mức chấm trong lượt này **ghi lịch FSRS thật**, giống hệt hàng đợi chính (không
+  còn chế độ chỉ-ghi-log riêng — extra-review-r1, đảo ADR-011/039/043). Hệ thống
+  **không bao giờ tự mở** lượt này — chỉ chạy khi user bấm.
 - **Given** hệ thống cần biết hôm nay đã giới thiệu bao nhiêu card mới, **when** nó
   đếm, **then** con số được **suy ra từ review log** — số lần chấm trong ngày mà card
   lúc đó đang ở trạng thái `new` — chứ **không** từ một cột counter riêng. Counter và
@@ -553,11 +555,13 @@ dọn, và toàn bộ giá trị của FR-18 mất theo.
   nó dùng một **giờ chuyển ngày cấu hình được** (mặc định 4 giờ sáng), không dùng nửa
   đêm hệ thống.
 - **Given** số card mới vượt `daily_new_limit` nên phải chọn card nào vào trước
-  (new-order-r1, ADR-047), **when** hàng đợi được dựng, **then** collection có từ
-  được thêm gần đây nhất — kể cả kho tạm — được ưu tiên trước collection cũ hơn;
-  trong cùng collection, từ đã gặp lại nhiều lần (cùng form đã có ≥2 dòng trong kho,
-  **cộng** số lần `seen` ở FR-22 — từ chưa học mà trang mới lại có nó) được ưu tiên trước
-  từ chỉ gặp một lần; sau hai tiêu chí đó mới tới thứ tự trang.
+  (new-order-r1 ADR-047, LIFO ở extra-review-r1 ADR-050), **when** hàng đợi được
+  dựng, **then** collection có từ được thêm gần đây nhất — kể cả kho tạm — được ưu
+  tiên trước collection cũ hơn; trong cùng collection, từ đã gặp lại nhiều lần
+  (cùng form đã có ≥2 dòng trong kho, **cộng** số lần `seen` ở FR-22 — từ chưa học
+  mà trang mới lại có nó) được ưu tiên trước từ chỉ gặp một lần; sau hai tiêu chí
+  đó, **lần chụp gần đây nhất lên trước** ("cuốn chiếu" — owner chốt 2026-10-01),
+  cùng một lần chụp thì giữ thứ tự trang.
   Đây là câu trả lời cho *card nào*, không đổi *card mới có bao nhiêu*.
 
 Giới hạn card mới là yêu cầu bắt buộc, không phải tuỳ chọn. Không có nó, một buổi
@@ -646,9 +650,11 @@ Mới ở v0.3. Đây là feature mà collection tồn tại để phục vụ.
   được ôn hôm nay*, không đổi cách chấm điểm.
 - **Given** có card đến hạn nằm **ngoài** phạm vi đang chọn, **when** màn hình review
   hiển thị, **then** số lượng đó phải **nhìn thấy được**.
-- **Given** người dùng muốn ôn card **chưa** đến hạn, **when** họ làm vậy, **then**
-  đó là một chế độ riêng, được ghi vào `review_logs` với `mode = cram`, và **không**
-  cập nhật FSRS state.
+- **Given** người dùng muốn chủ động học/ôn thêm khi hàng đợi hẹp này đã hết thẻ
+  đến hạn, **when** họ bấm "Ôn thêm", **then** đó là lượt trộn mới + ôn sớm của
+  FR-11 (giới hạn đúng phạm vi hẹp này) — **CÓ** cập nhật FSRS state như ôn bình
+  thường (extra-review-r1, đảo ADR-011: R1 không còn chế độ chấm-mà-không-đổi-lịch;
+  cột `review_logs.mode` giữ `cram` cho R2 distinguish/recall, Q-11).
 
 Ba criterion cuối tồn tại vì lọc hàng đợi có thể **phá vỡ hợp đồng ngầm của
 scheduler**: FSRS giả định card đến hạn thì được ôn trong ngày đó. Bỏ qua một
@@ -883,7 +889,7 @@ không kéo theo cả FR-01 và FR-08.
 - **Feature B — Expand:** bảng `word_relations`, cùng hai chế độ ôn **Phân biệt** và
   **Gợi nhớ theo nhóm**. Xem
   [research/vocabulary.md mục 5](docs/research/vocabulary.md#5-feature-b--expand-quan-hệ-ngữ-nghĩa-r2)
-- ~~Chế độ cram~~ — **đã kéo về R1 (2026-09-28, ADR-043):** ôn card chưa đến hạn từ màn hết thẻ, không đụng FSRS state
+- ~~Chế độ cram~~ — **đã kéo về R1 (2026-09-28, ADR-043):** ôn card chưa đến hạn từ màn hết thẻ, không đụng FSRS state. **ADR-050 (2026-10-01) đảo tiếp:** gộp vào "Ôn thêm" (FR-11), trộn mới + ôn sớm, **CÓ** đụng FSRS state — R1 không còn chế độ chấm-không-đổi-lịch; cột `mode='cram'` giữ cho R2
 - Lọc vocabulary nâng cao (phần còn lại của FR-08)
 - Cảnh báo trước khi trang trôi khỏi buffer (phần còn lại của FR-05)
 - Thống kê tiến bộ theo thời gian

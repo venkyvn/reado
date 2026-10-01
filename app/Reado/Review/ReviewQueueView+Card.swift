@@ -21,13 +21,13 @@ extension ReviewQueueView {
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                if mode == .cram {
+                if mode == .extra {
                     Text("Ôn thêm")
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-                        .accessibilityLabel("Chế độ ôn thêm, không đổi lịch")
+                        .accessibilityLabel("Chế độ ôn thêm")
                 }
                 // FR-12: undo nút nổi 1 bước.
                 if showUndoToast {
@@ -100,10 +100,9 @@ extension ReviewQueueView {
         }
     }
 
-    /// U1: nạp lại nhãn nhịp ôn cho thẻ đang đứng ở `lastSnapshot`.
+    /// U1: nạp lại nhãn nhịp ôn cho thẻ đang đứng ở `lastSnapshot` — extra-review-r1:
+    /// Ôn thêm giờ cũng đổi lịch thật nên nhãn vẫn đúng, không còn ẩn theo mode.
     func refreshIntervals() {
-        // Cram không đổi lịch → nhãn "ôn lại sau …" sẽ sai, ẩn hẳn.
-        guard mode == .srs else { intervalLabels = [:]; return }
         intervalLabels = lastSnapshot.map { model.intervalLabels(for: $0) } ?? [:]
     }
 

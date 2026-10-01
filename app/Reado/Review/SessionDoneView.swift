@@ -11,11 +11,11 @@ struct SessionDoneView: View {
 
     let tally: SessionTally
     let streak: Int
-    /// Ý 3 motivation-r1: CTA "Học thêm 10 từ" chỉ hiện khi kho còn thẻ new
-    /// chưa giới thiệu (`DailyProgress.totalNewRemaining > 0`) — nới hạn mức
-    /// vô nghĩa khi không còn gì để nới.
-    let canLearnMore: Bool
-    let onLearnMore: () -> Void
+    /// extra-review-r1: số thẻ Ôn thêm còn lấy được trong phạm vi hiện tại
+    /// (`ReviewQueue.extraAvailableCount`, CHƯA kẹp — view tự kẹp ở
+    /// `ReviewQueue.extraBatchSize` khi hiện số). 0 → ẩn CTA.
+    let extraAvailable: Int
+    let onExtra: () -> Void
     let onHome: () -> Void
 
     /// Giới hạn hiển thị — danh sách dài quá thì rối, không phải bảng thành tích.
@@ -34,9 +34,10 @@ struct SessionDoneView: View {
                     .opacity(appeared ? 1 : 0)
                     .animation(reduceMotion ? nil : Motion.reveal.delay(0.16), value: appeared)
                 Spacer(minLength: Spacing.row)
-                if canLearnMore {
-                    Button(action: onLearnMore) {
-                        Text("Học thêm 10 từ").frame(maxWidth: .infinity)
+                if extraAvailable > 0 {
+                    Button(action: onExtra) {
+                        Text("Ôn thêm \(min(extraAvailable, ReviewQueue.extraBatchSize)) thẻ")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)

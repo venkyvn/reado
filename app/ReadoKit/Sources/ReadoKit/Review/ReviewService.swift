@@ -158,41 +158,10 @@ public enum ReviewService {
         }
     }
 
-    /// Cram (ADR-011/043): chấm thẻ CHƯA đến hạn mà KHÔNG đổi lịch — chỉ INSERT
-    /// một dòng `review_logs` `mode='cram'` (snapshot TRƯỚC = trạng thái hiện tại
-    /// của thẻ, `scheduled_days` không đổi). KHÔNG `UPDATE cards`. Trả id log.
-    @discardableResult
-    public static func recordCram(
-        on db: SQLiteDatabase,
-        cardID: String,
-        before: CardSnapshot,
-        rating: ReadoRating,
-        now: Date
-    ) throws -> String {
-        let logID = Identifier.uuid()
-        let elapsed = max(
-            0,
-            Int(((now.timeIntervalSince(before.lastReview ?? now)) / 86_400).rounded()))
-        try insertLog(
-            on: db, logID: logID, cardID: cardID, mode: "cram",
-            rating: rating.rawValue, before: before, elapsedDays: elapsed,
-            scheduledDays: before.scheduledDays,
-            reviewedAtIso: ISOTimestamp.string(from: now))
-        return logID
-    }
-
-    /// Undo Cram: chỉ xoá đúng dòng log cram vừa ghi — `cards` chưa từng bị đổi
-    /// nên không cần khôi phục gì. Không xoá được log srs qua đường này.
-    public static func undoCram(
-        on db: SQLiteDatabase, cardID: String, logID: String
-    ) throws {
-        try db.run(
-            "DELETE FROM review_logs WHERE id = ? AND card_id = ? AND mode = 'cram';",
-            [.text(logID), .text(cardID)])
-    }
-
-    /// Snapshot TRƯỚC → một dòng `review_logs` (dùng chung srs + cram; `mode`
-    /// chỉ nhận 'srs'/'cram' theo CHECK của bảng).
+    /// Snapshot TRƯỚC → một dòng `review_logs`. `mode` chỉ nhận 'srs'/'cram'
+    /// theo CHECK của bảng; R1 chỉ còn ghi 'srs' (extra-review-r1 đảo ADR-011 —
+    /// Ôn thêm giờ ghi lịch thật qua `record`, không còn đường chỉ-log riêng).
+    /// Cột + CHECK giữ 'cram' cho R2 (Q-11 distinguish/recall), không migration.
     private static func insertLog(
         on db: SQLiteDatabase,
         logID: String,

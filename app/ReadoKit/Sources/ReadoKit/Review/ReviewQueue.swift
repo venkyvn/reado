@@ -4,15 +4,21 @@ import Foundation
 /// - thẻ MỚI bị chặn bởi `daily_new_limit` (toàn cục, trước khi lọc scope);
 /// - thẻ ÔN LẠI thì KHÔNG bị giới hạn này.
 /// `suspended_at IS NULL`. FR-18 thêm `scope`: nil = tất cả collection.
+/// Ôn thêm (B1 extra-review-r1, đảo ADR-011/043 cho R1): `extraCardIDs`/
+/// `loadExtraQueue` bên dưới — trộn thẻ mới + ôn sớm, MỌI lượt chấm ghi lịch
+/// thật (không còn đường `mode='cram'` chỉ-log).
 public enum ReviewQueue {
 
     /// Nhánh 1 — thẻ mới đến hạn, quota = daily_new_limit trừ số thẻ mới đã
     /// giới thiệu hôm nay. `scope` (FR-18): nil = tất cả, ngược lại chỉ chọn
     /// card thuộc đúng các collection — hạn mức vẫn áp TOÀN CỤC trước (không nới).
-    /// Thứ tự (new-order-r1, ADR-047): bộ vừa thêm từ gần nhất trước (kể cả kho
-    /// tạm) → trong bộ, từ gặp lại trước — số dòng cùng `term_normalized` CỘNG số
-    /// lần `seen` (FR-22, reencounter-r1 T3: từ chưa học mà trang mới lại có nó) →
-    /// thứ tự trang (`created_at`, rồi `due_at`).
+    /// Thứ tự (new-order-r1 ADR-047, đảo LIFO ở extra-review-r1 B3): bộ vừa
+    /// thêm từ gần nhất trước (kể cả kho tạm) → trong bộ, từ gặp lại trước — số
+    /// dòng cùng `term_normalized` CỘNG số lần `seen` (FR-22) → **LIFO**: trang/
+    /// lần chụp gần đây nhất trước (`v.created_at DESC`), cùng một lần chụp thì
+    /// giữ thứ tự trang (`v.rowid ASC`, không `WITHOUT ROWID`). Owner chốt
+    /// 2026-10-01: "cuốn chiếu" — từ vừa thêm học trước, chấp nhận từ cũ đợi lâu
+    /// hơn (không trần, Ôn thêm vẫn kéo được qua `extraCardIDs`).
     public static func newCardIDs(
         on db: SQLiteDatabase, quota: Int64, scope: Set<String>? = nil
     ) throws -> [String] {
@@ -33,7 +39,7 @@ public enum ReviewQueue {
                 WHERE v3.term_normalized = v.term_normalized)
               + (SELECT COUNT(*) FROM encounters e
                   WHERE e.vocab_item_id = v.id AND e.kind = 'seen') DESC,
-              v.created_at, c.due_at, c.id
+              v.created_at DESC, v.rowid ASC
             LIMIT ?;
             """, params
         ).compactMap { $0.first?.textValue }
@@ -62,23 +68,28 @@ public enum ReviewQueue {
         ).compactMap { $0.first?.textValue }
     }
 
-    /// Số thẻ tối đa mỗi lượt Cram (owner chốt 2026-09-28, ADR-043).
-    public static let cramBatchSize = 20
+    // MARK: — Ôn thêm (extra-review-r1, đảo ADR-011/043 cho R1)
 
-    /// Cram (FR-18 tiêu chí 4, ADR-011/043) — thẻ ĐÃ HỌC (state ≠ new), chưa
-    /// suspend, CHƯA đến hạn ngày học (`due_at > window.end`; thẻ đến hạn tối
-    /// nay đi đường srs dù chưa qua `now`), sắp đến hạn trước. `scope` nil =
-    /// tất cả. Thẻ new KHÔNG vào đây — đường "Học thêm".
-    public static func cramCardIDs(
+    /// Số thẻ tối đa mỗi lượt Ôn thêm (owner chốt 2026-10-01).
+    public static let extraBatchSize = 20
+    /// Phần dành cho thẻ MỚI trong một lượt — nửa kia dành cho ôn sớm. Bên nào
+    /// thiếu thì bên kia bù đủ `extraBatchSize` (owner chốt).
+    public static let extraNewShare = 10
+
+    /// Thẻ ĐÃ HỌC (state ≠ new), chưa suspend, CHƯA đến hạn ngày học
+    /// (`due_at > window.end`), và CHƯA có lượt chấm nào hôm nay (tránh lôi lại
+    /// ngay thẻ vừa Ôn thêm xong — "mỗi lượt ra nhóm khác", owner chốt). Sắp
+    /// due trước lên trước — "10 từ đến hạn" (owner chốt 2026-10-01).
+    public static func extraReviewCardIDs(
         on db: SQLiteDatabase,
         now: Date,
         scope: Set<String>? = nil,
-        limit: Int = cramBatchSize
+        limit: Int = extraNewShare
     ) throws -> [String] {
         guard limit > 0 else { return [] }
-        let windowEnd = currentDayWindow(on: db, now: now).end
+        let window = currentDayWindow(on: db, now: now)
         let (clause, binds) = inScopeClause(scope)
-        var params: [SQLValue] = [.text(windowEnd)]
+        var params: [SQLValue] = [.text(window.end), .text(window.start)]
         params.append(contentsOf: binds)
         params.append(.int(Int64(limit)))
         return try db.rows(
@@ -88,6 +99,10 @@ public enum ReviewQueue {
             WHERE c.state != 'new'
               AND c.suspended_at IS NULL
               AND c.due_at > ?
+              AND NOT EXISTS (
+                    SELECT 1 FROM review_logs l
+                    WHERE l.card_id = c.id AND l.reviewed_at >= ?
+                  )
               AND \(clause)
             ORDER BY c.due_at, c.id
             LIMIT ?;
@@ -95,29 +110,83 @@ public enum ReviewQueue {
         ).compactMap { $0.first?.textValue }
     }
 
-    /// Số thẻ Cram được trong phạm vi (không bị `limit`) — quyết định hiện nút
-    /// "Ôn thêm" hay không.
-    public static func crammableCount(
+    /// Xen kẽ hai danh sách (cũ, mới, cũ, mới…; phần dư dồn cuối) — owner chốt
+    /// 2026-10-01: lượt Ôn thêm phải MIX từ cũ với từ mới, không xếp hết bên
+    /// này rồi mới tới bên kia. Hàm thuần — test không cần DB.
+    public static func interleave(old: [String], new: [String]) -> [String] {
+        var result: [String] = []
+        result.reserveCapacity(old.count + new.count)
+        var i = 0, j = 0
+        while i < old.count || j < new.count {
+            if i < old.count { result.append(old[i]); i += 1 }
+            if j < new.count { result.append(new[j]); j += 1 }
+        }
+        return result
+    }
+
+    /// Lượt Ôn thêm — tối đa `limit` thẻ, tối đa `newShare` thẻ mới ("10 từ gần
+    /// nhất" LIFO, bỏ qua `daily_new_limit`) + phần còn lại là ôn sớm ("10 từ
+    /// đến hạn"). Bên nào thiếu thì bên kia bù đủ `limit` (owner chốt). Chấm mọi
+    /// thẻ ở đây = `ReviewService.record` bình thường — không còn đường
+    /// `mode='cram'` chỉ-ghi-log của R1.
+    public static func extraCardIDs(
+        on db: SQLiteDatabase,
+        now: Date,
+        scope: Set<String>? = nil,
+        limit: Int = extraBatchSize,
+        newShare: Int = extraNewShare
+    ) throws -> [String] {
+        guard limit > 0 else { return [] }
+        let newCap = min(newShare, limit)
+        var newIDs = try newCardIDs(on: db, quota: Int64(newCap), scope: scope)
+        let reviewCap = limit - newIDs.count
+        let reviewIDs = try extraReviewCardIDs(
+            on: db, now: now, scope: scope, limit: reviewCap)
+        // Bù chiều ngược lại: ôn sớm thiếu mà kho còn từ mới ngoài `newCap` thì
+        // kéo thêm cho đủ `limit`. `newCardIDs` xác định (ORDER BY có c.id) nên
+        // phần đầu của lần gọi lại với quota lớn hơn giữ nguyên.
+        let stillOpen = limit - newIDs.count - reviewIDs.count
+        if stillOpen > 0 {
+            newIDs = try newCardIDs(
+                on: db, quota: Int64(newIDs.count + stillOpen), scope: scope)
+        }
+        return interleave(old: reviewIDs, new: newIDs)
+    }
+
+    /// Số thẻ Ôn thêm có thể lấy trong phạm vi — KHÔNG bị `limit` của một lượt —
+    /// quyết định hiện CTA "Ôn thêm N thẻ" hay không, N hiển thị kẹp ở
+    /// `extraBatchSize` (caller).
+    public static func extraAvailableCount(
         on db: SQLiteDatabase, now: Date, scope: Set<String>? = nil
     ) throws -> Int64 {
-        let windowEnd = currentDayWindow(on: db, now: now).end
+        let window = currentDayWindow(on: db, now: now)
         let (clause, binds) = inScopeClause(scope)
-        var params: [SQLValue] = [.text(windowEnd)]
-        params.append(contentsOf: binds)
-        return try db.scalarInt64(
+        let newCount = try db.scalarInt64(
             """
             SELECT COUNT(*) FROM cards c
             JOIN vocab_items v ON v.id = c.vocab_item_id
-            WHERE c.state != 'new'
-              AND c.suspended_at IS NULL
-              AND c.due_at > ?
+            WHERE c.state = 'new' AND c.suspended_at IS NULL AND \(clause);
+            """, binds) ?? 0
+        var reviewParams: [SQLValue] = [.text(window.end), .text(window.start)]
+        reviewParams.append(contentsOf: binds)
+        let reviewCount = try db.scalarInt64(
+            """
+            SELECT COUNT(*) FROM cards c
+            JOIN vocab_items v ON v.id = c.vocab_item_id
+            WHERE c.state != 'new' AND c.suspended_at IS NULL AND c.due_at > ?
+              AND NOT EXISTS (
+                    SELECT 1 FROM review_logs l
+                    WHERE l.card_id = c.id AND l.reviewed_at >= ?
+                  )
               AND \(clause);
-            """, params) ?? 0
+            """, reviewParams) ?? 0
+        return newCount + reviewCount
     }
 
     /// Số thẻ có review ĐẦU TIÊN nằm trong ngày hôm nay (thẻ "mới giới thiệu
-    /// hôm nay") — dùng để trừ vào quota nhánh 1. Chỉ đếm log `mode='srs'`:
-    /// log cram không ăn hạn mức FR-11 (ADR-011).
+    /// hôm nay") — dùng để trừ vào quota nhánh 1. Mọi lượt chấm (kể cả qua
+    /// Ôn thêm) đều ghi `mode='srs'` (extra-review-r1 đảo ADR-011) nên đếm qua
+    /// đây là đủ, không cần lọc mode nữa — giữ điều kiện cho rõ ý.
     public static func newIntroducedCount(
         on db: SQLiteDatabase, dayStartIso: String
     ) throws -> Int64 {
@@ -186,8 +255,6 @@ public enum ReviewQueue {
 
     /// `dayStart` (ISO) hiện tại theo `settings.timezone` + `day_cutoff_hour` —
     /// cùng cửa sổ "hôm nay" mà `loadFullQueue`/`DailyProgressService` dùng.
-    /// `AppModel` (ý 3 "Học thêm") gọi hàm này để gắn phần nới hạn mức đúng ngày
-    /// học hiện tại, KHÔNG dùng `Calendar.current` nửa đêm hệ thống.
     public static func currentDayStartIso(on db: SQLiteDatabase, now: Date) -> String {
         currentDayWindow(on: db, now: now).start
     }
@@ -202,21 +269,10 @@ public enum ReviewQueue {
             now: now, timezone: timezone, dayCutoffHour: cutoffHour)
     }
 
-    /// Hàm THUẦN (không DB) — phần nới "Học thêm" chỉ còn hiệu lực trong đúng
-    /// `dayStart` đã lưu; qua ngày mới (giờ chuyển ngày FR-11, không nửa đêm hệ
-    /// thống) thì mất, không cộng dồn (Q-A đã chốt 2026-09-26).
-    public static func effectiveExtra(
-        stored: (dayStart: String, count: Int)?,
-        currentDayStart: String
-    ) -> Int {
-        guard let stored, stored.dayStart == currentDayStart else { return 0 }
-        return stored.count
-    }
-
     // MARK: — FR-11 full queue façade (cards → [ReviewItem] + snapshot map)
 
     /// Một item hiển thị trên hàng đợi — FR-12 cần term/pos/meaning_vi/ipa/example/
-    /// collectionName, FR-11 cần cardID做 key.
+    /// collectionName, FR-11 cần cardID làm key.
     public struct ReviewItem: Equatable, Identifiable, Sendable {
         public var id: String { cardID }
         public let cardID: String
@@ -249,21 +305,19 @@ public enum ReviewQueue {
     /// Đọc toàn bộ hàng đợi hiện tại (hai nhánh gộp) kèm chi tiết vocab
     /// + collection cho UI + map cardID→snapshot TRƯỚC (FR-12 undo cần).
     /// `dailyNewLimit` / `now` caller truyền vào để tính quota chính xác.
-    /// `extraNew` (ý 3 motivation-r1, "Học thêm 10 từ"): phần nới hạn mức new
-    /// RIÊNG ngày hiện tại, giữ trong bộ nhớ app (`AppModel`, không schema) —
-    /// mặc định 0 = hành vi cũ. Vẫn áp TOÀN CỤC trước khi lọc phạm vi (FR-11).
     public static func loadFullQueue(
         on db: SQLiteDatabase,
         dailyNewLimit: Int,
         now: Date,
-        scope: Set<String>? = nil,
-        extraNew: Int = 0
+        scope: Set<String>? = nil
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
         let window = currentDayWindow(on: db, now: now)
 
-        // Nhánh 1 — new (quota).
+        // Nhánh 1 — new (quota). Có thể âm khi Ôn thêm đã giới thiệu vượt trần
+        // hôm đó (owner chốt: chấp nhận, không trần qua Ôn thêm) — `max(0, …)`
+        // kẹp về 0, không cấp thêm chứ không lỗi.
         let introduced = try newIntroducedCount(on: db, dayStartIso: window.start)
-        let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - introduced)
+        let remainingQuota = max(0, Int64(dailyNewLimit) - introduced)
         let newIDs = try newCardIDs(on: db, quota: remainingQuota, scope: scope)
         // Nhánh 2 — due (review/relearning, đến cuối ngày học — window.end).
         let dueIDs = try dueCardIDs(on: db, dueBeforeIso: window.end, scope: scope)
@@ -273,25 +327,31 @@ public enum ReviewQueue {
         return try hydrate(on: db, cardIDs: allCardIDs)
     }
 
-    /// Cram: hàng đợi ôn thêm (không đụng lịch) — cùng shape với `loadFullQueue`.
-    public static func loadCramQueue(
+    /// Ôn thêm (extra-review-r1): hàng đợi trộn mới + ôn sớm — cùng shape với
+    /// `loadFullQueue`. Giữ đúng thứ tự xen kẽ của `extraCardIDs` (KHÔNG sắp lại
+    /// theo `due_at` — thẻ mới và thẻ ôn sớm có `due_at` khác hẳn nhau, sắp lại
+    /// sẽ tách rời phần đã xen kẽ).
+    public static func loadExtraQueue(
         on db: SQLiteDatabase,
         now: Date,
         scope: Set<String>? = nil,
-        limit: Int = cramBatchSize
+        limit: Int = extraBatchSize
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
-        let ids = try cramCardIDs(on: db, now: now, scope: scope, limit: limit)
+        let ids = try extraCardIDs(on: db, now: now, scope: scope, limit: limit)
         guard !ids.isEmpty else { return ([], [:]) }
-        return try hydrate(on: db, cardIDs: ids)
+        return try hydrate(on: db, cardIDs: ids, preserveOrder: true)
     }
 
-    /// cardIDs → `ReviewItem` (kèm vocab + collection) + snapshot TRƯỚC, sắp theo
-    /// `due_at` — dùng chung cho hàng đợi srs và Cram.
+    /// cardIDs → `ReviewItem` (kèm vocab + collection) + snapshot TRƯỚC —
+    /// `preserveOrder` false (mặc định, `loadFullQueue`): sắp theo `due_at`.
+    /// true (`loadExtraQueue`): giữ đúng thứ tự `cardIDs` truyền vào (xen kẽ đã
+    /// tính trước đó) — sắp theo `due_at` ở đây sẽ phá thứ tự xen kẽ.
     private static func hydrate(
-        on db: SQLiteDatabase, cardIDs: [String]
+        on db: SQLiteDatabase, cardIDs: [String], preserveOrder: Bool = false
     ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot]) {
         let placeholders = cardIDs.map { _ in "?" }.joined(separator: ",")
         let params: [SQLValue] = cardIDs.map { .text($0) }
+        let orderClause = preserveOrder ? "" : "ORDER BY c.due_at, c.id"
         let rows = try db.rows(
             """
             SELECT c.id AS card_id,
@@ -302,20 +362,24 @@ public enum ReviewQueue {
             JOIN vocab_items v ON v.id = c.vocab_item_id
             JOIN collections col ON col.id = v.collection_id
             WHERE c.id IN (\(placeholders))
-            ORDER BY c.due_at, c.id;
+            \(orderClause);
             """, params)
 
-        var items: [ReviewItem] = []
+        var byID: [String: ReviewItem] = [:]
+        var dueOrder: [ReviewItem] = []
         for row in rows {
-            items.append(ReviewItem(
+            let item = ReviewItem(
                 cardID: row["card_id"].textValue ?? "",
                 term: row["term"].textValue ?? "",
                 pos: row["pos"].textValue ?? "other",
                 meaningVI: row["meaning_vi"].textValue ?? "",
                 ipa: row["ipa"].textValue,
                 example: row["example"].textValue ?? "",
-                collectionName: row["collection_name"].textValue ?? ""))
+                collectionName: row["collection_name"].textValue ?? "")
+            byID[item.cardID] = item
+            dueOrder.append(item)
         }
+        let items = preserveOrder ? cardIDs.compactMap { byID[$0] } : dueOrder
         // 1 query thêm cho snapshot cả lô — tránh N+1 (trước: 1 fetchSnapshot/card).
         let snapshots = try ReviewService.fetchSnapshots(on: db, cardIDs: cardIDs)
         return (items, snapshots)

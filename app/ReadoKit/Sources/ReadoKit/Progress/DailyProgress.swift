@@ -18,8 +18,7 @@ public struct DailyProgress: Equatable, Sendable {
     /// chuyển ngày) — dùng cho dòng nhắc "giữ streak" (ý 7, không tính `cram`).
     public let reviewedToday: Bool
     /// Tổng thẻ `state = 'new'` còn tồn trong kho (chưa từng giới thiệu),
-    /// KHÔNG áp hạn mức — dùng để ẩn CTA "Học thêm 10 từ" (ý 3) khi kho đã hết
-    /// thẻ mới, tránh nút nới hạn mức vô nghĩa.
+    /// KHÔNG áp hạn mức.
     public let totalNewRemaining: Int
 
     public init(
@@ -43,8 +42,7 @@ public enum DailyProgressService {
     public static func load(
         on db: SQLiteDatabase,
         dailyNewLimit: Int,
-        now: Date,
-        extraNew: Int = 0
+        now: Date
     ) throws -> DailyProgress {
         // timezone + giờ chuyển ngày — đúng cặp giá trị FR-11 dùng chung.
         let window = ReviewQueue.currentDayWindow(on: db, now: now)
@@ -52,12 +50,13 @@ public enum DailyProgressService {
         let (timezone, cutoffHour) = DayContext.read(on: db)
 
         // Nhánh new (hạn mức) — luật FR-11: quota trừ số thẻ mới đã giới thiệu.
-        // `extraNew` (ý 3 "Học thêm 10 từ"): nới trần RIÊNG hôm nay, giữ ở
-        // AppModel — số hiển thị Home phải khớp đúng hàng đợi thật sau khi bấm.
+        // `introduced` có thể vượt `dailyNewLimit` khi Ôn thêm (extra-review-r1)
+        // đã giới thiệu thêm từ mới hôm đó (owner chốt: chấp nhận, không trần
+        // qua Ôn thêm) — `max(0, …)` kẹp quota còn lại về 0, không âm.
         let totalNew = Int((try db.scalarInt64(
             "SELECT COUNT(*) FROM cards WHERE state = 'new' AND suspended_at IS NULL;")) ?? 0)
         let introduced = Int(try ReviewQueue.newIntroducedCount(on: db, dayStartIso: dayStartIso))
-        let remainingQuota = max(0, Int64(dailyNewLimit) + Int64(extraNew) - Int64(introduced))
+        let remainingQuota = max(0, Int64(dailyNewLimit) - Int64(introduced))
         let newQueued = try ReviewQueue.newCardIDs(on: db, quota: remainingQuota).count
 
         // Nhánh due — không hạn mức (FR-11); hạn theo ngày học (window.end),

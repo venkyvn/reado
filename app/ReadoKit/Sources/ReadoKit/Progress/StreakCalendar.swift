@@ -10,7 +10,8 @@ public struct StreakDay: Equatable, Sendable, Identifiable {
     public let dayStartISO: String
     /// Thời điểm đại diện (đầu cửa sổ) — chỉ để UI hiển thị ngày.
     public let date: Date
-    /// Số thẻ ôn trong ngày (mọi rating, mọi mode `srs`).
+    /// Số thẻ ôn trong ngày (mọi rating, mọi mode — kể cả log `cram` cũ từ R1
+    /// trước extra-review-r1).
     public let reviewCount: Int
     /// Số trang đã chụp/phân tích trong ngày (reading_sessions; 0 cho kho tạm —
     /// Q-10/ADR-029 kho tạm không lưu phiên).
@@ -47,6 +48,46 @@ public struct StreakHeatmap: Equatable, Sendable {
         self.currentStreak = currentStreak
         self.longestStreak = longestStreak
         self.weeks = weeks
+    }
+}
+
+/// B4 extra-review-r1 (owner chốt 2026-10-01): màu heatmap chia theo TỨ PHÂN VỊ
+/// số thẻ của chính user (kiểu GitHub) thay vì mốc cố định — ngày ôn nhiều hẳn
+/// mới thật sự đậm, không bão hoà ở 7 thẻ như thang cũ. Hàm thuần — test không
+/// cần DB.
+public enum StreakIntensity {
+    /// Dưới ngần này ngày CÓ ôn trong lưới → chưa đủ dữ liệu chia phân vị có
+    /// nghĩa (vài mốc trùng nhau) — dùng mốc cố định cũ (1 / 2 / 3–4 / 5–6 / 7+).
+    public static let minDaysForPercentile = 4
+    private static let fixedThresholds = [1, 2, 4, 6]
+
+    /// 4 ngưỡng tăng dần (p25/p50/p75/max) từ số thẻ các ngày CÓ ôn (> 0).
+    /// `level(count:thresholds:)` dùng ngưỡng này: mức 1 nếu `count` ≤ ngưỡng
+    /// đầu, … mức 5 nếu vượt ngưỡng cuối.
+    public static func thresholds(from counts: [Int]) -> [Int] {
+        let sorted = counts.filter { $0 > 0 }.sorted()
+        guard sorted.count >= minDaysForPercentile else { return fixedThresholds }
+        func quantile(_ q: Double) -> Int {
+            let idx = min(
+                sorted.count - 1,
+                max(0, Int((Double(sorted.count) * q).rounded(.up)) - 1))
+            return sorted[idx]
+        }
+        let t1 = quantile(0.25)
+        let t2 = max(t1 + 1, quantile(0.5))
+        let t3 = max(t2 + 1, quantile(0.75))
+        let t4 = max(t3 + 1, sorted.last ?? t3)
+        return [t1, t2, t3, t4]
+    }
+
+    /// Mức 1…5 theo 4 ngưỡng tăng dần — 0 nếu `count` = 0 (ngày không ôn, UI tô
+    /// xám riêng, không gọi hàm này).
+    public static func level(count: Int, thresholds: [Int]) -> Int {
+        guard count > 0 else { return 0 }
+        for (index, threshold) in thresholds.enumerated() where count <= threshold {
+            return index + 1
+        }
+        return thresholds.count + 1
     }
 }
 

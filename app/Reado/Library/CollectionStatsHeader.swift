@@ -193,19 +193,14 @@ struct CollectionStatsHeader: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
         } else if overview.crammableCount > 0 {
-            VStack(spacing: Spacing.xs) {
-                Button(action: onCram) {
-                    Label(
-                        "Ôn thêm \(min(overview.crammableCount, ReviewQueue.cramBatchSize)) thẻ",
-                        systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                Text("Không ảnh hưởng lịch ôn")
-                    .font(Typo.meta)
-                    .foregroundStyle(.secondary)
+            Button(action: onCram) {
+                Label(
+                    "Ôn thêm \(min(overview.crammableCount, ReviewQueue.extraBatchSize)) thẻ",
+                    systemImage: "arrow.clockwise")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         } else {
             Text("Chụp trang để thêm từ — dùng nút chụp nổi.")
                 .font(Typo.meta)

@@ -7,7 +7,7 @@ import ReadoKit
 // `model.capture.analysisResult`… và chỉ vẽ lại khi ĐÚNG nhóm đó đổi, thay vì mọi
 // thay đổi trên một đối tượng ~40 thuộc tính.
 
-/// Hàng đợi ôn (FR-11/12/18, Cram ADR-043, "Học thêm" motivation-r1).
+/// Hàng đợi ôn (FR-11/12/18, Ôn thêm extra-review-r1 — đảo ADR-011/043).
 @MainActor
 @Observable
 final class ReviewState {
@@ -24,15 +24,9 @@ final class ReviewState {
     // vi (phải nhìn thấy — research/vocabulary.md 4.2).
     var scope: Set<String>? = nil
     var dueOutsideScope = 0
-    /// Số thẻ Cram được trong phạm vi hiện tại (đã học, chưa đến hạn) — quyết
-    /// định nút "Ôn thêm" ở màn hết thẻ (ADR-043).
-    var crammableCount = 0
-
-    /// Ý 3 motivation-r1 ("Học thêm 10 từ", Q-A/Q-B đã chốt): phần nới hạn mức
-    /// new RIÊNG ngày học hiện tại — chỉ bộ nhớ app, KHÔNG lưu DB/migration.
-    /// Gắn theo `dayStart` (giờ chuyển ngày FR-11, không nửa đêm hệ thống) —
-    /// qua ngày mới tự mất qua `ReviewQueue.effectiveExtra`.
-    var extraNewQuota: (dayStart: String, count: Int)?
+    /// Số thẻ Ôn thêm lấy được trong phạm vi hiện tại (mới + ôn sớm, không bị
+    /// `extraBatchSize` của MỘT lượt) — quyết định CTA "Ôn thêm N thẻ".
+    var extraAvailableCount = 0
 }
 
 /// Chụp (FR-01) + phân tích (FR-02/04) một trang — vòng đời từ ảnh tới kết quả.
@@ -82,6 +76,11 @@ final class ShellSignals {
     /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
     /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
     var suppressFloatShutter = false
+
+    /// extra-review-r1 B2: Home "Ôn thêm N thẻ" đổi tab Ôn + set cờ này để tab
+    /// mở thẳng `.extra` thay vì mặc định `.srs` — `ReviewQueueView` (tab, không
+    /// `showsCloseButton`) đọc rồi dọn ở `onAppear`, giống `pendingHubNavigationID`.
+    var pendingReviewMode: ReviewMode?
 }
 
 /// Dữ liệu của collection đang xem ở Hub (một Hub mở một lúc nên một bộ biến là đủ).
