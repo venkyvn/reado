@@ -33,6 +33,10 @@ enum NotificationScheduler {
         let request = UNNotificationRequest(
             identifier: requestIdentifier, content: content, trigger: trigger)
         center.removeAllPendingNotificationRequests()
-        try? await center.add(request)
+        do {
+            try await center.add(request)
+        } catch {
+            DebugTrace.event("reminder", "scheduleFailed", ["error": String(describing: error)])
+        }
     }
 }

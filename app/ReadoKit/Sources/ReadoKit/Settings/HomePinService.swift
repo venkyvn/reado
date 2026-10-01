@@ -55,10 +55,10 @@ public enum HomePinService {
                 .filter { !$0.isEmpty }
         }
         // Xoá collection → id không còn tồn tại; bỏ khỏi danh sách (giữ thứ tự).
-        return raw.filter { id in
-            (try? db.scalarInt64(
+        return try raw.filter { id in
+            try db.scalarInt64(
                 "SELECT 1 FROM collections WHERE id = ? LIMIT 1;",
-                [.text(id)])) != nil
+                [.text(id)]) != nil
         }
     }
 

@@ -16,7 +16,7 @@ import UIKit
 /// sheet lồng sheet). Crop hiển thị NGAY trong ZStack (không `.sheet`) nên
 /// full màn, không còn đè tab bar/toolbar.
 struct CaptureView: View {
-    @Environment(AppModel.self) private var model
+    @Environment(AppModel.self) var model
     @Environment(\.dismiss) private var dismiss
 
     private enum Step {
@@ -34,9 +34,9 @@ struct CaptureView: View {
     // nil = kho tạm; mở từ Hub → prefill sẵn tên bộ. `initialDest` để "quên" đích
     // khi hủy phiên chụp mà không chụp gì.
     @State private var initialDest: String?
-    @State private var showDestPicker = false
+    @State var showDestPicker = false
     @State private var showNewCollection = false
-    @State private var newCollectionName = ""
+    @State var newCollectionName = ""
 
     var body: some View {
         ZStack {
@@ -227,30 +227,6 @@ struct CaptureView: View {
         .padding(.top, 8)
     }
 
-    private var destChip: some View {
-        Button {
-            showDestPicker = true
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Lưu vào")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.75))
-                Text(destName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(cameraDestIsInbox ? "Không chọn → kho tạm" : "Trang này vào bộ này")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.75))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Đổi bộ lưu, hiện \(destName)")
-    }
-
     /// Thư viện + shutter + flash (port UI lab §4, thay overlay camera cũ).
     private var bottomBar: some View {
         HStack {
@@ -290,107 +266,6 @@ struct CaptureView: View {
         }
         .padding(.horizontal, 36)
         .padding(.bottom, 24)
-    }
-
-    /// Tên đích hiện tại cho chip (nil = kho tạm).
-    private var destName: String {
-        if let id = model.capture.analysisTargetCollectionID,
-           let c = model.collections.first(where: { $0.id == id }) {
-            return c.name
-        }
-        return "Kho tạm"
-    }
-
-    /// Đích hiện tại có phải kho tạm không — chọn dòng gợi ý dưới chip.
-    private var cameraDestIsInbox: Bool {
-        if let id = model.capture.analysisTargetCollectionID,
-           let c = model.collections.first(where: { $0.id == id }) {
-            return c.isDefault
-        }
-        return true
-    }
-
-    /// Chọn đích + haptic (port UI lab §9: `.selection` lúc đổi dest).
-    private func selectDest(_ id: String?) {
-        UISelectionFeedbackGenerator().selectionChanged()
-        model.capture.analysisTargetCollectionID = id
-    }
-
-    /// Sheet chọn collection lưu — radio, kho tạm ghi "mặc định" (port UI lab §4.3).
-    private func destPickerSheet(close: @escaping () -> Void) -> some View {
-        NavigationStack {
-            List {
-                Section {
-                    Button {
-                        selectDest(nil)
-                        close()
-                    } label: {
-                        HStack {
-                            Label("Kho tạm", systemImage: "tray")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if model.capture.analysisTargetCollectionID == nil {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                }
-
-                Section("Bộ") {
-                    ForEach(model.collections.filter { !$0.isDefault }) { c in
-                        Button {
-                            selectDest(c.id)
-                            close()
-                        } label: {
-                            HStack {
-                                Text(c.name)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if model.capture.analysisTargetCollectionID == c.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Lưu vào đâu")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Xong") { close() }
-                }
-            }
-        }
-    }
-
-    /// Sheet tạo collection mới — nhập tên, tạo xong chọn luôn làm đích (port §4.2).
-    private func newCollectionSheet(close: @escaping () -> Void) -> some View {
-        NavigationStack {
-            Form {
-                TextField("Tên bộ", text: $newCollectionName)
-                Button {
-                    let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if let id = model.createCollectionOrAlert(name: name) {
-                        selectDest(id)
-                    }
-                    close()
-                } label: {
-                    Text("Tạo và chọn làm đích")
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .navigationTitle("Tạo bộ")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Huỷ") { close() }
-                }
-            }
-        }
     }
 
     private func captureTapped() {
