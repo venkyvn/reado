@@ -124,7 +124,7 @@ struct HomeTabView: View {
                 // FR-14: hết hạn mức hôm nay, không còn gì Ôn thêm được — không
                 // CTA giả. new-order-r1: bỏ con số tồn (vision Retention "không
                 // cần học hết"); FR-14 cho phép không hiện tồn.
-                Label("Xong phần hôm nay", systemImage: "checkmark.circle")
+                Label("Xong phần hôm nay", systemImage: "checkmark.circle.fill")
                     .font(Typo.rowSubtitle)
                     .foregroundStyle(.secondary)
             }

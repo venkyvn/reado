@@ -266,7 +266,7 @@ struct StreakCalendarView: View {
         } label: {
             Label(
                 hasDue ? "Ôn ngay" : "Chụp trang",
-                systemImage: hasDue ? "brain.head.profile" : "camera.fill")
+                systemImage: hasDue ? "brain.head.profile.fill" : "camera.fill")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.row)
