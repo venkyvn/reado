@@ -15,24 +15,11 @@ struct AnalysisView: View {
     @State private var expandedIDs: Set<String> = []
     // port UI lab §5.3: bản dịch đoạn ẩn tới khi tap (EN luôn hiện).
     @State private var revealedSegments: Set<Int> = []
-    @State private var saveAlert: SaveAlert?
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
     // FR-22: từ đã có trong kho gạch chân ở đoạn gốc; chạm mở popover.
     @State private var encounterMatcher = EncounterMatcher(lexicon: [])
     @State private var encounterSelection: EncounterSelection?
-
-    private enum SaveAlert: Identifiable {
-        case success(Int)
-        case failure(String)
-
-        var id: String {
-            switch self {
-            case let .success(count): "ok-\(count)"
-            case .failure: "fail"
-            }
-        }
-    }
 
     private var selectedCount: Int {
         drafts.filter(\.isSelected).count
@@ -131,11 +118,11 @@ struct AnalysisView: View {
                     .accessibilityLabel("Đóng phiên duyệt")
                 }
             }
-            if model.capture.analysisResult != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lưu (\(selectedCount))") { save() }
-                        .disabled(selectedCount == 0)
-                }
+        }
+        // ux-redesign-r1 T5a: CTA chính là nút prominent ghim đáy (không còn chữ nhỏ trên toolbar).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showsSaveBar {
+                saveBar
             }
         }
         // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
@@ -181,20 +168,6 @@ struct AnalysisView: View {
                 surface: String(firstSegment.sourceEN[match.range]), entries: match.entries)
         }
         #endif
-        .alert(item: $saveAlert) { alert in
-            switch alert {
-            case let .success(count):
-                return Alert(
-                    title: Text("Đã lưu"),
-                    message: Text("\(count) từ đã vào \(destinationLabel) và đến hạn ôn hôm nay."),
-                    dismissButton: .default(Text("OK")) { dismiss() })
-            case let .failure(message):
-                return Alert(
-                    title: Text("Không lưu được"),
-                    message: Text(message),
-                    dismissButton: .default(Text("OK")))
-            }
-        }
     }
 
     // MARK: - Lỗi (FR-04)
@@ -286,51 +259,95 @@ struct AnalysisView: View {
         }
     }
 
+    /// Nút Lưu chỉ hiện khi đang xem kết quả (không phải lỗi/đang phân tích/chưa có trang).
+    private var showsSaveBar: Bool {
+        model.capture.analysisFailure == nil
+            && !model.capture.isAnalyzing
+            && model.capture.analysisResult != nil
+    }
+
+    private var saveBar: some View {
+        Button {
+            save()
+        } label: {
+            Text("Lưu \(selectedCount) từ vào \(destinationName)")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(selectedCount == 0)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
+    }
+
     private func save() {
         do {
             // FR-05/06: segments + summary đi theo phiên đọc khi lưu vào collection
             // có tên; kho tạm không lưu phiên (kho chứa từ chưa phân loại).
-            // port UI lab: đích đã chọn TỪ LÚC CHỤP (`analysisTargetCollectionID`),
-            // duyệt từ chỉ đọc — không chọn lại ở đây.
+            // ADR-053: đích đổi được ngay ở đầu màn này (`CollectionDestinationPicker`),
+            // mặc định = bộ chọn lúc chụp (`analysisTargetCollectionID`).
             let result = model.capture.analysisResult
             let saved = try model.saveSelection(
                 drafts,
                 collectionID: model.capture.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
                 summaryVI: result?.summaryVI ?? "")
+            guard saved > 0 else {
+                // Không ghi được từ nào (kho chưa mở) — đừng đóng phiên duyệt như thể đã lưu.
+                model.alertMessage = "Không lưu được từ nào. Hãy thử lại."
+                Haptics.error()
+                return
+            }
+            // Thành công: không alert chặn — `saveSelection` đã đặt `shell.saveConfirmation`,
+            // RootView đọc ở onDismiss của sheet này rồi hiện banner "Đã lưu N từ vào X · Xem".
             hasConfirmed = true
-            saveAlert = .success(saved)
             Haptics.success()
+            dismiss()
         } catch {
-            saveAlert = .failure(error.localizedDescription)
+            model.report(error, while: "lưu từ vựng")
             Haptics.error()
         }
     }
 
-    /// Nhãn đích lưu cho thông báo thành công (kho tạm hoặc tên collection).
-    private var destinationLabel: String {
+    /// Tên đích lưu cho nút Lưu và dòng "Lưu vào" (kho tạm hoặc tên collection).
+    private var destinationName: String {
         if let id = model.capture.analysisTargetCollectionID,
            let collection = model.collections.first(where: { $0.id == id }) {
-            return "«\(collection.name)»"
+            return collection.name
         }
-        return "kho tạm"
+        return "Kho tạm"
     }
 
     // MARK: - Kết quả
 
     private func resultList(_ result: PageAnalysis) -> some View {
         List {
-            // port UI lab §5.2: đích lưu chỉ ĐỌC ở màn duyệt — chọn từ lúc chụp.
+            // ADR-053: đổi đích ngay ở đầu màn duyệt (trước: chỉ đọc, "Đổi bộ ở màn chụp" là ngõ cụt).
             Section {
-                Label {
-                    Text("Lưu vào \(destinationLabel)")
-                } icon: {
-                    Image(systemName: "tray.and.arrow.down")
-                        .foregroundStyle(Color.accentColor)
+                CollectionDestinationPicker {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "tray.and.arrow.down")
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
+                        Text("Lưu vào")
+                            .foregroundStyle(.secondary)
+                        Text(destinationName)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: Spacing.sm)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                .font(.subheadline)
-            } footer: {
-                Text("Đổi bộ ở màn chụp.")
+                .accessibilityLabel("Đổi nơi lưu, hiện \(destinationName)")
             }
 
             // FR-05 (ADR-007): song ngữ — EN luôn hiện, VI mở khi tap (port §5.3).

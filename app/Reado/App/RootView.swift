@@ -52,9 +52,10 @@ struct RootView: View {
     @State private var showAnalysis = false
     // ux-redesign-r1 T1a: phiên ôn toàn màn — nil = đóng.
     @State private var reviewRequest: ReviewRequest?
-    // ux-redesign-r1 T2: banner không chặn ở đáy (ADR-053). Tạm chỉ có `-ReadoScreen save-banner`
-    // đặt nó; luồng Lưu thật (T5a) gắn vào sau.
+    // ux-redesign-r1 T2/T5a: banner không chặn ở đáy (ADR-053) — hiện sau Lưu; màn debug
+    // `save-banner` cũng đặt nó. `bannerHubID` = Hub mà nút "Xem" mở (nil = banner không có đích).
     @State private var banner: ShellBannerItem?
+    @State private var bannerHubID: String?
     // T3a shell-chrome-r1: ẩn thanh tab (kèm nút chụp) khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
@@ -97,7 +98,7 @@ struct RootView: View {
             // indicator). Cộng thêm chiều cao thanh lên trên safeAreaPadding là cộng trùng — chỉ cộng
             // khe hở nhỏ.
             if let banner {
-                ShellBanner(item: banner, onAction: dismissBanner, onDismiss: dismissBanner)
+                ShellBanner(item: banner, onAction: openBannerHub, onDismiss: dismissBanner)
                     .padding(.horizontal, Spacing.md)
                     .padding(.bottom, Spacing.sm)
                     .safeAreaPadding(.bottom)
@@ -140,13 +141,15 @@ struct RootView: View {
         }
         .sheet(isPresented: $showAnalysis, onDismiss: {
             chrome.reveal()
-            // port UI lab §5.7: Lưu xong → về Hub bộ vừa lưu (kể cả kho tạm).
-            // Đang đứng trên đúng hub đó → chỉ refresh (dataRevision bump), không push trùng.
-            if let hubID = model.shell.pendingHubNavigationID {
-                model.shell.pendingHubNavigationID = nil
-                if model.shell.shutterTargetCollectionID != hubID {
-                    selectedTab = .today
-                    todayPath.append(.hub(hubID))
+            // ADR-053: Lưu xong → ở NGUYÊN chỗ đang đứng, chỉ hiện banner "Đã lưu N từ vào X · Xem"
+            // (không đổi tab, không alert chặn). "Xem" mở Hub bộ vừa lưu, xem `openBannerHub`.
+            if let saved = model.shell.saveConfirmation {
+                model.shell.saveConfirmation = nil
+                Motion.run(reduceMotion: reduceMotion) {
+                    bannerHubID = saved.collectionID
+                    banner = ShellBannerItem(
+                        message: "Đã lưu \(saved.count) từ vào \(saved.collectionName)",
+                        actionTitle: "Xem")
                 }
             }
             // FR-04: ảnh mờ / không phải tiếng Anh → mở lại CaptureView.
@@ -175,6 +178,27 @@ struct RootView: View {
 
     private func dismissBanner() {
         banner = nil
+        bannerHubID = nil
+    }
+
+    /// Nút "Xem" của banner sau Lưu: mở Hub bộ vừa lưu NGAY trên stack của tab đang đứng (không đổi tab).
+    private func openBannerHub() {
+        let hubID = bannerHubID
+        dismissBanner()
+        guard let hubID else { return }
+        switch selectedTab {
+        case .today: todayPath = path(showing: hubID, in: todayPath)
+        case .library: libraryPath = path(showing: hubID, in: libraryPath)
+        }
+    }
+
+    /// Đang ở đúng Hub đó → giữ nguyên (đã tự refresh qua `dataRevision`). Đang ở Hub của bộ khác
+    /// (path đúng 1 phần tử) → thay bằng Hub mới, không chồng hub lên hub (nút chụp chỉ hiện khi
+    /// path rỗng hoặc đúng 1 Hub). Còn lại thì đẩy thêm.
+    private func path(showing hubID: String, in path: [ShellRoute]) -> [ShellRoute] {
+        if let last = path.last, last == .hub(hubID) { return path }
+        if path.count == 1, case .hub = path[0] { return [.hub(hubID)] }
+        return path + [.hub(hubID)]
     }
 
     /// Bấm lại tab đang đứng → pop stack về root (Hôm nay / Thư viện).

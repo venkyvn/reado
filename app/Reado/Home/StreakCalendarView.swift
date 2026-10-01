@@ -13,7 +13,7 @@ struct StreakCalendarView: View {
     @Environment(\.startReview) private var startReview
 
     /// Mở Capture→Analysis qua RootView (xem RootView.swift) — KHÔNG tự giữ
-    /// state/sheet riêng ở đây nữa: bản riêng từng thiếu `pendingHubNavigationID`
+    /// state/sheet riêng ở đây nữa: bản riêng từng thiếu bước điều hướng sau Lưu
     /// và không thật sự đưa đi Cài đặt khi `pendingSettingsNavigation` bật
     /// (hai bản dismiss lệch nhau, bug đã xác nhận 2026-10-01).
     let onCapture: () -> Void
