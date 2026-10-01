@@ -5,7 +5,7 @@
 > Đối chiếu code lần cuối: `fe571bf`.
 
 Mỗi luật kiểm được bằng diff hoặc ảnh chụp. Dòng `→` là lý do.
-Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `FloatShutter` (glass tô accent, `.interactive()`),
+Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `ShellCaptureButton` (nút chụp trong thanh tab: glass tô accent, `.interactive()`),
 lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo góc/khe/frame số riêng, không `.continuous`, có comment tại chỗ).
 
 ## Nguồn token

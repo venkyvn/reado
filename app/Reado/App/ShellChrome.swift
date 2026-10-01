@@ -1,7 +1,7 @@
 import ReadoKit
 import SwiftUI
 
-/// T3a shell-chrome-r1 — thanh tab + `FloatShutter` ẩn khi cuộn xuống, hiện lại
+/// T3a shell-chrome-r1 — thanh tab (kèm nút chụp) ẩn khi cuộn xuống, hiện lại
 /// khi cuộn lên nhẹ (kiểu Facebook). Logic cuộn thuần (`ScrollChromeTracker`)
 /// sống ở ReadoKit (testable) — file này chỉ còn state SwiftUI + modifier.
 

@@ -1,43 +1,38 @@
 import ReadoKit
 import SwiftUI
 
-/// Tab gốc — port UI lab (2026-09-23): ba tab Home / Ôn / Kho thay cho
-/// NavigationStack + modal sheet cũ. Capture/Analysis vẫn là sheet phủ toàn
-/// tab; Cài đặt/Dữ liệu là push trên Home. Chụp nhanh bằng `FloatShutter` nổi
-/// (không tab Chụp). Thanh tab = `ShellTabBar` capsule, ẩn native tab bar.
-/// ux-redesign-r1 T1a: phiên ôn là cover toàn màn (`ReviewRequest`), mở từ mọi nơi
-/// qua `\.startReview` — tab Ôn chỉ còn màn "Bắt đầu ôn" tạm (T1b bỏ).
+/// Tab gốc — ux-redesign-r1 T1b (ADR-052 nháp): hai tab Hôm nay / Thư viện, nút chụp nằm TRONG
+/// hàng của thanh tab (không tab Chụp, không overlay nổi). Capture/Analysis là cover/sheet phủ
+/// toàn tab; Cài đặt là push trên Hôm nay, Dữ liệu là push trên Thư viện. Phiên ôn là cover toàn
+/// màn (`ReviewRequest`, T1a) mở từ mọi nơi qua `\.startReview` — không còn tab Ôn.
+/// Thanh tab = `ShellTabBar`, ẩn native tab bar.
 enum AppTab: Hashable, CaseIterable {
-    case home
-    case review
-    case kho
+    case today
+    case library
 
     var title: String {
         switch self {
-        case .home: "Home"
-        case .review: "Ôn"
-        case .kho: "Kho"
+        case .today: "Hôm nay"
+        case .library: "Thư viện"
         }
     }
 
     var icon: String {
         switch self {
-        case .home: "house"
-        case .review: "brain.head.profile"
-        case .kho: "archivebox"
+        case .today: "sun.max"
+        case .library: "books.vertical"
         }
     }
 
     var selectedIcon: String {
         switch self {
-        case .home: "house.fill"
-        case .review: "brain.head.profile.fill"
-        case .kho: "archivebox.fill"
+        case .today: "sun.max.fill"
+        case .library: "books.vertical.fill"
         }
     }
 }
 
-/// Route đẩy vào NavigationStack của Home/Kho — để FloatShutter biết đang đứng
+/// Route đẩy vào NavigationStack của Hôm nay/Thư viện — để nút chụp biết đang đứng
 /// ở "bề mặt chụp" (root/Hub) hay bên trong (lịch streak, phiên đọc qua hub).
 enum ShellRoute: Hashable {
     case hub(String)
@@ -49,10 +44,10 @@ enum ShellRoute: Hashable {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var selectedTab: AppTab = .home
-    // port UI lab §5.7: sau Lưu → push Hub bộ vừa lưu lên Home stack.
-    @State private var homePath: [ShellRoute] = []
-    @State private var khoPath: [ShellRoute] = []
+    @State private var selectedTab: AppTab = .today
+    // port UI lab §5.7: sau Lưu → push Hub bộ vừa lưu lên stack Hôm nay.
+    @State private var todayPath: [ShellRoute] = []
+    @State private var libraryPath: [ShellRoute] = []
     @State private var showCapture = false
     @State private var showAnalysis = false
     // ux-redesign-r1 T1a: phiên ôn toàn màn — nil = đóng.
@@ -60,15 +55,14 @@ struct RootView: View {
     // ux-redesign-r1 T2: banner không chặn ở đáy (ADR-053). Tạm chỉ có `-ReadoScreen save-banner`
     // đặt nó; luồng Lưu thật (T5a) gắn vào sau.
     @State private var banner: ShellBannerItem?
-    // T3a shell-chrome-r1: ẩn thanh tab + shutter khi cuộn xuống.
+    // T3a shell-chrome-r1: ẩn thanh tab (kèm nút chụp) khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack(path: $homePath) {
+            NavigationStack(path: $todayPath) {
                 HomeTabView(
-                    onSettings: { homePath.append(.settings) },
-                    onData: { homePath.append(.data) },
+                    onSettings: { todayPath.append(.settings) },
                     onCapture: openShutterCapture)
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
@@ -76,20 +70,10 @@ struct RootView: View {
             }
             .toolbar(.hidden, for: .tabBar)
             .toolbarBackground(.hidden, for: .tabBar)
-            .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
-            .tag(AppTab.home)
+            .tabItem { Label(AppTab.today.title, systemImage: AppTab.today.icon) }
+            .tag(AppTab.today)
 
-            NavigationStack {
-                // Nội dung canh giữa nên không cần `safeAreaPadding(reservedHeight)` như bản
-                // hàng đợi cũ — hàng nút cuối không còn nằm sát đáy.
-                ReviewStartView()
-            }
-            .toolbar(.hidden, for: .tabBar)
-            .toolbarBackground(.hidden, for: .tabBar)
-            .tabItem { Label(AppTab.review.title, systemImage: AppTab.review.icon) }
-            .tag(AppTab.review)
-
-            NavigationStack(path: $khoPath) {
+            NavigationStack(path: $libraryPath) {
                 KhoTabView()
                     .navigationDestination(for: ShellRoute.self) {
                         shellDestination($0)
@@ -97,51 +81,37 @@ struct RootView: View {
             }
             .toolbar(.hidden, for: .tabBar)
             .toolbarBackground(.hidden, for: .tabBar)
-            .tabItem { Label(AppTab.kho.title, systemImage: AppTab.kho.icon) }
-            .tag(AppTab.kho)
+            .tabItem { Label(AppTab.library.title, systemImage: AppTab.library.icon) }
+            .tag(AppTab.library)
         }
         .environment(chrome)
         .environment(\.startReview, { reviewRequest = $0 })
         .onChange(of: selectedTab) { chrome.reveal() }
-        .onChange(of: homePath) { chrome.reveal() }
-        .onChange(of: khoPath) { chrome.reveal() }
+        .onChange(of: todayPath) { chrome.reveal() }
+        .onChange(of: libraryPath) { chrome.reveal() }
         .overlay(alignment: .bottom) {
-            // Shutter nổi trên Home / Kho root và Hub; ẩn trên Ôn, lịch streak và
-            // phiên đọc (port UI lab §10). Overlay (không inset) để không đẩy list.
-            // ĐÃ ĐO BẰNG SCREENSHOT (không phải suy luận): dù overlay đứng TRƯỚC
-            // `safeAreaInset` bên dưới, `.safeAreaPadding(.bottom)` vẫn đọc safe
-            // area MÔI TRƯỜNG — safe area này do `safeAreaInset` gán cho CẢ SUBTREE
-            // (kể cả overlay attach trước nó trong chain), nên đã gồm sẵn toàn bộ
-            // chiều cao ShellTabBar (không chỉ home indicator như comment cũ tưởng).
-            // Cộng thêm `shutterLift` (= height+outerBottomPadding+shutterGap) lên
-            // trên safeAreaPadding là cộng trùng — đo được nút cao hơn capsule tới
-            // ~100pt. Giữ đúng safeAreaPadding, chỉ cộng thêm khe hở nhỏ.
-            if showShutter {
-                FloatShutter(action: openShutterCapture)
-                    .padding(.bottom, ShellTabBar.shutterGap)
-                    .safeAreaPadding(.bottom)
-                    // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt lên như nội dung.
-                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
-            }
-        }
-        .overlay(alignment: .bottom) {
-            // Banner nằm trên shutter nổi (cao `FloatShutter.size` + khe) để không đè lên nó; cùng
-            // cách đọc safe area môi trường như overlay shutter ở trên (đã gồm ShellTabBar).
+            // Banner nằm ngay trên thanh tab. ĐÃ ĐO BẰNG SCREENSHOT (không phải suy luận): dù overlay
+            // đứng TRƯỚC `safeAreaInset` bên dưới, `.safeAreaPadding(.bottom)` vẫn đọc safe area
+            // MÔI TRƯỜNG — safe area này do `safeAreaInset` gán cho CẢ SUBTREE (kể cả overlay attach
+            // trước nó trong chain), nên đã gồm sẵn toàn bộ chiều cao ShellTabBar (không chỉ home
+            // indicator). Cộng thêm chiều cao thanh lên trên safeAreaPadding là cộng trùng — chỉ cộng
+            // khe hở nhỏ.
             if let banner {
                 ShellBanner(item: banner, onAction: dismissBanner, onDismiss: dismissBanner)
                     .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, ShellTabBar.shutterGap + FloatShutter.size + Spacing.sm)
+                    .padding(.bottom, Spacing.sm)
                     .safeAreaPadding(.bottom)
                     .revealTransition()
             }
         }
-        .animation(reduceMotion ? nil : Motion.reveal, value: showShutter)
         .animation(reduceMotion ? nil : Motion.reveal, value: chrome.isHidden)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ShellTabBar(
                 selection: $selectedTab,
                 onReselect: popSelectedTabToRoot,
-                isHidden: chrome.isHidden)
+                isHidden: chrome.isHidden,
+                showsCapture: showsCaptureButton,
+                onCapture: openShutterCapture)
         }
         // ADR-036: fullScreenCover (không sheet) — CaptureView tự vẽ full-bleed
         // đen; sheet để lộ viền bo góc + không che hết status bar, không hợp
@@ -174,8 +144,8 @@ struct RootView: View {
             if let hubID = model.shell.pendingHubNavigationID {
                 model.shell.pendingHubNavigationID = nil
                 if model.shell.shutterTargetCollectionID != hubID {
-                    selectedTab = .home
-                    homePath.append(.hub(hubID))
+                    selectedTab = .today
+                    todayPath.append(.hub(hubID))
                 }
             }
             // FR-04: ảnh mờ / không phải tiếng Anh → mở lại CaptureView.
@@ -184,11 +154,11 @@ struct RootView: View {
                 showCapture = true
             }
             // FR-21 GWT cuối: lỗi agent → nút "Mở Cài đặt" trong AnalysisView
-            // bật cờ này; đưa thẳng về Home → push Settings.
+            // bật cờ này; đưa thẳng về Hôm nay → push Settings.
             if model.shell.pendingSettingsNavigation {
                 model.shell.pendingSettingsNavigation = false
-                selectedTab = .home
-                homePath = [.settings]
+                selectedTab = .today
+                todayPath = [.settings]
             }
         }) {
             NavigationStack { AnalysisView() }
@@ -206,16 +176,15 @@ struct RootView: View {
         banner = nil
     }
 
-    /// Bấm lại tab đang đứng → pop stack về root (Home / Kho). Tab Ôn không có path.
+    /// Bấm lại tab đang đứng → pop stack về root (Hôm nay / Thư viện).
     private func popSelectedTabToRoot(_ tab: AppTab) {
         switch tab {
-        case .home: homePath = []
-        case .kho: khoPath = []
-        case .review: break
+        case .today: todayPath = []
+        case .library: libraryPath = []
         }
     }
 
-    /// Mở chụp từ shutter nổi — đích = bộ hub đang mở (nếu có), không thì kho tạm.
+    /// Mở chụp từ nút chụp trong thanh tab — đích = bộ hub đang mở (nếu có), không thì kho tạm.
     private func openShutterCapture() {
         // port UI lab §9: haptic lúc chụp.
         Haptics.action()
@@ -223,20 +192,18 @@ struct RootView: View {
         showCapture = true
     }
 
-    /// Shutter nổi chỉ hiện trên "bề mặt chụp": root Home, root Kho và Hub. Ẩn
-    /// trên tab Ôn, lịch streak và phiên đọc (đang đọc, đang lật thẻ).
-    private var showShutter: Bool {
-        if chrome.isHidden { return false }
+    /// Nút chụp chỉ hiện trên "bề mặt chụp": root hai tab và Hub. Ẩn trên lịch streak,
+    /// cài đặt, dữ liệu và phiên đọc (đang đọc).
+    private var showsCaptureButton: Bool {
         if model.shell.suppressFloatShutter { return false }
         switch selectedTab {
-        case .review: return false
-        case .home: return isCaptureSurface(homePath)
-        case .kho: return isCaptureSurface(khoPath)
+        case .today: return isCaptureSurface(todayPath)
+        case .library: return isCaptureSurface(libraryPath)
         }
     }
 
     /// Root (path rỗng) hoặc đang mở 1 Hub = còn trên bề mặt chụp. Bất kỳ route
-    /// khác (streak / settings / data) = vào sâu, ẩn shutter.
+    /// khác (streak / settings / data) = vào sâu, ẩn nút chụp.
     private func isCaptureSurface(_ path: [ShellRoute]) -> Bool {
         if path.isEmpty { return true }
         if path.count == 1, case .hub = path[0] { return true }
@@ -258,9 +225,9 @@ struct RootView: View {
         }
         switch screen {
         case .home:
-            selectedTab = .home
-        case .kho:
-            selectedTab = .kho
+            selectedTab = .today
+        case .library:
+            selectedTab = .library
         case .review:
             reviewRequest = ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .srs)
         case .reviewExtra:
@@ -271,17 +238,17 @@ struct RootView: View {
                 model.alertMessage = "Launch arg lạ: không thấy bộ '\(key)'"
                 return
             }
-            selectedTab = .kho
-            khoPath = [.hub(match.id)]
+            selectedTab = .library
+            libraryPath = [.hub(match.id)]
         case .settings:
-            selectedTab = .home
-            homePath = [.settings]
+            selectedTab = .today
+            todayPath = [.settings]
         case .streak:
-            selectedTab = .home
-            homePath = [.streak]
+            selectedTab = .today
+            todayPath = [.streak]
         case .data:
-            selectedTab = .home
-            homePath = [.data]
+            selectedTab = .library
+            libraryPath = [.data]
         case .capture:
             openShutterCapture()
         case .analysisFixture:
@@ -290,7 +257,7 @@ struct RootView: View {
             model.shell.debugOpenFirstEncounter = true
             openDebugAnalysisFixture()
         case .saveBanner:
-            selectedTab = .home
+            selectedTab = .today
             Motion.run(reduceMotion: reduceMotion) {
                 banner = ShellBannerItem(
                     message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem", autoHides: false)
@@ -333,7 +300,7 @@ struct RootView: View {
     }
     #endif
 
-    /// Đích chung cho cả hai stack Home & Kho.
+    /// Đích chung cho cả hai stack Hôm nay & Thư viện.
     @ViewBuilder
     private func shellDestination(_ route: ShellRoute) -> some View {
         switch route {
@@ -342,7 +309,7 @@ struct RootView: View {
         case .streak:
             // J1: CTA "Chụp trang" ở màn này đích ngầm kho tạm — không set
             // `shutterTargetCollectionID` như `openShutterCapture` (đó là cho
-            // FloatShutter trên Hub, muốn đích = hub đang mở).
+            // nút chụp trên Hub, muốn đích = hub đang mở).
             StreakCalendarView(onCapture: {
                 Haptics.action()
                 model.capture.analysisTargetCollectionID = nil

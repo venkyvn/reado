@@ -33,7 +33,8 @@ public struct DebugLaunch: Equatable, Sendable {
 
     public enum Screen: Equatable, Sendable {
         case home
-        case kho
+        /// Tab Thư viện (ux-redesign-r1 T1b). Chuỗi cũ `kho` vẫn parse về đây để không phá script cũ.
+        case library
         case review
         case reviewExtra
         case collection(String)
@@ -126,7 +127,7 @@ public struct DebugLaunch: Equatable, Sendable {
         }
         switch value {
         case "home": return .home
-        case "kho": return .kho
+        case "kho", "library": return .library
         case "review": return .review
         case "review-extra": return .reviewExtra
         case "settings": return .settings

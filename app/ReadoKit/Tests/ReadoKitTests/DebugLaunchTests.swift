@@ -17,7 +17,8 @@ final class DebugLaunchTests: XCTestCase {
     func testEachScreenParses() {
         let cases: [(String, DebugLaunch.Screen)] = [
             ("home", .home),
-            ("kho", .kho),
+            ("kho", .library),
+            ("library", .library),
             ("review", .review),
             ("review-extra", .reviewExtra),
             ("settings", .settings),
@@ -75,7 +76,7 @@ final class DebugLaunchTests: XCTestCase {
 
     func testRepeatedKeyLastValueWins() {
         let launch = DebugLaunch.parse(["-ReadoScreen", "home", "-ReadoScreen", "kho"])
-        XCTAssertEqual(launch.screen, .kho)
+        XCTAssertEqual(launch.screen, .library)
     }
 
     func testMissingValueIsProblemNotCrash() {

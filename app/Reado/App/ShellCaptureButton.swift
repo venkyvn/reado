@@ -1,11 +1,12 @@
 import ReadoKit
 import SwiftUI
 
-// Tách từ RootView.swift (repo-hygiene-r1 B3).
+// Tách từ RootView.swift (repo-hygiene-r1 B3). ux-redesign-r1 T1b: từ overlay nổi
+// (`FloatShutter`) thành nút nằm TRONG hàng của thanh tab.
 
-/// Nút chụp nổi — chỉ nút này dùng hình shutter tròn (máy ảnh thật = hệ thống).
-struct FloatShutter: View {
-    static let size: CGFloat = 64
+/// Nút chụp tròn cạnh capsule tab (kiểu nút Search tách của iOS 26), cao bằng capsule — chỉ nút
+/// này dùng hình shutter tròn (máy ảnh thật = hệ thống).
+struct ShellCaptureButton: View {
     let action: () -> Void
 
     var body: some View {
@@ -16,7 +17,7 @@ struct FloatShutter: View {
                 Image(systemName: "camera.fill")
                     .font(.title2)
                     .foregroundStyle(.white)
-                    .frame(width: Self.size, height: Self.size)
+                    .frame(width: ShellTabBar.height, height: ShellTabBar.height)
             }
             .glassEffect(.regular.tint(Color.accentColor).interactive(), in: Circle())
             .accessibilityLabel("Chụp trang")
@@ -25,7 +26,7 @@ struct FloatShutter: View {
                 Image(systemName: "camera.fill")
                     .font(.title2)
                     .foregroundStyle(.white)
-                    .frame(width: Self.size, height: Self.size)
+                    .frame(width: ShellTabBar.height, height: ShellTabBar.height)
                     .background(Circle().fill(Color.accentColor))
                     .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
             }

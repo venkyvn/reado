@@ -69,11 +69,11 @@ final class ShellSignals {
     /// chụp kế tiếp) + sau khi RootView tiêu thụ.
     var pendingHubNavigationID: String?
 
-    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để FloatShutter
-    /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
+    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để nút chụp trong thanh tab
+    /// prefill đích chụp; rời Hub → nil (chụp từ root Hôm nay/Thư viện = kho tạm).
     var shutterTargetCollectionID: String?
 
-    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
+    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn nút chụp trong thanh tab
     /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
     var suppressFloatShutter = false
 

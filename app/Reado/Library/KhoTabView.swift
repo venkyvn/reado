@@ -54,6 +54,13 @@ struct KhoTabView: View {
         .shellScrollChrome()
         .navigationTitle("Kho")
         .toolbar {
+            // ux-redesign-r1 T1b: cửa Dữ liệu vừa rời Home — tạm đứng ở đây, T4 gom vào menu ⋯.
+            ToolbarItem(placement: .topBarLeading) {
+                NavigationLink(value: ShellRoute.data) {
+                    Label("Dữ liệu", systemImage: "externaldrive")
+                }
+                .accessibilityLabel("Dữ liệu")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     newCollectionName = ""

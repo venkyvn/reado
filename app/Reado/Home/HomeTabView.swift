@@ -12,7 +12,6 @@ struct HomeTabView: View {
     /// không còn đổi sang tab Ôn.
     @Environment(\.startReview) private var startReview
     let onSettings: () -> Void
-    let onData: () -> Void
     let onCapture: () -> Void
 
     var body: some View {
@@ -32,18 +31,12 @@ struct HomeTabView: View {
         }
         .navigationTitle("Reado")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            // ux-redesign-r1 T1b: chỉ còn ⚙ ở góc phải (quy ước iOS) — cửa Dữ liệu chuyển sang Thư viện.
+            ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onSettings) {
                     Label("Cài đặt", systemImage: "gearshape")
                 }
                 .accessibilityLabel("Cài đặt")
-            }
-            // J-R1-D: cửa Dữ liệu giữ icon tray trên Home (không tab thứ 4).
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: onData) {
-                    Label("Dữ liệu", systemImage: "externaldrive")
-                }
-                .accessibilityLabel("Dữ liệu")
             }
         }
     }

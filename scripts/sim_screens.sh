@@ -14,7 +14,7 @@
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
-#                                           # (home, kho, review, review-extra, collection:<id|tên>,
+#                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
 #                                           # settings, streak, data, capture, analysis-fixture, encounter-sheet,
 #                                           # save-banner).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
