@@ -118,14 +118,20 @@ struct ReviewQueueView: View {
                 }
                 .accessibilityLabel("Đóng")
             }
-            // FR-18: chọn phạm vi ôn (tất cả / một / vài collection).
+            // FR-18: chọn phạm vi ôn (tất cả / một / vài collection). ux-redesign-r1 T7: chrome cover
+            // thống nhất — ✕ trái, tiêu đề giữa, phạm vi hiện hẳn nhãn + ⏷ bên phải.
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showScopePicker = true
                 } label: {
-                    Label("Phạm vi", systemImage: "line.3.horizontal.decrease.circle")
+                    HStack(spacing: Spacing.xs) {
+                        Text(scopeTitle)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                    }
                 }
-                .accessibilityLabel("Phạm vi ôn")
+                .accessibilityLabel("Phạm vi ôn: \(scopeTitle)")
             }
         }
         .sheet(isPresented: $showScopePicker) {
@@ -151,6 +157,25 @@ struct ReviewQueueView: View {
             hasLoaded = true
             Task { await loadQueue() }
         }
+    }
+
+    /// Nhãn phạm vi trên thanh trên: "Tất cả bộ" / tên bộ (đúng một bộ) / "N bộ".
+    private var scopeTitle: String {
+        guard let scope, !scope.isEmpty else { return "Tất cả bộ" }
+        if scope.count == 1, let id = scope.first,
+           let name = model.collections.first(where: { $0.id == id })?.name
+        {
+            return name
+        }
+        return "\(scope.count) bộ"
+    }
+
+    /// J3: hết thẻ và kho không còn gì ôn thêm → "Chụp trang". Cover phiên ôn đóng HẲN rồi RootView mới
+    /// mở camera (`pendingCaptureAfterReview`, cùng kiểu `pendingRecapture`) — không present 2 cover
+    /// cùng lúc.
+    private func captureAfterReview() {
+        model.shell.pendingCaptureAfterReview = true
+        dismiss()
     }
 
     // MARK: — Empty / Done
@@ -189,6 +214,11 @@ struct ReviewQueueView: View {
             } actions: {
                 extraButton
                     .buttonStyle(.borderedProminent)
+                // Kho rỗng (không còn gì để ôn thêm) → dẫn sang chụp trang (J3), không để ngõ cụt.
+                if model.review.extraAvailableCount == 0 {
+                    Button("Chụp trang") { captureAfterReview() }
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
     }

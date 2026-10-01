@@ -133,6 +133,11 @@ struct RootView: View {
         .fullScreenCover(item: $reviewRequest, onDismiss: {
             chrome.reveal()
             model.reloadOverview()
+            // Màn ôn rỗng → "Chụp trang" (T7): cover ôn đã đóng hẳn mới mở camera.
+            if model.shell.pendingCaptureAfterReview {
+                model.shell.pendingCaptureAfterReview = false
+                openShutterCapture()
+            }
         }) { request in
             NavigationStack {
                 ReviewQueueView(initialScope: request.scope, initialMode: request.mode)

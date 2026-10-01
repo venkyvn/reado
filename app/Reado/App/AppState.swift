@@ -78,6 +78,10 @@ final class ShellSignals {
     /// `handleCapturedImage` (lần chụp kế tiếp) + sau khi RootView tiêu thụ.
     var saveConfirmation: SaveConfirmation?
 
+    /// ux-redesign-r1 T7: màn ôn rỗng bấm "Chụp trang" → bật cờ này rồi đóng cover phiên ôn; RootView
+    /// đọc ở `onDismiss` của cover đó rồi mới mở camera (không present hai cover cùng lúc).
+    var pendingCaptureAfterReview = false
+
     /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để nút chụp trong thanh tab
     /// prefill đích chụp; rời Hub → nil (chụp từ root Hôm nay/Thư viện = kho tạm).
     var shutterTargetCollectionID: String?
