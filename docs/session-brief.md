@@ -32,6 +32,7 @@
 4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn, happy case đã xong.
 5. D-3 (`docs/plans/fsrs-queue-fix-r1.md`, chặn T3): fen muốn Cram cũng cập nhật lịch hẹn mới như ôn thường — đảo ADR-011/ADR-043 + `review.md` §8.1. Nếu đảo cần plan riêng (`cram-reschedule-r1`) + ADR mới, không gộp vào plan này.
 6. repo-hygiene-r1: repo `venkyvn/reado` public hay private? (ảnh `ref/sample` còn trong history cũ → public thì cần `git filter-repo`); key Gemini từng nằm trong `.env.example` (chưa commit) — rotate nếu dán ở nơi khác; `docs/sample.md` (untracked, không rõ chủ) và `.keep.json` (`{}`) — giữ hay xoá.
+7. Xác minh còn treo sau session 2026-10-01 (merge vào main khi chưa xong các mục này — fen chủ động chọn): (a) chạy `scripts/test.sh` full cho `efed561`/`21e4400` (`DailyProgress.reviewedToday` lan lỗi, `CollectionStatsHeader` nhận `now`) — lane `kit` đã 49/49, full cuối ghi được là 306/308 ở `597c8d9`; (b) xem tay UI: alert lỗi (tạo/đổi tên bộ trùng, xoá/chuyển, ghim >5, alert trong sheet), state sau khi chia (chụp→phân tích→lưu→ôn, Cram, "Học thêm", Hub, phiên đọc), reencounter (gạch chân + "Nhận ra", hàng Home "Gặp lại N từ" — nghi N=0, thanh 4 màu/`MasteryRing`); (c) migration v3→v4 trên DB thật (cài đè lên bản cũ). Việc kế tiếp: `prompt-v6` hoặc B5 — mỗi cái một session mới.
 
 ## 3. Bẫy máy này
 
