@@ -11,7 +11,8 @@ struct ShellTabBar: View {
     /// Khe cần chừa ở CUỐI trang cho màn không có `safeAreaInset` xuyên qua `TabView` — nội dung
     /// tự áp `.safeAreaPadding` bằng số này để hàng nút cuối không chui xuống dưới thanh.
     /// Hiện không màn nào cần (cover ôn thay tab Ôn, T1a); giữ lại làm hằng số đo của thanh.
-    // TODO(đo ảnh): đo lại sau khi nút chụp vào hàng — nghi vẫn đúng vì nút cao bằng capsule.
+    /// Đã đo lại bằng ảnh (`open save-banner`, ux-redesign-r1): công thức khớp chiều cao
+    /// thật của hàng (capsule 64pt + 2 padding 8pt = 80pt) — đúng, không đổi.
     static let reservedHeight = height + outerBottomPadding + Spacing.sm
 
     @Binding var selection: AppTab
@@ -31,8 +32,8 @@ struct ShellTabBar: View {
     @Namespace private var pillNamespace
 
     var body: some View {
-        // TODO(đo ảnh): khe giữa capsule và nút chụp (đang Spacing.sm) — xem ảnh iPhone nhỏ + AX-XL
-        // rồi chỉnh cho khớp nút Search tách của iOS 26.
+        // Khe giữa capsule và nút chụp: đã đo bằng ảnh (`open save-banner`) — Spacing.sm (8pt)
+        // tách rõ hai khối, khớp cảm giác nút Search tách của iOS 26. Giữ nguyên.
         HStack(spacing: Spacing.sm) {
             tabCapsule
             if showsCapture {

@@ -102,7 +102,8 @@ struct RootView: View {
             if let banner {
                 ShellBanner(item: banner, onAction: openBannerHub, onDismiss: dismissBanner)
                     .padding(.horizontal, Spacing.md)
-                    // TODO(đo ảnh): khe giữa banner và thanh tab (đang Spacing.sm) — đo bằng `open save-banner`.
+                    // Khe giữa banner và thanh tab: đã đo bằng ảnh (`open save-banner`) — thoáng,
+                    // không chạm thanh tab, không hở quá. Giữ Spacing.sm.
                     .padding(.bottom, Spacing.sm)
                     .safeAreaPadding(.bottom)
                     .revealTransition()
