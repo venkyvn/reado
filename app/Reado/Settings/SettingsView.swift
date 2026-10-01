@@ -67,17 +67,15 @@ struct SettingsView: View {
         .onDisappear { model.reloadOverview() }
         .sheet(isPresented: $showAddAgent) {
             AgentFormSheet(agent: nil) { name, base, modelName, key in
-                addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
+                finishAgentEdit(
+                    model.addAgent(name: name, baseURL: base, model: modelName, apiKey: key))
             }
         }
         .sheet(item: $editingAgent) { agent in
             AgentFormSheet(agent: agent) { name, base, modelName, key in
-                updateAgent(
-                    agent,
-                    name: name,
-                    baseURL: base,
-                    model: modelName,
-                    apiKey: key)
+                finishAgentEdit(
+                    model.updateAgent(
+                        agent, name: name, baseURL: base, model: modelName, apiKey: key))
             }
         }
         .onChange(of: cefrLevels) { saved = false }
@@ -282,8 +280,7 @@ struct SettingsView: View {
     // MARK: — Load / save
 
     private func load() {
-        guard let database = model.database else { return }
-        if let settings = try? SettingsService.load(on: database) {
+        if let settings = model.loadLearningSettings() {
             cefrLevels = settings.cefrLevels
             dailyNewLimit = settings.dailyNewLimit
             dayCutoffHour = settings.dayCutoffHour
@@ -295,8 +292,7 @@ struct SettingsView: View {
     }
 
     private func reloadAgents() {
-        guard let database = model.database else { return }
-        if let listed = try? AnalysisAgentStore.list(on: database) {
+        if let listed = model.loadAgents() {
             agents = listed.agents
             activeAgentID = listed.activeID
         }
@@ -306,12 +302,11 @@ struct SettingsView: View {
     /// về mới vẽ lại (từng thấy khựng vì `setActive` kiểm Keychain lần hai —
     /// `agent.hasKey` ở đây đã có sẵn từ `list()`). Lỗi thì trả checkmark về chỗ cũ.
     private func select(_ agent: AnalysisAgent) {
-        guard let database = model.database else { return }
         agentError = nil
         let previousActiveID = activeAgentID
         activeAgentID = agent.id
         do {
-            try AnalysisAgentStore.setActive(on: database, id: agent.id, knownHasKey: agent.hasKey)
+            try model.setActiveAgent(agent)
         } catch {
             activeAgentID = previousActiveID
             agentError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
@@ -319,63 +314,23 @@ struct SettingsView: View {
     }
 
     private func remove(_ agent: AnalysisAgent) {
-        guard let database = model.database else { return }
         agentError = nil
         do {
-            try AnalysisAgentStore.delete(on: database, id: agent.id)
+            try model.deleteAgent(agent)
             reloadAgents()
         } catch {
             agentError = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
     }
 
-    /// `nil` = đã lưu. Chuỗi = lỗi hiện trong sheet.
-    private func addAgent(
-        name: String,
-        baseURL: String,
-        model: String,
-        apiKey: String?
-    ) -> String? {
-        guard let database = self.model.database else { return "Chưa mở được kho" }
-        guard let apiKey else { return "Thiếu API key" }
-        do {
-            try AnalysisAgentStore.add(
-                on: database,
-                name: name,
-                baseURL: baseURL,
-                model: model,
-                apiKey: apiKey)
+    /// Kết quả `model.addAgent`/`updateAgent`: `nil` = đã lưu → xoá lỗi cũ + nạp
+    /// lại danh sách; chuỗi = lỗi hiện trong sheet. Trả nguyên cho `AgentFormSheet`.
+    private func finishAgentEdit(_ error: String?) -> String? {
+        if error == nil {
             agentError = nil
             reloadAgents()
-            return nil
-        } catch {
-            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
         }
-    }
-
-    /// Key để trống khi sửa = giữ secret đang có trong Keychain.
-    private func updateAgent(
-        _ agent: AnalysisAgent,
-        name: String,
-        baseURL: String,
-        model: String,
-        apiKey: String?
-    ) -> String? {
-        guard let database = self.model.database else { return "Chưa mở được kho" }
-        do {
-            try AnalysisAgentStore.update(
-                on: database,
-                id: agent.id,
-                name: name,
-                baseURL: baseURL,
-                model: model,
-                apiKey: apiKey)
-            agentError = nil
-            reloadAgents()
-            return nil
-        } catch {
-            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-        }
+        return error
     }
 
     private func save() {

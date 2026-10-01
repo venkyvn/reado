@@ -91,7 +91,7 @@ extension AppModel {
             collectionID: collectionID,
             segments: segments,
             summaryVI: summaryVI,
-            now: SystemClock().now)
+            now: clock.now)
         DebugTrace.event("save", "selection", [
             "saved": saved, "collectionID": collectionID ?? "kho_tam", "segments": segments.count,
         ])

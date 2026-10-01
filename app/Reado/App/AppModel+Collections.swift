@@ -9,11 +9,11 @@ extension AppModel {
 
     /// Scaffold → 3.5: tổng quan collection giờ đọc từ ReadoKit
     /// (`allCollectionSummaries`) — tên, số từ, đến hạn, lần thêm gần nhất.
-    static func loadOverview(db: SQLiteDatabase) throws
+    static func loadOverview(db: SQLiteDatabase, now: Date) throws
         -> [CollectionOverview]
     {
         let summaries = try VocabRepository.allCollectionSummaries(
-            on: db, now: SystemClock().now)
+            on: db, now: now)
         return summaries.map { summary in
             CollectionOverview(
                 id: summary.id,
@@ -55,7 +55,7 @@ extension AppModel {
             return
         }
         collectionNextDue = try? VocabRepository.nextDue(
-            on: database, collectionID: collectionID, now: SystemClock().now)
+            on: database, collectionID: collectionID, now: clock.now)
     }
 
     /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).
@@ -229,8 +229,22 @@ extension AppModel {
     func importRows(_ rows: [CSVImport.CSVRow]) throws -> CSVImport.ImportSummary {
         guard let database else { throw CSVImport.ImportError.emptyFile }
         let summary = try CSVImport.importRows(
-            on: database, rows: rows, now: SystemClock().now)
+            on: database, rows: rows, now: clock.now)
         reloadOverview()
         return summary
+    }
+
+    // MARK: — Export (FR-16, J-R1-D)
+
+    /// TSV các collection đã chọn (`nil` = tất cả).
+    func exportTSV(collectionIDs: [String]?) throws -> String {
+        guard let database else { throw ReviewError.modelUnavailable }
+        return try ExportService.buildTSV(on: database, collectionIDs: collectionIDs)
+    }
+
+    /// JSON backup — LUÔN toàn bộ máy (J-R1-D #4), không lọc collection.
+    func exportJSON() throws -> Data {
+        guard let database else { throw ReviewError.modelUnavailable }
+        return try ExportService.buildJSON(on: database, now: clock.now)
     }
 }

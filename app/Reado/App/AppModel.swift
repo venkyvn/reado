@@ -27,6 +27,10 @@ struct GradeResult: Equatable {
 final class AppModel {
     private(set) var database: SQLiteDatabase?
     private(set) var failure: String?
+    /// Đồng hồ duy nhất của app target — mọi `now` đi qua đây (một lần chấm /
+    /// một lần nạp dùng đúng một giá trị), không gọi `SystemClock()` rải rác.
+    /// Qualify `ReadoKit.Clock` để không nhầm với `Swift.Clock`.
+    let clock: any ReadoKit.Clock = SystemClock()
     private(set) var collections: [CollectionOverview] = []
     // FR-14: tổng quan Home — đến hạn (quota-aware) + tồn đọng + streak.
     private(set) var dailyProgress: DailyProgress?
@@ -117,9 +121,6 @@ final class AppModel {
     /// Q-B đã chốt: N = 10 từ cố định, một nút "Học thêm 10 từ".
     static let learnMoreBatchSize = 10
 
-    /// Các review item hiện hàng đợi (hai nhánh) — cách đọc cho ReviewQueueView.
-    var reviewQueue: [ReviewQueue.ReviewItem] { reviewItems }
-
     struct CollectionOverview: Identifiable, Equatable {
         let id: String
         let name: String
@@ -205,8 +206,10 @@ final class AppModel {
 
     func reloadOverview() {
         guard let database else { return }
-        collections = (try? Self.loadOverview(db: database)) ?? []
-        dailyProgress = (try? Self.loadDailyProgress(db: database, extraNew: effectiveExtraNew))
+        let now = clock.now
+        collections = (try? Self.loadOverview(db: database, now: now)) ?? []
+        dailyProgress = (try? Self.loadDailyProgress(
+            db: database, now: now, extraNew: effectiveExtraNew))
         homePinIDs = (try? HomePinService.ids(on: database)) ?? []
         reviewScopeDefault = (try? ReviewScopeService.load(on: database)) ?? .empty
         // ADR-041: proxy mặc định chưa deploy → chỉ agent BYOK có key mới
@@ -231,7 +234,7 @@ final class AppModel {
     /// với `dayStart` thật của DB đang mở.
     var effectiveExtraNew: Int {
         guard let database else { return 0 }
-        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: SystemClock().now)
+        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
         return ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
     }
 }

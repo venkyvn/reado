@@ -5,9 +5,31 @@ import ReadoKit
 // Tách từ AppModel.swift (refactor): logic giữ nguyên, chỉ đổi file.
 
 extension AppModel {
-    /// ADR-041: thêm agent BYOK từ checklist onboarding — cùng logic với
-    /// `SettingsView.addAgent` (mặc định đặt active). `nil` = đã lưu, chuỗi =
-    /// lỗi hiện trong sheet.
+    // MARK: — Agent AI (Settings + checklist onboarding)
+
+    /// Danh sách agent + id đang active cho Settings; nil khi chưa mở được DB
+    /// hoặc đọc lỗi (view giữ nguyên danh sách cũ).
+    func loadAgents() -> (agents: [AnalysisAgent], activeID: String)? {
+        guard let database else { return nil }
+        return try? AnalysisAgentStore.list(on: database)
+    }
+
+    /// Đặt agent active. `knownHasKey` lấy từ `list()` — không hỏi Keychain lần
+    /// hai (tránh khựng lúc tap). KHÔNG `reloadOverview` ở đây: view cập nhật lạc
+    /// quan và Settings reload overview một lần ở `onDisappear`.
+    func setActiveAgent(_ agent: AnalysisAgent) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try AnalysisAgentStore.setActive(
+            on: database, id: agent.id, knownHasKey: agent.hasKey)
+    }
+
+    func deleteAgent(_ agent: AnalysisAgent) throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        try AnalysisAgentStore.delete(on: database, id: agent.id)
+    }
+
+    /// Thêm agent BYOK (Settings + checklist onboarding, ADR-041) — mặc định đặt
+    /// active. `nil` = đã lưu, chuỗi = lỗi hiện trong sheet.
     func addAgent(name: String, baseURL: String, model: String, apiKey: String?) -> String? {
         guard let database else { return "Chưa mở được kho" }
         guard let apiKey else { return "Thiếu API key" }
@@ -17,8 +39,29 @@ extension AppModel {
             reloadOverview()
             return nil
         } catch {
-            return (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+            return Self.userMessage(for: error)
         }
+    }
+
+    /// Key để trống khi sửa = giữ secret đang có trong Keychain. `nil` = đã lưu,
+    /// chuỗi = lỗi hiện trong sheet.
+    func updateAgent(
+        _ agent: AnalysisAgent, name: String, baseURL: String, model: String, apiKey: String?
+    ) -> String? {
+        guard let database else { return "Chưa mở được kho" }
+        do {
+            try AnalysisAgentStore.update(
+                on: database, id: agent.id, name: name, baseURL: baseURL, model: model,
+                apiKey: apiKey)
+            reloadOverview()
+            return nil
+        } catch {
+            return Self.userMessage(for: error)
+        }
+    }
+
+    private static func userMessage(for error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription ?? String(describing: error)
     }
 
     /// FR-15: đọc 3 núm học tập — fallback về seed default khi chưa seed.
@@ -29,10 +72,12 @@ extension AppModel {
     /// FR-14: số đếm Home — quota-aware + streak + số trang, dùng chung
     /// `dailyNewLimit` đã đọc từ settings. `extraNew` (ý 3): phần nới "Học
     /// thêm" còn hiệu lực hôm nay để số Home khớp đúng hàng đợi thật.
-    static func loadDailyProgress(db: SQLiteDatabase, extraNew: Int = 0) throws -> DailyProgress {
+    static func loadDailyProgress(
+        db: SQLiteDatabase, now: Date, extraNew: Int = 0
+    ) throws -> DailyProgress {
         let dailyNewLimit = currentSettings(db).dailyNewLimit
         return try DailyProgressService.load(
-            on: db, dailyNewLimit: dailyNewLimit, now: SystemClock().now, extraNew: extraNew)
+            on: db, dailyNewLimit: dailyNewLimit, now: now, extraNew: extraNew)
     }
 
     /// J-R1-P: nạp lịch streak (heatmap 18 tuần + streak hiện tại/dài nhất).
@@ -43,7 +88,7 @@ extension AppModel {
             return
         }
         streakHeatmap = try? StreakCalendarService.load(
-            on: database, now: SystemClock().now)
+            on: database, now: clock.now)
     }
 
     // MARK: — FR-15 Settings
@@ -90,22 +135,6 @@ extension AppModel {
         reloadOverview()
         // 3.12: đồng bộ lịch nhắc ngay sau khi lưu (bật → xin quyền + đặt lịch).
         Task { await self.syncReminderSchedule(requestPermission: true) }
-    }
-
-    /// Convenience — code cũ (SettingsView đơn level) gọi một CEFR duy nhất.
-    func saveLearningSettings(
-        cefrLevel: CEFRLevel,
-        dailyNewLimit: Int,
-        dayCutoffHour: Int,
-        reminderEnabled: Bool,
-        reminderMinutes: Int
-    ) throws {
-        try saveLearningSettings(
-            cefrLevels: [cefrLevel],
-            dailyNewLimit: dailyNewLimit,
-            dayCutoffHour: dayCutoffHour,
-            reminderEnabled: reminderEnabled,
-            reminderMinutes: reminderMinutes)
     }
 
     /// 3.12: đồng bộ lịch nhắc local notification với settings hiện tại.

@@ -20,7 +20,7 @@ extension AppModel {
         defer { isLoadingReview = false }
         do {
             let dailyNewLimit = Self.currentSettings(database).dailyNewLimit
-            let now = SystemClock().now
+            let now = clock.now
             let windowEnd = ReviewQueue.currentDayWindow(on: database, now: now).end
             let (items, snapshots) = try ReviewQueue.loadFullQueue(
                 on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope,
@@ -55,10 +55,13 @@ extension AppModel {
         guard let database else { throw ReviewError.modelUnavailable }
         let settings = try ReadoFSRS.readSettings(on: database)
         let scheduler = try ReviewScheduler(settings: settings)
-        let outcome = try scheduler.grade(rating, snapshot: snapshot, now: SystemClock().now)
+        // Một `now` cho cả tính lịch lẫn ghi log: `last_review_at`/`reviewed_at`
+        // phải khớp đúng thời điểm scheduler dùng để tính `due`.
+        let now = clock.now
+        let outcome = try scheduler.grade(rating, snapshot: snapshot, now: now)
         let logID = try ReviewService.record(
             on: database, cardID: cardID, before: snapshot,
-            outcome: outcome, now: SystemClock().now)
+            outcome: outcome, now: now)
         // FR-19: kiểm tra leech SAU khi đã ghi log + update cards.
         // Nếu lapses >= ngưỡng → suspend card (ra khỏi hàng đợi).
         _ = try LeechService.evaluateAfterGrade(on: database, cardID: cardID)
@@ -76,7 +79,7 @@ extension AppModel {
               let settings = try? ReadoFSRS.readSettings(on: database),
               let scheduler = try? ReviewScheduler(settings: settings),
               let outcomes = try? IntervalPreview.outcomes(
-                  scheduler: scheduler, snapshot: snapshot, now: SystemClock().now)
+                  scheduler: scheduler, snapshot: snapshot, now: clock.now)
         else { return [:] }
         return outcomes.mapValues { IntervalPreview.label(days: $0.scheduledDays) }
     }
@@ -91,7 +94,7 @@ extension AppModel {
         reviewError = nil
         defer { isLoadingReview = false }
         do {
-            let now = SystemClock().now
+            let now = clock.now
             let (items, snapshots) = try ReviewQueue.loadCramQueue(
                 on: database, now: now, scope: scope)
             reviewItems = items
@@ -116,7 +119,7 @@ extension AppModel {
         guard let database else { throw ReviewError.modelUnavailable }
         let logID = try ReviewService.recordCram(
             on: database, cardID: cardID, before: snapshot,
-            rating: rating, now: SystemClock().now)
+            rating: rating, now: clock.now)
         return GradeResult(logID: logID, crossedMastery: false)
     }
 
@@ -142,7 +145,7 @@ extension AppModel {
     /// view — tránh hai tác vụ async cùng ghi `reviewItems` một lúc.
     func learnMore() {
         guard let database else { return }
-        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: SystemClock().now)
+        let dayStart = ReviewQueue.currentDayStartIso(on: database, now: clock.now)
         // Khác ngày với lần nới trước → `effectiveExtra` trả 0, không cộng dồn
         // từ ngày cũ (Q-A đã chốt).
         let current = ReviewQueue.effectiveExtra(stored: extraNewQuota, currentDayStart: dayStart)
