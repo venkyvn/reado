@@ -10,4 +10,9 @@ Audit repo Reado (read-only trừ khi fen nói "vá"). Cwd = gốc repo (`CLAUDE
 3. **Tên lệnh cũ:** `grep -n '/reado-start\|/reado-plan\|/reado-handoff'` trên file sống (`CLAUDE.md`, `README.md`, `ROADMAP.md`, `docs/` trừ `journal/`, `.claude/`). Trúng = PROBLEM (đổi sang `/rstart` `/rplan` `/rhandoff`). Journal giữ nguyên.
 4. **Dấu vết tool cũ:** `grep -rniE 'dsh|deepseek|cursorignore|danger-full-access|smart_glob'` trên cùng tập file sống. Trúng = PROBLEM.
 5. **Kích thước `session-brief.md` §1:** `awk '/^## 1\./{p=1} /^## 2\./{p=0} p' docs/session-brief.md | wc -c`. Vượt 4096 byte = PROBLEM (gợi ý: chuyển bullet đã khớp sang `docs/journal/`, chỉ giữ 1 dòng + con trỏ). Cũng kiểm mỗi plan ở `docs/plans/*.md` có dòng trạng thái (`> **...KHÉP...**` hoặc tương đương) ở gần đầu file không — thiếu = cảnh báo (không PROBLEM).
-6. **Tóm tắt ≤ 10 dòng:** số PROBLEMS, orphans đáng ngờ (`plan-template` phải được CLAUDE.md trỏ), lệnh cũ, dấu vết tool cũ, lệnh slash có đủ không, §1 brief có vượt ngân sách không. **Không** sửa file. Fen bảo vá thì mới edit.
+6. **Token MASTER còn trong code:** mỗi tên token/hàm mà `design-system/reado/MASTER.md` nhắc tới phải còn trong `app/` (dạng gọi hoặc dạng khai báo member). Không còn = PROBLEM: sửa MASTER theo code, rồi cập nhật dòng "Đối chiếu code lần cuối".
+   ```bash
+   grep -oE '(Theme|Typo|Spacing|Radius|Motion|Haptics|ShellTabBar|AppTheme)\.[A-Za-z]+|chromeGlass|cardShadow|card\(\)|revealTransition|appErrorAlert|Pill|IconTile|VocabSummary' design-system/reado/MASTER.md \
+     | sort -u | while read -r t; do n="${t%()}"; grep -rqF "$n" app/ || grep -rqE "(let|var|func|case) ${n#*.}\b" app/ || echo "PROBLEM: MASTER nhắc $t, không còn trong app/"; done
+   ```
+7. **Tóm tắt ≤ 10 dòng:** số PROBLEMS, orphans đáng ngờ (`plan-template` phải được CLAUDE.md trỏ), lệnh cũ, dấu vết tool cũ, lệnh slash có đủ không, §1 brief có vượt ngân sách không, token MASTER mất. **Không** sửa file. Fen bảo vá thì mới edit.

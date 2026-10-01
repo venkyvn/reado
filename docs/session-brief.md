@@ -23,6 +23,7 @@
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
 - **Hàng đợi chưa bắt đầu:** prompt-v6 (fen đã go) — dịch hay, `phrases` chạm-sáng, chọn sẵn top 5. → `docs/plans/prompt-v6.md`
+- master-rewrite-r1 (2026-10-01, ✅, ADR-051) — MASTER.md viết lại thành luật SwiftUI (trước là output web của ui-ux-pro-max, lệch code); skill `reado-ui`; `/raudit` kiểm token MASTER. → `docs/journal/2026-10-01.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 
@@ -38,6 +39,7 @@
    - **Reencounter** (reencounter-r1 T2/T3): gạch chân + "Nhận ra", hàng Home "Gặp lại N từ" (nghi N=0 — kiểm `SELECT kind, created_at FROM encounters`), thanh 4 màu/`MasteryRing`.
    - **Capture** (refactor-r4 T1): chip "Lưu vào", sheet chọn/tạo bộ.
    - **Settings** (remove-proxy-r1): ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
+   - **Accent lệch** (phát hiện lúc master-rewrite-r1): ảnh `after-home-light.png` cho thấy `FloatShutter`/tab đang chọn ra xanh iOS dù theme đang là Xanh rừng, trong khi `IconTile`/nút "Thêm" ra đúng xanh rừng — cả hai đều gọi `Color.accentColor`; chưa rõ nguyên nhân (`.tint` chưa kịp áp? `glassEffect` tint không đọc theo `.tint` môi trường?).
    - (c) migration v3→v4 trên DB thật (cài đè bản cũ) — chưa làm.
    - Việc kế tiếp sau khi xem xong: `prompt-v6` — một session riêng.
 
