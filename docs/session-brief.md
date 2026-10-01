@@ -10,6 +10,7 @@
 > Số test chính thức = số gộp scheme `Reado` — hook `session-context.sh` tự nạp kết quả gần nhất (`.tmp/results/last-summary.txt`/`kit-summary.txt`) vào đầu session, không ghi tay ở đây nữa. **Chưa xem tay UI** trên nhiều màn — §2.7 giờ mở được phần lớn bằng `scripts/sim_screens.sh open <màn>` (verify-nav-r1 T1), còn chụp/đọc ảnh thật (T3) chưa chạy.
 
 - verify-nav-r1 (2026-10-01, T1 ✅, T2/T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`) + `sim_screens.sh open` để agent mở thẳng một màn và chụp không cần chạm tay. → `docs/plans/verify-nav-r1.md`
+- master-rewrite-r1 (2026-10-01, ✅, ADR-051) — MASTER.md viết lại thành luật SwiftUI (trước là output web của ui-ux-pro-max, lệch code); skill `reado-ui`; `/raudit` kiểm token MASTER. → `docs/journal/2026-10-01.md`
 - extra-review-r1 (2026-10-01, ✅ KHÉP, ADR-050) — gộp Cram + "Học thêm" thành "Ôn thêm" 20 thẻ ghi lịch FSRS thật, LIFO thật cho thẻ mới, heatmap theo phân vị. → `docs/journal/2026-10-01.md`
 - remove-proxy-r1 (2026-10-01, ✅ KHÉP, ADR-049) — xoá proxy Reado, FR-02 chỉ còn BYOK. → `docs/journal/2026-10-01.md`
 - refactor-r4 (2026-10-01, ✅ KHÉP) — tách `CaptureView`, B5 chuyển test sang `ReadoKitTests`, tách `AnalysisTests.swift`. → `docs/plans/done/refactor-r4.md`
@@ -24,7 +25,6 @@
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
 - **Hàng đợi chưa bắt đầu:** prompt-v6 (fen đã go) — dịch hay, `phrases` chạm-sáng, chọn sẵn top 5. → `docs/plans/prompt-v6.md`
-- master-rewrite-r1 (2026-10-01, ✅, ADR-051) — MASTER.md viết lại thành luật SwiftUI (trước là output web của ui-ux-pro-max, lệch code); skill `reado-ui`; `/raudit` kiểm token MASTER. → `docs/journal/2026-10-01.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 
