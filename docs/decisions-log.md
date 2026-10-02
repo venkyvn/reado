@@ -968,3 +968,34 @@
   `journeys.md` (J1 bước 4, bảng mục 1), prompt-spec §3/§7 (trỏ v6, "AI chỉ xếp thứ
   tự đề xuất"). Không đụng DDL, không đụng `AnalysisResponseNormalizer`/Decoder (T2a
   đã xong). UI chạm-sáng `phrases` là việc riêng, chưa làm (T3, `docs/plans/done/prompt-v6.md`).
+
+## ADR-056 — Q-13: gập item FR-10 "đã thuộc" thay vì xoá, liệt kê đủ nghĩa khi khoá lệch mức thuộc
+
+- **Ngày:** 2026-10-02
+- **Bối cảnh:** Q-13 (`CLAUDE.md` §5, `docs/plans/q13-sense-filter-r1.md`) — khoá so
+  khớp FR-10 `term_normalized|pos` (Q-09, trong một collection) không phân biệt
+  nghĩa. `ReviewDraftBuilder.drafts(excludingMature:)` xoá hẳn item khớp khoá khỏi
+  màn duyệt: từ đồng âm mang nghĩa mới (`bank` "ngân hàng" đã thuộc, trang mới dùng
+  "bờ sông") bị ẩn im lặng, người dùng không có cách biết, nghĩa mới mất. Lệch spec
+  phát hiện kèm: `matureKeys` ẩn cả khi chỉ một dòng cùng khoá đã thuộc, trong khi
+  FR-10 GWT 3 (cũ) nói từ chưa thuộc gặp lại vẫn được đề xuất.
+- **Quyết định:** Fen chốt phương án **B** trong 5 phương án đề ra (A giữ nguyên, C
+  so nghĩa bằng text, D gọi AI lượt 2, E tầng `senses` mới — đều bị loại hoặc hoãn).
+  Item khớp khoá đã thuộc không xoá khỏi màn duyệt — gập xuống nhóm riêng (UI: T2,
+  chưa làm), không chọn sẵn, không chiếm suất `preselectLimit` (5) của danh sách
+  chính. Ca lệch spec (khoá có cả dòng đã thuộc lẫn dòng mới/chưa thuộc, vd vừa lưu
+  nghĩa mới): chọn **(i)** — vẫn vào nhóm gập, liệt kê **đủ** nghĩa trong kho của mọi
+  dòng cùng khoá (không chỉ dòng đã thuộc) vì hệ thống không biết trang đang dùng
+  nghĩa nào; không sửa thành "chỉ ẩn khi mọi dòng cùng khoá đã thuộc" (phương án (ii)
+  bị bỏ).
+- **Hệ quả:** `VocabRepository.matureSenses(on:collectionID:) -> [String: [String]]`
+  (mới) + `matureKeys` viết lại thành wrapper của nó. `ReviewDraftBuilder.drafts`
+  đổi `excludingMature: Set<String>` thành `matureSenses: [String: [String]]`, trả
+  `ReviewDraftResult { visible, matureHidden: [MatureHiddenDraft] }` thay vì
+  `[ReviewDraft]` phẳng — item khớp khoá rơi vào `matureHidden` kèm
+  `knownMeanings`, không còn biến mất. `AppModel+Settings.matureKeysForCapture()` →
+  `matureSensesForCapture()`. Sửa PRD FR-10 GWT 1 (+ GWT 3). UI section "Đã thuộc ·
+  N" gập + fixture là T2, để session sau (1 task tầng 2/session) —
+  `draftResult.matureHidden` tạm chưa hiển thị, `AnalysisView` vẫn dùng
+  `draftResult.visible` y như hành vi trước khi đổi (không xoá, chỉ chưa có UI).
+  Không đụng schema/migration, `saveCapture`, `Prompt*.swift`.

@@ -295,10 +295,14 @@ struct AnalysisView: View {
         guard let result = model.capture.analysisResult, drafts.isEmpty else { return }
         // port UI lab §5.5: preselect = verified && cefr ∈ settings.cefrLevels.
         let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
-        drafts = ReviewDraftBuilder.drafts(
+        let draftResult = ReviewDraftBuilder.drafts(
             from: result.vocabulary,
             selectedLevels: levels.map(Set.init),
-            excludingMature: model.matureKeysForCapture())
+            matureSenses: model.matureSensesForCapture())
+        // Q-13 phương án B: `draftResult.matureHidden` (item khớp khoá đã thuộc,
+        // kèm nghĩa trong kho) chưa có UI — section "Đã thuộc · N" gập là T2
+        // (docs/plans/q13-sense-filter-r1.md), để session sau.
+        drafts = draftResult.visible
     }
 
     /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào

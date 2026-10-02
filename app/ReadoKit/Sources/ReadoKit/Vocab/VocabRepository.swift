@@ -126,16 +126,30 @@ public enum VocabRepository {
     }
 
     /// Term+pos đã thuộc trong đúng collection (Q-09). Không tính leech
-    /// (`suspended_at`) và không tính collection khác.
+    /// (`suspended_at`) và không tính collection khác. Wrapper của
+    /// `matureSenses` (chỉ lấy khoá) — giữ cho call site chỉ cần tập khoá.
     public static func matureKeys(
         on db: SQLiteDatabase, collectionID: String
     ) throws -> Set<String> {
+        Set(try matureSenses(on: db, collectionID: collectionID).keys)
+    }
+
+    /// Q-13 phương án B (ADR-056): khoá `term|pos` → `meaning_vi` của MỌI dòng
+    /// đã thuộc cùng khoá, trong đúng collection (Q-09). Cùng điều kiện
+    /// `matureKeys` (`state='review'`, `stability >= known_stability ?? 21`,
+    /// `suspended_at IS NULL`). Dùng để gập (không xoá) item khớp khoá trên màn
+    /// duyệt, kèm nghĩa trong kho cho người dùng tự so — không còn im lặng loại
+    /// nghĩa mới cùng khoá (Context — lệch spec cũ).
+    public static func matureSenses(
+        on db: SQLiteDatabase, collectionID: String
+    ) throws -> [String: [String]] {
         let setting = try db.rows(
             "SELECT known_stability FROM settings WHERE id = 1 LIMIT 1;")
         let threshold = setting.first?.first?.doubleValue ?? defaultMatureStability
         let rows = try db.rows(
             """
-            SELECT v.term_normalized AS term_normalized, v.pos AS pos
+            SELECT v.term_normalized AS term_normalized, v.pos AS pos,
+                   v.meaning_vi AS meaning_vi
             FROM vocab_items v
             JOIN cards c ON c.vocab_item_id = v.id
             WHERE v.collection_id = ?
@@ -144,12 +158,15 @@ public enum VocabRepository {
               AND c.suspended_at IS NULL;
             """,
             [.text(collectionID), .double(threshold)])
-        return Set(rows.compactMap { row in
+        var result: [String: [String]] = [:]
+        for row in rows {
             guard let term = row["term_normalized"].textValue,
                   let pos = row["pos"].textValue
-            else { return nil }
-            return "\(term)|\(pos.lowercased())"
-        })
+            else { continue }
+            let key = "\(term)|\(pos.lowercased())"
+            result[key, default: []].append(row["meaning_vi"].textValue ?? "")
+        }
+        return result
     }
 
     /// Lưu một trang capture — transaction #4 (SD mục 6).

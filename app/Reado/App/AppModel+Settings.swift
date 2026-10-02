@@ -95,20 +95,22 @@ extension AppModel {
         }
     }
 
-    /// FR-10: term+pos đã thuộc (stability >= 21, state review) trong collection
-    /// đang chụp. Chưa chọn bộ → kho tạm. Lỗi DB → tập rỗng, không giấu từ.
-    func matureKeysForCapture() -> Set<String> {
-        guard let database else { return [] }
+    /// FR-10 / Q-13 phương án B: nghĩa trong kho (`meaning_vi`) của mọi term+pos
+    /// đã thuộc (stability >= 21, state review) trong collection đang chụp —
+    /// khoá `term|pos` → danh sách nghĩa. Chưa chọn bộ → kho tạm. Lỗi DB → rỗng,
+    /// không giấu từ.
+    func matureSensesForCapture() -> [String: [String]] {
+        guard let database else { return [:] }
         let target = capture.analysisTargetCollectionID
-        return read("từ đã thuộc của bộ", fallback: []) {
+        return read("nghĩa đã thuộc của bộ", fallback: [:]) {
             let collectionID: String?
             if let target {
                 collectionID = target
             } else {
                 collectionID = try VocabRepository.defaultCollectionID(on: database)
             }
-            guard let collectionID else { return [] }
-            return try VocabRepository.matureKeys(on: database, collectionID: collectionID)
+            guard let collectionID else { return [:] }
+            return try VocabRepository.matureSenses(on: database, collectionID: collectionID)
         }
     }
 

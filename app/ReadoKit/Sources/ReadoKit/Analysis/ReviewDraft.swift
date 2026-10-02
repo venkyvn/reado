@@ -71,6 +71,29 @@ public struct ReviewDraftError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
+/// Q-13 phương án B (ADR-056): một draft khớp khoá `term|pos` đã thuộc
+/// (`VocabRepository.matureKey`) — không xoá khỏi màn duyệt, gập xuống nhóm
+/// riêng kèm MỌI nghĩa trong kho của khoá đó. Ca lệch spec (Context: khoá có
+/// cả dòng đã thuộc lẫn dòng mới) xử lý theo quyết định (i) — liệt kê đủ nghĩa
+/// trong kho, không tự suy đoán trang đang dùng nghĩa nào. `draft.isSelected`
+/// luôn `false` lúc dựng; chọn tay item này vẫn đi qua `selected(_:)` như mọi
+/// draft khác.
+public struct MatureHiddenDraft: Equatable, Sendable, Identifiable {
+    public var id: String { draft.id }
+    public let draft: ReviewDraft
+    /// `meaning_vi` của mọi dòng cùng khoá đã thuộc — ít nhất 1 phần tử.
+    public let knownMeanings: [String]
+}
+
+/// Kết quả `ReviewDraftBuilder.drafts`: `visible` là danh sách chính (sort +
+/// preselect như trước — không đổi hành vi khi `matureSenses` rỗng),
+/// `matureHidden` là nhóm gập Q-13. `matureHidden` không tính vào
+/// `preselectLimit`/preselect count của `visible`.
+public struct ReviewDraftResult: Equatable, Sendable {
+    public let visible: [ReviewDraft]
+    public let matureHidden: [MatureHiddenDraft]
+}
+
 /// Dựng draft từ kết quả phân tích + chốt lại thành danh sách sẽ lưu.
 /// Logic thuần ở ReadoKit để test được acceptance criteria FR-03/FR-09.
 public enum ReviewDraftBuilder {
@@ -93,32 +116,52 @@ public enum ReviewDraftBuilder {
     ///   không bao giờ preselect và không chiếm suất trong 5 item.
     /// - `selectedLevels = nil` → mọi verified đều đủ điều kiện (vẫn cap ở 5,
     ///   tương thích ngược về mặt chữ ký, khác hành vi cũ "chọn hết").
+    /// - Q-13 phương án B (ADR-056, 2026-10-02 — đảo "xoá hẳn item khớp khoá đã
+    ///   thuộc"): `matureSenses` (khoá `term|pos` → nghĩa trong kho,
+    ///   `VocabRepository.matureSenses`) không còn loại item khỏi kết quả — item
+    ///   khớp khoá rơi vào `ReviewDraftResult.matureHidden` (không preselect,
+    ///   không chiếm suất `preselectLimit` của `visible`) thay vì biến mất.
     public static func drafts(
         from items: [PageAnalysis.VocabularyItemIn],
         selectedLevels: Set<String>? = nil,
-        excludingMature: Set<String> = []
-    ) -> [ReviewDraft] {
-        let visible = items.filter { item in
-            !excludingMature.contains(
-                VocabRepository.matureKey(term: item.term, pos: item.pos))
-        }
+        matureSenses: [String: [String]] = [:]
+    ) -> ReviewDraftResult {
         var preselectedCount = 0
-        let all = visible.map { item -> ReviewDraft in
+        var visible: [ReviewDraft] = []
+        var matureHidden: [MatureHiddenDraft] = []
+        for item in items {
+            let key = VocabRepository.matureKey(term: item.term, pos: item.pos)
+            if let knownMeanings = matureSenses[key] {
+                let draft = ReviewDraft(
+                    term: item.term,
+                    pos: item.pos,
+                    ipa: item.ipa ?? "",
+                    meaningVI: item.meaningVI,
+                    cefr: item.cefr ?? "",
+                    example: item.example,
+                    verification: item.verification,
+                    isSelected: false)
+                matureHidden.append(
+                    MatureHiddenDraft(draft: draft, knownMeanings: knownMeanings))
+                continue
+            }
             let eligible = isEligibleForPreselect(item, selectedLevels: selectedLevels)
             let isSelected = eligible && preselectedCount < preselectLimit
             if isSelected { preselectedCount += 1 }
-            return ReviewDraft(
-                term: item.term,
-                pos: item.pos,
-                ipa: item.ipa ?? "",
-                meaningVI: item.meaningVI,
-                cefr: item.cefr ?? "",
-                example: item.example,
-                verification: item.verification,
-                isSelected: isSelected)
+            visible.append(
+                ReviewDraft(
+                    term: item.term,
+                    pos: item.pos,
+                    ipa: item.ipa ?? "",
+                    meaningVI: item.meaningVI,
+                    cefr: item.cefr ?? "",
+                    example: item.example,
+                    verification: item.verification,
+                    isSelected: isSelected))
         }
-        return all.filter { $0.verification != .verified }
-            + all.filter { $0.verification == .verified }
+        let sortedVisible = visible.filter { $0.verification != .verified }
+            + visible.filter { $0.verification == .verified }
+        return ReviewDraftResult(visible: sortedVisible, matureHidden: matureHidden)
     }
 
     /// Đủ điều kiện preselect FR-02: verified (không unverified/suspect) + cefr ∈

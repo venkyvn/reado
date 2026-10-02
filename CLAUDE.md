@@ -70,7 +70,8 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 BYOK-only (ADR-049 2026-10-01 — "proxy hybrid" cũ là bia mộ) · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp theo collection · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
 - **Chốt thêm 2026-09-24:** ngưỡng leech FR-19 = **6** lần Again. Không gộp với Q-08.
 - **Chốt thêm 2026-10-01:** bỏ proxy Reado — ADR-049.
-- **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4) · Q-13 (khoá so khớp FR-10 `term_normalized+pos` không phân biệt nghĩa — từ đã thuộc gặp lại một nghĩa MỚI cùng `pos`, vd đồng âm, bị lọc khỏi màn duyệt mà không có cách biết; cần /rplan riêng để cân phương án trước khi hỏi).
+- **Chốt thêm 2026-10-02:** Q-13 (khoá so khớp FR-10 `term_normalized+pos` không phân biệt nghĩa) — phương án **B**: item khớp khoá đã thuộc gập xuống nhóm riêng thay vì xoá khỏi màn duyệt; khoá có cả dòng đã thuộc lẫn dòng mới/chưa thuộc vẫn vào nhóm gập, liệt kê đủ nghĩa kèm mức thuộc (ADR-056).
+- **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ
 

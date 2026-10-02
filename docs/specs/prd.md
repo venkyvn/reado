@@ -475,12 +475,18 @@ gặp lại một từ chưa thuộc là chuyện *tốt*, chỉ từ đã thu�
 
 - **Given** AI trả về danh sách vocabulary cho một trang, **when** hệ thống lọc
   trước khi đưa ra cho người dùng chọn, **then** những từ người dùng **đã thuộc** —
-  đo bằng FSRS stability vượt một ngưỡng cấu hình được — bị loại khỏi danh sách.
+  đo bằng FSRS stability vượt một ngưỡng cấu hình được — gập xuống một nhóm riêng,
+  **khỏi danh sách chính** nhưng không xoá khỏi màn duyệt, kèm nghĩa trong kho để
+  người dùng tự so (Q-13 phương án B, ADR-056).
 - **Given** việc so khớp, **when** hệ thống chuẩn hoá `term` thành `term_normalized`,
   **then** khác biệt về hoa/thường và khoảng trắng đầu cuối không làm sót.
 - **Given** một từ đã có trong kho nhưng **chưa** thuộc, **when** nó xuất hiện lại ở
-  trang khác, **then** nó vẫn được đề xuất; người dùng bỏ qua, hoặc lưu thành một
-  dòng mới nếu lần này nó mang nghĩa khác.
+  trang khác, **then** nó vẫn được đề xuất bình thường trên danh sách chính — trừ
+  khi cùng khoá `term+pos` đã có ít nhất một dòng khác **đã thuộc** (vd đồng âm):
+  khi đó cả khoá vào nhóm gập, liệt kê **đủ** nghĩa trong kho của mọi dòng (không
+  chỉ dòng đã thuộc) vì hệ thống không biết trang đang dùng nghĩa nào (Q-13 quyết
+  định (i)); người dùng bỏ qua, hoặc lưu thành một dòng mới nếu lần này nó mang
+  nghĩa khác.
 - **Given** hệ thống lưu một `term` đã tồn tại, **when** ghi vào kho, **then**
   **không** ràng buộc `unique` nào chặn lại. Một dòng là một nghĩa.
 

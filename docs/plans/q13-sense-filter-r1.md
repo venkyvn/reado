@@ -1,6 +1,6 @@
 # Plan: q13-sense-filter-r1
 
-> **Trạng thái:** open (2026-10-02) - Q-13: bộ lọc FR-10 ẩn nghĩa mới cùng `pos` mà không ai biết; 5 phương án, khuyến nghị B (gập thay vì xoá); chờ fen chốt 2 câu cuối file, chưa code
+> **Trạng thái:** open (2026-10-02) - Q-13: fen chốt B + (i) (ADR-056). T1 (kit: `matureSenses` + `ReviewDraftBuilder` tách nhóm gập) code xong, `scripts/test.sh kit`/`build` xanh. T2 (UI section "Đã thuộc · N" + fixture) chưa làm — để session sau.
 
 ## Context
 Q-13 (`CLAUDE.md` §5): khoá so khớp FR-10 là `term_normalized|pos` trong một collection
@@ -67,7 +67,7 @@ phiền: gập, không chọn sẵn). Không chặn C sau này — nếu dùng t
 ## Tầng 2 — Tasks (nếu chọn B)
 1 task = 1 session. Cả hai cần Mac (cloud không build/test iOS). Làm T1 trước.
 
-### T1 — kit: nghĩa trong kho + builder tách nhóm gập
+### T1 — kit: nghĩa trong kho + builder tách nhóm gập — XONG (2026-10-02)
 - Files: `app/ReadoKit/Sources/ReadoKit/Vocab/VocabRepository.swift`,
   `app/ReadoKit/Sources/ReadoKit/Analysis/ReviewDraft.swift`, `app/Reado/App/AppModel+Settings.swift`
   (`matureKeysForCapture` → trả nghĩa), test `ReadoKitTests` (ReviewDraft + VocabRepository).
@@ -85,10 +85,8 @@ phiền: gập, không chọn sẵn). Không chặn C sau này — nếu dùng t
   mở ra thấy hai nghĩa, chọn → "Lưu (N)" tăng.
 - DoD: full xanh + ảnh; journal + brief.
 
-## Câu hỏi cho fen (Q-13 — chưa chốt, không tự chọn)
-1. **Hướng:** A · **B** (khuyến nghị) · C · D?
-2. **Term+pos có cả dòng đã thuộc lẫn chưa thuộc** (lệch spec ở Context) xử lý sao?
-   - (i) Vào nhóm gập, liệt kê mọi nghĩa kèm mức thuộc — nghiêng về đây vì máy không biết trang đang dùng
-     nghĩa nào; phải sửa câu chữ FR-10 GWT 3.
-   - (ii) Sửa code theo GWT 3 — chỉ ẩn khi **mọi** dòng cùng khoá đã thuộc, còn lại lên danh sách chính
-     (trang dùng nghĩa đã thuộc thì từ đó cũng lên lại).
+## Câu hỏi cho fen (Q-13 — đã chốt 2026-10-02)
+1. **Hướng:** A · **B** (khuyến nghị, fen chọn) · C · D.
+2. **Term+pos có cả dòng đã thuộc lẫn chưa thuộc** (lệch spec ở Context) — fen chọn:
+   - **(i)** Vào nhóm gập, liệt kê mọi nghĩa kèm mức thuộc — máy không biết trang đang dùng nghĩa nào;
+     đã sửa câu chữ FR-10 GWT 3 (`docs/specs/prd.md`). Xem ADR-056.

@@ -33,7 +33,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
             vocabIn(term: "charlie", verification: .suspect),
             vocabIn(term: "delta", verification: .verified),
         ]
-        let drafts = ReviewDraftBuilder.drafts(from: items)
+        let drafts = ReviewDraftBuilder.drafts(from: items).visible
         XCTAssertEqual(drafts.map(\.term), ["bravo", "charlie", "alpha", "delta"])
         XCTAssertEqual(drafts.map(\.isSelected), [false, false, true, true])
     }
@@ -43,7 +43,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
     /// 5 đầu, 3 cuối hiện nhưng không tick.
     func testDraftBuilderPreselectsTopFiveOfEightVerified() {
         let items = (1...8).map { vocabIn(term: "t\($0)", verification: .verified) }
-        let drafts = ReviewDraftBuilder.drafts(from: items)
+        let drafts = ReviewDraftBuilder.drafts(from: items).visible
         XCTAssertEqual(drafts.map(\.term), items.map(\.term), "verified giữ thứ tự AI")
         XCTAssertEqual(
             drafts.map(\.isSelected),
@@ -53,7 +53,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
     /// Dưới ngưỡng `preselectLimit` → chọn sẵn hết, không bị cắt oan.
     func testDraftBuilderPreselectsAllWhenFewerThanLimit() {
         let items = (1...3).map { vocabIn(term: "t\($0)", verification: .verified) }
-        let drafts = ReviewDraftBuilder.drafts(from: items)
+        let drafts = ReviewDraftBuilder.drafts(from: items).visible
         XCTAssertEqual(drafts.map(\.isSelected), [true, true, true])
     }
 
@@ -72,7 +72,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
             vocabIn(term: "e6", cefr: "B2", verification: .verified),
             vocabIn(term: "e7", cefr: "B2", verification: .verified),
         ]
-        let drafts = ReviewDraftBuilder.drafts(from: items, selectedLevels: ["B2"])
+        let drafts = ReviewDraftBuilder.drafts(from: items, selectedLevels: ["B2"]).visible
         let selected = Dictionary(
             drafts.map { ($0.term, $0.isSelected) }, uniquingKeysWith: { a, _ in a })
         for term in ["e1", "e2", "e3", "e4", "e5"] {
@@ -90,7 +90,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
     func testDraftBuilderUnverifiedDoesNotConsumePreselectSlot() {
         let items = [vocabIn(term: "u1", verification: .unverified)]
             + (1...5).map { vocabIn(term: "v\($0)", verification: .verified) }
-        let drafts = ReviewDraftBuilder.drafts(from: items)
+        let drafts = ReviewDraftBuilder.drafts(from: items).visible
         let selected = Dictionary(
             drafts.map { ($0.term, $0.isSelected) }, uniquingKeysWith: { a, _ in a })
         XCTAssertEqual(selected["u1"], false)
@@ -99,18 +99,48 @@ final class ReviewDraftBuilderTests: XCTestCase {
         }
     }
 
-    /// Item bị lọc `excludingMature` (FR-10) biến mất hoàn toàn trước khi đếm —
-    /// không chiếm suất của 5, không hiện trên màn duyệt.
-    func testDraftBuilderMatureExcludedItemDoesNotConsumeSlot() {
-        let mature = vocabIn(term: "mature-word", pos: "noun", verification: .verified)
+    /// Q-13 phương án B (ADR-056): item khớp khoá `matureSenses` KHÔNG biến mất
+    /// — rơi vào `matureHidden` (gập), không preselect, không chiếm suất 5 của
+    /// `visible`.
+    func testDraftBuilderMatureItemGoesToMatureHiddenNotPreselected() throws {
+        let mature = vocabIn(
+            term: "mature-word", pos: "noun", meaning: "bờ sông",
+            verification: .verified)
         let items = [mature] + (1...5).map {
             vocabIn(term: "v\($0)", pos: "noun", verification: .verified)
         }
-        let drafts = ReviewDraftBuilder.drafts(
+        let result = ReviewDraftBuilder.drafts(
             from: items,
-            excludingMature: [VocabRepository.matureKey(term: "mature-word", pos: "noun")])
-        XCTAssertFalse(drafts.contains { $0.term == "mature-word" })
-        XCTAssertEqual(drafts.map(\.isSelected), [true, true, true, true, true])
+            matureSenses: [
+                VocabRepository.matureKey(term: "mature-word", pos: "noun"): ["ngân hàng"]
+            ])
+        XCTAssertFalse(result.visible.contains { $0.term == "mature-word" })
+        XCTAssertEqual(result.visible.map(\.isSelected), [true, true, true, true, true])
+        XCTAssertEqual(result.matureHidden.count, 1)
+        let hidden = try XCTUnwrap(result.matureHidden.first)
+        XCTAssertEqual(hidden.draft.term, "mature-word")
+        XCTAssertEqual(hidden.draft.meaningVI, "bờ sông", "nghĩa AI trả về trang này")
+        XCTAssertEqual(hidden.knownMeanings, ["ngân hàng"], "nghĩa trong kho")
+        XCTAssertFalse(hidden.draft.isSelected, "không preselect")
+    }
+
+    /// Ca lệch spec ở Context + quyết định (i): khoá `term|pos` có NHIỀU nghĩa
+    /// trong kho (vd một dòng "ngân hàng" đã thuộc + một dòng "bờ sông" vừa lưu,
+    /// chưa thuộc) → vẫn vào `matureHidden`, liệt kê ĐỦ nghĩa kèm mức thuộc của
+    /// từng dòng — không tự suy đoán trang đang dùng nghĩa nào.
+    func testDraftBuilderMatureHiddenListsAllKnownMeaningsForMixedMaturity() throws {
+        let item = vocabIn(
+            term: "bank", pos: "noun", meaning: "bờ sông", verification: .verified)
+        let result = ReviewDraftBuilder.drafts(
+            from: [item],
+            matureSenses: [
+                VocabRepository.matureKey(term: "bank", pos: "noun"): [
+                    "ngân hàng", "bờ sông",
+                ]
+            ])
+        XCTAssertTrue(result.visible.isEmpty)
+        let hidden = try XCTUnwrap(result.matureHidden.first)
+        XCTAssertEqual(hidden.knownMeanings, ["ngân hàng", "bờ sông"])
     }
 
     /// port UI lab §5.5: preselect = verified VÀ cefr ∈ selectedLevels — verified
@@ -123,7 +153,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
             vocabIn(term: "d-none", cefr: nil, verification: .verified),
         ]
         let drafts = ReviewDraftBuilder.drafts(
-            from: items, selectedLevels: ["B2"])
+            from: items, selectedLevels: ["B2"]).visible
         // c-c1 (verified, ngoài B2) và d-none (verified, cefr rỗng) bỏ chọn sẵn.
         let selected = Dictionary(
             drafts.map { ($0.term, $0.isSelected) },
@@ -141,7 +171,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
         let drafts = ReviewDraftBuilder.drafts(from: [
             vocabIn(term: "a", cefr: "B2", verification: .verified),
             vocabIn(term: "b", cefr: "C1", verification: .verified),
-        ])
+        ]).visible
         XCTAssertEqual(drafts.map(\.isSelected), [true, true])
     }
 
@@ -230,7 +260,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
         let drafts = ReviewDraftBuilder.drafts(from: [
             vocabIn(term: " keep ", verification: .verified),
             vocabIn(term: "drop", verification: .unverified),  // không preselect
-        ])
+        ]).visible
         let items = try ReviewDraftBuilder.selected(drafts)
         XCTAssertEqual(items.map(\.term), ["keep"])
 
