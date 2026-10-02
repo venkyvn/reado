@@ -187,7 +187,7 @@ CREATE TABLE settings (
   timezone           TEXT NOT NULL,  -- IANA; seed luc cai dat tu device. FR-11 / FR-14
   enable_short_term  INTEGER NOT NULL DEFAULT 0 CHECK (enable_short_term IN (0, 1)),
   -- Q-12 tat. swift-fsrs: enableShortTerm / learning steps rong
-  known_stability    REAL,           -- FR-10; NULL = chua bat loc. So = PRD Q-08
+  known_stability    REAL,           -- FR-10; NULL khong tat loc, coi nhu 21. So = PRD Q-08
   leech_lapses       INTEGER,        -- FR-19 hanh dong; NULL = chua bat. lapses van dem
   fsrs_params        TEXT,           -- JSON array; null = default thu vien
   fsrs_version       TEXT,           -- 'fsrs-6' ke ca khi fsrs_params null
