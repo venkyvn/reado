@@ -277,7 +277,10 @@ struct StreakCalendarView: View {
         .buttonStyle(.borderedProminent)
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
+        // Màn push qua `navigationDestination` không thừa hưởng safeAreaInset của
+        // ShellTabBar (xác nhận bằng ảnh — CTA từng đè thẳng lên thanh tab) — tự
+        // cộng thêm reservedHeight để đứng NGAY TRÊN thanh, không chồng lên nó.
+        .padding(.bottom, Spacing.sm + ShellTabBar.reservedHeight)
         .background(.background)
         .overlay(alignment: .top) { Divider() }
     }

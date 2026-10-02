@@ -137,7 +137,9 @@ struct ReadingSessionView: View {
         .buttonStyle(.bordered)
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
+        // Màn push qua NavigationLink không thừa hưởng safeAreaInset của ShellTabBar
+        // (cùng bug đã xác nhận ở StreakCalendarView) — tự cộng reservedHeight.
+        .padding(.bottom, Spacing.sm + ShellTabBar.reservedHeight)
         .background(.background)
         .overlay(alignment: .top) { Divider() }
     }
