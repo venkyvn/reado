@@ -2,15 +2,28 @@
   "segments": [
     {
       "source_en": "Sleep is the keystone of every good routine.",
-      "translation_vi": "Giấc ngủ là nền tảng của mọi thói quen tốt."
+      "translation_vi": "Giấc ngủ là nền tảng của mọi thói quen tốt.",
+      "phrases": [
+        {"en": "Sleep is", "vi": "Giấc ngủ là"},
+        {"en": "keystone of every good routine", "vi": "nền tảng của mọi thói quen tốt"}
+      ]
     },
     {
       "source_en": "A resilient mind recovers quickly from setbacks.",
-      "translation_vi": "Một tâm trí kiên cường hồi phục nhanh sau những vấp ngã."
+      "translation_vi": "Một tâm trí kiên cường hồi phục nhanh sau những vấp ngã.",
+      "phrases": [
+        {"en": "resilient mind", "vi": "tâm trí kiên cường"},
+        {"en": "recovers quickly", "vi": "hồi phục nhanh"},
+        {"en": "from setbacks", "vi": "sau những vấp ngã"}
+      ]
     },
     {
       "source_en": "Discipline matters most on the days you feel like quitting.",
-      "translation_vi": "Kỷ luật quan trọng nhất vào những ngày bạn muốn bỏ cuộc."
+      "translation_vi": "Kỷ luật quan trọng nhất vào những ngày bạn muốn bỏ cuộc.",
+      "phrases": [
+        {"en": "Discipline matters most", "vi": "Kỷ luật quan trọng nhất"},
+        {"en": "feel like quitting", "vi": "muốn bỏ cuộc"}
+      ]
     }
   ],
   "vocabulary": [

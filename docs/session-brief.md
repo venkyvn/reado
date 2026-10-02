@@ -29,14 +29,12 @@
 - repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
-- prompt-v6 (2026-10-02, **T1 ✅ + T2a ✅ + T2b ✅ code/build**, chờ fen chấm bảng, T3 chưa làm) —
-  T1: `scripts/prompt_eval.py` + `scripts/prompts/v5.txt`. T2a: `PageAnalysis.Segment.phrases`
-  (cặp cụm EN↔VI, FR-05) qua normalizer + decoder + `SegmentDTO` optional — đường ống thuần. T2b:
-  `Prompt.swift` v6 (dịch theo cụm, xin `phrases`, `vocabulary` xếp theo giá trị học); `ReviewDraftBuilder`
-  preselect tối đa 5 item đủ điều kiện đầu (FR-09, đảo "mặc định tất cả"); eval script đọc thẳng
-  `Prompt.swift` + chạy thật `qwen3.8-flash` trên 4 trang → `.tmp/prompt-eval/20261002T041512Z.md`.
-  **Fen chưa đọc bảng xác nhận v6 không tệ hơn** — chưa coi prompt v6 là kiểm chứng chất lượng xong.
-  → `docs/plans/prompt-v6.md`
+- prompt-v6 (2026-10-02, **T1+T2a+T2b+T3 ✅ code/test**, 2 việc chờ fen) — T1 eval script; T2a đường ống
+  `phrases`; T2b prompt v6 + xếp hạng + preselect 5; T3 `PhraseLocator` (ReadoKit) định vị cặp cụm →
+  chạm cụm EN thì cụm EN+VI cùng sáng (`EncounterText`/`PhraseHighlightText`, accent theo
+  `@AppStorage`). Full 406/408, kit 387/387. **Chờ fen:** (1) đọc bảng eval v5/v6
+  `.tmp/prompt-eval/20261002T041512Z.md`, (2) xem tay `ReadingSessionView` thật (chưa có launch arg mở
+  thẳng phiên đọc). → `docs/plans/prompt-v6.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 
@@ -53,7 +51,7 @@
    - **Capture** (refactor-r4 T1): chip "Lưu vào", sheet chọn/tạo bộ.
    - **Settings** (remove-proxy-r1): ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
    - (c) migration v3→v4 trên DB thật (cài đè bản cũ) — chưa làm.
-   - Việc kế tiếp sau khi xem xong: `prompt-v6` — một session riêng.
+   - **prompt-v6** (T3 xong 2026-10-02): `ReadingSessionView` thật — chưa có launch arg mở thẳng phiên đọc đã lưu, phải chạm tay qua Hub.
 8. ~~Bug alert+sheet~~ — **đã sửa 2026-10-01**, `AlertHostStack` (chỉ layer mount sau cùng present `.alert()`). → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
 9. ~~Accent lệch~~ — **đã sửa 2026-10-02 (ux-redesign-r1 T10)**, đọc `AppTheme` từ `@AppStorage` thay vì environment cho view tự vẽ. → `docs/journal/2026-10-02.md`
 

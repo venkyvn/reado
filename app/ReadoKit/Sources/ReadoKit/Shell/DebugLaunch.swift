@@ -46,6 +46,9 @@ public struct DebugLaunch: Equatable, Sendable {
         /// ux-redesign-r1 T5b — như `analysisFixture` nhưng mở thẳng tab "Trang" (song ngữ hiện sẵn).
         case analysisFixturePage
         case encounterSheet
+        /// prompt-v6 T3 — như `analysisFixturePage` nhưng sáng sẵn cụm EN↔VI đầu tiên của trang,
+        /// để chụp được trạng thái "đã chạm" không cần thao tác tay.
+        case phraseHighlight
         /// ux-redesign-r1 T2 — banner "Đã lưu … · Xem" mẫu (`ShellBanner`) trên Home, chưa cần luồng lưu thật.
         case saveBanner
     }
@@ -139,6 +142,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "analysis-fixture": return .analysisFixture
         case "analysis-fixture-page": return .analysisFixturePage
         case "encounter-sheet": return .encounterSheet
+        case "phrase-highlight": return .phraseHighlight
         case "save-banner": return .saveBanner
         default: return nil
         }

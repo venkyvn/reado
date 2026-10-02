@@ -1,7 +1,7 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
 > **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅ + T2a ✅ + T2b ✅ (code+build, chờ fen chấm
-> bảng eval)**; T3 chưa làm.
+> bảng eval) + T3 ✅ (code+test+ảnh, chờ fen xem tay `ReadingSessionView`)**.
 > Hợp đồng gốc 09-30 vẫn đúng; sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
 
 ## Chỗ cập nhật so với bản 09-30
@@ -107,9 +107,36 @@
   Coi T2b là "code xong, build xanh", chưa coi là "prompt v6 đã kiểm chứng chất lượng" cho tới khi
   fen đọc `.tmp/prompt-eval/20261002T041512Z.md` và nói v6 không tệ hơn.
 
-### T3 — UI chạm-sáng
-- Chạm cụm EN → cụm VI tương ứng sáng (`SegmentBlock` trong `AnalysisComponents.swift` +
-  `ReadingSessionView`). Kiểu hiển thị khác gạch chân từ kho của FR-22 (reencounter-r1); token theo
-  `design-system/reado/MASTER.md`.
-- Fixture `sim_screens.sh open analysis-fixture` thêm `phrases` để chụp được.
-- DoD: full xanh + fen xem tay.
+### T3 — UI chạm-sáng (✅ code+test+ảnh xong 2026-10-02, chờ fen xem tay `ReadingSessionView`)
+- `Analysis/PhraseLocator.swift` (ReadoKit, mới): định vị `segment.phrases[].en`/`.vi` thành
+  `Range<String.Index>` trên chuỗi gốc — dựng bảng (ký tự gập 1-1 ↔ index gốc) theo đúng luật
+  `VerifyEngine.normalize`, tìm khớp có biên từ (EN) hoặc không (VI, dấu câu tiếng Việt không đều),
+  bỏ qua lần khớp sai biên và thử lần kế tiếp (`cue` không khớp giữa `rescue`), chồng chữ thì cụm sau
+  bị bỏ. Cụm không định vị được bỏ im lặng — đồ hiển thị (FR-05), không phải vocabulary.
+- Hiển thị: cụm EN gạch chân liền mảnh (`Color.secondary`, không chồng với gạch chấm accent của
+  FR-22). Chạm cụm EN → cụm đó VÀ cụm VI tương ứng cùng tô nền `accent.opacity(0.18)`, chữ giữ
+  `.primary`; tự hiện bản dịch đoạn nếu đang ẩn. Tối đa MỘT cụm sáng trên cả màn. Ẩn bản dịch của
+  đoạn đang sáng (nút đoạn hoặc nút đáy) → tắt luôn highlight. `accent` đọc qua
+  `@AppStorage("appTheme")` (pattern `ShellTabBar`, MASTER §Màu ngoại lệ ux-redesign-r1 T10), không
+  `Color.accentColor` trần.
+- `EncounterText.swift`: thêm tham số có default (`phrases`, `activePhraseIndex`, `accent`,
+  `onPhraseTap`) — link cụm (`reado-phrase://`) gán TRƯỚC, link từ gặp lại FR-22
+  (`reado-term://`) gán SAU nên đè ở phần chữ chồng (chạm đúng chữ chồng mở popover từ cũ, không
+  sáng cụm — ưu tiên có chủ ý). `PhraseHighlightText.swift` (mới, `Shared/`): bản VI, không
+  tappable, chỉ phản chiếu cụm đang sáng.
+- `SegmentBlock` (`AnalysisComponents.swift`) + `ReadingSessionView`: nối `PhraseLocator.spans`,
+  state `activePhrase` (segment+phrase index), `togglePhrase`/`revealIfNeeded`; `accessibilityActions`
+  một action mỗi cụm (VoiceOver không chạm được link lồng trong `Text` theo span).
+- Debug: `DebugLaunch.Screen.phraseHighlight` (`-ReadoScreen phrase-highlight`) — mở tab Trang, sáng
+  sẵn cụm đầu tiên định vị được, không cần chạm tay. Cờ `AppState.debugActivateFirstPhrase`.
+- Fixture `scripts/fixtures/analysis-demo.json` thêm `phrases` cho cả 3 đoạn (2–3 cặp/đoạn); một cặp
+  chứa `keystone` để chụp được ca chồng với từ gặp lại FR-22 (`demo-vocab.csv`).
+- Test (`PhraseLocatorTests`, ReadoKit, +10): khớp đúng nguyên văn, khác hoa/thường, nháy cong,
+  khoảng trắng kép/xuống dòng, giữ dấu tiếng Việt (`ban` ≠ `bán`), biên từ EN (`in` không khớp
+  `within`), bỏ qua lần khớp sai biên thử lần kế (`cue` trong `rescue`), không tìm thấy, chồng nhau,
+  rỗng, giữ đúng `phraseIndex` gốc. `DebugLaunchTests` +1 (`phrase-highlight`).
+- **Kết quả:** kit 387/387 (+11), full **406/408** (+11, 2 skip cũ), `** BUILD SUCCEEDED **` /
+  `** TEST SUCCEEDED **`. Ảnh `analysis-fixture-page` (gạch chân cụm, chồng với `keystone`) và
+  `phrase-highlight` (trạng thái đã chạm) — light/dark + theme sepia — đúng MASTER, không bị
+  `ShellTabBar` che. **Chưa xem tay** `ReadingSessionView` thật (phiên đọc đã lưu — chưa có launch
+  argument mở thẳng màn đó); DoD còn treo phần này, ghi ở session-brief §2.7.

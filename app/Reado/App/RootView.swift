@@ -315,6 +315,10 @@ struct RootView: View {
         case .encounterSheet:
             model.shell.debugOpenFirstEncounter = true
             openDebugAnalysisFixture()
+        case .phraseHighlight:
+            model.shell.debugShowAnalysisPage = true
+            model.shell.debugActivateFirstPhrase = true
+            openDebugAnalysisFixture()
         case .saveBanner:
             selectedTab = .today
             Motion.run(reduceMotion: reduceMotion) {

@@ -98,6 +98,9 @@ final class ShellSignals {
     /// ux-redesign-r1 T5b — `-ReadoScreen analysis-fixture-page` bật cờ này; AnalysisView đọc ở
     /// `onAppear` để mở thẳng tab "Trang" rồi dọn sạch.
     var debugShowAnalysisPage = false
+    /// prompt-v6 T3 — `-ReadoScreen phrase-highlight` bật cờ này; AnalysisView đọc ở `.task` để
+    /// tự sáng cụm EN↔VI đầu tiên định vị được rồi dọn sạch.
+    var debugActivateFirstPhrase = false
     #endif
 }
 

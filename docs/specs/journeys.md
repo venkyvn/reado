@@ -213,7 +213,7 @@ Một **session** = một lần capture thành công đã confirm picker (một 
 ### Happy path — mở một session (chọn từ list)
 
 7. Trong session:
-   - **Song ngữ xen kẽ theo đoạn**, đúng thứ tự (FR-05, ADR-007) — bản dịch hiện sẵn ngay dưới bản gốc, 0 thao tác. **Nút nhỏ ở phía dưới màn:** 1 tap = ẩn/hiện toàn bộ bản dịch (ADR-030) — từ ADR-053, màn Duyệt & lưu tab "Trang" cũng dùng chung cơ chế này.
+   - **Song ngữ xen kẽ theo đoạn**, đúng thứ tự (FR-05, ADR-007) — bản dịch hiện sẵn ngay dưới bản gốc, 0 thao tác. **Nút nhỏ ở phía dưới màn:** 1 tap = ẩn/hiện toàn bộ bản dịch (ADR-030) — từ ADR-053, màn Duyệt & lưu tab "Trang" cũng dùng chung cơ chế này. **Cụm chạm-sáng** (FR-05, prompt-v6 T3): một số cụm EN được gạch chân mảnh — chạm một cụm thì cụm đó và cụm VI tương ứng cùng tô nền, tự hiện bản dịch đoạn nếu đang ẩn; tối đa một cụm sáng cùng lúc. Chữ đã có trong kho (FR-22) ưu tiên hơn — chạm đúng chữ chồng vẫn mở popover từ cũ.
    - **Summary** nằm **dưới** phần đọc (FR-06: mặc định thu gọn trên list hoặc trên detail — không thay trang sách, vision nguyên lý 6).
    - **Từ session này collect thêm:** danh sách vocab đã confirm từ đúng lần capture đó (subset của kho collection). Unverified từng hiện lúc picker không nằm đây trừ khi user giữ. **Mở — chưa làm** (brief §2.3, thiếu `session_id` trên `vocab_items`, ngoài phạm vi ux-redesign-r1).
 8. List 10 session: mỗi hàng có thể hiện summary (snippet) để chọn đúng phiên, không bắt mở hết mới biết.

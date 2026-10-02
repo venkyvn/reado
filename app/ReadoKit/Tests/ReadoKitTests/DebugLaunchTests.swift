@@ -28,6 +28,7 @@ final class DebugLaunchTests: XCTestCase {
             ("analysis-fixture", .analysisFixture),
             ("analysis-fixture-page", .analysisFixturePage),
             ("encounter-sheet", .encounterSheet),
+            ("phrase-highlight", .phraseHighlight),
             ("save-banner", .saveBanner),
         ]
         for (raw, expected) in cases {

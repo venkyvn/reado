@@ -31,6 +31,18 @@ struct AnalysisView: View {
     // FR-22: từ đã có trong kho gạch chân ở đoạn gốc; chạm mở popover.
     @State private var encounterMatcher = EncounterMatcher(lexicon: [])
     @State private var encounterSelection: EncounterSelection?
+    // FR-05 (prompt-v6 T3): cụm EN↔VI đang chạm-sáng — tối đa một cụm sáng trên cả màn.
+    @State private var activePhrase: ActivePhrase?
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+
+    private struct ActivePhrase: Equatable {
+        let segmentIndex: Int
+        let phraseIndex: Int
+    }
+
+    /// View tự vẽ nền tô sáng — đọc trực tiếp `@AppStorage` (MASTER §Màu ngoại lệ
+    /// ux-redesign-r1 T10), không `Color.accentColor` trần.
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
     private var selectedCount: Int {
         drafts.filter(\.isSelected).count
@@ -191,6 +203,20 @@ struct AnalysisView: View {
             encounterSelection = EncounterSelection(
                 surface: String(firstSegment.sourceEN[match.range]), entries: match.entries)
         }
+        .task {
+            // prompt-v6 T3 — `-ReadoScreen phrase-highlight`: sáng sẵn cụm đầu
+            // tiên có cặp cụm định vị được, để chụp trạng thái "đã chạm".
+            guard model.shell.debugActivateFirstPhrase else { return }
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            model.shell.debugActivateFirstPhrase = false
+            guard let segments = model.capture.analysisResult?.segments else { return }
+            for (index, seg) in segments.enumerated() {
+                guard let first = PhraseLocator.spans(for: seg).first else { continue }
+                revealIfNeeded(index)
+                activePhrase = ActivePhrase(segmentIndex: index, phraseIndex: first.phraseIndex)
+                break
+            }
+        }
         #endif
     }
 
@@ -320,6 +346,7 @@ struct AnalysisView: View {
             Motion.run(reduceMotion: reduceMotion) {
                 showTranslations.toggle()
                 overriddenSegments.removeAll()
+                activePhrase = nil
             }
         } label: {
             Label(
@@ -530,7 +557,11 @@ struct AnalysisView: View {
                             segment: seg,
                             isRevealed: isRevealed(index),
                             matcher: encounterMatcher,
+                            activePhraseIndex: activePhrase?.segmentIndex == index
+                                ? activePhrase?.phraseIndex : nil,
+                            accent: accent,
                             onSelect: { encounterSelection = $0 },
+                            onPhraseTap: { togglePhrase(segment: index, phrase: $0) },
                             onTap: { toggleSegment(index) })
                     }
                     if !result.summaryVI.isEmpty {
@@ -562,6 +593,37 @@ struct AnalysisView: View {
                 overriddenSegments.remove(index)
             } else {
                 overriddenSegments.insert(index)
+            }
+            // Ẩn bản dịch của đoạn đang có cụm sáng → tắt luôn highlight (không
+            // còn VI để tô, sáng cụm EN một mình thì vô nghĩa).
+            if !isRevealed(index), activePhrase?.segmentIndex == index {
+                activePhrase = nil
+            }
+        }
+        Haptics.selection()
+    }
+
+    /// Lật riêng đoạn `index` sang hiện, KHÔNG đổi nếu đã hiện — không phát haptics
+    /// (dùng khi chạm cụm cần tự hiện bản dịch, khác chạm trực tiếp vào đoạn).
+    private func revealIfNeeded(_ index: Int) {
+        guard !isRevealed(index) else { return }
+        if overriddenSegments.contains(index) {
+            overriddenSegments.remove(index)
+        } else {
+            overriddenSegments.insert(index)
+        }
+    }
+
+    /// FR-05 (prompt-v6 T3) — chạm cụm EN: sáng/tắt cụm này, tự hiện bản dịch
+    /// đoạn nếu đang ẩn. Tối đa một cụm sáng trên cả màn (chạm cụm khác thì đổi).
+    private func togglePhrase(segment index: Int, phrase: Int) {
+        let target = ActivePhrase(segmentIndex: index, phraseIndex: phrase)
+        Motion.run(reduceMotion: reduceMotion) {
+            if activePhrase == target {
+                activePhrase = nil
+            } else {
+                activePhrase = target
+                revealIfNeeded(index)
             }
         }
         Haptics.selection()

@@ -18,6 +18,18 @@ struct ReadingSessionView: View {
     // FR-22: từ đã có trong kho gạch chân; chạm mở popover + "Nhận ra".
     @State private var encounterMatcher = EncounterMatcher(lexicon: [])
     @State private var encounterSelection: EncounterSelection?
+    // FR-05 (prompt-v6 T3): cụm EN↔VI đang chạm-sáng — tối đa một cụm sáng trên cả màn.
+    @State private var activePhrase: ActivePhrase?
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+
+    private struct ActivePhrase: Equatable {
+        let segmentIndex: Int
+        let phraseIndex: Int
+    }
+
+    /// View tự vẽ nền tô sáng — đọc trực tiếp `@AppStorage` (MASTER §Màu ngoại lệ
+    /// ux-redesign-r1 T10), không `Color.accentColor` trần.
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
     var body: some View {
         ScrollView {
@@ -78,13 +90,21 @@ struct ReadingSessionView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             ForEach(Array(session.segments.enumerated()), id: \.offset) { index, seg in
                 // `onTapGesture` thay `Button`: Button nuốt chạm của link từ cũ (FR-22).
+                let phraseSpans = PhraseLocator.spans(for: seg)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     EncounterText(
-                        text: seg.sourceEN, matcher: encounterMatcher,
-                        onSelect: { encounterSelection = $0 })
+                        text: seg.sourceEN, matcher: encounterMatcher, phrases: phraseSpans,
+                        activePhraseIndex: activePhrase?.segmentIndex == index
+                            ? activePhrase?.phraseIndex : nil,
+                        accent: accent, onSelect: { encounterSelection = $0 },
+                        onPhraseTap: { togglePhrase(segment: index, phrase: $0) })
                         .font(.title3)
                     if isRevealed(index) {
-                        Text(seg.translationVI)
+                        PhraseHighlightText(
+                            text: seg.translationVI, phrases: phraseSpans,
+                            activePhraseIndex: activePhrase?.segmentIndex == index
+                                ? activePhrase?.phraseIndex : nil,
+                            accent: accent)
                             .font(.body)
                             .foregroundStyle(.secondary)
                             .revealTransition()
@@ -98,6 +118,14 @@ struct ReadingSessionView: View {
                 .accessibilityValue(isRevealed(index) ? seg.translationVI : "Bản dịch đang ẩn")
                 .accessibilityHint(isRevealed(index) ? "Ẩn bản dịch đoạn này" : "Hiện bản dịch đoạn này")
                 .accessibilityAction { toggleSegment(index) }
+                .accessibilityActions {
+                    // VoiceOver không chạm được link lồng trong Text theo span — action riêng mỗi cụm.
+                    ForEach(phraseSpans, id: \.phraseIndex) { span in
+                        Button("Cụm \(seg.sourceEN[span.en]): \(seg.translationVI[span.vi])") {
+                            togglePhrase(segment: index, phrase: span.phraseIndex)
+                        }
+                    }
+                }
             }
         }
     }
@@ -113,6 +141,36 @@ struct ReadingSessionView: View {
             } else {
                 overriddenSegments.insert(index)
             }
+            // Ẩn bản dịch của đoạn đang có cụm sáng → tắt luôn highlight.
+            if !isRevealed(index), activePhrase?.segmentIndex == index {
+                activePhrase = nil
+            }
+        }
+        Haptics.selection()
+    }
+
+    /// Lật riêng đoạn `index` sang hiện, KHÔNG đổi nếu đã hiện — không phát
+    /// haptics (dùng khi chạm cụm cần tự hiện bản dịch).
+    private func revealIfNeeded(_ index: Int) {
+        guard !isRevealed(index) else { return }
+        if overriddenSegments.contains(index) {
+            overriddenSegments.remove(index)
+        } else {
+            overriddenSegments.insert(index)
+        }
+    }
+
+    /// FR-05 (prompt-v6 T3) — chạm cụm EN: sáng/tắt cụm này, tự hiện bản dịch
+    /// đoạn nếu đang ẩn. Tối đa một cụm sáng trên cả màn.
+    private func togglePhrase(segment index: Int, phrase: Int) {
+        let target = ActivePhrase(segmentIndex: index, phraseIndex: phrase)
+        Motion.run(reduceMotion: reduceMotion) {
+            if activePhrase == target {
+                activePhrase = nil
+            } else {
+                activePhrase = target
+                revealIfNeeded(index)
+            }
         }
         Haptics.selection()
     }
@@ -124,6 +182,7 @@ struct ReadingSessionView: View {
             Motion.run(reduceMotion: reduceMotion) {
                 showTranslations.toggle()
                 overriddenSegments.removeAll()
+                activePhrase = nil
             }
         } label: {
             Label(
