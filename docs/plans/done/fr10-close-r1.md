@@ -1,8 +1,8 @@
 # Plan: fr10-close-r1 — khép FR-10 (task 3.8): tính lại nhóm "Đã thuộc" khi đổi đích + đồng bộ docs
 
 > **Trạng thái:** closed (2026-10-02) - T1 xong: `ReviewDraftBuilder.regroup` + `AnalysisView.onChange` + 9
-> test. Full `scripts/test.sh` 424/426 xanh (2 skip cũ). Ảnh fixture tĩnh đã xem; **đổi đích thật (chạm Menu
-> "Lưu vào") chưa xem tay** — `sim_screens.sh` không giả lập chạm được tay, logic đã có 7 test `regroup*`.
+> test. Full `scripts/test.sh` 424/426 xanh (2 skip cũ). Ảnh fixture tĩnh + fen xem tay đổi đích thật trên
+> simulator (chạm "Lưu vào ⏷" đổi bộ rồi đổi lại Kho tạm) — pass, không còn nợ xác minh.
 
 ## Context
 ROADMAP 3.8 và PRD FR-10 ghi "chưa bật bộ lọc trong code", nhưng code đã có từ `73f92a6` (lọc lúc duyệt)
@@ -38,5 +38,4 @@ từ đã thuộc ở bộ mới lọt danh sách chính (có thể đang chọn
   sót qua đổi nhóm, `knownMeanings` làm mới theo bộ mới, `matureSenses` rỗng → tất cả về visible, idempotent,
   giữ sort unverified-first. Tất cả xanh (kit 21/21 riêng file).
 - DoD: `scripts/test.sh kit` xanh → full xanh (424/426, 2 skip cũ) → ảnh `analysis-fixture-mature`
-  light/dark đúng MASTER (trạng thái tĩnh, xem tay được). **Đổi đích thật chưa xem tay** — ghi nợ, không
-  phải bug đã biết; cần fen tự chạm "Lưu vào" trên máy thật/simulator để xác nhận nhóm gập đổi theo bộ.
+  light/dark đúng MASTER → fen xem tay đổi đích thật trên simulator (2026-10-02) — pass, hết nợ.
