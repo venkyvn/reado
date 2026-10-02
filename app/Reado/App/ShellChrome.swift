@@ -29,6 +29,7 @@ private struct ShellScrollChrome: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 18, *) {
             content
+                .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
                 .onScrollGeometryChange(for: ScrollSample.self) { geometry in
                     ScrollSample(
                         offsetY: geometry.contentOffset.y + geometry.contentInsets.top,
@@ -47,6 +48,7 @@ private struct ShellScrollChrome: ViewModifier {
             // D2 shell-chrome-r1: deployment target 17.0 không có
             // `onScrollGeometryChange` — thanh luôn hiện trên iOS 17.
             content
+                .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
         }
     }
 }

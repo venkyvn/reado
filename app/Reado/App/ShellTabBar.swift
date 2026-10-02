@@ -2,15 +2,17 @@ import SwiftUI
 
 /// Thanh tab nổi — thay thanh native (cao cố định ~49pt). Một hàng gồm capsule 2 tab + nút chụp
 /// tròn cùng chiều cao (ux-redesign-r1 T1b, kiểu nút Search tách của iOS 26). Gắn qua
-/// `safeAreaInset` trên `TabView` nên theo mọi màn push, không đè nội dung.
+/// `safeAreaInset` trên `TabView` — áp dụng cho ROOT mỗi tab, nhưng `List` đẩy qua
+/// `navigationDestination` (Hub, Streak, Settings, Data…) KHÔNG tự thừa hưởng (xác nhận bằng ảnh,
+/// `CollectionDetailView` 12 từ bị thanh tab đè hàng cuối) — những màn đó phải tự áp
+/// `.safeAreaPadding(.bottom, reservedHeight)`, gộp sẵn trong `shellScrollChrome()`.
 struct ShellTabBar: View {
     /// Chiều cao capsule = đường kính nút chụp (không gồm padding ngoài / home indicator).
     static let height: CGFloat = 64
     /// Padding dưới thanh, phía trên home indicator.
     static let outerBottomPadding: CGFloat = 8
-    /// Khe cần chừa ở CUỐI trang cho màn không có `safeAreaInset` xuyên qua `TabView` — nội dung
-    /// tự áp `.safeAreaPadding` bằng số này để hàng nút cuối không chui xuống dưới thanh.
-    /// Hiện không màn nào cần (cover ôn thay tab Ôn, T1a); giữ lại làm hằng số đo của thanh.
+    /// Khe cần chừa ở CUỐI trang cho màn không tự thừa hưởng `safeAreaInset` xuyên `TabView`
+    /// (mọi màn push qua `navigationDestination`) — áp qua `shellScrollChrome()`, không gọi tay.
     /// Đã đo lại bằng ảnh (`open save-banner`, ux-redesign-r1): công thức khớp chiều cao
     /// thật của hàng (capsule 64pt + 2 padding 8pt = 80pt) — đúng, không đổi.
     static let reservedHeight = height + outerBottomPadding + Spacing.sm
