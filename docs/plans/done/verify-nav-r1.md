@@ -1,6 +1,6 @@
 # Plan: verify-nav-r1
 
-> **Trạng thái:** open (2026-10-01) - launch argument mở thẳng màn cho agent chụp simulator; T1 + T2 xong (`docs/journal/2026-10-01.md`), T3 chưa làm. T2 phát hiện bug alert+sheet có sẵn — xem `docs/session-brief.md` §2.
+> **Trạng thái:** closed (2026-10-02) - launch argument mở thẳng màn cho agent chụp simulator; T1 + T2 xong (`docs/journal/2026-10-01.md`). T3: fen xem tay toàn bộ brief §2.7 trên simulator thật (Ôn thêm, Alert lỗi, Reencounter, Capture, Settings, prompt-v6, migration v3→v4, camera permission-denied) — tất cả pass, không có mục fail. Chi tiết: `docs/journal/2026-10-02.md`.
 
 ## Context
 Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp được màn mở đầu (Home). Vì vậy brief §2.7 còn treo nhiều mục "chưa xem tay" (Ôn thêm, alert lỗi, reencounter, Capture, Settings, accent lệch). Mục tiêu: chỉ bằng launch argument của bản DEBUG, agent mở thẳng được một màn (kèm theme và seed), chụp light/dark rồi tự đọc PNG, không cần ai chạm tay.
@@ -68,13 +68,22 @@ Máy agent không có idb/XCUITest, `scripts/sim_screens.sh` chỉ chụp đư�
 - **Phát hiện ngoài kế hoạch — bug có sẵn, không phải do task này:** `RootView` và mỗi sheet (`AnalysisView`) cùng gắn `.appErrorAlert()` (`Shared/ErrorAlert.swift`) trên CHUNG `model.alertMessage`. Set `alertMessage` trong lúc một sheet đang mở (bất kể đồng bộ hay trễ 1.5s) làm UIKit coi RootView "already presenting" — log `com.apple.UIKit:Presentation`, "Attempt to present ... which is already presenting ..." — và huỷ CẢ sheet lẫn alert, không chỉ riêng alert. Xác nhận bằng `xcrun simctl spawn log stream` lúc debug `-ReadoAlert` + `analysis-fixture`. Vì vậy DoD gốc "alert hiện cả ở root lẫn trong sheet" **bỏ** — `RootView.applyDebugScreenIfNeeded` giờ bỏ qua `-ReadoAlert` khi đi cùng `analysis-fixture`/`encounter-sheet` (im lặng, không set `alertMessage` nữa vì chính nó cũng dính lỗi). Ghi vào `docs/session-brief.md` §2 cho owner — KHÔNG sửa `ErrorAlert.swift` ở task này (ảnh hưởng mọi sheet thật trong app, cần phiên riêng để kiểm kỹ).
 - DoD (đã đạt, trừ câu alert+sheet đã bỏ ở trên): kit 347/347 xanh, build xanh, full suite 366/368 (2 skip opt-in cũ). Ảnh chụp thật trên simulator xác nhận: Home có "Xong phần hôm nay — Ôn thêm 20 thẻ" + "Gặp lại 5 từ tuần này"; heatmap `Lịch ôn` nhiều mức màu (21 ngày streak); `analysis-fixture` mở đúng AnalysisView với 4 từ gạch chân chấm (keystone/routine/resilient/discipline); `encounter-sheet` mở đúng EncounterSheet "keystone" chồng lên Analysis; `--alert dup-name`/`pin-limit` đứng riêng (không kèm sheet) hiện alert đúng; `analysis-fixture --alert dup-name` giờ mở sheet bình thường, không còn treo trắng màn.
 
-### T3 — chạy verify brief §2.7
-- Files: `docs/session-brief.md` §2.7 (cập nhật kết quả), `docs/journal/2026-10-xx.md`, ảnh trong `.tmp/screens/` (ngoài git).
-- Việc: với mỗi mục §2.7 tới được bằng script, `open` rồi `shot` (theme forest + sepia nếu liên quan accent, có `size accessibility-extra-large` cho màn chính), đọc PNG, ghi vào bảng.
-- Dự kiến phân loại:
-  - **Tới được bằng script:** CTA Home mở `.extra`, heatmap, alert trùng tên / ghim > 5 (root + trong sheet), gạch chân + EncounterSheet, hàng "Gặp lại N từ", thanh 4 màu / `MasteryRing` ở hub, chip "Lưu vào" trên Capture, Settings ẩn agent builtin, accent FloatShutter/tab ở forest + sepia.
-  - **Vẫn cần tay:** kéo/chấm thẻ (Quên thì due mai, lượt 2 không ra thẻ cũ: kit đã test logic), sheet chọn/tạo bộ, lỗi "chưa có agent" khi chụp, migration v3→v4, camera permission-denied.
-- DoD: bảng pass / fail / cần tay được in ra chat. Mỗi mục fail có ảnh và mô tả lỗi; fix nằm ở task khác, không sửa trong T3. Brief §2.7 chỉ còn các mục cần tay và các mục fail.
+### T3 — chạy verify brief §2.7 — ✅
+- Files: `docs/session-brief.md` §2.4/§2.7 (cập nhật kết quả), `docs/journal/2026-10-02.md`.
+- Việc: thay vì agent chụp (không có GUI), fen tự chạy `scripts/sim_screens.sh open <màn>` trên máy có Simulator GUI thật
+  (mở qua Xcode DeviceHub, không phải `open -a Simulator` — máy fen không đăng ký tên app đó với Launch Services) và chạm
+  tay trực tiếp.
+- Kết quả — **tất cả pass**, không có mục fail hay mục cần hoãn:
+  - Ôn thêm: trộn đúng cũ+mới, CTA Home mở đúng `.extra`, heatmap đổi màu rõ.
+  - Alert lỗi: tạo/đổi tên bộ trùng, xoá/chuyển, ghim >5 (root + trong sheet) đều đúng.
+  - Reencounter: gạch chân + "Nhận ra", hàng "Gặp lại N từ", thanh 4 màu/`MasteryRing`.
+  - Capture: chip "Lưu vào", sheet chọn/tạo bộ.
+  - Settings: ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
+  - prompt-v6: `ReadingSessionView` thật qua Hub.
+  - Migration v3→v4 trên DB thật (cài đè bản cũ).
+  - Camera permission-denied: nút "Mở Cài đặt" bật đúng (gộp luôn §2.4, đóng chung đợt này).
+  - Bonus ngoài §2.7 (q13-sense-filter-r1 vừa ship): nhóm "Đã thuộc · N" trên `analysis-fixture` — đóng sẵn, mở ra đúng 2 nghĩa, chọn tăng "Lưu (N)" đúng.
+- DoD: không còn mục nào ở brief §2.7 — xoá cả mục, giữ pointer vào plan này + journal.
 
 ## Verification (tổng)
 - `scripts/test.sh kit` sau T1 và T2. Toàn bộ `scripts/test.sh` trước `/rhandoff` của T2.
