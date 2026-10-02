@@ -7,44 +7,38 @@
 
 ## 1. Tình trạng hiện tại (mục lục — chi tiết ở journal/plan, không lặp lại ở đây)
 
-> Số test chính thức = số gộp scheme `Reado` — hook `session-context.sh` tự nạp kết quả gần nhất (`.tmp/results/last-summary.txt`/`kit-summary.txt`) vào đầu session, không ghi tay ở đây nữa. **Chưa xem tay UI** trên nhiều màn — §2.7 giờ mở được phần lớn bằng `scripts/sim_screens.sh open <màn>` (verify-nav-r1 T1+T2), còn chạy qua từng mục + đọc ảnh thật (T3) chưa làm.
+> Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay. **Chưa xem tay UI** nhiều màn: §2.7 mở được bằng `scripts/sim_screens.sh open <màn>`, còn chạy từng mục + đọc ảnh (verify-nav-r1 T3).
 
-- fix-alert-sheet-dismiss-r1 (2026-10-01, ✅ KHÉP) — bug §2 mục 8 cũ: `RootView` + sheet con cùng gắn `.appErrorAlert()` trên chung `alertMessage`, set lỗi lúc sheet mở huỷ cả sheet lẫn alert. Sửa bằng `AlertHostStack` (ReadoKit, logic thuần, 5 test) — chỉ layer mount sau cùng mới present `.alert()`; bỏ workaround debug-only trong `RootView.swift`. Verify bằng ảnh `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet "Duyệt & lưu từ vựng" + alert "Có lỗi" cùng hiện. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
-- verify-nav-r1 (2026-10-01, T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`/`-ReadoSeed`/`-ReadoAlert`) + `sim_screens.sh open` để agent mở thẳng một màn (kể cả seed lịch ôn giả, fixture phân tích) và chụp không cần chạm tay. T2 lộ bug alert+sheet có sẵn — §2 mục 8. → `docs/plans/verify-nav-r1.md`
-- master-rewrite-r1 (2026-10-01, ✅, ADR-051) — MASTER.md viết lại thành luật SwiftUI (trước là output web của ui-ux-pro-max, lệch code); skill `reado-ui`; `/raudit` kiểm token MASTER. → `docs/journal/2026-10-01.md`
-- extra-review-r1 (2026-10-01, ✅ KHÉP, ADR-050) — gộp Cram + "Học thêm" thành "Ôn thêm" 20 thẻ ghi lịch FSRS thật, LIFO thật cho thẻ mới, heatmap theo phân vị. → `docs/journal/2026-10-01.md`
-- remove-proxy-r1 (2026-10-01, ✅ KHÉP, ADR-049) — xoá proxy Reado, FR-02 chỉ còn BYOK. → `docs/journal/2026-10-01.md`
-- refactor-r4 (2026-10-01, ✅ KHÉP) — tách `CaptureView`, B5 chuyển test sang `ReadoKitTests`, tách `AnalysisTests.swift`. → `docs/plans/done/refactor-r4.md`
-- refactor-r2 + refactor-r3 (2026-10-01, ✅) — `AppModel.clock`, facade DB cho Settings/Export, đọc cột theo tên (`SQLRow`), chia state `AppModel` 4 nhóm, dọn `try?` nuốt lỗi thật. → `docs/journal/2026-10-01.md`
-- Audit nhỏ sau refactor-r4 (2026-10-01, ✅) — gộp SQL rời vào `VocabRepository.defaultCollectionID`. → `docs/journal/2026-10-01.md`
-- fsrs-queue-fix-r1 (T1 ✅ T2 ✅, **T3 hết chặn — chưa làm**) — queue so `due_at` với cửa sổ ngày học, `GradePreview` tái dùng nhãn trong 30'. → `docs/plans/fsrs-queue-fix-r1.md`
-- reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, 2026-10-01, ADR-048) — FR-22 gặp lại từ cũ khi đọc, thang Mới/Đang học/Đã nhớ/Đã thấm. → `docs/plans/reencounter-r1.md`
-- new-order-r1 (2026-09-30, ✅ KHÉP, ADR-047) — thẻ mới ưu tiên bộ vừa thêm (LIFO trong bộ đảo tiếp ở extra-review-r1). → `docs/journal/2026-09-30.md`
-- vision-refresh-r2 (2026-09-30, ✅, docs-only) — `vision.md` chỉ giữ luật hiện hành, thang 4 mức Mới/Đang học/Đã nhớ/Đã thấm. → `docs/journal/2026-09-30.md`
-- shell-chrome-r1 (2026-09-30, ✅ KHÉP) — ô nhập Settings, nút Ôn hết bị tab bar che, hết giật kéo thẻ, ẩn/hiện tab khi cuộn. → `docs/plans/done/shell-chrome-r1.md`
-- repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
-- cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
-- OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
-- **Hàng đợi chưa bắt đầu:** prompt-v6 (fen đã go) — dịch hay, `phrases` chạm-sáng, chọn sẵn top 5. → `docs/plans/prompt-v6.md`
+**Đang mở / hàng đợi**
+- ux-redesign-r1 (draft 2026-10-01) — audit + IA hướng B (bỏ tab Ôn, Q-b chốt) + 14 task, chưa code; Q-a/c/d/e có mặc định. → `docs/plans/ux-redesign-r1.md`
+- verify-nav-r1 (T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG + `sim_screens.sh open` mở thẳng một màn. → `docs/plans/verify-nav-r1.md`
+- fsrs-queue-fix-r1 (T1 ✅ T2 ✅, **T3 hết chặn — chưa làm**). → `docs/plans/fsrs-queue-fix-r1.md`
+- reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, ADR-048) — FR-22 gặp lại từ cũ khi đọc. → `docs/plans/reencounter-r1.md`
+- prompt-v6 (fen đã go, chưa bắt đầu) — dịch hay, `phrases` chạm-sáng, chọn sẵn top 5. → `docs/plans/prompt-v6.md`
+
+**Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
+- 2026-10-01 → `docs/journal/2026-10-01.md`: fix-alert-sheet-dismiss-r1 (`AlertHostStack`) · master-rewrite-r1 (ADR-051) · extra-review-r1 "Ôn thêm 20" (ADR-050) · remove-proxy-r1 BYOK-only (ADR-049) · refactor-r2/r3/r4 · audit nhỏ sau refactor-r4.
+- 2026-09-30 → `docs/journal/2026-09-30.md`: new-order-r1 (ADR-047) · vision-refresh-r2 · shell-chrome-r1.
+- 2026-09-28 → `docs/journal/2026-09-28.md`: repo-hygiene-r1 (ADR-044/046) · cram-collection-r1 (ADR-043) · OCR `RecognizeDocumentsRequest` (ADR-042).
 
 ## 2. Chờ owner (không tự bắt đầu)
 
-1. A-02: prompt baseline **đã có** ở `docs/agent/prompt-spec.md` §2 (owner dán 2026-09-08; dòng "vẫn trống" cũ ở đây sai). Còn thiếu: fen chấm output baseline vs app — `prompt-v6` T1 (replay Diagnostics) sẽ dựng bảng so.
-2. Ngưỡng leech FR-19 đã chốt = 6 (2026-09-24). Không hỏi lại.
-3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4).
-4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn, happy case đã xong.
-5. ~~D-3~~ — **đã trả lời 2026-10-01 (ADR-050, extra-review-r1):** có, Cram (giờ gọi "Ôn thêm") cập nhật lịch hẹn mới như ôn thường. T3 của `fsrs-queue-fix-r1.md` (elapsed_days một định nghĩa) hết bị chặn — kiểm lại khi mở plan đó tiếp.
-6. repo-hygiene-r1: repo `venkyvn/reado` public hay private? (ảnh `ref/sample` còn trong history cũ → public thì cần `git filter-repo`); key Gemini từng nằm trong `.env.example` (chưa commit) — rotate nếu dán ở nơi khác; `docs/sample.md` (untracked, không rõ chủ) và `.keep.json` (`{}`) — giữ hay xoá.
-7. Xem tay UI còn treo (máy agent không có Simulator GUI) — gộp theo màn, không theo task:
+> Số mục giữ cố định — plan khác trỏ `§2.3`/`§2.4`/`§2.7`. Mục đã xong để lại một dòng gạch.
+
+1. A-02: prompt baseline đã có ở `docs/agent/prompt-spec.md` §2. Còn thiếu: fen chấm output baseline vs app — `prompt-v6` T1 (replay Diagnostics) dựng bảng so.
+2. ~~Ngưỡng leech FR-19~~ — đã chốt = 6 (`CLAUDE.md` §5).
+3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4): (a) thêm FK, (b) để R2, (c) bỏ bước khỏi J2.
+4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn.
+5. ~~D-3~~ — đã trả lời (ADR-050): "Ôn thêm" ghi lịch FSRS thật; fsrs-queue-fix-r1 T3 hết chặn.
+6. repo-hygiene-r1: repo `venkyvn/reado` public hay private? (ảnh `ref/sample` còn trong history cũ → public thì cần `git filter-repo`); key Gemini từng nằm trong `.env.example` (chưa commit) — rotate nếu dán ở nơi khác; `docs/sample.md` (untracked) và `.keep.json` (`{}`) — giữ hay xoá.
+7. Xem tay UI còn treo (máy agent không có Simulator GUI) — gộp theo màn:
    - **Ôn thêm** (extra-review-r1): trộn đúng cũ+mới, Quên → due mai, lượt 2 không ra thẻ cũ, CTA Home mở đúng `.extra`, heatmap đổi màu rõ khi ôn nhiều.
-   - **Alert lỗi** (refactor-r3): tạo/đổi tên bộ trùng, xoá/chuyển, ghim >5 — đã xem bằng `-ReadoAlert dup-name|pin-limit` lúc KHÔNG có sheet, alert hiện đúng. "alert phải hiện cả trong sheet" **từng THẤY BUG, đã sửa 2026-10-01** — ~~mục 8~~ dưới.
+   - **Alert lỗi** (refactor-r3): tạo/đổi tên bộ trùng, xoá/chuyển, ghim >5 — đã xem `-ReadoAlert dup-name|pin-limit` lúc không có sheet; `dup-name` trong sheet đã xem sau fix-alert-sheet-dismiss-r1.
    - **Reencounter** (reencounter-r1 T2/T3): gạch chân + "Nhận ra", hàng Home "Gặp lại N từ" (nghi N=0 — kiểm `SELECT kind, created_at FROM encounters`), thanh 4 màu/`MasteryRing`.
    - **Capture** (refactor-r4 T1): chip "Lưu vào", sheet chọn/tạo bộ.
    - **Settings** (remove-proxy-r1): ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
-   - **Accent lệch** (phát hiện lúc master-rewrite-r1): ảnh `after-home-light.png` cho thấy `FloatShutter`/tab đang chọn ra xanh iOS dù theme đang là Xanh rừng, trong khi `IconTile`/nút "Thêm" ra đúng xanh rừng — cả hai đều gọi `Color.accentColor`; chưa rõ nguyên nhân (`.tint` chưa kịp áp? `glassEffect` tint không đọc theo `.tint` môi trường?).
+   - **Accent lệch** (master-rewrite-r1): `FloatShutter`/tab đang chọn ra xanh iOS dù theme Xanh rừng, trong khi `IconTile`/nút "Thêm" đúng — cả hai gọi `Color.accentColor`; chưa rõ nguyên nhân (`.tint` chưa áp? `glassEffect` không đọc `.tint` môi trường?).
    - (c) migration v3→v4 trên DB thật (cài đè bản cũ) — chưa làm.
-   - Việc kế tiếp sau khi xem xong: `prompt-v6` — một session riêng.
-8. ~~Bug alert+sheet~~ — **đã sửa 2026-10-01 (fix-alert-sheet-dismiss-r1).** `RootView` và mỗi sheet (vd `AnalysisView`) từng cùng gắn `.appErrorAlert()` trên chung `model.alertMessage`, khiến set lỗi lúc sheet đang mở huỷ cả sheet lẫn alert (UIKit "already presenting"). Sửa bằng `AlertHostStack` — chỉ layer mount sau cùng mới present `.alert()`. Verify bằng `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet + alert cùng hiện đúng. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
 
 ## 3. Bẫy máy này
 
