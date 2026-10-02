@@ -32,6 +32,11 @@ struct ShellTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Namespace private var pillNamespace
+    /// `Color.accentColor`/`.tint` không theo `.tint()` áp ở `ReadoApp` cho view tự vẽ (xác nhận
+    /// bằng ảnh trên cả simulator lẫn máy thật, ux-redesign-r1 T10) — đọc thẳng `AppTheme` từ
+    /// `@AppStorage` thay vì tin vào environment. Cùng key với `ReadoApp.appTheme`.
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
     var body: some View {
         // Khe giữa capsule và nút chụp: đã đo bằng ảnh (`open save-banner`) — Spacing.sm (8pt)
@@ -95,13 +100,13 @@ struct ShellTabBar: View {
                     }
                 }
             }
-            .foregroundStyle(selected ? Color.accentColor : .secondary)
+            .foregroundStyle(selected ? accent : .secondary)
             .frame(maxWidth: .infinity)
             .frame(maxHeight: .infinity)
             .background {
                 if selected {
                     Capsule()
-                        .fill(Color.accentColor.opacity(0.14))
+                        .fill(accent.opacity(0.14))
                         .matchedGeometryEffect(id: "shell-tab-pill", in: pillNamespace)
                 }
             }

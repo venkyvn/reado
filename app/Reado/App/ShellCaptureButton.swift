@@ -9,6 +9,11 @@ import SwiftUI
 struct ShellCaptureButton: View {
     let action: () -> Void
 
+    /// Cùng lý do với `ShellTabBar.accent` — `Color.accentColor` không theo `.tint()` cho view tự
+    /// vẽ, đọc thẳng `AppTheme` từ `@AppStorage`.
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
+
     var body: some View {
         // ux-polish-r1 T4: Liquid Glass interactive (iOS 26+) — glass tự phản
         // hồi khi nhấn, bỏ ShutterPressStyle thủ công. iOS < 26 giữ nguyên.
@@ -19,7 +24,7 @@ struct ShellCaptureButton: View {
                     .foregroundStyle(.white)
                     .frame(width: ShellTabBar.height, height: ShellTabBar.height)
             }
-            .glassEffect(.regular.tint(Color.accentColor).interactive(), in: Circle())
+            .glassEffect(.regular.tint(accent).interactive(), in: Circle())
             .accessibilityLabel("Chụp trang")
         } else {
             Button(action: action) {
@@ -27,7 +32,7 @@ struct ShellCaptureButton: View {
                     .font(.title2)
                     .foregroundStyle(.white)
                     .frame(width: ShellTabBar.height, height: ShellTabBar.height)
-                    .background(Circle().fill(Color.accentColor))
+                    .background(Circle().fill(accent))
                     .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(ShutterPressStyle())
