@@ -83,6 +83,11 @@ public struct MatureHiddenDraft: Equatable, Sendable, Identifiable {
     public let draft: ReviewDraft
     /// `meaning_vi` của mọi dòng cùng khoá đã thuộc — ít nhất 1 phần tử.
     public let knownMeanings: [String]
+
+    public init(draft: ReviewDraft, knownMeanings: [String]) {
+        self.draft = draft
+        self.knownMeanings = knownMeanings
+    }
 }
 
 /// Kết quả `ReviewDraftBuilder.drafts`: `visible` là danh sách chính (sort +
@@ -217,5 +222,39 @@ public enum ReviewDraftBuilder {
 
     static func trim(_ string: String) -> String {
         string.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// fr10-close-r1: tính lại `visible`/`matureHidden` khi đích lưu đổi (ADR-053 cho
+    /// đổi ngay trên màn duyệt) — `matureSenses` của T1 chỉ đọc một lần lúc mở màn
+    /// (Q-09 so khớp theo collection, đích đổi thì bộ so khớp cũng phải đổi theo).
+    /// Nhận draft **hiện tại** (giữ sửa tay + lựa chọn), không dựng lại từ AI:
+    /// - Khoá tính trên term/pos **của draft** — đúng thứ sẽ lưu, không phải bản AI gốc.
+    /// - Rời khỏi nhóm gập (bộ mới không có khoá) → về `visible`, **giữ** `isSelected`
+    ///   (chọn tay trong nhóm gập không mất khi đổi đích xong lại về danh sách chính).
+    ///   Không preselect thêm — suất `preselectLimit` chỉ tính lúc dựng ban đầu.
+    /// - Vào nhóm gập (bộ mới có khoá) → **bỏ chọn** (ADR-056: nhóm gập không bao giờ
+    ///   mang theo lựa chọn người dùng không nhìn thấy), `knownMeanings` lấy theo
+    ///   `matureSenses` mới.
+    /// - Item mới rời nhóm gập nối cuối trước khi sort lại unverified/suspect lên đầu.
+    public static func regroup(
+        visible: [ReviewDraft],
+        matureHidden: [MatureHiddenDraft],
+        matureSenses: [String: [String]]
+    ) -> ReviewDraftResult {
+        var newVisible: [ReviewDraft] = []
+        var newMatureHidden: [MatureHiddenDraft] = []
+        for draft in visible + matureHidden.map(\.draft) {
+            let key = VocabRepository.matureKey(term: draft.term, pos: draft.pos)
+            if let knownMeanings = matureSenses[key] {
+                var hidden = draft
+                hidden.isSelected = false
+                newMatureHidden.append(MatureHiddenDraft(draft: hidden, knownMeanings: knownMeanings))
+            } else {
+                newVisible.append(draft)
+            }
+        }
+        let sortedVisible = newVisible.filter { $0.verification != .verified }
+            + newVisible.filter { $0.verification == .verified }
+        return ReviewDraftResult(visible: sortedVisible, matureHidden: newMatureHidden)
     }
 }

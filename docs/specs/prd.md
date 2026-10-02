@@ -492,8 +492,10 @@ gặp lại một từ chưa thuộc là chuyện *tốt*, chỉ từ đã thu�
 
 Bộ lọc này là **cơ chế chống trùng duy nhất còn lại** sau khi ràng buộc `unique` bị
 bỏ, nên chất lượng của nó quan trọng hơn vẻ ngoài. Ngưỡng "đã thuộc" và lemmatize
-đã chốt ở mục 12 (Q-08 `stability >= 21`, Q-06 không lemmatize). Task 3.8 chưa bật
-bộ lọc trong code. Lý lẽ đầy đủ ở
+đã chốt ở mục 12 (Q-08 `stability >= 21`, Q-06 không lemmatize). Bộ lọc đã bật
+trong code (Task 3.8, fr10-close-r1) — đổi đích lưu ngay trên màn duyệt (ADR-053)
+tính lại nhóm gập theo bộ mới (`ReviewDraftBuilder.regroup`), giữ sửa tay +
+lựa chọn người dùng. Lý lẽ đầy đủ ở
 [research/vocabulary.md mục 6.3](docs/research/vocabulary.md#63-vì-sao-không-có-ràng-buộc-unique).
 
 #### FR-17 — Collection Management

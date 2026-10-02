@@ -141,7 +141,9 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
    chọn sẵn **tối đa 5 đầu** theo thứ tự AI xếp hạng giá trị học (FR-09, prompt-v6 T2b). Unverified badge,
    không preselect (FR-02). User sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn —
    **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không
-   còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
+   còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ). Đổi đích → nhóm gập "Đã thuộc"
+   tính lại theo bộ mới (Q-09 so khớp theo collection), giữ nguyên sửa tay + lựa chọn người dùng
+   (fr10-close-r1, `ReviewDraftBuilder.regroup`).
 5. Nút đáy "Lưu N từ vào X" (prominent, ghim đáy) → lưu card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2). Thao tác **không chặn** — không alert xác nhận.
 6. Sau Lưu: ở lại đúng chỗ đang đứng (không tự đổi tab, không bị đẩy sang Hub) + `ShellBanner` không chặn "Đã lưu N từ vào X · Xem" (ADR-053). Bấm "Xem" mới mở Hub của X; để banner tự tắt (4s, hoặc giữ khi VoiceOver đang chạy) thì ở nguyên màn cũ. Số new trên Hôm nay đã áp `daily_new_limit` (FR-14).
 

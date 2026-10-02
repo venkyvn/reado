@@ -183,6 +183,9 @@ struct AnalysisView: View {
             syncDraftsIfNeeded()
         }
         .onChange(of: model.capture.analysisResult) { _, _ in syncDraftsIfNeeded() }
+        // fr10-close-r1: ADR-053 cho đổi đích ngay trên màn duyệt — Q-09 so khớp
+        // "đã thuộc" theo collection nên đổi đích phải tính lại nhóm gập theo bộ mới.
+        .onChange(of: model.capture.analysisTargetCollectionID) { _, _ in regroupMatureIfNeeded() }
         .task {
             // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
             // sheet), phân tích được kích hoạt khi màn hình này xuất hiện.
@@ -329,6 +332,25 @@ struct AnalysisView: View {
         matureHiddenDrafts = draftResult.matureHidden.map(\.draft)
         matureMeaningsByID = Dictionary(
             uniqueKeysWithValues: draftResult.matureHidden.map { ($0.id, $0.knownMeanings) })
+    }
+
+    /// fr10-close-r1: đích đổi trên màn duyệt (ADR-053) → tính lại nhóm "Đã thuộc"
+    /// theo bộ mới mà KHÔNG dựng lại từ AI — giữ sửa tay + lựa chọn của người dùng
+    /// (`ReviewDraftBuilder.regroup`). Không chạy khi chưa có gì để tính (chưa phân
+    /// tích xong, hoặc cả hai danh sách rỗng).
+    private func regroupMatureIfNeeded() {
+        guard model.capture.analysisResult != nil,
+              !drafts.isEmpty || !matureHiddenDrafts.isEmpty
+        else { return }
+        let hidden = matureHiddenDrafts.map { draft in
+            MatureHiddenDraft(draft: draft, knownMeanings: matureMeaningsByID[draft.id] ?? [])
+        }
+        let result = ReviewDraftBuilder.regroup(
+            visible: drafts, matureHidden: hidden, matureSenses: model.matureSensesForCapture())
+        drafts = result.visible
+        matureHiddenDrafts = result.matureHidden.map(\.draft)
+        matureMeaningsByID = Dictionary(
+            uniqueKeysWithValues: result.matureHidden.map { ($0.id, $0.knownMeanings) })
     }
 
     /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào

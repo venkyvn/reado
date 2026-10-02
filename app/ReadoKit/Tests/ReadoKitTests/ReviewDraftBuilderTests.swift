@@ -281,4 +281,125 @@ final class ReviewDraftBuilderTests: XCTestCase {
         XCTAssertEqual(rows[0][2].textValue, "new")
         XCTAssertEqual(rows[0][3].textValue, "2026-09-18T02:00:00Z")
     }
+
+    // MARK: - regroup (fr10-close-r1: đổi đích trên màn duyệt, ADR-053)
+
+    /// Đích đổi sang bộ có khoá đã thuộc → item rời `visible`, vào `matureHidden`
+    /// VÀ bị bỏ chọn (ADR-056: nhóm gập không mang lựa chọn người dùng không thấy).
+    func testRegroupMovesVisibleItemToMatureHiddenAndDeselects() {
+        let draft = ReviewDraft(
+            term: "bank", pos: "noun", ipa: "", meaningVI: "bờ sông",
+            cefr: "", example: "ex", verification: .verified, isSelected: true)
+        let result = ReviewDraftBuilder.regroup(
+            visible: [draft],
+            matureHidden: [],
+            matureSenses: [VocabRepository.matureKey(term: "bank", pos: "noun"): ["ngân hàng"]])
+        XCTAssertTrue(result.visible.isEmpty)
+        let hidden = result.matureHidden.first
+        XCTAssertEqual(hidden?.draft.id, draft.id, "giữ nguyên id cho binding")
+        XCTAssertEqual(hidden?.knownMeanings, ["ngân hàng"])
+        XCTAssertEqual(hidden?.draft.isSelected, false)
+    }
+
+    /// Đích đổi sang bộ không có khoá → item rời `matureHidden`, về `visible`,
+    /// GIỮ `isSelected` (chọn tay trước đó không mất khi quay lại danh sách chính).
+    func testRegroupMovesMatureHiddenItemToVisibleKeepingSelection() {
+        let draft = ReviewDraft(
+            term: "setback", pos: "noun", ipa: "", meaningVI: "trở ngại",
+            cefr: "", example: "ex", verification: .verified, isSelected: true)
+        let hidden = MatureHiddenDraft(draft: draft, knownMeanings: ["thất bại"])
+        let result = ReviewDraftBuilder.regroup(
+            visible: [], matureHidden: [hidden], matureSenses: [:])
+        XCTAssertTrue(result.matureHidden.isEmpty)
+        let visible = result.visible.first
+        XCTAssertEqual(visible?.id, draft.id)
+        XCTAssertEqual(visible?.isSelected, true, "chọn tay trong nhóm gập không mất")
+    }
+
+    /// Khoá tính theo term/pos ĐÃ SỬA của draft — không phải bản AI gốc.
+    func testRegroupUsesEditedTermAndPosForKey() {
+        var draft = ReviewDraft(
+            term: "oldterm", pos: "verb", ipa: "", meaningVI: "m",
+            cefr: "", example: "ex", verification: .verified, isSelected: true)
+        draft.term = "bank"
+        draft.pos = "noun"
+        let result = ReviewDraftBuilder.regroup(
+            visible: [draft], matureHidden: [],
+            matureSenses: [VocabRepository.matureKey(term: "bank", pos: "noun"): ["ngân hàng"]])
+        XCTAssertTrue(result.visible.isEmpty, "phải khớp theo term/pos đã sửa, không phải oldterm/verb")
+        XCTAssertEqual(result.matureHidden.first?.draft.term, "bank")
+    }
+
+    /// Sửa tay (meaning/example) sống sót qua regroup dù item đổi nhóm.
+    func testRegroupPreservesEditedFieldsAcrossGroupChange() {
+        var draft = ReviewDraft(
+            term: "bank", pos: "noun", ipa: "", meaningVI: "nghĩa gốc",
+            cefr: "", example: "ví dụ gốc", verification: .verified, isSelected: false)
+        draft.meaningVI = "nghĩa đã sửa"
+        draft.example = "ví dụ đã sửa"
+        let result = ReviewDraftBuilder.regroup(
+            visible: [draft], matureHidden: [],
+            matureSenses: [VocabRepository.matureKey(term: "bank", pos: "noun"): ["ngân hàng"]])
+        XCTAssertEqual(result.matureHidden.first?.draft.meaningVI, "nghĩa đã sửa")
+        XCTAssertEqual(result.matureHidden.first?.draft.example, "ví dụ đã sửa")
+    }
+
+    /// `knownMeanings` lấy theo `matureSenses` MỚI (bộ mới) — không giữ nghĩa của
+    /// bộ cũ nếu item đã ở sẵn trong `matureHidden`.
+    func testRegroupRefreshesKnownMeaningsFromNewMatureSenses() {
+        let draft = ReviewDraft(
+            term: "bank", pos: "noun", ipa: "", meaningVI: "m",
+            cefr: "", example: "ex", verification: .verified, isSelected: false)
+        let hidden = MatureHiddenDraft(draft: draft, knownMeanings: ["nghĩa bộ cũ"])
+        let result = ReviewDraftBuilder.regroup(
+            visible: [], matureHidden: [hidden],
+            matureSenses: [VocabRepository.matureKey(term: "bank", pos: "noun"): ["nghĩa bộ mới"]])
+        XCTAssertEqual(result.matureHidden.first?.knownMeanings, ["nghĩa bộ mới"])
+    }
+
+    /// `matureSenses` rỗng (vd đổi sang Kho tạm chưa có từ nào đã thuộc) → mọi
+    /// item về `visible`, kể cả item đang nằm trong `matureHidden`.
+    func testRegroupWithEmptyMatureSensesMovesEverythingToVisible() {
+        let a = ReviewDraft(
+            term: "a", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .verified, isSelected: true)
+        let b = ReviewDraft(
+            term: "b", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .verified, isSelected: false)
+        let result = ReviewDraftBuilder.regroup(
+            visible: [a], matureHidden: [MatureHiddenDraft(draft: b, knownMeanings: ["x"])],
+            matureSenses: [:])
+        XCTAssertTrue(result.matureHidden.isEmpty)
+        XCTAssertEqual(Set(result.visible.map(\.id)), Set([a.id, b.id]))
+    }
+
+    /// Gọi `regroup` hai lần liên tiếp với cùng input (vd đổi đích hai lần về
+    /// cùng một bộ) → kết quả không đổi, không nhân đôi/mất item.
+    func testRegroupIsIdempotentForSameInput() {
+        let a = ReviewDraft(
+            term: "a", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .verified, isSelected: true)
+        let senses = [VocabRepository.matureKey(term: "mature", pos: "noun"): ["x"]]
+        let mature = ReviewDraft(
+            term: "mature", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .verified, isSelected: true)
+        let first = ReviewDraftBuilder.regroup(
+            visible: [a, mature], matureHidden: [], matureSenses: senses)
+        let second = ReviewDraftBuilder.regroup(
+            visible: first.visible, matureHidden: first.matureHidden, matureSenses: senses)
+        XCTAssertEqual(first, second)
+    }
+
+    /// `visible` vẫn sort unverified/suspect lên đầu sau regroup (không riêng lúc dựng).
+    func testRegroupKeepsUnverifiedFirstSortOrder() {
+        let verified = ReviewDraft(
+            term: "v", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .verified, isSelected: false)
+        let unverified = ReviewDraft(
+            term: "u", pos: "noun", ipa: "", meaningVI: "m", cefr: "",
+            example: "ex", verification: .unverified, isSelected: false)
+        let result = ReviewDraftBuilder.regroup(
+            visible: [verified, unverified], matureHidden: [], matureSenses: [:])
+        XCTAssertEqual(result.visible.map(\.term), ["u", "v"])
+    }
 }
