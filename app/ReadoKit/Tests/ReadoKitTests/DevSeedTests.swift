@@ -88,4 +88,28 @@ final class DevSeedTests: XCTestCase {
         let count = try db.scalarInt64("SELECT COUNT(*) FROM review_logs;") ?? 0
         XCTAssertEqual(count, 0)
     }
+
+    // MARK: - markMature (q13-sense-filter-r1 T2)
+
+    func testMarkMatureSetsStabilityAboveThreshold() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "Demo")
+        let item = try Fixtures.insertVocab(
+            in: db, collectionID: col, term: "setback", pos: "noun")
+        try Fixtures.insertCard(in: db, vocabItemID: item, state: "new")
+
+        try DevSeed.markMature(on: db, termNormalized: "setback", pos: "noun", now: now)
+
+        let rows = try db.rows("SELECT state, stability FROM cards;")
+        XCTAssertEqual(rows.first?["state"].textValue, "review")
+        XCTAssertGreaterThanOrEqual(rows.first?["stability"].doubleValue ?? 0, 21)
+    }
+
+    func testMarkMatureNoOpWhenTermNotFound() throws {
+        let db = try Fixtures.seededDB()
+        // Không khớp term+pos nào — không crash, không đổi gì.
+        try DevSeed.markMature(on: db, termNormalized: "ghost", pos: "noun", now: now)
+        let count = try db.scalarInt64("SELECT COUNT(*) FROM cards;") ?? 0
+        XCTAssertEqual(count, 0)
+    }
 }

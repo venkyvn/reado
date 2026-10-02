@@ -19,6 +19,14 @@ struct AnalysisView: View {
     }
 
     @State private var drafts: [ReviewDraft] = []
+    // Q-13 phương án B (ADR-056): item khớp khoá `term|pos` đã thuộc — gập xuống
+    // nhóm riêng (không xoá), không preselect, không chiếm suất 5 của `drafts`.
+    // Mảng riêng (không lồng trong `drafts`) để binding tới từng ô chọn vẫn hoạt
+    // động — `MatureHiddenDraft.draft` là `let`, không mutate được qua index.
+    @State private var matureHiddenDrafts: [ReviewDraft] = []
+    @State private var matureMeaningsByID: [String: [String]] = [:]
+    // Gập sẵn theo mặc định (T2 DoD) — mở ra mới thấy danh sách nghĩa trong kho.
+    @State private var matureHiddenExpanded = false
     @State private var expandedIDs: Set<String> = []
     @State private var tab: AnalysisTab = .vocab
     // ADR-030 (cơ chế y hệt `ReadingSessionView`): bản dịch mặc định HIỆN, một nút đáy bật/tắt
@@ -44,8 +52,10 @@ struct AnalysisView: View {
     /// ux-redesign-r1 T10), không `Color.accentColor` trần.
     private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
+    /// Q-13: đếm cả item chọn từ nhóm gập "Đã thuộc" — chọn ở đó tăng số trong
+    /// nút "Lưu (N)" giống mọi item khác (T2 DoD).
     private var selectedCount: Int {
-        drafts.filter(\.isSelected).count
+        drafts.filter(\.isSelected).count + matureHiddenDrafts.filter(\.isSelected).count
     }
 
     /// Dòng chữ theo tiến độ agent (FR-02) — model.capture.analysisProgress nil
@@ -148,7 +158,9 @@ struct AnalysisView: View {
             if showsResult {
                 switch tab {
                 case .vocab:
-                    if !drafts.isEmpty { saveBar }
+                    // Q-13: nhóm gập "Đã thuộc" có thể còn hàng chọn được dù `drafts`
+                    // (danh sách chính) rỗng — nút Lưu vẫn phải hiện để lưu được.
+                    if !drafts.isEmpty || !matureHiddenDrafts.isEmpty { saveBar }
                 case .page: translationBar
                 }
             }
@@ -187,6 +199,16 @@ struct AnalysisView: View {
             if model.shell.debugShowAnalysisPage {
                 model.shell.debugShowAnalysisPage = false
                 tab = .page
+            }
+            // q13-sense-filter-r1 T2 — `-ReadoScreen analysis-fixture-mature`: mở sẵn nhóm gập
+            // "Đã thuộc" + chọn luôn dòng đầu, để một ảnh chụp chứng minh cả mở nhóm lẫn
+            // "Lưu (N)" tăng theo lựa chọn trong nhóm đó (simulator không giả lập chạm được).
+            if model.shell.debugExpandMatureHidden {
+                model.shell.debugExpandMatureHidden = false
+                matureHiddenExpanded = true
+                if !matureHiddenDrafts.isEmpty {
+                    matureHiddenDrafts[0].isSelected = true
+                }
             }
         }
         .task {
@@ -292,21 +314,26 @@ struct AnalysisView: View {
     // MARK: - Flow
 
     private func syncDraftsIfNeeded() {
-        guard let result = model.capture.analysisResult, drafts.isEmpty else { return }
+        guard let result = model.capture.analysisResult, drafts.isEmpty, matureHiddenDrafts.isEmpty
+        else { return }
         // port UI lab §5.5: preselect = verified && cefr ∈ settings.cefrLevels.
         let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
         let draftResult = ReviewDraftBuilder.drafts(
             from: result.vocabulary,
             selectedLevels: levels.map(Set.init),
             matureSenses: model.matureSensesForCapture())
-        // Q-13 phương án B: `draftResult.matureHidden` (item khớp khoá đã thuộc,
-        // kèm nghĩa trong kho) chưa có UI — section "Đã thuộc · N" gập là T2
-        // (docs/plans/q13-sense-filter-r1.md), để session sau.
         drafts = draftResult.visible
+        // Q-13 phương án B (ADR-056): tách riêng thành mảng + dict để binding
+        // (`$matureHiddenDrafts[index]`) đi được tới từng ô chọn — `knownMeanings`
+        // tra theo id draft, hiển thị ở `MatureHiddenRow`.
+        matureHiddenDrafts = draftResult.matureHidden.map(\.draft)
+        matureMeaningsByID = Dictionary(
+            uniqueKeysWithValues: draftResult.matureHidden.map { ($0.id, $0.knownMeanings) })
     }
 
     /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào
-    /// (T9: rỗng sau FR-10) thì chẳng có gì để mất — đóng thẳng.
+    /// (T9: rỗng sau FR-10) thì chẳng có gì để mất — đóng thẳng. Nhóm gập "Đã thuộc" không tính
+    /// (chưa chọn gì ở đó cũng không phải "việc đang làm" — Q-13 không preselect).
     private var hasUnsavedWork: Bool {
         model.capture.analysisResult != nil && !hasConfirmed && !drafts.isEmpty
     }
@@ -375,8 +402,10 @@ struct AnalysisView: View {
             // ADR-053: đích đổi được ngay ở đầu màn này (`CollectionDestinationPicker`),
             // mặc định = bộ chọn lúc chụp (`analysisTargetCollectionID`).
             let result = model.capture.analysisResult
+            // Q-13: item chọn trong nhóm gập "Đã thuộc" lưu như mọi draft khác —
+            // qua đúng `ReviewDraftBuilder.selected(_:)` (model.saveSelection).
             let saved = try model.saveSelection(
-                drafts,
+                drafts + matureHiddenDrafts,
                 collectionID: model.capture.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
                 summaryVI: result?.summaryVI ?? "")
@@ -474,10 +503,12 @@ struct AnalysisView: View {
 
     // MARK: - Tab Từ vựng
 
-    /// FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
+    /// FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008). Q-13: nhóm gập
+    /// "Đã thuộc" có thể còn hàng ngay cả khi `drafts` (danh sách chính) rỗng —
+    /// vẫn hiện List (không màn trắng) để không mất đường vào nhóm gập đó.
     @ViewBuilder
     private var vocabList: some View {
-        if drafts.isEmpty {
+        if drafts.isEmpty && matureHiddenDrafts.isEmpty {
             emptyVocabView
         } else {
             vocabRows
@@ -499,6 +530,12 @@ struct AnalysisView: View {
                 dismiss()
             }
         }
+    }
+
+    /// "Đã chọn X/Y" của danh sách CHÍNH — không tính nhóm gập "Đã thuộc" (đếm
+    /// riêng ở header của nhóm đó), tránh X vượt Y khi người dùng chọn cả hai.
+    private var visibleSelectedCount: Int {
+        drafts.filter(\.isSelected).count
     }
 
     private var vocabRows: some View {
@@ -538,10 +575,31 @@ struct AnalysisView: View {
                             }
                     }
                 } header: {
-                    Text("Đã chọn \(selectedCount)/\(drafts.count)")
+                    Text("Đã chọn \(visibleSelectedCount)/\(drafts.count)")
                         .contentTransition(.numericText())
-                        .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
+                        .animation(reduceMotion ? nil : Motion.reveal, value: visibleSelectedCount)
                 }
+            }
+            if !matureHiddenDrafts.isEmpty {
+                matureHiddenSection
+            }
+        }
+    }
+
+    /// Q-13 phương án B (ADR-056) — nhóm gập cuối tab Từ vựng: item khớp khoá
+    /// `term|pos` đã thuộc, KHÔNG bị xoá khỏi màn duyệt. Gập sẵn (T2 DoD); mở ra
+    /// liệt kê đủ nghĩa trong kho kèm nghĩa AI gán cho trang này (`MatureHiddenRow`).
+    private var matureHiddenSection: some View {
+        Section {
+            DisclosureGroup(isExpanded: $matureHiddenExpanded) {
+                ForEach(Array(matureHiddenDrafts.enumerated()), id: \.element.id) { index, draft in
+                    MatureHiddenRow(
+                        draft: $matureHiddenDrafts[index],
+                        knownMeanings: matureMeaningsByID[draft.id] ?? [])
+                }
+            } label: {
+                Text("Đã thuộc · \(matureHiddenDrafts.count)")
+                    .font(Typo.rowTitle)
             }
         }
     }

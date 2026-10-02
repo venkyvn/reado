@@ -135,7 +135,13 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
    mở thẳng form thêm agent (`AgentFormSheet`) thay vì chụp rồi báo lỗi sau (ADR-053, phòng lỗi trước).
 2. Không bước collection picker. Đích ngầm = kho tạm.
 3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). ~~Mặc định = proxy Reado~~ — bỏ, ADR-049: chưa thêm agent BYOK thì lỗi, không chạy được bước này. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
-4. Màn **Duyệt & lưu**: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn **tối đa 5 đầu** theo thứ tự AI xếp hạng giá trị học (FR-09, prompt-v6 T2b). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn — **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
+4. Màn **Duyệt & lưu**: FR-10 gập từ đã thuộc xuống nhóm riêng "Đã thuộc · N" cuối danh sách (gập sẵn, không
+   xoá — Q-13 phương án B, ADR-056), mở ra thấy nghĩa AI gán cho trang này cạnh mọi nghĩa đã có trong kho cùng
+   khoá `term+pos`; chọn một dòng trong đó vẫn tăng số ở nút Lưu như item thường. Verified (danh sách chính)
+   chọn sẵn **tối đa 5 đầu** theo thứ tự AI xếp hạng giá trị học (FR-09, prompt-v6 T2b). Unverified badge,
+   không preselect (FR-02). User sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn —
+   **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không
+   còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
 5. Nút đáy "Lưu N từ vào X" (prominent, ghim đáy) → lưu card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2). Thao tác **không chặn** — không alert xác nhận.
 6. Sau Lưu: ở lại đúng chỗ đang đứng (không tự đổi tab, không bị đẩy sang Hub) + `ShellBanner` không chặn "Đã lưu N từ vào X · Xem" (ADR-053). Bấm "Xem" mới mở Hub của X; để banner tự tắt (4s, hoặc giữ khi VoiceOver đang chạy) thì ở nguyên màn cũ. Số new trên Hôm nay đã áp `daily_new_limit` (FR-14).
 
@@ -153,7 +159,7 @@ Capture · Processing · Duyệt & lưu (đổi đích + chọn từ) · banner 
 | BYOK 401 / timeout / JSON lệch schema | Lỗi rõ + CTA Settings; không lưu vocab dở | FR-21 |
 | Submit trùng do mạng | Không lưu hai bộ vocab trùng | FR-02 |
 | Chưa thêm agent, bấm nút chụp | Mở form thêm agent trước, không mở camera (ADR-053) | FR-21 |
-| Vocab rỗng sau FR-10 | "Không còn từ đáng học trên trang này" + [Chụp lại] [Đóng] — vẫn cho đọc tab Trang (T9) | FR-10 |
+| Vocab rỗng sau FR-10 | "Không còn từ đáng học trên trang này" + [Chụp lại] [Đóng] — vẫn cho đọc tab Trang (T9). Còn item trong nhóm gập "Đã thuộc" (Q-13) thì KHÔNG rơi vào state này — vẫn hiện danh sách với nhóm gập đó, còn chọn/lưu được | FR-10 |
 | Thoát picker chưa confirm | Cảnh báo mất kết quả analysis | FR-03 |
 | Lưu thất bại (không phải thành công) | Vẫn alert chặn — chỉ đường **thành công** đổi sang banner (ADR-053) | FR-02 |
 | Analysis cần mạng | Fail rõ, không giả offline. Ôn (J3–J5) **chạy được offline** (NFR-03, Q-02 local-first) — không cần journey ôn-khi-mất-mạng riêng nếu hàng đợi đã trên máy | NFR-03 |

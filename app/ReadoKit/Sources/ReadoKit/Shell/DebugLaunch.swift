@@ -49,6 +49,9 @@ public struct DebugLaunch: Equatable, Sendable {
         /// prompt-v6 T3 — như `analysisFixturePage` nhưng sáng sẵn cụm EN↔VI đầu tiên của trang,
         /// để chụp được trạng thái "đã chạm" không cần thao tác tay.
         case phraseHighlight
+        /// q13-sense-filter-r1 T2 — như `analysisFixture` nhưng mở sẵn nhóm gập "Đã thuộc" (Q-13
+        /// phương án B), để chụp trạng thái mở không cần thao tác tay (simulator không có cách tap).
+        case analysisFixtureMature
         /// ux-redesign-r1 T2 — banner "Đã lưu … · Xem" mẫu (`ShellBanner`) trên Home, chưa cần luồng lưu thật.
         case saveBanner
     }
@@ -143,6 +146,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "analysis-fixture-page": return .analysisFixturePage
         case "encounter-sheet": return .encounterSheet
         case "phrase-highlight": return .phraseHighlight
+        case "analysis-fixture-mature": return .analysisFixtureMature
         case "save-banner": return .saveBanner
         default: return nil
         }

@@ -101,6 +101,10 @@ final class ShellSignals {
     /// prompt-v6 T3 — `-ReadoScreen phrase-highlight` bật cờ này; AnalysisView đọc ở `.task` để
     /// tự sáng cụm EN↔VI đầu tiên định vị được rồi dọn sạch.
     var debugActivateFirstPhrase = false
+    /// q13-sense-filter-r1 T2 — `-ReadoScreen analysis-fixture-mature` bật cờ này; AnalysisView
+    /// đọc ở `onAppear` để tự mở nhóm gập "Đã thuộc" (mặc định gập) rồi dọn sạch — simulator
+    /// không có cách giả lập chạm để chụp trạng thái mở.
+    var debugExpandMatureHidden = false
     #endif
 }
 

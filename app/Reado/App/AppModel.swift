@@ -158,6 +158,11 @@ final class AppModel {
               let rows = try? CSVImport.parse(text)
         else { return }
         _ = try? CSVImport.importRows(on: database, rows: rows, now: SystemClock().now)
+        // q13-sense-filter-r1 T2: "setback" (noun, blank collection → Kho tạm)
+        // đánh dấu đã thuộc — fixture `analysis-fixture` (cùng khoá term|pos)
+        // có nhóm gập "Đã thuộc" để chụp (Q-13 phương án B, ADR-056).
+        try? DevSeed.markMature(
+            on: database, termNormalized: "setback", pos: "noun", now: SystemClock().now)
     }
 
     /// verify-nav-r1 T2 — `-ReadoSeed demo|demo-reviewed|empty` (`DebugLaunch`,

@@ -319,6 +319,9 @@ struct RootView: View {
             model.shell.debugShowAnalysisPage = true
             model.shell.debugActivateFirstPhrase = true
             openDebugAnalysisFixture()
+        case .analysisFixtureMature:
+            model.shell.debugExpandMatureHidden = true
+            openDebugAnalysisFixture()
         case .saveBanner:
             selectedTab = .today
             Motion.run(reduceMotion: reduceMotion) {

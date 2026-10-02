@@ -64,6 +64,45 @@ public enum DevSeed {
         }
     }
 
+    /// q13-sense-filter-r1 T2 — đánh dấu MỘT thẻ demo đã nạp (CSV) "đã thuộc"
+    /// (Q-08: `state = 'review'`, `stability >= 21`) để fixture `analysis-fixture`
+    /// (`scripts/sim_screens.sh open analysis-fixture`) có từ khớp khoá `term|pos`
+    /// cho nhóm gập "Đã thuộc" (Q-13 phương án B, ADR-056) khi mở màn duyệt.
+    /// UPDATE thẳng cột — đây là STATE CUỐI của dữ liệu demo tĩnh, không phải một
+    /// lượt chấm thật, nên không qua `ReviewScheduler` (luật CLAUDE §4 "FSRS phải
+    /// dùng thư viện" áp cho TÍNH lịch chấm; seed demo dùng raw SQL giống
+    /// `Seeder`/test `Fixtures.insertCard`). Không khớp `term_normalized`+`pos`
+    /// nào → im lặng bỏ qua (dev seed, không phải lỗi người dùng).
+    public static func markMature(
+        on db: SQLiteDatabase, termNormalized: String, pos: String, now: Date
+    ) throws {
+        guard
+            let cardID = try db.rows(
+                """
+                SELECT cards.id FROM cards
+                JOIN vocab_items ON vocab_items.id = cards.vocab_item_id
+                WHERE vocab_items.term_normalized = ? AND vocab_items.pos = ?
+                ORDER BY cards.rowid LIMIT 1;
+                """,
+                [.text(termNormalized), .text(pos)]
+            ).first?.first?.textValue
+        else { return }
+
+        try db.run(
+            """
+            UPDATE cards
+            SET state = 'review', stability = 30, difficulty = 5,
+                reps = 5, lapses = 0, learning_steps = 0, scheduled_days = 30,
+                last_review_at = ?, due_at = ?
+            WHERE id = ?;
+            """,
+            [
+                .text(ISOTimestamp.string(from: now.addingTimeInterval(-30 * 86_400))),
+                .text(ISOTimestamp.string(from: now.addingTimeInterval(30 * 86_400))),
+                .text(cardID),
+            ])
+    }
+
     /// Dọn nốt: thẻ nào vẫn due trong cửa sổ "hôm nay" (lịch FSRS ngắn hơn
     /// offset đã rải ở `gradeHistory`) → chấm thêm 1 lần Easy ngay trước `now`
     /// để đẩy `due_at` ra sau. Tối đa 3 vòng — không treo nếu interval vẫn

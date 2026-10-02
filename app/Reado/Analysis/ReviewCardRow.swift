@@ -153,3 +153,61 @@ struct ReviewCardRow: View {
         }
     }
 }
+
+// MARK: - Nhóm gập "Đã thuộc" (Q-13 phương án B, ADR-056)
+
+/// Một dòng trong nhóm gập "Đã thuộc · N" ở cuối tab Từ vựng: draft khớp khoá
+/// `term|pos` đã thuộc (`VocabRepository.matureKey`) — gập xuống đây thay vì bị
+/// xoá khỏi màn duyệt (Q-13). Hiển thị cả nghĩa AI gán cho TRANG này cạnh mọi
+/// nghĩa đã có TRONG KHO cùng khoá, để người dùng tự so — máy không đoán hộ đây
+/// là nghĩa trùng hay nghĩa mới (quyết định (i)). Không có editor 6 field như
+/// `ReviewCardRow` (chi tiết hiển thị — chọn thì lưu nguyên bản AI trả, giống
+/// mọi draft khác qua `ReviewDraftBuilder.selected(_:)`).
+struct MatureHiddenRow: View {
+    @Binding var draft: ReviewDraft
+    let knownMeanings: [String]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.row) {
+            selectButton
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.xs) {
+                    Text(draft.term)
+                        .fontWeight(.semibold)
+                    if !draft.pos.isEmpty {
+                        Text(draft.pos)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text("Trang này: \(draft.meaningVI)")
+                    .font(.subheadline)
+                Text("Trong kho: \(knownMeanings.joined(separator: "; "))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, Spacing.xs)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var selectButton: some View {
+        Button {
+            draft.isSelected.toggle()
+            Haptics.selection()
+        } label: {
+            Image(systemName: draft.isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(
+                    draft.isSelected ? Color.accentColor : Color.secondary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            draft.isSelected ? "Bỏ chọn \(draft.term)" : "Chọn \(draft.term) để ôn tập")
+        .accessibilityValue(draft.isSelected ? "Đã chọn" : "Chưa chọn")
+        .accessibilityAddTraits(draft.isSelected ? .isSelected : [])
+    }
+}

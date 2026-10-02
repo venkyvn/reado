@@ -1,6 +1,9 @@
 # Plan: q13-sense-filter-r1
 
-> **Trạng thái:** open (2026-10-02) - Q-13: fen chốt B + (i) (ADR-056). T1 (kit: `matureSenses` + `ReviewDraftBuilder` tách nhóm gập) code xong, `scripts/test.sh kit`/`build` xanh. T2 (UI section "Đã thuộc · N" + fixture) chưa làm — để session sau.
+> **Trạng thái:** closed (2026-10-02) - Q-13: fen chốt B + (i) (ADR-056). T1 (kit: `matureSenses` +
+> `ReviewDraftBuilder` tách nhóm gập) xong. T2 (UI section "Đã thuộc · N" + fixture `setback`/noun +
+> `DevSeed.markMature` + ảnh light/dark chứng minh gập/mở/chọn/"Lưu (N)" tăng) xong — full
+> `scripts/test.sh` 416/418 xanh (2 skip cũ). Chi tiết: `docs/journal/2026-10-02.md`.
 
 ## Context
 Q-13 (`CLAUDE.md` §5): khoá so khớp FR-10 là `term_normalized|pos` trong một collection
