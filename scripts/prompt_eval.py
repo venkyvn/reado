@@ -5,7 +5,14 @@
 `Prompt.version` (docs/plans/prompt-v6.md T1).
 
     python3 scripts/prompt_eval.py --diagnostics .tmp/diagnostics/<ts> \
-        --prompt scripts/prompts/v5.txt --prompt scripts/prompts/v6.txt
+        --prompt scripts/prompts/v5.txt \
+        --prompt app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift \
+        --model qwen3.8-flash
+
+--prompt nhận file .txt (template thô, placeholder {CEFR}/{PAGE_OCR}) hoặc .swift
+(rút thẳng literal multi-line string trong `Prompt.text`, cùng placeholder) — so
+trực tiếp với bản đang sửa trong ReadoKit, không cần chép tay ra .txt mỗi lần đổi prompt.
+--model/--base-url ghi đè meta.json khi model gốc đã đổi tên/ngừng ở provider.
 
 Không có --diagnostics → dùng thư mục mới nhất trong .tmp/diagnostics/.
 Mỗi thư mục analyses/<id>/ cần sẵn page_ocr.txt + meta.json (model, baseURL, cefr)
@@ -15,8 +22,9 @@ Key đọc từ .env ở gốc repo lúc chạy (không in ra, không ghi vào k
 cùng cú pháp khối PROVIDER=/API_KEY= như scripts/sim_aibox.sh dùng cho simulator.
 Không dependency ngoài stdlib.
 
-Output: một file Markdown trong .tmp/prompt-eval/ — KHÔNG chứa text trang gốc
-(bản quyền sách), chỉ model/cefr/độ dài response + JSON tóm tắt mỗi prompt.
+Output: một file Markdown trong .tmp/prompt-eval/ (đã gitignore) — có text trang
++ bản dịch/cặp cụm/vocab từng prompt để fen chấm cạnh nhau, KHÔNG commit vào repo
+(bản quyền sách).
 """
 import argparse
 import json
@@ -49,6 +57,24 @@ def load_json(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def load_prompt_template(path: Path) -> str:
+    """Trả về template thô (placeholder {CEFR}/{PAGE_OCR}). File .txt đọc nguyên;
+    file .swift rút literal multi-line string trong thân `func text(...)` của
+    Prompt.swift — để so trực tiếp bản đang sửa, không lệch do chép tay ra .txt."""
+    if path.suffix != ".swift":
+        return path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r'"""\n(.*?)\n([ \t]*)"""', text, re.DOTALL)
+    if not match:
+        sys.exit(f"Không tìm thấy literal \"\"\" ... \"\"\" trong {path}")
+    body, indent = match.group(1), match.group(2)
+    lines = [line[len(indent):] if line.startswith(indent) else line
+             for line in body.split("\n")]
+    rebuilt = "\n".join(lines)
+    rebuilt = rebuilt.replace("\\(cefrLevel)", "{CEFR}").replace("\\(pageOCR)", "{PAGE_OCR}")
+    return rebuilt.replace("\\\\", "\\")
 
 
 def pick_env_key(env_path: Path) -> str | None:
@@ -176,7 +202,77 @@ def summarize(content: str) -> str:
     )
 
 
-def run(diagnostics_dir: Path, prompt_paths: list[Path], limit: int, out_dir: Path) -> Path:
+def md_cell(text: str) -> str:
+    """Escape một ô bảng Markdown — gộp xuống dòng, chặn `|` phá bảng."""
+    return re.sub(r"\s+", " ", text or "").replace("|", "\\|").strip()
+
+
+def render_segments_table(parsed_by_prompt: dict[str, dict | None], prompt_names: list[str]) -> list[str]:
+    """Bảng song song theo chỉ số segment: EN (lấy từ prompt đầu tiên có đúng
+    segment đó) + VI/phrases riêng của mỗi prompt — segmentation có thể lệch
+    nhẹ giữa hai bản, nhưng cùng OCR nên đa số khớp theo chỉ số."""
+    seg_lists = {
+        name: (parsed_by_prompt.get(name) or {}).get("segments", []) or []
+        for name in prompt_names
+    }
+    max_len = max((len(v) for v in seg_lists.values()), default=0)
+    if max_len == 0:
+        return []
+    header = ["#", "EN (source_en)"]
+    header += [f"VI · {name}" for name in prompt_names]
+    header += [f"phrases · {name}" for name in prompt_names]
+    lines = [
+        "| " + " | ".join(header) + " |",
+        "| " + " | ".join(["---"] * len(header)) + " |",
+    ]
+    for i in range(max_len):
+        en = ""
+        for name in prompt_names:
+            segs = seg_lists[name]
+            if i < len(segs) and segs[i].get("source_en"):
+                en = segs[i]["source_en"]
+                break
+        row = [str(i + 1), md_cell(en)]
+        for name in prompt_names:
+            segs = seg_lists[name]
+            vi = segs[i].get("translation_vi", "") if i < len(segs) else ""
+            row.append(md_cell(vi))
+        for name in prompt_names:
+            segs = seg_lists[name]
+            phrases = (segs[i].get("phrases") or []) if i < len(segs) else []
+            phrase_text = "; ".join(
+                f"{p.get('en', '?')} → {p.get('vi', '?')}" for p in phrases)
+            row.append(md_cell(phrase_text))
+        lines.append("| " + " | ".join(row) + " |")
+    return lines
+
+
+def render_vocab_lists(parsed_by_prompt: dict[str, dict | None], prompt_names: list[str]) -> list[str]:
+    """Vocab giữ nguyên thứ tự AI trả về — đúng cái cần chấm cho preselect top 5."""
+    lines: list[str] = []
+    for name in prompt_names:
+        parsed = parsed_by_prompt.get(name)
+        if not parsed:
+            continue
+        vocab = parsed.get("vocabulary", []) or []
+        lines.append(f"**vocab · {name}** (thứ tự AI, {len(vocab)} từ, 5 đầu sẽ chọn sẵn):")
+        for idx, v in enumerate(vocab, 1):
+            mark = "→ preselect" if idx <= 5 else ""
+            lines.append(
+                f"{idx}. {v.get('term', '?')} ({v.get('cefr', '?')}) — "
+                f"{v.get('meaning_vi', '?')} {mark}".rstrip())
+        lines.append("")
+    return lines
+
+
+def run(
+    diagnostics_dir: Path,
+    prompt_paths: list[Path],
+    limit: int,
+    out_dir: Path,
+    model_override: str | None,
+    base_url_override: str | None,
+) -> Path:
     analyses_dir = find_analyses_dir(diagnostics_dir)
     if analyses_dir is None:
         sys.exit(f"Không thấy analyses/ trong {diagnostics_dir} — kéo lại bằng pull_diagnostics.sh.")
@@ -186,7 +282,8 @@ def run(diagnostics_dir: Path, prompt_paths: list[Path], limit: int, out_dir: Pa
     if not api_key:
         sys.exit(f"Không tìm được API_KEY trong {env_path} — kiểm tra file.")
 
-    prompt_templates = {p.name: p.read_text(encoding="utf-8") for p in prompt_paths}
+    prompt_templates = {p.name: load_prompt_template(p) for p in prompt_paths}
+    prompt_names = list(prompt_templates)
 
     folders = sorted(p for p in analyses_dir.iterdir() if p.is_dir())[:limit]
     if not folders:
@@ -198,7 +295,8 @@ def run(diagnostics_dir: Path, prompt_paths: list[Path], limit: int, out_dir: Pa
     lines = [
         f"# prompt_eval — {diagnostics_dir.name}",
         "",
-        f"Prompts: {', '.join(prompt_templates)} · {len(folders)} lần phân tích",
+        f"Prompts: {', '.join(prompt_names)} · {len(folders)} lần phân tích"
+        + (f" · model ghi đè = {model_override}" if model_override else ""),
         "",
     ]
 
@@ -209,23 +307,35 @@ def run(diagnostics_dir: Path, prompt_paths: list[Path], limit: int, out_dir: Pa
             continue
         page_ocr = ocr_path.read_text(encoding="utf-8", errors="replace")
         meta = load_json(meta_path)
-        model = meta.get("model")
-        base_url = meta.get("baseURL")
+        model = model_override or meta.get("model")
+        base_url = base_url_override or meta.get("baseURL")
         cefr = meta.get("cefr", "B1")
         if not model or not base_url:
-            lines.append(f"## {folder.name} — thiếu model/baseURL trong meta.json, bỏ qua")
+            lines.append(f"## {folder.name} — thiếu model/baseURL (meta.json hoặc --model/--base-url), bỏ qua")
             lines.append("")
             continue
 
         lines.append(f"## {folder.name} (model={model}, cefr={cefr}, {len(page_ocr)} ký tự OCR)")
+        parsed_by_prompt: dict[str, dict | None] = {}
         for name, template in prompt_templates.items():
             prompt_text = template.replace("{CEFR}", cefr).replace("{PAGE_OCR}", page_ocr)
             content, error = call_model(base_url, api_key, model, prompt_text)
             if error:
                 lines.append(f"- **{name}**: lỗi — {error}")
-            else:
-                lines.append(f"- **{name}**: {summarize(content)}")
+                parsed_by_prompt[name] = None
+                continue
+            lines.append(f"- **{name}**: {summarize(content)}")
+            try:
+                parsed_by_prompt[name] = json.loads(content)
+            except Exception:
+                parsed_by_prompt[name] = None
         lines.append("")
+
+        table = render_segments_table(parsed_by_prompt, prompt_names)
+        if table:
+            lines.extend(table)
+            lines.append("")
+        lines.extend(render_vocab_lists(parsed_by_prompt, prompt_names))
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     return out_path
@@ -239,6 +349,10 @@ def main() -> None:
                          help="File template prompt (lặp lại để so nhiều bản)")
     parser.add_argument("--limit", type=int, default=30, help="Số lần phân tích tối đa (mặc định 30)")
     parser.add_argument("--out-dir", type=Path, default=ROOT / ".tmp" / "prompt-eval")
+    parser.add_argument("--model", type=str, default=None,
+                         help="Ghi đè model trong meta.json (model gốc đã đổi tên/ngừng ở provider)")
+    parser.add_argument("--base-url", type=str, default=None,
+                         help="Ghi đè baseURL trong meta.json")
     args = parser.parse_args()
 
     diagnostics_dir = args.diagnostics or latest_diagnostics_dir()
@@ -251,7 +365,7 @@ def main() -> None:
         if not p.exists():
             sys.exit(f"Không thấy prompt template: {p}")
 
-    out_path = run(diagnostics_dir, args.prompt, args.limit, args.out_dir)
+    out_path = run(diagnostics_dir, args.prompt, args.limit, args.out_dir, args.model, args.base_url)
     print(f"Đã ghi: {out_path}")
 
 

@@ -116,9 +116,11 @@ A-02** — bằng chứng phải đến từ việc so với output của chính
 > **Đã lệch code:** bản dưới đây là prompt multimodal gốc, trước ADR-034 (OCR
 > trên máy + text-mode). Prompt THẬT đang chạy nằm ở
 > `app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift` (`Prompt.version`,
-> hiện tại **5** — ADR-037: OCR tự dò ranh giới đoạn bằng hình học trước khi
-> đưa vào prompt). Đổi luật `\n\n`/paragraph thì sửa `Prompt.swift`, không sửa
-> khối code dưới đây.
+> hiện tại **6** — ADR-037: OCR tự dò ranh giới đoạn bằng hình học trước khi
+> đưa vào prompt; ADR-055 (prompt-v6): dịch theo cụm/nhịp câu, xin thêm
+> `segments[].phrases`, `vocabulary` xếp theo giá trị học giảm dần). Đổi luật
+> `\n\n`/paragraph hay prompt thật thì sửa `Prompt.swift`, không sửa khối code
+> dưới đây.
 
 ```
 Bạn là một dịch giả chuyên nghiệp có kiến thức sư phạm về giảng dạy tiếng Anh.
@@ -379,7 +381,7 @@ Thêm chúng vào prompt là đảo một quyết định đã chốt ở doc kh
 | ~~Từ đồng nghĩa / trái nghĩa~~ | ~~Thuộc `word_relations` ở R2, và cơ chế là AI đề xuất, người duyệt — không phải sinh kèm lúc trích xuất~~ **Owner MỞ LẠI 2026-09-08:** thêm 2 cột hiển thị bổ trợ do AI sinh kèm lúc capture; `word_relations` R2 **không bị huỷ** — nó vẫn là cơ chế *luyện* cặp quan hệ | structure mục 5; [rich-vocab-cram-ddl.md](docs/research/review.md) mục 1 |
 | Dạng nguyên thể của `term` | Q-06 đã chốt: không lemmatize. Client chỉ chữ thường + trim | structure mục 6.4 |
 | Câu ví dụ do AI tự đặt | Ràng buộc bắt buộc của FR-02, và là chỗ neo của nguyên lý 1 | mục 6 |
-| Nên đưa từ nào vào bộ ôn tập | Đó là quyết định của owner ở FR-09, và của bộ lọc `stability` ở FR-10 | FR-09, FR-10 |
+| Quyết định cuối giữ/bỏ từ nào vào bộ ôn tập | AI (prompt v6) chỉ **xếp thứ tự đề xuất** theo giá trị học (dùng để preselect top 5, FR-09); giữ/bỏ/chọn thêm vẫn là owner. Lọc `stability` ở FR-10 vẫn là tầng riêng | FR-09, FR-10, prompt-v6 T2b |
 | Giải thích ngữ pháp | **NG-08** | PRD mục 3 |
 | Audio / hướng dẫn phát âm | **NG-01**. `ipa` là chỗ dừng có chủ ý | PRD mục 3 |
 

@@ -107,7 +107,7 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 | Input đúng **một** path: ảnh (camera hoặc thư viện) | NG-07 |
 | Song ngữ + summary **persist** cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, **không ảnh**) — đọc lại được để dễ đọc sách; **kho tạm không lưu session**; session thứ 11 trôi; vocab đã confirm không bao giờ trôi | Q-10 chốt 2026-09-18 (ADR-029); NFR-04; FR-05/FR-06 qua hình dạng J2 (một capture = một session) |
 | `example` phải trích nguyên văn; unverified **không** chọn sẵn; không loại trong im lặng | FR-02, prompt-spec |
-| Item verified: mặc định **chọn tất cả**, user bỏ những cái đã biết | FR-09 |
+| Item verified: AI xếp theo giá trị học giảm dần, màn duyệt **chọn sẵn tối đa 5 đầu** (`preselectLimit`), còn lại user tự chọn thêm | FR-09, prompt-v6 T2b |
 | Lọc từ **đã thuộc** lúc trích xuất (FR-10); không `unique` trên `term` | structure §6.3 |
 | Hai nhánh queue: new bị `daily_new_limit`, due thì không | FR-11 |
 | Home hiện số **sẽ ôn hôm nay** (sau hạn mức), backlog là số **riêng** | FR-14 |
@@ -135,7 +135,7 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
    mở thẳng form thêm agent (`AgentFormSheet`) thay vì chụp rồi báo lỗi sau (ADR-053, phòng lỗi trước).
 2. Không bước collection picker. Đích ngầm = kho tạm.
 3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). ~~Mặc định = proxy Reado~~ — bỏ, ADR-049: chưa thêm agent BYOK thì lỗi, không chạy được bước này. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
-4. Màn **Duyệt & lưu**: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn (FR-09). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn — **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
+4. Màn **Duyệt & lưu**: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn **tối đa 5 đầu** theo thứ tự AI xếp hạng giá trị học (FR-09, prompt-v6 T2b). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn — **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
 5. Nút đáy "Lưu N từ vào X" (prominent, ghim đáy) → lưu card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2). Thao tác **không chặn** — không alert xác nhận.
 6. Sau Lưu: ở lại đúng chỗ đang đứng (không tự đổi tab, không bị đẩy sang Hub) + `ShellBanner` không chặn "Đã lưu N từ vào X · Xem" (ADR-053). Bấm "Xem" mới mở Hub của X; để banner tự tắt (4s, hoặc giữ khi VoiceOver đang chạy) thì ở nguyên màn cũ. Số new trên Hôm nay đã áp `daily_new_limit` (FR-14).
 

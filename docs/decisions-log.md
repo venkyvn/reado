@@ -941,3 +941,30 @@
   checklist 3 hàng độc lập, vẫn giữ "3 bước suy từ dữ liệu thật, 2 cờ UserDefaults").
   `docs/specs/journeys.md` không đụng — onboarding không phải journey riêng, đã ghi ở
   J-R1-S "CEFR trống lần đầu" trỏ ADR này thay ADR-041.
+
+## ADR-055 — prompt-v6: dịch theo cụm + `phrases` + xếp hạng vocab + preselect top 5
+
+- **Ngày:** 2026-10-02
+- **Bối cảnh:** Vision #2 muốn bản dịch là thứ để học văn phong (theo cụm, theo nhịp
+  câu), không chỉ gỡ nghĩa — prompt v5 chỉ yêu cầu "dễ hiểu", không có cơ chế nào dạy
+  cách chuyển ngữ cụm từ. FR-09 criterion 1 cũ ("mặc định chọn tất cả") khiến người
+  dùng phải bỏ chọn từng từ thủ công mỗi lần duyệt — không tận dụng được việc AI biết
+  ước lượng từ nào đáng học hơn ở cùng trình độ. Owner chốt 2026-09-30: N = 5, AI xếp
+  hạng; 2026-10-02: model đánh giá = `qwen3.8-flash` (model cũ `deepseek-v4.1-flash`
+  đã 503 model_not_found ở provider).
+- **Quyết định:** `Prompt.swift` v6 (`Prompt.version = 6`): chỉ dẫn dịch theo
+  cụm/nhịp câu tự nhiên; xin thêm `segments[].phrases` (2–6 cặp EN↔VI đáng học mỗi
+  đoạn, đường ống nhận/lọc đã làm ở T2a — sai thì bỏ im lặng, không phải vocabulary);
+  `vocabulary` xin trả về theo **giá trị học giảm dần**. `ReviewDraftBuilder.drafts`
+  đổi luật preselect: verified giữ thứ tự AI, chỉ **`preselectLimit` (5) item đủ điều
+  kiện đầu tiên** (verified + đúng CEFR, như cũ) được chọn sẵn — AI chỉ xếp thứ tự đề
+  xuất, người dùng vẫn là người duyệt cuối (FR-09, vision #3). `scripts/prompt_eval.py`
+  thêm đọc thẳng `Prompt.swift` (rút literal, khỏi chép tay `.txt`) + `--model`/
+  `--base-url` ghi đè + bảng song song EN/VI/phrases/vocab để fen chấm trước khi đổi
+  prompt thật — chạy trên 4 trang thật `.tmp/diagnostics/20260928T112557Z/` với
+  `qwen3.8-flash`, cả 4 trang hai bản đều trả JSON hợp lệ, v6 có phrases hợp lệ.
+- **Hệ quả:** `Analysis/Prompt.swift`, `Analysis/ReviewDraft.swift` (+6 test
+  `ReviewDraftBuilderTests`), `scripts/prompt_eval.py`. Sửa PRD FR-09 criterion 1,
+  `journeys.md` (J1 bước 4, bảng mục 1), prompt-spec §3/§7 (trỏ v6, "AI chỉ xếp thứ
+  tự đề xuất"). Không đụng DDL, không đụng `AnalysisResponseNormalizer`/Decoder (T2a
+  đã xong). UI chạm-sáng `phrases` là việc riêng, chưa làm (T3, `docs/plans/prompt-v6.md`).

@@ -29,15 +29,18 @@
 - repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
-- prompt-v6 (2026-10-02, **T1 ✅ + T2a ✅**, T2b/T3 chưa làm) — T1: `scripts/prompt_eval.py` +
-  `scripts/prompts/v5.txt`. T2a: `PageAnalysis.Segment.phrases` (cặp cụm EN↔VI, FR-05) qua
-  normalizer (substring qua `VerifyEngine.normalize`, tối đa 6) + decoder + `SegmentDTO` optional —
-  đường ống thuần, `Prompt.version` vẫn 5. T2b (prompt v6 + xếp hạng + preselect 5) cần model sống
-  — fen chốt `qwen3.8-flash` thay `deepseek-v4.1-flash` đã 503. → `docs/plans/prompt-v6.md`
+- prompt-v6 (2026-10-02, **T1 ✅ + T2a ✅ + T2b ✅ code/build**, chờ fen chấm bảng, T3 chưa làm) —
+  T1: `scripts/prompt_eval.py` + `scripts/prompts/v5.txt`. T2a: `PageAnalysis.Segment.phrases`
+  (cặp cụm EN↔VI, FR-05) qua normalizer + decoder + `SegmentDTO` optional — đường ống thuần. T2b:
+  `Prompt.swift` v6 (dịch theo cụm, xin `phrases`, `vocabulary` xếp theo giá trị học); `ReviewDraftBuilder`
+  preselect tối đa 5 item đủ điều kiện đầu (FR-09, đảo "mặc định tất cả"); eval script đọc thẳng
+  `Prompt.swift` + chạy thật `qwen3.8-flash` trên 4 trang → `.tmp/prompt-eval/20261002T041512Z.md`.
+  **Fen chưa đọc bảng xác nhận v6 không tệ hơn** — chưa coi prompt v6 là kiểm chứng chất lượng xong.
+  → `docs/plans/prompt-v6.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 
-1. A-02: prompt baseline **đã có** ở `docs/agent/prompt-spec.md` §2 (owner dán 2026-09-08; dòng "vẫn trống" cũ ở đây sai). Còn thiếu: fen chấm output baseline vs app — `prompt-v6` T1 xong công cụ dựng bảng so (`scripts/prompt_eval.py`), T2 sẽ chạy v5 vs v6 thật.
+1. A-02: prompt baseline **đã có** ở `docs/agent/prompt-spec.md` §2 (owner dán 2026-09-08; dòng "vẫn trống" cũ ở đây sai). Còn thiếu: fen chấm output baseline vs app — `prompt-v6` T2b đã chạy v5 vs v6 thật (`qwen3.8-flash`, 4 trang), bảng ở `.tmp/prompt-eval/20261002T041512Z.md` chờ fen đọc.
 2. Ngưỡng leech FR-19 đã chốt = 6 (2026-09-24). Không hỏi lại.
 3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4).
 4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn, happy case đã xong.

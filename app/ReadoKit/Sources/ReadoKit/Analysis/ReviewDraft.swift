@@ -79,14 +79,20 @@ public enum ReviewDraftBuilder {
     public static let validPOS: [String] = ["noun", "verb", "adj", "adv", "phrase", "other"]
     public static let validCEFR: [String] = ["A2", "B1", "B2", "C1"]
 
+    /// FR-09 (sửa prompt-v6 T2b, 2026-10-02 — đảo "mặc định tất cả"): số item
+    /// chọn sẵn tối đa trên màn duyệt. AI (prompt v6) trả `vocabulary` theo thứ
+    /// tự giá trị học giảm dần; người dùng vẫn là người duyệt cuối cho phần còn lại.
+    public static let preselectLimit = 5
+
     /// Từ kết quả AI → danh sách draft:
     /// - SD 10.3: unverified + suspect **lên đầu** (để xử lý trước — ADR-008),
-    ///   verified giữ nguyên thứ tự gốc (thứ tự xuất hiện trên trang).
-    /// - FR-09 mặc định chọn tất cả, nhưng FR-02 + SD 10.3: unverified/suspect
-    ///   **bỏ chọn sẵn** — user chủ động chọn lại nếu giữ.
-    /// - port UI lab (2026-09-23): preselect còn lọc theo CEFR — chỉ `verified`
-    ///   **và** `cefr ∈ selectedLevels` mới được chọn sẵn. `selectedLevels = nil`
-    ///   → giữ hành vi cũ (chọn mọi verified) cho test tương thích.
+    ///   verified giữ nguyên thứ tự AI trả về (giá trị học giảm dần, prompt v6).
+    /// - FR-09: preselect tối đa `preselectLimit` (5) item **đủ điều kiện** đầu
+    ///   tiên theo thứ tự AI — không còn "mặc định tất cả". Đủ điều kiện = verified
+    ///   + `cefr ∈ selectedLevels` (như cũ, FR-02 + SD 10.3). unverified/suspect
+    ///   không bao giờ preselect và không chiếm suất trong 5 item.
+    /// - `selectedLevels = nil` → mọi verified đều đủ điều kiện (vẫn cap ở 5,
+    ///   tương thích ngược về mặt chữ ký, khác hành vi cũ "chọn hết").
     public static func drafts(
         from items: [PageAnalysis.VocabularyItemIn],
         selectedLevels: Set<String>? = nil,
@@ -96,8 +102,12 @@ public enum ReviewDraftBuilder {
             !excludingMature.contains(
                 VocabRepository.matureKey(term: item.term, pos: item.pos))
         }
-        let all = visible.map { item in
-            ReviewDraft(
+        var preselectedCount = 0
+        let all = visible.map { item -> ReviewDraft in
+            let eligible = isEligibleForPreselect(item, selectedLevels: selectedLevels)
+            let isSelected = eligible && preselectedCount < preselectLimit
+            if isSelected { preselectedCount += 1 }
+            return ReviewDraft(
                 term: item.term,
                 pos: item.pos,
                 ipa: item.ipa ?? "",
@@ -105,15 +115,17 @@ public enum ReviewDraftBuilder {
                 cefr: item.cefr ?? "",
                 example: item.example,
                 verification: item.verification,
-                isSelected: preselect(item, selectedLevels: selectedLevels))
+                isSelected: isSelected)
         }
         return all.filter { $0.verification != .verified }
             + all.filter { $0.verification == .verified }
     }
 
-    /// Preselect FR-02: verified (không unverified/suspect) + cefr ∈ levels
-    /// (nếu có bộ lọc). cefr rỗng/không rõ → không preselect dù verified.
-    private static func preselect(
+    /// Đủ điều kiện preselect FR-02: verified (không unverified/suspect) + cefr ∈
+    /// levels (nếu có bộ lọc). cefr rỗng/không rõ → không đủ điều kiện dù verified.
+    /// Không tự chọn — chỉ `drafts` mới quyết item nào trong số đủ điều kiện rơi
+    /// vào `preselectLimit` đầu.
+    private static func isEligibleForPreselect(
         _ item: PageAnalysis.VocabularyItemIn,
         selectedLevels: Set<String>?
     ) -> Bool {

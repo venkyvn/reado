@@ -1,6 +1,7 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
-> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅ + T2a ✅**; T2b/T3 chưa làm.
+> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅ + T2a ✅ + T2b ✅ (code+build, chờ fen chấm
+> bảng eval)**; T3 chưa làm.
 > Hợp đồng gốc 09-30 vẫn đúng; sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
 
 ## Chỗ cập nhật so với bản 09-30
@@ -79,20 +80,32 @@
 - **Kết quả:** +6 test (`AnalysisDecoderTests` ×4, `ReadingSessionTests` ×2). Full test **390/392
   xanh** (2 skip opt-in cũ), `** TEST SUCCEEDED **`. Chi tiết: `docs/journal/2026-10-02.md`.
 
-#### T2b — prompt v6 + xếp hạng + preselect top 5 (cần model sống để chấm)
+#### T2b — prompt v6 + xếp hạng + preselect top 5 (✅ code+build xong 2026-10-02, chờ fen chấm)
 - Model eval: **`qwen3.8-flash`** (fen chốt 2026-10-02 — `deepseek-v4.1-flash` cũ đã 503 model_not_found).
-- `prompt_eval.py` thêm `--model`/`--base-url` ghi đè meta; nhận thẳng `Prompt.swift` (rút literal như
-  cách ra `v5.txt`) → so trực tiếp với bản đang sửa, không cần `v6.txt` riêng (tránh lệch template).
+- `prompt_eval.py` thêm `--model`/`--base-url` ghi đè meta; `load_prompt_template` nhận cả `.swift`
+  (rút literal multi-line string trong `Prompt.text`) → so trực tiếp với bản đang sửa, không cần
+  `v6.txt` riêng (tránh lệch template). Thêm bảng song song Markdown theo chỉ số segment
+  (EN · VI mỗi prompt · phrases mỗi prompt) + list vocab theo thứ tự AI, đánh dấu 5 item sẽ preselect.
 - `Prompt.swift` v6 (`version = 6`): dịch theo cụm/nhịp câu tự nhiên (vision #2), xin `phrases` 2–6 cặp/
   đoạn, `vocabulary` xếp theo giá trị học giảm dần.
-- `ReviewDraftBuilder.drafts`: verified giữ thứ tự AI (không còn thứ tự trang); preselect tối đa **5**
-  đầu trong số verified + đúng CEFR (đếm sau `excludingMature`). Unverified/suspect vẫn lên đầu, không
-  chọn sẵn.
-- Test (`ReviewDraftBuilderTests`): 8 verified → đúng 5 đầu; 3 verified → cả 3; CEFR lọc trước rồi mới
-  đếm 5; unverified không chiếm suất. Sửa `testDraftBuilderNilLevelsSelectsAllVerified` theo luật mới.
-- Docs: PRD FR-09 criterion 1; prompt-spec §3 (trỏ v6) + §7 dòng "Nên đưa từ nào vào bộ ôn tập" → "AI chỉ
-  xếp thứ tự đề xuất"; ADR-055; ROADMAP.
-- DoD: full xanh **và** fen chấm bảng `.tmp/prompt-eval/` v5 vs v6 (≥4 trang thật): v6 không tệ hơn.
+- `ReviewDraftBuilder.drafts`: verified giữ thứ tự AI (không còn thứ tự trang); preselect tối đa
+  `preselectLimit` (5) đầu trong số verified + đúng CEFR (đếm sau `excludingMature`). Unverified/suspect
+  vẫn lên đầu, không chọn sẵn, không chiếm suất.
+- Test (`ReviewDraftBuilderTests`, +6): 8 verified → đúng 5 đầu; 3 verified → cả 3; CEFR lọc trước rồi
+  mới đếm 5 (item ngoài level không chiếm suất); unverified không chiếm suất dù đứng trước; mature-
+  excluded không chiếm suất. Sửa comment `testDraftBuilderNilLevelsSelectsAllVerified` theo luật mới.
+- Docs: PRD FR-09 criterion 1; journeys.md (J1 bước 4, bảng mục 1); prompt-spec §3 (trỏ v6) + §7 dòng
+  "Nên đưa từ nào vào bộ ôn tập" → "AI chỉ xếp thứ tự đề xuất"; ADR-055; ROADMAP nhật ký.
+- **Kết quả:** full suite **395/397 xanh** (2 skip cũ), kit **376/376**, `** TEST SUCCEEDED **`. Chạy
+  thật `qwen3.8-flash` trên 4 trang `.tmp/diagnostics/20260928T112557Z/`
+  (`python3 scripts/prompt_eval.py --diagnostics .tmp/diagnostics/20260928T112557Z --model qwen3.8-flash
+  --prompt scripts/prompts/v5.txt --prompt app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift`):
+  cả 4 trang hai bản đều ra JSON hợp lệ, v6 có phrases hợp lệ (11–16/trang, v5 luôn 0 vì chưa hỏi),
+  vocab 2 bản tương đương về chất lượng. Bảng: `.tmp/prompt-eval/20261002T041512Z.md` (gitignore,
+  **không** commit — có text trang bản quyền).
+- **DoD còn treo:** full xanh ✅ **và** fen chấm bảng v5 vs v6 — bảng đã có, **fen chưa xác nhận**.
+  Coi T2b là "code xong, build xanh", chưa coi là "prompt v6 đã kiểm chứng chất lượng" cho tới khi
+  fen đọc `.tmp/prompt-eval/20261002T041512Z.md` và nói v6 không tệ hơn.
 
 ### T3 — UI chạm-sáng
 - Chạm cụm EN → cụm VI tương ứng sáng (`SegmentBlock` trong `AnalysisComponents.swift` +
