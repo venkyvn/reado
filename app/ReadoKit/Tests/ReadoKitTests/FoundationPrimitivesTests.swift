@@ -80,20 +80,4 @@ final class FoundationPrimitivesTests: XCTestCase {
         XCTAssertEqual(window.start, "2026-09-17T21:00:00Z")
         XCTAssertEqual(window.end, "2026-09-18T21:00:00Z")
     }
-
-    // MARK: CardSnapshot.dayDiff
-
-    func testDayDiffRoundingAndBounds() {
-        let from = Fixtures.iso("2026-09-18T00:00:00Z")
-        // 25h → 1.0417 → 1
-        XCTAssertEqual(
-            CardSnapshot.dayDiff(
-                from: from, to: Fixtures.iso("2026-09-19T01:00:00Z")), 1)
-        // Không có lastReview (thẻ mới) → 0
-        XCTAssertEqual(CardSnapshot.dayDiff(from: nil, to: from), 0)
-        // Ngược thời gian → 0, không âm
-        XCTAssertEqual(
-            CardSnapshot.dayDiff(
-                from: Fixtures.iso("2026-09-19T01:00:00Z"), to: from), 0)
-    }
 }

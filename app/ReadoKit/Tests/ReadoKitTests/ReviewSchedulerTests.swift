@@ -87,6 +87,31 @@ final class ReviewSchedulerTests: XCTestCase {
         XCTAssertEqual(outcome.elapsedDaysRounded, 2)
     }
 
+    /// Guard lib drift: `elapsed_days` = hiệu ngày lịch **UTC** (floor theo
+    /// `startOfDay` UTC), KHÔNG phải |Δ|/24h làm tròn — hành vi của
+    /// `Date.dateDiffInDays` trong swift-fsrs @`4fbaf20`
+    /// (`FSRSHelper.swift:98`). Nếu nâng lib mà công thức đổi, test này đỏ.
+    func testElapsedDaysIsUTCCalendarDiffNotRounded24h() throws {
+        let scheduler = try makeScheduler()
+        func elapsedDays(from: String, to: String) throws -> Int {
+            let snapshot = Fixtures.cardSnapshot(
+                due: Fixtures.iso(to), stability: 5, difficulty: 4, reps: 1,
+                state: "review", lastReview: Fixtures.iso(from))
+            return try scheduler.grade(
+                .good, snapshot: snapshot, now: Fixtures.iso(to)
+            ).elapsedDaysRounded
+        }
+        // Cách 1h nhưng vắt qua nửa đêm UTC → 1 ngày lịch, dù |Δ|/24h làm tròn ra 0.
+        XCTAssertEqual(
+            try elapsedDays(from: "2026-09-10T23:30:00Z", to: "2026-09-11T00:30:00Z"), 1)
+        // Cách 23h, cùng ngày lịch UTC → 0 ngày, dù gần trọn 1 ngày.
+        XCTAssertEqual(
+            try elapsedDays(from: "2026-09-10T00:30:00Z", to: "2026-09-10T23:30:00Z"), 0)
+        // Cách 47h, hai ranh giới ngày → 2 ngày lịch.
+        XCTAssertEqual(
+            try elapsedDays(from: "2026-09-10T02:00:00Z", to: "2026-09-12T01:00:00Z"), 2)
+    }
+
     func testStateCodesRoundTripAllFour() {
         for code in CardStateCode.allCodes {
             XCTAssertTrue(CardStateCode.isValid(code), "không map được \(code)")

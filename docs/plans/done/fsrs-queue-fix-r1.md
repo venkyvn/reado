@@ -1,6 +1,6 @@
 # Plan: fsrs-queue-fix-r1
 
-> **Trạng thái:** open (2026-09-30) - T1/T2 xong; T3 (elapsed_days) hết chặn D-3, chưa làm
+> **Trạng thái:** closed (2026-10-02) - T1/T2/T3 xong. T3: `elapsed_days` một định nghĩa (lib swift-fsrs tự ghi đè, bỏ `CardSnapshot.dayDiff`), docs `review.md` §4.1 cập nhật.
 
 > Fen save 2026-09-30. Nguồn: review "FSRS đã best practice chưa" (session cloud, đối chiếu `swift-fsrs` @`4fbaf20`).
 > 1 task tầng 2 / session, đóng bằng `/rhandoff`. Thứ tự: **T1 → T2 → T3**. T1 ✅ T2 ✅; T3 **chặn** tới khi chốt D-3 (dưới).
@@ -62,13 +62,13 @@
   - `ReviewQueueAndServiceTests`: `last_review_at` == `reviewed_at`.
 - **DoD:** suite xanh · nhãn nút == `scheduled_days` được ghi (test `GradePreview` với fuzz bật).
 
-### T3 — elapsed-days (một định nghĩa + docs) — **chặn tới khi chốt D-3**
+### T3 — elapsed-days (một định nghĩa + docs) ✅ xong 2026-10-02
+- **Xong 2026-10-02:** D-3 đã tự hết — ADR-050 (extra-review-r1, 2026-10-01) xoá hẳn đường `recordCram`/`mode='cram'`, nên vế cram của T3 không còn áp dụng. Còn lại đúng 1 định nghĩa lệch: `CardSnapshot.schedulerCard` tự tính `elapsedDays` rồi truyền cho lib, nhưng `AbstractScheduler.init` (swift-fsrs @`4fbaf20`) **ghi đè ngay** bằng `Date.dateDiffInDays` (hiệu ngày lịch UTC) — giá trị Reado tính toán chưa bao giờ được dùng.
+- **Lệch so với bản plan gốc (ghi nhận, không chặn):** không tạo `ElapsedDays.calendarDaysUTC` — không còn chỗ nào trong Reado cần giá trị này (log lấy thẳng từ `ReviewOutcome.elapsedDaysRounded` do lib trả, cram đã bỏ, optimizer R2 sẽ tính lại từ `reviewed_at`). Chép lại công thức lib chỉ để đưa vào một input bị lib bỏ qua là thêm code không ai đọc. Chọn cách đơn giản hơn: truyền thẳng `0`, xoá `CardSnapshot.dayDiff`.
 - **Files:**
-  - Mới `ElapsedDays.calendarDaysUTC(from:to:)` (ReadoKit): chép `Date.dateDiffInDays` của swift-fsrs @`4fbaf20` (helper ngày, không phải thuật toán FSRS; lib để `internal` nên không gọi thẳng được) — comment trỏ nguồn.
-  - `CardSnapshot.schedulerCard` dùng hàm mới; sửa comment (lib tự tính lại `elapsedDays`, giá trị truyền vào bị bỏ qua). Bỏ `CardSnapshot.dayDiff` nếu hết chỗ dùng (hiện 4 chỗ, phần lớn trong test).
-  - `ReviewService.recordCram`: `elapsed_days` bằng hàm mới — khớp log srs như `review.md` (dòng ~1040) yêu cầu. **Nếu D-3 đảo (cram cập nhật lịch):** phần này chuyển sang `cram-reschedule-r1`, T3 chỉ còn `CardSnapshot` + docs.
-  - Docs `research/review.md` §4.1: thêm 1 dòng — `elapsed_days` = hiệu ngày lịch UTC (giống swift-fsrs), không theo `day_cutoff_hour`; optimizer R2 tính lại từ `reviewed_at` theo `DayBoundary`.
-- **Test:**
-  - Guard lib drift: nhiều cặp timestamp (kể cả vắt qua 07:00 giờ VN = 00:00 UTC) → `ElapsedDays` == `scheduler.grade(...).elapsedDaysRounded`.
-  - `CramReviewTests` kiểm `elapsed_days`; `FoundationPrimitivesTests` sửa theo.
-- **DoD:** suite xanh · D-3 đã chốt và docs khớp code.
+  - `app/ReadoKit/Sources/ReadoKit/Review/CardSnapshot.swift`: `schedulerCard` truyền `elapsedDays: 0` + comment giải thích lib ghi đè; xoá `dayDiff`.
+  - `app/ReadoKit/Tests/ReadoKitTests/FoundationPrimitivesTests.swift`: xoá `testDayDiffRoundingAndBounds`.
+  - `app/ReadoKit/Tests/ReadoKitTests/ReviewSchedulerTests.swift`: thêm `testElapsedDaysIsUTCCalendarDiffNotRounded24h` (guard lib drift — 3 cặp timestamp, kể cả vắt nửa đêm UTC, so với giá trị `elapsedDaysRounded` thật từ `scheduler.grade`).
+  - `docs/research/review.md` §4.1: thêm đoạn "Cập nhật 2026-10-02" — `elapsed_days` là giá trị swift-fsrs tự tính (ngày lịch UTC), không theo `day_cutoff_hour`; Reado không tự định nghĩa lại.
+- **Test:** `scripts/test.sh kit` 387/387 · targeted simulator (`ReviewSchedulerTests`+`FoundationPrimitivesTests`) 24/24 · full `scripts/test.sh test` 406/408 (2 skip opt-in, không đổi so với trước).
+- **DoD:** `grep -rn "dayDiff" app/` rỗng · suite xanh · docs khớp code.

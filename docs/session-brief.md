@@ -11,12 +11,11 @@
 
 **Đang mở / hàng đợi**
 - verify-nav-r1 (T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG + `sim_screens.sh open` mở thẳng một màn. → `docs/plans/verify-nav-r1.md`
-- fsrs-queue-fix-r1 (T1 ✅ T2 ✅, **T3 hết chặn — chưa làm**). → `docs/plans/fsrs-queue-fix-r1.md`
 - reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, ADR-048) — FR-22 gặp lại từ cũ khi đọc. → `docs/plans/reencounter-r1.md`
 - q13-sense-filter-r1 (open, chưa code) — Q-13 khoá FR-10 không phân biệt nghĩa: 5 phương án, khuyến nghị B (gập thay vì xoá); chờ fen chốt 2 câu cuối plan. → `docs/plans/q13-sense-filter-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
-- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval).
+- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval) · fsrs-queue-fix-r1 T3 (elapsed_days một định nghĩa — lib tự ghi đè, bỏ `CardSnapshot.dayDiff`). → `docs/plans/done/fsrs-queue-fix-r1.md`
 - 2026-10-01 → `docs/journal/2026-10-01.md`: fix-alert-sheet-dismiss-r1 (`AlertHostStack`) · master-rewrite-r1 (ADR-051) · extra-review-r1 "Ôn thêm 20" (ADR-050) · remove-proxy-r1 BYOK-only (ADR-049) · refactor-r2/r3/r4 · audit nhỏ sau refactor-r4.
 - 2026-09-30 → `docs/journal/2026-09-30.md`: new-order-r1 (ADR-047) · vision-refresh-r2 · shell-chrome-r1.
 - 2026-09-28 → `docs/journal/2026-09-28.md`: repo-hygiene-r1 (ADR-044/046) · cram-collection-r1 (ADR-043) · OCR `RecognizeDocumentsRequest` (ADR-042).
@@ -29,7 +28,7 @@
 2. ~~Ngưỡng leech FR-19~~ — đã chốt = 6 (`CLAUDE.md` §5).
 3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4): (a) thêm FK, (b) để R2, (c) bỏ bước khỏi J2.
 4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn.
-5. ~~D-3~~ — đã trả lời (ADR-050): "Ôn thêm" ghi lịch FSRS thật; fsrs-queue-fix-r1 T3 hết chặn.
+5. ~~D-3~~ — đã trả lời (ADR-050): "Ôn thêm" ghi lịch FSRS thật; fsrs-queue-fix-r1 T3 đã xong (2026-10-02).
 6. repo-hygiene-r1: repo `venkyvn/reado` public hay private? (ảnh `ref/sample` còn trong history cũ → public thì cần `git filter-repo`); key Gemini từng nằm trong `.env.example` (chưa commit) — rotate nếu dán ở nơi khác; `docs/sample.md` (untracked) và `.keep.json` (`{}`) — giữ hay xoá.
 7. Xem tay UI còn treo (máy agent không có Simulator GUI) — gộp theo màn:
    - **Ôn thêm** (extra-review-r1): trộn đúng cũ+mới, Quên → due mai, lượt 2 không ra thẻ cũ, CTA Home mở đúng `.extra`, heatmap đổi màu rõ khi ôn nhiều.

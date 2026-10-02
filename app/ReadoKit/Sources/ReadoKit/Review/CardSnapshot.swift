@@ -44,9 +44,12 @@ public struct CardSnapshot: Equatable, Sendable {
         self.suspendedAt = suspendedAt
     }
 
-    /// `Card` cho engine. `elapsedDays` = số ngày tròn (làm tròn) kể từ
-    /// last_review — 0 với thẻ mới. LongTermScheduler dùng giá trị này làm
-    /// `interval` khi tính recall stability, nên phải truyền đầy đủ.
+    /// `Card` cho engine. `elapsedDays` truyền `0` vì **bị lib ghi đè** —
+    /// `AbstractScheduler.init` (swift-fsrs @`4fbaf20`) tự tính lại bằng
+    /// `Date.dateDiffInDays(from: lastReview, to: reviewTime)` = hiệu ngày
+    /// lịch UTC (floor theo `startOfDay` UTC), không phải |Δ|/24h làm tròn.
+    /// Định nghĩa thật của `elapsed_days` nằm ở `ReviewOutcome.elapsedDaysRounded`
+    /// (xem `research/review.md` §4.1) — Reado không tự tính giá trị này.
     func schedulerCard(now: Date) throws -> Card {
         guard let cardState = CardStateCode.toState(state) else {
             throw ReviewSchedulerError.invalidCardStateCode(state)
@@ -55,7 +58,7 @@ public struct CardSnapshot: Equatable, Sendable {
             due: due,
             stability: stability,
             difficulty: difficulty,
-            elapsedDays: Self.dayDiff(from: lastReview, to: now),
+            elapsedDays: 0,
             scheduledDays: Double(scheduledDays),
             learningSteps: learningSteps,
             reps: reps,
@@ -63,11 +66,5 @@ public struct CardSnapshot: Equatable, Sendable {
             state: cardState,
             lastReview: lastReview
         )
-    }
-
-    /// Ngày tròn kiểu ts-fsrs: |Δ|/ngày rồi làm tròn, không âm.
-    public static func dayDiff(from: Date?, to: Date) -> Double {
-        guard let from else { return 0 }
-        return max(0, (to.timeIntervalSince(from) / 86_400).rounded())
     }
 }

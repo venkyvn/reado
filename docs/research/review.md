@@ -263,6 +263,13 @@ trọng tài viết sẵn cho lần đầu hai thứ lệch nhau:
 Cùng logic đó áp cho `scheduled_days`, vốn suy ra được từ `due_before` trừ lần
 `reviewed_at` trước.
 
+> **Cập nhật 2026-10-02 (fsrs-queue-fix-r1 T3):** giá trị ghi vào `review_logs.elapsed_days`
+> là giá trị **swift-fsrs tự tính** (`AbstractScheduler.init` @`4fbaf20`, `Date.dateDiffInDays`)
+> — hiệu ngày lịch **UTC** (floor theo `startOfDay` UTC), **không** theo `day_cutoff_hour` của
+> Reado. Input `CardSnapshot` truyền cho lib luôn là `0` vì lib ghi đè ngay khi khởi tạo scheduler;
+> Reado không tự định nghĩa lại công thức này (NG-09). Optimizer R2 nếu cần `elapsed_days` theo
+> "ngày học" thật sẽ tính lại từ `reviewed_at` qua `DayBoundary`, không đọc cột này.
+
 ---
 
 ## 5. `mode` là `RevlogReviewKind` đã tách trục
