@@ -324,6 +324,7 @@ struct RootView: View {
             openDebugAnalysisFixture()
         case .saveBanner:
             selectedTab = .today
+            bannerHubID = model.collections.first(where: { $0.isDefault })?.id
             Motion.run(reduceMotion: reduceMotion) {
                 banner = ShellBannerItem(
                     message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem", autoHides: false)
