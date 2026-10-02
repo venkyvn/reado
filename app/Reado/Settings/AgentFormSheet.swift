@@ -16,7 +16,7 @@ enum AgentPreset: String, CaseIterable, Identifiable {
 }
 
 /// Form dùng chung cho thêm/sửa agent OpenAI-compatible.
-/// U2 ux-polish-r1 (ADR-041): dùng lại từ `OnboardingChecklistSection`, không
+/// U2 ux-polish-r1 (ADR-041): dùng lại từ hero Home (`HomeTabView`, bước kết nối agent), không
 /// còn `private` — nội bộ vẫn chỉ gọi từ cùng target `Reado`.
 struct AgentFormSheet: View {
     let agent: AnalysisAgent?

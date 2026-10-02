@@ -133,6 +133,30 @@ final class ReadingSessionTests: XCTestCase {
         XCTAssertTrue(ReadingSessionRepository.decodeSegments("").isEmpty)
     }
 
+    // MARK: — phrases (FR-05, prompt-v6 T2a)
+
+    func testEncodeDecodeRoundTripWithPhrases() throws {
+        let segments = [
+            PageAnalysis.Segment(
+                sourceEN: "The old lighthouse stood on the cliff.",
+                translationVI: "Ngọn hải đăng cũ đứng trên vách đá.",
+                phrases: [
+                    .init(en: "the old lighthouse", vi: "ngọn hải đăng cũ"),
+                    .init(en: "stood on the cliff", vi: "đứng trên vách đá"),
+                ]),
+        ]
+        let json = try ReadingSessionRepository.encodeSegments(segments)
+        XCTAssertEqual(ReadingSessionRepository.decodeSegments(json), segments)
+    }
+
+    func testDecodeSegmentsWithoutPhrasesKeyDefaultsToEmpty() {
+        // Phiên đọc cũ lưu trước prompt-v6 — JSON không có key `phrases`.
+        let json = #"[{"source_en":"A","translation_vi":"B"}]"#
+        let decoded = ReadingSessionRepository.decodeSegments(json)
+        XCTAssertEqual(decoded, [segment("A", "B")])
+        XCTAssertEqual(decoded.first?.phrases, [])
+    }
+
     func testListSessionsOrdersNewestFirst() throws {
         let db = try Fixtures.seededDB()
         let collectionID = try namedCollection(db)

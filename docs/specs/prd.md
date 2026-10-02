@@ -459,8 +459,11 @@ Plan: [plans/reencounter-r1.md](docs/plans/reencounter-r1.md).
 #### FR-09 — Select Items For Review
 
 - **Given** vocabulary vừa được trích xuất, **when** người dùng chọn, **then** họ
-  quyết định item nào trở thành review card — mặc định là **tất cả**, bỏ chọn
-  từng item nếu đã biết.
+  quyết định item nào trở thành review card. AI (prompt v6) trả `vocabulary` theo
+  thứ tự giá trị học giảm dần; màn duyệt **chọn sẵn tối đa 5 item đủ điều kiện
+  đầu tiên** (`ReviewDraftBuilder.preselectLimit`) theo thứ tự đó — không còn
+  "mặc định tất cả" (đảo 2026-10-02, prompt-v6 T2b). Phần còn lại vẫn hiện, người
+  dùng tự chọn thêm nếu muốn; AI chỉ đề xuất thứ tự, không quyết định giữ/bỏ.
 - **Given** một item được chọn, **when** nó được lưu, **then** nó vào SRS queue với
   trạng thái `new` và đến hạn ngay trong ngày.
 

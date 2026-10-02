@@ -1,32 +1,70 @@
 import SwiftUI
 
-/// Thanh tab capsule nổi — thay thanh native (cao cố định ~49pt). Gắn qua
-/// `safeAreaInset` trên `TabView` nên theo mọi màn push, không đè nội dung.
+/// Thanh tab nổi — thay thanh native (cao cố định ~49pt). Một hàng gồm capsule 2 tab + nút chụp
+/// tròn cùng chiều cao (ux-redesign-r1 T1b, kiểu nút Search tách của iOS 26). Gắn qua
+/// `safeAreaInset` trên `TabView` — áp dụng cho ROOT mỗi tab, nhưng `List` đẩy qua
+/// `navigationDestination` (Hub, Streak, Settings, Data…) KHÔNG tự thừa hưởng (xác nhận bằng ảnh,
+/// `CollectionDetailView` 12 từ bị thanh tab đè hàng cuối) — những màn đó phải tự áp
+/// `.safeAreaPadding(.bottom, reservedHeight)`, gộp sẵn trong `shellScrollChrome()`.
 struct ShellTabBar: View {
-    /// Chiều cao capsule (không gồm padding ngoài / home indicator).
+    /// Chiều cao capsule = đường kính nút chụp (không gồm padding ngoài / home indicator).
     static let height: CGFloat = 64
-    /// Padding dưới capsule, phía trên home indicator.
+    /// Padding dưới thanh, phía trên home indicator.
     static let outerBottomPadding: CGFloat = 8
-    /// Khe giữa mép trên capsule và FloatShutter. RootView cộng đúng số này lên
-    /// trên `.safeAreaPadding(.bottom)` — không cộng thêm `height`/
-    /// `outerBottomPadding` (đo bằng screenshot: cộng thêm gây nút cao hơn capsule
-    /// ~100pt, vì safe area môi trường ở đó đã gồm sẵn cả ShellTabBar).
-    static let shutterGap: CGFloat = 12
-    /// Khe cần chừa ở CUỐI trang cho màn không có `safeAreaInset` xuyên qua
-    /// `TabView` (vd `ReviewQueueView` tab Ôn) — nội dung tự áp `.safeAreaPadding`
-    /// bằng số này để hàng nút cuối không chui xuống dưới capsule.
+    /// Khe cần chừa ở CUỐI trang cho màn không tự thừa hưởng `safeAreaInset` xuyên `TabView`
+    /// (mọi màn push qua `navigationDestination`) — áp qua `shellScrollChrome()`, không gọi tay.
+    /// Đã đo lại bằng ảnh (`open save-banner`, ux-redesign-r1): công thức khớp chiều cao
+    /// thật của hàng (capsule 64pt + 2 padding 8pt = 80pt) — đúng, không đổi.
     static let reservedHeight = height + outerBottomPadding + Spacing.sm
 
     @Binding var selection: AppTab
     var onReselect: (AppTab) -> Void = { _ in }
-    /// T3a shell-chrome-r1 — true khi vừa cuộn xuống, ẩn capsule khỏi màn hình.
+    /// T3a shell-chrome-r1 — true khi vừa cuộn xuống, ẩn cả hàng (tab + nút chụp) khỏi màn hình.
     var isHidden: Bool = false
+    /// Nút chụp chỉ hiện trên "bề mặt chụp" (root hai tab + Hub) — vào sâu (lịch streak, cài đặt,
+    /// dữ liệu, phiên đọc) thì ẩn, capsule giãn ra chiếm cả hàng.
+    var showsCapture: Bool = true
+    var onCapture: () -> Void = {}
+    /// Tab có chấm báo (Q-e: chấm khi có thẻ đến hạn, không ghi số — số đỏ tạo áp lực, lệch
+    /// Retention "không cần học hết").
+    var badgedTabs: Set<AppTab> = []
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Namespace private var pillNamespace
+    /// `Color.accentColor`/`.tint` không theo `.tint()` áp ở `ReadoApp` cho view tự vẽ (xác nhận
+    /// bằng ảnh trên cả simulator lẫn máy thật, ux-redesign-r1 T10) — đọc thẳng `AppTheme` từ
+    /// `@AppStorage` thay vì tin vào environment. Cùng key với `ReadoApp.appTheme`.
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
     var body: some View {
+        // Khe giữa capsule và nút chụp: đã đo bằng ảnh (`open save-banner`) — Spacing.sm (8pt)
+        // tách rõ hai khối, khớp cảm giác nút Search tách của iOS 26. Giữ nguyên.
+        HStack(spacing: Spacing.sm) {
+            tabCapsule
+            if showsCapture {
+                ShellCaptureButton(action: onCapture)
+                    // Scale nhẹ: nút tròn nở ra tại chỗ, không trượt như nội dung.
+                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
+            }
+        }
+        .animation(reduceMotion ? nil : Motion.reveal, value: showsCapture)
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Self.outerBottomPadding)
+        // D3 shell-chrome-r1: KHÔNG đổi frame/padding khi ẩn — safe area (dùng bởi
+        // HomeTabView `.safeAreaPadding`) phải đứng yên, chỉ trượt + mờ cả hàng.
+        // +40 phủ home indicator (~34pt), không cần GeometryReader.
+        .offset(y: isHidden && !reduceMotion ? Self.height + Self.outerBottomPadding + 40 : 0)
+        .opacity(isHidden ? 0 : 1)
+        .allowsHitTesting(!isHidden)
+        .accessibilityHidden(isHidden)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Điều hướng")
+    }
+
+    private var tabCapsule: some View {
         HStack(spacing: Spacing.xs) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 tabButton(tab)
@@ -36,22 +74,11 @@ struct ShellTabBar: View {
         .frame(height: Self.height)
         // ux-polish-r1 T4: Liquid Glass (iOS 26+), fallback material dưới đó.
         .chromeGlass(in: Capsule())
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Self.outerBottomPadding)
-        // D3 shell-chrome-r1: KHÔNG đổi frame/padding khi ẩn — safe area (dùng bởi
-        // ReviewQueueView/HomeTabView `.safeAreaPadding`) phải đứng yên, chỉ trượt
-        // + mờ capsule. +40 phủ home indicator (~34pt), không cần GeometryReader.
-        .offset(y: isHidden && !reduceMotion ? Self.height + Self.outerBottomPadding + 40 : 0)
-        .opacity(isHidden ? 0 : 1)
-        .allowsHitTesting(!isHidden)
-        .accessibilityHidden(isHidden)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Điều hướng")
     }
 
     private func tabButton(_ tab: AppTab) -> some View {
         let selected = selection == tab
+        let badged = badgedTabs.contains(tab)
         return Button {
             Haptics.selection()
             if selected {
@@ -64,26 +91,22 @@ struct ShellTabBar: View {
         } label: {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
-                    Image(systemName: selected ? tab.selectedIcon : tab.icon)
-                        .font(.title2)
-                        .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+                    tabIcon(tab, selected: selected, badged: badged)
                 } else {
                     VStack(spacing: Spacing.tight) {
-                        Image(systemName: selected ? tab.selectedIcon : tab.icon)
-                            .font(.title2)
-                            .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+                        tabIcon(tab, selected: selected, badged: badged)
                         Text(tab.title)
                             .font(.caption2)
                     }
                 }
             }
-            .foregroundStyle(selected ? Color.accentColor : .secondary)
+            .foregroundStyle(selected ? accent : .secondary)
             .frame(maxWidth: .infinity)
             .frame(maxHeight: .infinity)
             .background {
                 if selected {
                     Capsule()
-                        .fill(Color.accentColor.opacity(0.14))
+                        .fill(accent.opacity(0.14))
                         .matchedGeometryEffect(id: "shell-tab-pill", in: pillNamespace)
                 }
             }
@@ -91,6 +114,22 @@ struct ShellTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
+        .accessibilityValue(badged ? "Có thẻ đến hạn" : "")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
+    private func tabIcon(_ tab: AppTab, selected: Bool, badged: Bool) -> some View {
+        Image(systemName: selected ? tab.selectedIcon : tab.icon)
+            .font(.title2)
+            .symbolEffect(.bounce, value: reduceMotion ? false : selected)
+            .overlay(alignment: .topTrailing) {
+                if badged {
+                    Circle()
+                        .fill(Theme.due)
+                        .frame(width: Spacing.sm, height: Spacing.sm)
+                        .offset(x: Spacing.xs, y: -Spacing.tight)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 }

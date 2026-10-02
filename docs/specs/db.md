@@ -187,7 +187,7 @@ CREATE TABLE settings (
   timezone           TEXT NOT NULL,  -- IANA; seed luc cai dat tu device. FR-11 / FR-14
   enable_short_term  INTEGER NOT NULL DEFAULT 0 CHECK (enable_short_term IN (0, 1)),
   -- Q-12 tat. swift-fsrs: enableShortTerm / learning steps rong
-  known_stability    REAL,           -- FR-10; NULL = chua bat loc. So = PRD Q-08
+  known_stability    REAL,           -- FR-10; NULL khong tat loc, coi nhu 21. So = PRD Q-08
   leech_lapses       INTEGER,        -- FR-19 hanh dong; NULL = chua bat. lapses van dem
   fsrs_params        TEXT,           -- JSON array; null = default thu vien
   fsrs_version       TEXT,           -- 'fsrs-6' ke ca khi fsrs_params null
@@ -233,6 +233,7 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | Xoá agent đang `active_agent_id` → gán lại hàng placeholder | FR-21, ADR-049 |
 | `openai_compat`: `base_url` + `model` không null; HTTPS trừ loopback / RFC1918 | Self-host LAN |
 | Client POST `{base_url}/chat/completions` (prefix kiểu `https://openrouter.ai/api/v1`) | Wire OpenAI-compat |
+| `cards.due_at` luôn **đọc cột đã ghi sẵn lúc chấm**, không tính lại on-the-fly | Fuzz FSRS làm ngày "nhảy" mỗi lần tính lại → lịch ôn loạn (bia mộ từ journeys.md Phần 2 cũ, bỏ 2026-10-02) |
 
 ### A.3 Không nằm file SQLite kho từ
 

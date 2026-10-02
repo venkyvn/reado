@@ -16,7 +16,8 @@ struct SessionDoneView: View {
     /// `ReviewQueue.extraBatchSize` khi hiện số). 0 → ẩn CTA.
     let extraAvailable: Int
     let onExtra: () -> Void
-    let onHome: () -> Void
+    /// Đóng cover phiên ôn — về đúng chỗ đã mở nó, không phải "Về Home".
+    let onDone: () -> Void
 
     /// Giới hạn hiển thị — danh sách dài quá thì rối, không phải bảng thành tích.
     private static let maxMasteredShown = 5
@@ -42,8 +43,8 @@ struct SessionDoneView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.large)
                 }
-                Button(action: onHome) {
-                    Text("Về Home").frame(maxWidth: .infinity)
+                Button(action: onDone) {
+                    Text("Xong").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

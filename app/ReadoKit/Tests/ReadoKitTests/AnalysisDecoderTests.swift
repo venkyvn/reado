@@ -40,6 +40,77 @@ final class AnalysisDecoderTests: XCTestCase {
         XCTAssertNil(analysis.vocabulary[0].cefr)
     }
 
+    // MARK: - phrases (FR-05, prompt-v6 T2a — cặp cụm chạm-sáng, chỉ hiển thị)
+
+    func testNormalizerKeepsValidPhrasesInOrder() throws {
+        let raw: [String: Any] = [
+            "segments": [
+                [
+                    "source_en": "The old lighthouse stood on the cliff.",
+                    "translation_vi": "Ngọn hải đăng cũ đứng trên vách đá.",
+                    "phrases": [
+                        ["en": "the old lighthouse", "vi": "ngọn hải đăng cũ"],
+                        ["en": "stood on the cliff", "vi": "đứng trên vách đá"],
+                    ],
+                ]
+            ],
+            "vocabulary": [],
+            "summary_vi": "x",
+        ]
+        let normalized = try AnalysisResponseNormalizer.normalize(AnalysisFixtures.jsonData(raw))
+        let analysis = try AnalysisResponseDecoder.decode(normalized)
+        XCTAssertEqual(analysis.segments[0].phrases.map(\.en), ["the old lighthouse", "stood on the cliff"])
+        XCTAssertEqual(analysis.segments[0].phrases.map(\.vi), ["ngọn hải đăng cũ", "đứng trên vách đá"])
+    }
+
+    func testNormalizerDropsPhraseNotSubstringOfSourceOrTranslation() throws {
+        let raw: [String: Any] = [
+            "segments": [
+                [
+                    "source_en": "The old lighthouse stood on the cliff.",
+                    "translation_vi": "Ngọn hải đăng cũ đứng trên vách đá.",
+                    "phrases": [
+                        ["en": "the old lighthouse", "vi": "ngọn hải đăng cũ"],
+                        ["en": "a sentence not on page", "vi": "ngọn hải đăng cũ"],
+                        ["en": "the old lighthouse", "vi": "câu bịa không có trong bản dịch"],
+                        ["en": "", "vi": "ngọn hải đăng cũ"],
+                    ],
+                ]
+            ],
+            "vocabulary": [],
+            "summary_vi": "x",
+        ]
+        let normalized = try AnalysisResponseNormalizer.normalize(AnalysisFixtures.jsonData(raw))
+        let analysis = try AnalysisResponseDecoder.decode(normalized)
+        XCTAssertEqual(analysis.segments[0].phrases.count, 1)
+        XCTAssertEqual(analysis.segments[0].phrases[0].en, "the old lighthouse")
+    }
+
+    func testNormalizerCapsPhrasesAtSix() throws {
+        let source = "one two three four five six seven eight."
+        let translation = "một hai ba bốn năm sáu bảy tám."
+        let raw: [String: Any] = [
+            "segments": [
+                [
+                    "source_en": source,
+                    "translation_vi": translation,
+                    "phrases": (1...8).map { _ in ["en": "one", "vi": "một"] },
+                ]
+            ],
+            "vocabulary": [],
+            "summary_vi": "x",
+        ]
+        let normalized = try AnalysisResponseNormalizer.normalize(AnalysisFixtures.jsonData(raw))
+        let analysis = try AnalysisResponseDecoder.decode(normalized)
+        XCTAssertEqual(analysis.segments[0].phrases.count, 6)
+    }
+
+    func testDecoderWithoutPhrasesDefaultsToEmpty() throws {
+        // Output v5 cũ không có field `phrases` — decode vẫn phải chạy, không throw.
+        let analysis = try AnalysisResponseDecoder.decode(AnalysisFixtures.jsonData(AnalysisFixtures.validResponseJSON()))
+        XCTAssertEqual(analysis.segments[0].phrases, [])
+    }
+
     func testNormalizerEmptyPageIsNotEnglish() {
         let raw: [String: Any] = [
             "segments": [],

@@ -33,7 +33,8 @@ public struct DebugLaunch: Equatable, Sendable {
 
     public enum Screen: Equatable, Sendable {
         case home
-        case kho
+        /// Tab Thư viện (ux-redesign-r1 T1b). Chuỗi cũ `kho` vẫn parse về đây để không phá script cũ.
+        case library
         case review
         case reviewExtra
         case collection(String)
@@ -42,7 +43,14 @@ public struct DebugLaunch: Equatable, Sendable {
         case data
         case capture
         case analysisFixture
+        /// ux-redesign-r1 T5b — như `analysisFixture` nhưng mở thẳng tab "Trang" (song ngữ hiện sẵn).
+        case analysisFixturePage
         case encounterSheet
+        /// prompt-v6 T3 — như `analysisFixturePage` nhưng sáng sẵn cụm EN↔VI đầu tiên của trang,
+        /// để chụp được trạng thái "đã chạm" không cần thao tác tay.
+        case phraseHighlight
+        /// ux-redesign-r1 T2 — banner "Đã lưu … · Xem" mẫu (`ShellBanner`) trên Home, chưa cần luồng lưu thật.
+        case saveBanner
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -124,7 +132,7 @@ public struct DebugLaunch: Equatable, Sendable {
         }
         switch value {
         case "home": return .home
-        case "kho": return .kho
+        case "kho", "library": return .library
         case "review": return .review
         case "review-extra": return .reviewExtra
         case "settings": return .settings
@@ -132,7 +140,10 @@ public struct DebugLaunch: Equatable, Sendable {
         case "data": return .data
         case "capture": return .capture
         case "analysis-fixture": return .analysisFixture
+        case "analysis-fixture-page": return .analysisFixturePage
         case "encounter-sheet": return .encounterSheet
+        case "phrase-highlight": return .phraseHighlight
+        case "save-banner": return .saveBanner
         default: return nil
         }
     }

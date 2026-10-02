@@ -15,7 +15,7 @@ extension AppModel {
         capture.captureError = nil
         capture.analysisResult = nil
         capture.analysisFailure = nil
-        shell.pendingHubNavigationID = nil
+        shell.saveConfirmation = nil
     }
 
     // MARK: — FR-02 AI Analysis
@@ -97,9 +97,13 @@ extension AppModel {
         ])
         if saved > 0 {
             reloadOverview()
-            // port UI lab §5.7: Lưu → Hub bộ vừa chọn (kho tạm = hub kho tạm).
-            shell.pendingHubNavigationID =
-                collectionID ?? collections.first(where: { $0.isDefault })?.id
+            // ADR-053: RootView hiện banner "Đã lưu N từ vào X · Xem" (kho tạm cũng có id/tên).
+            if let target = collectionID ?? collections.first(where: { $0.isDefault })?.id,
+               let name = collections.first(where: { $0.id == target })?.name
+            {
+                shell.saveConfirmation = SaveConfirmation(
+                    count: saved, collectionID: target, collectionName: name)
+            }
             capture.lastCapturedImage = nil
             capture.analysisResult = nil
             capture.analysisTargetCollectionID = nil

@@ -61,37 +61,28 @@ struct ReviewCardRow: View {
         .accessibilityAddTraits(draft.isSelected ? .isSelected : [])
     }
 
-    @ViewBuilder
+    /// ux-redesign-r1 T5b: đóng = 3 tầng chữ (từ + pill · nghĩa · một dòng meta gồm chip xác minh và
+    /// chevron). Chip + chevron xuống dòng meta thay vì bóp cột nghĩa ở bên phải (audit #8); một
+    /// layout cho mọi cỡ chữ nên không cần nhánh accessibility riêng.
     private var summaryLabel: some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                summaryText
-                HStack {
-                    VerificationBadge(status: draft.verification)
-                    Spacer()
-                    expandChevron
-                }
-            }
-        } else {
-            HStack(alignment: .top, spacing: Spacing.sm) {
-                summaryText
-                Spacer(minLength: Spacing.xs)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            summaryText
+            HStack {
                 VerificationBadge(status: draft.verification)
+                Spacer(minLength: Spacing.xs)
                 expandChevron
             }
         }
     }
 
-    /// Cùng khối `VocabSummary` với row Kho. Mở card thì IPA + ví dụ ẩn (editor bên dưới
-    /// đã có đủ field), chỉ còn từ + nghĩa.
+    /// Cùng khối `VocabSummary` với row Kho nhưng KHÔNG hiện IPA + câu ví dụ — hai thứ đó chỉ
+    /// xuất hiện khi mở card (editor bên dưới có đủ field), để row đóng gọn.
     private var summaryText: some View {
         VocabSummary(
             term: draft.term,
             pos: draft.pos,
             cefr: draft.cefr,
-            ipa: isExpanded ? "" : draft.ipa,
-            meaning: draft.meaningVI,
-            example: isExpanded ? "" : draft.example)
+            meaning: draft.meaningVI)
     }
 
     private var expandChevron: some View {
@@ -99,7 +90,6 @@ struct ReviewCardRow: View {
             .font(.caption)
             .foregroundStyle(.secondary)
             .rotationEffect(.degrees(isExpanded ? 180 : 0))
-            .frame(width: 44, height: 44)
             .animation(
                 reduceMotion ? nil : Motion.reveal,
                 value: isExpanded)

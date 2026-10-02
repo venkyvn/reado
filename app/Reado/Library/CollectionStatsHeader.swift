@@ -1,9 +1,9 @@
 import ReadoKit
 import SwiftUI
 
-/// Header màn collection (cram-collection-r1 T4): thẻ tiến độ 4 màu + 3 ô số +
-/// CTA đổi theo ngữ cảnh. View thuần — không đọc `AppModel`, chỉ nhận số liệu và
-/// hai closure (ôn thường / ôn thêm).
+/// Header màn collection (cram-collection-r1 T4): thẻ tiến độ 4 màu + MỘT dòng meta +
+/// CTA đổi theo ngữ cảnh (ux-redesign-r1 T6: 3 ô số → một dòng meta). View thuần — không đọc
+/// `AppModel`, chỉ nhận số liệu và hai closure (ôn thường / ôn thêm).
 struct CollectionStatsHeader: View {
     let overview: AppModel.CollectionOverview
     let nextDue: VocabRepository.NextDue?
@@ -12,14 +12,12 @@ struct CollectionStatsHeader: View {
     let onReview: () -> Void
     let onCram: () -> Void
 
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             if segments.total > 0 {
                 progressCard
             }
-            statTiles
+            metaLine
             cta
         }
         .padding(.vertical, Spacing.xs)
@@ -106,79 +104,36 @@ struct CollectionStatsHeader: View {
         }
     }
 
-    // MARK: — 3 ô số
+    // MARK: — Dòng meta
 
-    private var statTiles: some View {
-        let tiles = VStack(spacing: Spacing.sm) { tileViews }
-        return Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                tiles
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: Spacing.sm) { tileViews }
-                    tiles
-                }
-            }
+    /// "Đến hạn N · +M từ/7 ngày · Lần ôn tiếp …" — thay 3 ô số (audit #14: header quá nặng). "Lần ôn
+    /// tiếp" chỉ hiện khi hết thẻ đến hạn mà còn lịch sắp tới; đang có thẻ đến hạn thì "Đến hạn N" đã đủ.
+    private var metaLine: some View {
+        Text(metaParts.joined(separator: " · "))
+            .font(Typo.meta)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var metaParts: [String] {
+        var parts = [
+            "Đến hạn \(overview.dueNow)",
+            "+\(overview.addedLast7Days) từ/7 ngày",
+        ]
+        if let nextDueText {
+            parts.append("Lần ôn tiếp \(nextDueText)")
         }
+        return parts
     }
 
-    @ViewBuilder
-    private var tileViews: some View {
-        tile(
-            title: "Đến hạn", value: "\(overview.dueNow)", detail: nil,
-            valueColor: overview.dueNow > 0 ? Theme.due : .primary)
-        tile(
-            title: "7 ngày qua", value: "+\(overview.addedLast7Days) từ",
-            detail: lastAddedText, valueColor: .primary)
-        tile(
-            title: "Lần ôn tiếp", value: nextDueValue, detail: nextDueDetail,
-            valueColor: .primary)
-    }
-
-    private func tile(
-        title: String, value: String, detail: String?, valueColor: Color
-    ) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.tight) {
-            Text(title)
-                .font(Typo.meta)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(Typo.metric)
-                .foregroundStyle(valueColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            if let detail {
-                Text(detail)
-                    .font(Typo.meta)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.row)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.md))
-        .accessibilityElement(children: .combine)
-    }
-
-    private var lastAddedText: String? {
-        guard let last = overview.lastAddedAt else { return nil }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return "thêm lần cuối " + formatter.localizedString(for: last, relativeTo: now)
-    }
-
-    private var nextDueValue: String {
-        if overview.dueNow > 0 { return "Ngay bây giờ" }
-        guard let nextDue else { return "—" }
+    private var nextDueText: String? {
+        guard overview.dueNow == 0, let nextDue else { return nil }
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .full
         return formatter.localizedString(for: nextDue.date, relativeTo: now)
-    }
-
-    private var nextDueDetail: String? {
-        guard overview.dueNow == 0, let nextDue else { return nil }
-        return "\(nextDue.count) thẻ"
+            + " (\(nextDue.count) thẻ)"
     }
 
     // MARK: — CTA theo ngữ cảnh
@@ -202,7 +157,7 @@ struct CollectionStatsHeader: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
         } else {
-            Text("Chụp trang để thêm từ — dùng nút chụp nổi.")
+            Text("Chụp trang để thêm từ — dùng nút chụp ở thanh dưới.")
                 .font(Typo.meta)
                 .foregroundStyle(.secondary)
         }

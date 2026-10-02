@@ -56,6 +56,15 @@ final class CaptureFlow {
     var analysisTargetCollectionID: String?
 }
 
+/// Kết quả một lần Lưu thành công — `AnalysisView` đóng rồi `RootView` đọc để hiện banner
+/// "Đã lưu N từ vào X · Xem" (ADR-053; thay alert chặn + ép đổi tab).
+struct SaveConfirmation: Equatable {
+    let count: Int
+    /// Bộ đã lưu vào (kho tạm cũng có id) — nút "Xem" đẩy Hub này.
+    let collectionID: String
+    let collectionName: String
+}
+
 /// Tín hiệu điều hướng/chrome giữa các màn (RootView tiêu thụ rồi dọn sạch).
 @MainActor
 @Observable
@@ -64,29 +73,34 @@ final class ShellSignals {
     /// RootView tiêu thụ ở onDismiss của sheet phân tích rồi dọn sạch.
     var pendingSettingsNavigation = false
 
-    /// port UI lab §5.7: sau Lưu → RootView push Hub của bộ vừa lưu (kể cả kho
-    /// tạm). Set ở `saveSelection` thành công, dọn ở `handleCapturedImage` (lần
-    /// chụp kế tiếp) + sau khi RootView tiêu thụ.
-    var pendingHubNavigationID: String?
+    /// ux-redesign-r1 T5a: sau Lưu → RootView hiện banner, KHÔNG đổi tab/push Hub (thay
+    /// cơ chế push Hub của port UI lab §5.7). Set ở `saveSelection` thành công, dọn ở
+    /// `handleCapturedImage` (lần chụp kế tiếp) + sau khi RootView tiêu thụ.
+    var saveConfirmation: SaveConfirmation?
 
-    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để FloatShutter
-    /// prefilt đích chụp; rời Hub → nil (chụp từ Home/Kho root = kho tạm).
+    /// ux-redesign-r1 T7: màn ôn rỗng bấm "Chụp trang" → bật cờ này rồi đóng cover phiên ôn; RootView
+    /// đọc ở `onDismiss` của cover đó rồi mới mở camera (không present hai cover cùng lúc).
+    var pendingCaptureAfterReview = false
+
+    /// port UI lab §6: Hub (CollectionDetailView) đang mở set id này để nút chụp trong thanh tab
+    /// prefill đích chụp; rời Hub → nil (chụp từ root Hôm nay/Thư viện = kho tạm).
     var shutterTargetCollectionID: String?
 
-    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn shutter nổi
+    /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn nút chụp trong thanh tab
     /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
     var suppressFloatShutter = false
-
-    /// extra-review-r1 B2: Home "Ôn thêm N thẻ" đổi tab Ôn + set cờ này để tab
-    /// mở thẳng `.extra` thay vì mặc định `.srs` — `ReviewQueueView` (tab, không
-    /// `showsCloseButton`) đọc rồi dọn ở `onAppear`, giống `pendingHubNavigationID`.
-    var pendingReviewMode: ReviewMode?
 
     #if DEBUG
     /// verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` bật cờ này; AnalysisView
     /// đọc ở `.task` để tự mở `EncounterSheet` của match đầu tiên (demo gạch chân
     /// chấm) rồi dọn sạch, giống các cờ `pending*` khác ở trên.
     var debugOpenFirstEncounter = false
+    /// ux-redesign-r1 T5b — `-ReadoScreen analysis-fixture-page` bật cờ này; AnalysisView đọc ở
+    /// `onAppear` để mở thẳng tab "Trang" rồi dọn sạch.
+    var debugShowAnalysisPage = false
+    /// prompt-v6 T3 — `-ReadoScreen phrase-highlight` bật cờ này; AnalysisView đọc ở `.task` để
+    /// tự sáng cụm EN↔VI đầu tiên định vị được rồi dọn sạch.
+    var debugActivateFirstPhrase = false
     #endif
 }
 

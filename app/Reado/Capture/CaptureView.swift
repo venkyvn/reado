@@ -34,9 +34,6 @@ struct CaptureView: View {
     // nil = kho tạm; mở từ Hub → prefill sẵn tên bộ. `initialDest` để "quên" đích
     // khi hủy phiên chụp mà không chụp gì.
     @State private var initialDest: String?
-    @State var showDestPicker = false
-    @State private var showNewCollection = false
-    @State var newCollectionName = ""
 
     var body: some View {
         ZStack {
@@ -98,12 +95,6 @@ struct CaptureView: View {
             }
         }
         .appErrorAlert()
-        .sheet(isPresented: $showDestPicker) {
-            destPickerSheet(close: { showDestPicker = false })
-        }
-        .sheet(isPresented: $showNewCollection) {
-            newCollectionSheet(close: { showNewCollection = false })
-        }
     }
 
     private var busyMessage: String? {
@@ -191,8 +182,8 @@ struct CaptureView: View {
         }
     }
 
-    /// X đóng + chip đích lưu + tạo bộ mới (port UI lab §4, chuyển từ overlay
-    /// camera cũ sang chrome SwiftUI thật — luôn có nút thoát, kể cả lúc đen).
+    /// X đóng + chip đích lưu (port UI lab §4, chuyển từ overlay camera cũ sang chrome
+    /// SwiftUI thật — luôn có nút thoát, kể cả lúc đen). Tạo bộ mới nằm trong menu của chip.
     private var topBar: some View {
         HStack(alignment: .top, spacing: 10) {
             Button {
@@ -210,18 +201,6 @@ struct CaptureView: View {
             destChip
 
             Spacer()
-
-            Button {
-                newCollectionName = ""
-                showNewCollection = true
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.black.opacity(0.45), in: Circle())
-            }
-            .accessibilityLabel("Tạo bộ mới")
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -306,7 +285,7 @@ struct CaptureView: View {
 }
 
 /// Vòng trắng + lõi trắng — chỉ nút này dùng hình shutter tròn (máy ảnh thật
-/// = hệ thống), khớp `FloatShutter` ở RootView nhưng to hơn cho màn full-bleed.
+/// = hệ thống), khớp `ShellCaptureButton` ở thanh tab nhưng to hơn cho màn full-bleed.
 private struct ShutterButtonLabel: View {
     var body: some View {
         Circle()

@@ -29,6 +29,14 @@ public struct ReadingSession: Equatable, Sendable, Identifiable {
 private struct SegmentDTO: Codable {
     let source_en: String
     let translation_vi: String
+    /// Cặp cụm chạm-sáng (FR-05, prompt-v6 T3) — `nil` khi rỗng để JSON phiên cũ/mới
+    /// gọn, không phình thêm key không cần thiết.
+    let phrases: [PhraseDTO]?
+}
+
+private struct PhraseDTO: Codable {
+    let en: String
+    let vi: String
 }
 
 public enum ReadingSessionRepository {
@@ -41,7 +49,11 @@ public enum ReadingSessionRepository {
         -> String
     {
         let dtos = segments.map {
-            SegmentDTO(source_en: $0.sourceEN, translation_vi: $0.translationVI)
+            SegmentDTO(
+                source_en: $0.sourceEN,
+                translation_vi: $0.translationVI,
+                phrases: $0.phrases.isEmpty
+                    ? nil : $0.phrases.map { PhraseDTO(en: $0.en, vi: $0.vi) })
         }
         let data = try JSONEncoder().encode(dtos)
         return String(data: data, encoding: .utf8) ?? "[]"
@@ -56,7 +68,10 @@ public enum ReadingSessionRepository {
             return []
         }
         return dtos.map {
-            PageAnalysis.Segment(sourceEN: $0.source_en, translationVI: $0.translation_vi)
+            PageAnalysis.Segment(
+                sourceEN: $0.source_en,
+                translationVI: $0.translation_vi,
+                phrases: ($0.phrases ?? []).map { PageAnalysis.Phrase(en: $0.en, vi: $0.vi) })
         }
     }
 

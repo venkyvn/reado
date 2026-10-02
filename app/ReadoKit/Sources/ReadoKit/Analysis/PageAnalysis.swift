@@ -12,10 +12,28 @@ public struct PageAnalysis: Equatable, Sendable {
     public struct Segment: Equatable, Sendable {
         public let sourceEN: String
         public let translationVI: String
+        /// Cặp cụm EN↔VI chạm-sáng trong đoạn (FR-05 criterion mới, prompt-v6 T3).
+        /// Chỉ hiển thị — không lưu riêng, không vào `vocab_items`. `en` phải là
+        /// substring của `sourceEN`, `vi` của `translationVI` — luật thi hành ở
+        /// `AnalysisResponseNormalizer`, không phải ở đây. Mặc định `[]` để 4 chỗ
+        /// gọi init cũ (prompt v5, test) không phải sửa.
+        public let phrases: [Phrase]
 
-        public init(sourceEN: String, translationVI: String) {
+        public init(sourceEN: String, translationVI: String, phrases: [Phrase] = []) {
             self.sourceEN = sourceEN
             self.translationVI = translationVI
+            self.phrases = phrases
+        }
+    }
+
+    /// Một cặp cụm EN↔VI trong segment — đồ hiển thị (FR-05), không phải vocabulary.
+    public struct Phrase: Equatable, Sendable {
+        public let en: String
+        public let vi: String
+
+        public init(en: String, vi: String) {
+            self.en = en
+            self.vi = vi
         }
     }
 

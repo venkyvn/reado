@@ -10,13 +10,19 @@
 #   scripts/sim_screens.sh size <cỡ>       # Dynamic Type: extra-extra-large | large | ... (xcrun simctl ui)
 #   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system]
 #                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
-#                                      [--fresh] [--no-build]
+#                                      [--fixture <file.json>] [--agent] [--fresh] [--no-build]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
-#                                           # (home, kho, review, review-extra, collection:<id|tên>,
-#                                           # settings, streak, data, capture, analysis-fixture, encounter-sheet).
+#                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
+#                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
+#                                           # encounter-sheet, phrase-highlight, save-banner).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
+#                                           # `--agent` seed sẵn một agent AI-Box với key GIẢ (không kiểm tra, không gọi mạng)
+#                                           # để `activeAgentReady` = true — mở camera/luồng chụp không cần key thật.
+#                                           # Không có `--agent` thì app coi như chưa có agent (bấm chụp ra form thêm agent).
+#                                           # `--fixture` đổi JSON cho màn analysis-fixture* (mặc định
+#                                           # scripts/fixtures/analysis-demo.json; analysis-empty.json = rỗng sau FR-10).
 #                                           # `--seed` chỉ có tác dụng khi kho ĐANG TRỐNG (seed-once, như CSV cũ)
 #                                           # — đổi seed thì luôn kèm `--fresh`. `demo-reviewed` dựng lịch ôn giả
 #                                           # (`DevSeed.gradeHistory`) cho CTA "Ôn thêm" + heatmap nhiều mức màu.
@@ -74,6 +80,7 @@ case "${1:-}" in
     THEME=""
     SEED=""
     ALERT=""
+    WITH_AGENT=0
     OPEN_FRESH=0
     OPEN_BUILD=1
     while [[ $# -gt 0 ]]; do
@@ -81,11 +88,18 @@ case "${1:-}" in
         --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
         --seed) SEED="${2:?Thiếu giá trị cho --seed}"; shift 2 ;;
         --alert) ALERT="${2:?Thiếu giá trị cho --alert}"; shift 2 ;;
+        --fixture) ANALYSIS_FIXTURE="${2:?Thiếu giá trị cho --fixture}"; shift 2 ;;
+        --agent) WITH_AGENT=1; shift ;;
         --fresh) OPEN_FRESH=1; shift ;;
         --no-build) OPEN_BUILD=0; shift ;;
         *) echo "Tham số lạ: $1" >&2; exit 2 ;;
       esac
     done
+    # App đọc file qua đường dẫn tuyệt đối (simulator dùng chung ổ đĩa với máy chủ).
+    case "$ANALYSIS_FIXTURE" in
+      /*) ;;
+      *) ANALYSIS_FIXTURE="$ROOT/$ANALYSIS_FIXTURE" ;;
+    esac
     if [[ -n "$SEED" && "$OPEN_FRESH" == 0 ]]; then
       echo "Lưu ý: --seed chỉ áp khi kho trống — kèm --fresh nếu muốn chắc seed mới." >&2
     fi
@@ -118,6 +132,14 @@ case "${1:-}" in
     if [[ -n "$ALERT" ]]; then
       LAUNCH_ARGS+=(-ReadoAlert "$ALERT")
     fi
+    AGENT_NOTE=""
+    if [[ "$WITH_AGENT" == 1 ]]; then
+      AGENT_NOTE=" (có agent giả)"
+      # AppModel.seedDevAIBoxAgentIfNeeded (DEBUG) đọc biến này, thêm agent không qua kiểm key.
+      export SIMCTL_CHILD_READO_DEV_AIBOX_KEY="dev-dummy-key"
+    else
+      unset SIMCTL_CHILD_READO_DEV_AIBOX_KEY
+    fi
     # --terminate-running-process: launch trước đó (nếu còn sống) không đọc argv
     # mới — phải buộc khởi động lại để `-ReadoScreen` mới có hiệu lực.
     SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" \
@@ -125,7 +147,7 @@ case "${1:-}" in
       xcrun simctl launch \
       --terminate-running-process "$UDID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}" >/dev/null
     sleep 4  # đợi app mở + điều hướng xong trước khi `shot`
-    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
+    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)}${AGENT_NOTE} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
     exit 0
     ;;
 esac

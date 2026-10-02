@@ -11,42 +11,71 @@ struct EncounterSelection: Identifiable {
 }
 
 /// FR-22 — đoạn văn tiếng Anh với từ/cụm đã có trong kho được gạch chân chấm;
-/// chạm vào mở popover (`EncounterSheet`). Không có từ nào khớp thì là `Text`
-/// thường (không đổi hành vi so với trước).
+/// chạm vào mở popover (`EncounterSheet`). FR-05 (prompt-v6 T3) — cụm EN↔VI
+/// chạm-sáng (`PhraseLocator.PhraseSpan`): gạch chân liền mảnh, chạm thì cụm
+/// này và cụm VI tương ứng cùng tô nền accent. Không có từ/cụm nào thì là
+/// `Text` thường (không đổi hành vi so với trước).
 ///
 /// Bẫy: link trong `Text` bị `Button` bao ngoài nuốt chạm — chỗ dùng phải bọc
 /// đoạn bằng `onTapGesture`, không dùng `Button`. Chạm link đi qua `openURL`.
+/// Cụm và từ gặp lại chồng chữ: link từ gặp lại gán SAU nên đè — chạm đúng
+/// chữ chồng mở popover từ cũ, không chạm-sáng cụm (ưu tiên có chủ ý).
 struct EncounterText: View {
     let text: String
     let matcher: EncounterMatcher
+    var phrases: [PhraseLocator.PhraseSpan] = []
+    /// `phrase.phraseIndex` đang sáng — không phải chỉ số trong `phrases` (đã lọc).
+    var activePhraseIndex: Int? = nil
+    var accent: Color = .accentColor
     let onSelect: (EncounterSelection) -> Void
+    var onPhraseTap: ((Int) -> Void)? = nil
 
-    private static let scheme = "reado-term"
+    private static let matchScheme = "reado-term"
+    private static let phraseScheme = "reado-phrase"
 
     var body: some View {
         let matches = matcher.matches(in: text)
-        if matches.isEmpty {
+        if matches.isEmpty && phrases.isEmpty {
             Text(text)
         } else {
             Text(attributed(matches))
                 .environment(\.openURL, OpenURLAction { url in
-                    guard url.scheme == Self.scheme,
-                          let index = Int(url.lastPathComponent),
-                          matches.indices.contains(index)
-                    else { return .systemAction }
-                    let match = matches[index]
-                    onSelect(EncounterSelection(
-                        surface: String(text[match.range]), entries: match.entries))
-                    return .handled
+                    guard let index = Int(url.lastPathComponent) else { return .systemAction }
+                    switch url.scheme {
+                    case Self.matchScheme:
+                        guard matches.indices.contains(index) else { return .systemAction }
+                        let match = matches[index]
+                        onSelect(EncounterSelection(
+                            surface: String(text[match.range]), entries: match.entries))
+                        return .handled
+                    case Self.phraseScheme:
+                        guard phrases.indices.contains(index), let onPhraseTap
+                        else { return .systemAction }
+                        onPhraseTap(phrases[index].phraseIndex)
+                        return .handled
+                    default:
+                        return .systemAction
+                    }
                 })
         }
     }
 
     private func attributed(_ matches: [EncounterMatch]) -> AttributedString {
         var result = AttributedString(text)
+        // Cụm chạm-sáng gán TRƯỚC — chữ không chồng từ gặp lại giữ link này.
+        for (phraseListIndex, span) in phrases.enumerated() {
+            guard let range = Range(span.en, in: result) else { continue }
+            result[range].link = URL(string: "\(Self.phraseScheme)://phrase/\(phraseListIndex)")
+            result[range].foregroundColor = Color.primary
+            result[range].underlineStyle = Text.LineStyle(pattern: .solid, color: Color.secondary)
+            if span.phraseIndex == activePhraseIndex {
+                result[range].backgroundColor = accent.opacity(0.18)
+            }
+        }
+        // Từ gặp lại (FR-22) gán SAU — đè lên link cụm ở phần chữ trùng.
         for (index, match) in matches.enumerated() {
             guard let range = Range(match.range, in: result) else { continue }
-            result[range].link = URL(string: "\(Self.scheme)://match/\(index)")
+            result[range].link = URL(string: "\(Self.matchScheme)://match/\(index)")
             result[range].underlineStyle = Text.LineStyle(pattern: .dot)
             result[range].foregroundColor = Color.accentColor
         }

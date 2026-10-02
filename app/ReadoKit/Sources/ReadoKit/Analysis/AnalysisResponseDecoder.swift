@@ -21,9 +21,15 @@ public enum AnalysisResponseDecoder {
             else {
                 throw AnalysisError.schemaViolation("segment source_en/translation_vi empty")
             }
+            // `phrases` đã được AnalysisResponseNormalizer lọc (substring, tối đa 6) —
+            // ở đây chỉ map, không lọc lại. Thiếu field (output v5 cũ) → [].
+            let phrases = (seg.phrases ?? []).map {
+                PageAnalysis.Phrase(en: $0.en, vi: $0.vi)
+            }
             return PageAnalysis.Segment(
                 sourceEN: seg.source_en,
-                translationVI: seg.translation_vi)
+                translationVI: seg.translation_vi,
+                phrases: phrases)
         }
 
         // Validate vocabulary
@@ -103,6 +109,14 @@ public enum AnalysisResponseDecoder {
     struct RawSegment: Decodable {
         let source_en: String
         let translation_vi: String
+        /// Optional — output v5 cũ không có field này; normalizer đã lọc trước khi
+        /// tới decoder (substring, tối đa 6).
+        let phrases: [RawPhrase]?
+    }
+
+    struct RawPhrase: Decodable {
+        let en: String
+        let vi: String
     }
 
     struct RawVocabulary: Decodable {

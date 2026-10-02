@@ -180,7 +180,7 @@ extension AppModel {
     }
 
     /// Ghim thêm collection lên Home. Đã đủ 5 pin → `set` ném `.tooMany` (UI mở
-    /// chooser chọn pin hiện có để thay TRƯỚC khi gọi — `HomePinToggle`
+    /// chooser chọn pin hiện có để thay TRƯỚC khi gọi — `setHomePinned`
     /// kiểm `count < maxPins`).
     @discardableResult
     func addHomePin(_ id: String) throws -> [String] {

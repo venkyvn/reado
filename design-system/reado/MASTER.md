@@ -5,7 +5,7 @@
 > Đối chiếu code lần cuối: `fe571bf`.
 
 Mỗi luật kiểm được bằng diff hoặc ảnh chụp. Dòng `→` là lý do.
-Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `FloatShutter` (glass tô accent, `.interactive()`),
+Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `ShellCaptureButton` (nút chụp trong thanh tab: glass tô accent, `.interactive()`),
 lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo góc/khe/frame số riêng, không `.continuous`, có comment tại chỗ).
 
 ## Nguồn token
@@ -15,8 +15,14 @@ lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo
   → Chép số thì sẽ lệch: bản cũ ghi tint và font cứng, trong khi code đã đổi.
 
 ## Màu
-- Màu nhấn = `Color.accentColor` (thừa hưởng `.tint` ở `ReadoApp`). Không dùng `Color.blue`.
+- Màu nhấn = `Color.accentColor` (thừa hưởng `.tint` ở `ReadoApp`) cho control hệ thống (`.borderedProminent`,
+  `Pill`, swipe action…). Không dùng `Color.blue`.
   → Fen chọn accent trong `AppTheme` (Xanh rừng mặc định · Chàm · Nâu giấy · Hệ thống). Ghi cứng một màu là bỏ qua lựa chọn đó.
+  **Ngoại lệ đã có chủ ý (ux-redesign-r1 T10):** `ShellTabBar`/`ShellCaptureButton` KHÔNG dùng `Color.accentColor` —
+  đọc thẳng `AppTheme(rawValue:)` từ `@AppStorage("appTheme")`. Lý do: `Color.accentColor`/`.glassEffect(...tint(...))`
+  xác nhận bằng ảnh KHÔNG theo `.tint()` môi trường cho view tự vẽ (khác buttonStyle hệ thống) — từng ra xanh iOS
+  hệ thống dù đổi accent, trên cả simulator lẫn máy thật. Thêm view tự vẽ cần màu nhấn thì theo cùng pattern
+  (đọc `@AppStorage("appTheme")`), đừng dùng `Color.accentColor` trần.
 - Không dùng `.tint(...)` để đổi màu nhãn, chữ hay icon — màu chữ đi qua `.foregroundStyle`. `.tint` chỉ hợp lệ khi tô nền control hệ thống bằng token, ví dụ swipe action `.tint(Color.accentColor)` / `.tint(Theme.danger)` / `Color(.systemGray)` cho trạng thái tắt (`SettingsView`, `KhoTabView`, `AnalysisView`).
   → Swipe action không có cách tô nào khác. Dùng `.tint` cho chữ thì màu chỉ ăn ở một số control, chỗ khác vẫn là accent.
 - Hex chỉ được xuất hiện trong `AppTheme.accent`.
@@ -57,8 +63,10 @@ lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo
   → Một thang duy nhất thì các màn khớp nhau mà không cần đo.
 - Nhãn nhỏ (due, CEFR, POS, trạng thái) dùng `Pill`. Khối một từ dùng `VocabSummary`.
   → Kho và màn duyệt từ giữ cùng thứ tự dòng, không có capsule copy tay.
-- Nội dung cuộn trong shell phải chừa chỗ: `.safeAreaPadding(.bottom, ShellTabBar.reservedHeight)` hoặc đặt trong view đã có sẵn khoảng chừa này.
-  → Tab bar nổi đè lên nội dung. Nút Quên/Khó/Được/Dễ từng bị che.
+- Nội dung cuộn trong shell phải chừa chỗ: `.safeAreaPadding(.bottom, ShellTabBar.reservedHeight)` hoặc đặt trong view đã có sẵn khoảng chừa này. Áp sẵn qua `shellScrollChrome()` cho `List`/`ScrollView` gốc — màn tự vẽ CTA riêng bằng `.safeAreaInset(edge: .bottom)` (vd `StreakCalendarView`, `ReadingSessionView`) phải TỰ cộng thêm `ShellTabBar.reservedHeight` vào padding đáy của CTA đó, vì `safeAreaInset` của `ShellTabBar` (gắn trên `TabView`) không truyền được vào màn push qua `navigationDestination`/`NavigationLink`.
+  → Tab bar nổi đè lên nội dung. Nút Quên/Khó/Được/Dễ từng bị che; Hub (12 từ) và CTA "Ôn ngay" ở Lịch streak cũng từng bị che/chồng màu (xác nhận bằng ảnh, ux-redesign-r1 T10 — đã sửa).
+- Banner xác nhận không chặn (`ShellBanner`, ADR-053 — vd "Đã lưu N từ vào X · Xem") dùng `chromeGlass` như thanh tab, đặt TRÊN thanh tab qua `overlay(alignment: .bottom)` ở `RootView`, không phải alert/toast thư viện ngoài. Tự ẩn sau 4s; khi `UIAccessibility.isVoiceOverRunning` thì KHÔNG tự ẩn (đóng bằng nút ✕) — WCAG 2.2.1. Luôn có `AccessibilityNotification.Announcement` khi hiện.
+  → Lưu xong không được chặn thao tác tiếp, nhưng VoiceOver cần đủ thời gian nghe/chạm trước khi biến mất.
 - Hiện/ẩn nội dung đi qua `Motion.run(reduceMotion:)` + `revealTransition()`. Haptic đi qua `Haptics.*`. Sheet/tab/push để hệ thống tự animate.
   → Một nhịp motion duy nhất, tôn trọng Reduce Motion, không làm hiệu ứng ăn mừng.
 - Vùng chạm ≥ 44×44pt.
@@ -76,5 +84,7 @@ lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo
 - [ ] Chụp cả light và dark: `scripts/sim_screens.sh shot <tên>`, đọc PNG.
 - [ ] Thử ≥ 2 accent: Xanh rừng và Nâu giấy (Settings → Chủ đề).
 - [ ] Dynamic Type `accessibility-extra-large` (`scripts/sim_screens.sh size accessibility-extra-large`): không cắt chữ, không chồng lấn.
-- [ ] Không có gì bị `ShellTabBar` che ở cuối màn cuộn.
+- [ ] Không có gì bị `ShellTabBar` che ở cuối màn cuộn — đặc biệt màn có CTA riêng qua `.safeAreaInset` (xem luật ở Bố cục).
+- [ ] Reduce Motion: đổi trạng thái không giật, không mất animation chặn thao tác (`Motion.run(reduceMotion:)` — kiểm bằng code, máy agent không bật được Reduce Motion qua `simctl`).
 - [ ] Diff không thêm hex, số lẻ hay màu trần mới. Mọi giá trị đi qua token ở trên.
+- [ ] Thứ tự VoiceOver hợp lý (hero/CTA chính → chỉ số phụ → danh sách) — cần máy có Simulator GUI hoặc thiết bị thật để bật VoiceOver, không kiểm được chỉ bằng ảnh tĩnh.

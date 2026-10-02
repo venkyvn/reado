@@ -26,7 +26,7 @@ final class ReviewDraftBuilderTests: XCTestCase {
 
     func testDraftBuilderPutsUnverifiedAndSuspectFirstAndDeselected() {
         // SD 10.3: unverified/suspect lên đầu và bỏ chọn sẵn; verified giữ thứ
-        // tự gốc và chọn sẵn (FR-09 "mặc định tất cả" trừ nhóm chưa xác minh).
+        // tự AI và chọn sẵn vì dưới `preselectLimit` (FR-09, prompt-v6 T2b).
         let items = [
             vocabIn(term: "alpha", verification: .verified),
             vocabIn(term: "bravo", verification: .unverified),
@@ -36,6 +36,81 @@ final class ReviewDraftBuilderTests: XCTestCase {
         let drafts = ReviewDraftBuilder.drafts(from: items)
         XCTAssertEqual(drafts.map(\.term), ["bravo", "charlie", "alpha", "delta"])
         XCTAssertEqual(drafts.map(\.isSelected), [false, false, true, true])
+    }
+
+    /// FR-09 (prompt-v6 T2b, 2026-10-02): chỉ 5 item đủ điều kiện ĐẦU TIÊN theo
+    /// thứ tự AI được chọn sẵn — không còn "mặc định tất cả". 8 verified → đúng
+    /// 5 đầu, 3 cuối hiện nhưng không tick.
+    func testDraftBuilderPreselectsTopFiveOfEightVerified() {
+        let items = (1...8).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items)
+        XCTAssertEqual(drafts.map(\.term), items.map(\.term), "verified giữ thứ tự AI")
+        XCTAssertEqual(
+            drafts.map(\.isSelected),
+            [true, true, true, true, true, false, false, false])
+    }
+
+    /// Dưới ngưỡng `preselectLimit` → chọn sẵn hết, không bị cắt oan.
+    func testDraftBuilderPreselectsAllWhenFewerThanLimit() {
+        let items = (1...3).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items)
+        XCTAssertEqual(drafts.map(\.isSelected), [true, true, true])
+    }
+
+    /// Item verified nhưng ngoài CEFR lọc không được tính vào 5 suất — chỉ item
+    /// ĐỦ ĐIỀU KIỆN (verified + cefr ∈ levels) mới chiếm suất, dù đứng trước trong
+    /// thứ tự AI.
+    func testDraftBuilderCefrFilterAppliesBeforeCountingLimit() {
+        let items = [
+            vocabIn(term: "e1", cefr: "B2", verification: .verified),
+            vocabIn(term: "x1", cefr: "C1", verification: .verified),  // ngoài level, không chiếm suất
+            vocabIn(term: "e2", cefr: "B2", verification: .verified),
+            vocabIn(term: "e3", cefr: "B2", verification: .verified),
+            vocabIn(term: "x2", cefr: "C1", verification: .verified),  // ngoài level, không chiếm suất
+            vocabIn(term: "e4", cefr: "B2", verification: .verified),
+            vocabIn(term: "e5", cefr: "B2", verification: .verified),
+            vocabIn(term: "e6", cefr: "B2", verification: .verified),
+            vocabIn(term: "e7", cefr: "B2", verification: .verified),
+        ]
+        let drafts = ReviewDraftBuilder.drafts(from: items, selectedLevels: ["B2"])
+        let selected = Dictionary(
+            drafts.map { ($0.term, $0.isSelected) }, uniquingKeysWith: { a, _ in a })
+        for term in ["e1", "e2", "e3", "e4", "e5"] {
+            XCTAssertEqual(selected[term], true, "\(term) phải trong 5 đủ điều kiện đầu")
+        }
+        for term in ["e6", "e7"] {
+            XCTAssertEqual(selected[term], false, "\(term) vượt 5 suất")
+        }
+        XCTAssertEqual(selected["x1"], false)
+        XCTAssertEqual(selected["x2"], false)
+    }
+
+    /// unverified/suspect đứng trước trong mảng gốc vẫn không chiếm suất của 5 —
+    /// chỉ verified mới được tính (SD 10.3 + FR-02).
+    func testDraftBuilderUnverifiedDoesNotConsumePreselectSlot() {
+        let items = [vocabIn(term: "u1", verification: .unverified)]
+            + (1...5).map { vocabIn(term: "v\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items)
+        let selected = Dictionary(
+            drafts.map { ($0.term, $0.isSelected) }, uniquingKeysWith: { a, _ in a })
+        XCTAssertEqual(selected["u1"], false)
+        for i in 1...5 {
+            XCTAssertEqual(selected["v\(i)"], true, "v\(i) phải được chọn sẵn (không bị u1 chiếm suất)")
+        }
+    }
+
+    /// Item bị lọc `excludingMature` (FR-10) biến mất hoàn toàn trước khi đếm —
+    /// không chiếm suất của 5, không hiện trên màn duyệt.
+    func testDraftBuilderMatureExcludedItemDoesNotConsumeSlot() {
+        let mature = vocabIn(term: "mature-word", pos: "noun", verification: .verified)
+        let items = [mature] + (1...5).map {
+            vocabIn(term: "v\($0)", pos: "noun", verification: .verified)
+        }
+        let drafts = ReviewDraftBuilder.drafts(
+            from: items,
+            excludingMature: [VocabRepository.matureKey(term: "mature-word", pos: "noun")])
+        XCTAssertFalse(drafts.contains { $0.term == "mature-word" })
+        XCTAssertEqual(drafts.map(\.isSelected), [true, true, true, true, true])
     }
 
     /// port UI lab §5.5: preselect = verified VÀ cefr ∈ selectedLevels — verified
@@ -59,7 +134,9 @@ final class ReviewDraftBuilderTests: XCTestCase {
         XCTAssertEqual(selected["d-none"], false)
     }
 
-    /// `selectedLevels = nil` giữ hành vi cũ: chọn mọi verified (tương thích).
+    /// `selectedLevels = nil` → mọi verified đều đủ điều kiện; dưới `preselectLimit`
+    /// (2 < 5) nên vẫn chọn cả hai — cap chỉ lộ ra khi đủ điều kiện vượt 5
+    /// (`testDraftBuilderPreselectsTopFiveOfEightVerified`).
     func testDraftBuilderNilLevelsSelectsAllVerified() {
         let drafts = ReviewDraftBuilder.drafts(from: [
             vocabIn(term: "a", cefr: "B2", verification: .verified),

@@ -10,29 +10,39 @@ struct AnalysisView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// ux-redesign-r1 T5b: danh sách từ (việc chính) tách khỏi trang gốc — không còn "Đoạn gốc" dài
+    /// đẩy việc duyệt từ xuống dưới. Mặc định mở "Từ vựng" (Q-d).
+    private enum AnalysisTab: Hashable {
+        case vocab, page
+    }
 
     @State private var drafts: [ReviewDraft] = []
     @State private var expandedIDs: Set<String> = []
-    // port UI lab §5.3: bản dịch đoạn ẩn tới khi tap (EN luôn hiện).
-    @State private var revealedSegments: Set<Int> = []
-    @State private var saveAlert: SaveAlert?
+    @State private var tab: AnalysisTab = .vocab
+    // ADR-030 (cơ chế y hệt `ReadingSessionView`): bản dịch mặc định HIỆN, một nút đáy bật/tắt
+    // toàn bộ; chạm một đoạn lật riêng đoạn đó. Bấm nút đáy xoá hết lật riêng — nếu không, sau vài
+    // lần chạm lẻ thì nút không còn nói đúng trạng thái đang thấy.
+    @State private var showTranslations = true
+    @State private var overriddenSegments: Set<Int> = []
     @State private var showQuitWarning = false
     @State private var hasConfirmed = false
     // FR-22: từ đã có trong kho gạch chân ở đoạn gốc; chạm mở popover.
     @State private var encounterMatcher = EncounterMatcher(lexicon: [])
     @State private var encounterSelection: EncounterSelection?
+    // FR-05 (prompt-v6 T3): cụm EN↔VI đang chạm-sáng — tối đa một cụm sáng trên cả màn.
+    @State private var activePhrase: ActivePhrase?
+    @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
 
-    private enum SaveAlert: Identifiable {
-        case success(Int)
-        case failure(String)
-
-        var id: String {
-            switch self {
-            case let .success(count): "ok-\(count)"
-            case .failure: "fail"
-            }
-        }
+    private struct ActivePhrase: Equatable {
+        let segmentIndex: Int
+        let phraseIndex: Int
     }
+
+    /// View tự vẽ nền tô sáng — đọc trực tiếp `@AppStorage` (MASTER §Màu ngoại lệ
+    /// ux-redesign-r1 T10), không `Color.accentColor` trần.
+    private var accent: Color { AppTheme(rawValue: appTheme)?.accent ?? Color.accentColor }
 
     private var selectedCount: Int {
         drafts.filter(\.isSelected).count
@@ -105,7 +115,7 @@ struct AnalysisView: View {
                 .frame(maxWidth: .infinity)
                 .transition(.opacity)
             } else if let result = model.capture.analysisResult {
-                resultList(result)
+                resultView(result)
                     .transition(.opacity)
             } else {
                 ContentUnavailableView(
@@ -131,15 +141,21 @@ struct AnalysisView: View {
                     .accessibilityLabel("Đóng phiên duyệt")
                 }
             }
-            if model.capture.analysisResult != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lưu (\(selectedCount))") { save() }
-                        .disabled(selectedCount == 0)
+        }
+        // ux-redesign-r1 T5a/T5b: nút ghim đáy theo tab — "Từ vựng" là Lưu (CTA chính), "Trang" là
+        // ẩn/hiện bản dịch (ADR-030).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showsResult {
+                switch tab {
+                case .vocab:
+                    if !drafts.isEmpty { saveBar }
+                case .page: translationBar
                 }
             }
         }
         // FR-03: chưa confirm mà thoát → cảnh báo mất kết quả analysis.
         // Swipe sheet bị chặn tới khi đã lưu/bỏ; nút Đóng hỏi rõ ràng.
+        // Giữ chặn kể cả khi rỗng sau FR-10: đóng bằng nút (X / Đóng) mới dọn state, vuốt thì không.
         .interactiveDismissDisabled(model.capture.analysisResult != nil && !hasConfirmed)
         .alert("Bỏ kết quả phân tích?", isPresented: $showQuitWarning) {
             Button("Bỏ kết quả", role: .destructive) {
@@ -166,6 +182,13 @@ struct AnalysisView: View {
             }
         }
         #if DEBUG
+        .onAppear {
+            // ux-redesign-r1 T5b — `-ReadoScreen analysis-fixture-page`: mở thẳng tab Trang.
+            if model.shell.debugShowAnalysisPage {
+                model.shell.debugShowAnalysisPage = false
+                tab = .page
+            }
+        }
         .task {
             // verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` (RootView bật
             // `debugOpenFirstEncounter`): tự mở popover của match đầu tiên để
@@ -180,21 +203,21 @@ struct AnalysisView: View {
             encounterSelection = EncounterSelection(
                 surface: String(firstSegment.sourceEN[match.range]), entries: match.entries)
         }
-        #endif
-        .alert(item: $saveAlert) { alert in
-            switch alert {
-            case let .success(count):
-                return Alert(
-                    title: Text("Đã lưu"),
-                    message: Text("\(count) từ đã vào \(destinationLabel) và đến hạn ôn hôm nay."),
-                    dismissButton: .default(Text("OK")) { dismiss() })
-            case let .failure(message):
-                return Alert(
-                    title: Text("Không lưu được"),
-                    message: Text(message),
-                    dismissButton: .default(Text("OK")))
+        .task {
+            // prompt-v6 T3 — `-ReadoScreen phrase-highlight`: sáng sẵn cụm đầu
+            // tiên có cặp cụm định vị được, để chụp trạng thái "đã chạm".
+            guard model.shell.debugActivateFirstPhrase else { return }
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            model.shell.debugActivateFirstPhrase = false
+            guard let segments = model.capture.analysisResult?.segments else { return }
+            for (index, seg) in segments.enumerated() {
+                guard let first = PhraseLocator.spans(for: seg).first else { continue }
+                revealIfNeeded(index)
+                activePhrase = ActivePhrase(segmentIndex: index, phraseIndex: first.phraseIndex)
+                break
             }
         }
+        #endif
     }
 
     // MARK: - Lỗi (FR-04)
@@ -278,76 +301,204 @@ struct AnalysisView: View {
             excludingMature: model.matureKeysForCapture())
     }
 
+    /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào
+    /// (T9: rỗng sau FR-10) thì chẳng có gì để mất — đóng thẳng.
+    private var hasUnsavedWork: Bool {
+        model.capture.analysisResult != nil && !hasConfirmed && !drafts.isEmpty
+    }
+
     private func quitTapped() {
-        if model.capture.analysisResult != nil, !hasConfirmed {
+        if hasUnsavedWork {
             showQuitWarning = true
         } else {
+            // Dọn state (ảnh + kết quả) để lần mở camera sau không tự mở lại phân tích cũ.
+            model.discardAnalysis()
             dismiss()
         }
+    }
+
+    /// Nút đáy chỉ hiện khi đang xem kết quả (không phải lỗi/đang phân tích/chưa có trang).
+    private var showsResult: Bool {
+        model.capture.analysisFailure == nil
+            && !model.capture.isAnalyzing
+            && model.capture.analysisResult != nil
+    }
+
+    private var saveBar: some View {
+        Button {
+            save()
+        } label: {
+            Text("Lưu \(selectedCount) từ vào \(destinationName)")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(selectedCount == 0)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    /// ADR-030: MỘT nút cố định dưới đáy bật/tắt toàn bộ bản dịch (mặc định hiện).
+    private var translationBar: some View {
+        Button {
+            Motion.run(reduceMotion: reduceMotion) {
+                showTranslations.toggle()
+                overriddenSegments.removeAll()
+                activePhrase = nil
+            }
+        } label: {
+            Label(
+                showTranslations ? "Ẩn bản dịch" : "Hiện bản dịch",
+                systemImage: showTranslations ? "eye.slash" : "eye")
+                .contentTransition(.symbolEffect(.replace))
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.row)
+        }
+        .buttonStyle(.bordered)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(.background)
+        .overlay(alignment: .top) { Divider() }
     }
 
     private func save() {
         do {
             // FR-05/06: segments + summary đi theo phiên đọc khi lưu vào collection
             // có tên; kho tạm không lưu phiên (kho chứa từ chưa phân loại).
-            // port UI lab: đích đã chọn TỪ LÚC CHỤP (`analysisTargetCollectionID`),
-            // duyệt từ chỉ đọc — không chọn lại ở đây.
+            // ADR-053: đích đổi được ngay ở đầu màn này (`CollectionDestinationPicker`),
+            // mặc định = bộ chọn lúc chụp (`analysisTargetCollectionID`).
             let result = model.capture.analysisResult
             let saved = try model.saveSelection(
                 drafts,
                 collectionID: model.capture.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
                 summaryVI: result?.summaryVI ?? "")
+            guard saved > 0 else {
+                // Không ghi được từ nào (kho chưa mở) — đừng đóng phiên duyệt như thể đã lưu.
+                model.alertMessage = "Không lưu được từ nào. Hãy thử lại."
+                Haptics.error()
+                return
+            }
+            // Thành công: không alert chặn — `saveSelection` đã đặt `shell.saveConfirmation`,
+            // RootView đọc ở onDismiss của sheet này rồi hiện banner "Đã lưu N từ vào X · Xem".
             hasConfirmed = true
-            saveAlert = .success(saved)
             Haptics.success()
+            dismiss()
         } catch {
-            saveAlert = .failure(error.localizedDescription)
+            model.report(error, while: "lưu từ vựng")
             Haptics.error()
         }
     }
 
-    /// Nhãn đích lưu cho thông báo thành công (kho tạm hoặc tên collection).
-    private var destinationLabel: String {
+    /// Tên đích lưu cho nút Lưu và dòng "Lưu vào" (kho tạm hoặc tên collection).
+    private var destinationName: String {
         if let id = model.capture.analysisTargetCollectionID,
            let collection = model.collections.first(where: { $0.id == id }) {
-            return "«\(collection.name)»"
+            return collection.name
         }
-        return "kho tạm"
+        return "Kho tạm"
     }
 
     // MARK: - Kết quả
 
-    private func resultList(_ result: PageAnalysis) -> some View {
+    private func resultView(_ result: PageAnalysis) -> some View {
+        VStack(spacing: 0) {
+            resultHeader
+            switch tab {
+            case .vocab:
+                vocabList
+            case .page:
+                pageView(result)
+            }
+        }
+    }
+
+    /// Đích lưu + chuyển tab — luôn hiện ở đầu màn, dù đang ở tab nào.
+    private var resultHeader: some View {
+        VStack(spacing: Spacing.sm) {
+            destinationRow
+            tabPicker
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    /// ADR-053: đổi đích ngay ở đầu màn duyệt (trước: chỉ đọc, "Đổi bộ ở màn chụp" là ngõ cụt).
+    private var destinationRow: some View {
+        CollectionDestinationPicker {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "tray.and.arrow.down")
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
+                Text("Lưu vào")
+                    .foregroundStyle(.secondary)
+                Text(destinationName)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: Spacing.sm)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .font(.subheadline)
+            .padding(.horizontal, Spacing.md)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .card()
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Đổi nơi lưu, hiện \(destinationName)")
+    }
+
+    /// Segmented; cỡ chữ accessibility thì đổi sang menu (nhãn "Từ vựng · 12" không vừa ô segmented).
+    @ViewBuilder
+    private var tabPicker: some View {
+        let picker = Picker("Hiển thị", selection: $tab) {
+            Text("Từ vựng · \(drafts.count)").tag(AnalysisTab.vocab)
+            Text("Trang").tag(AnalysisTab.page)
+        }
+        if dynamicTypeSize.isAccessibilitySize {
+            picker.pickerStyle(.menu)
+        } else {
+            picker.pickerStyle(.segmented)
+        }
+    }
+
+    // MARK: - Tab Từ vựng
+
+    /// FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
+    @ViewBuilder
+    private var vocabList: some View {
+        if drafts.isEmpty {
+            emptyVocabView
+        } else {
+            vocabRows
+        }
+    }
+
+    /// J1: không còn từ đáng học sau FR-10 (đã thuộc / agent không tìm được) → nói rõ + đường đi, không
+    /// để danh sách trống im lặng. Tab Trang vẫn đọc được.
+    private var emptyVocabView: some View {
+        ContentUnavailableView {
+            Label("Không còn từ đáng học trên trang này", systemImage: "text.badge.checkmark")
+        } description: {
+            Text("Các từ trên trang đã thuộc rồi, hoặc không có từ nào cần thêm. Bạn vẫn có thể đọc bản dịch ở tab Trang.")
+        } actions: {
+            Button("Chụp lại") { recapture() }
+                .buttonStyle(.borderedProminent)
+            Button("Đóng", role: .cancel) {
+                model.discardAnalysis()
+                dismiss()
+            }
+        }
+    }
+
+    private var vocabRows: some View {
         List {
-            // port UI lab §5.2: đích lưu chỉ ĐỌC ở màn duyệt — chọn từ lúc chụp.
-            Section {
-                Label {
-                    Text("Lưu vào \(destinationLabel)")
-                } icon: {
-                    Image(systemName: "tray.and.arrow.down")
-                        .foregroundStyle(Color.accentColor)
-                }
-                .font(.subheadline)
-            } footer: {
-                Text("Đổi bộ ở màn chụp.")
-            }
-
-            // FR-05 (ADR-007): song ngữ — EN luôn hiện, VI mở khi tap (port §5.3).
-            if !result.segments.isEmpty {
-                Section("Đoạn gốc") {
-                    ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
-                        SegmentBlock(
-                            segment: seg,
-                            isRevealed: revealedSegments.contains(index),
-                            matcher: encounterMatcher,
-                            onSelect: { encounterSelection = $0 },
-                            onTap: { toggleSegment(index) })
-                    }
-                }
-            }
-
-            // FR-03/FR-09: duyệt + chọn + sửa 6 field inline (ADR-008).
             if !drafts.isEmpty {
                 Section {
                     // Chọn/bỏ tất cả — để trong Section (header List nuốt tap).
@@ -383,21 +534,41 @@ struct AnalysisView: View {
                             }
                     }
                 } header: {
-                    HStack {
-                        Text("Từ vựng")
-                        Spacer()
-                        Text("Đã chọn \(selectedCount)/\(drafts.count)")
-                            .foregroundStyle(.secondary)
-                            .contentTransition(.numericText())
-                            .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
-                    }
+                    Text("Đã chọn \(selectedCount)/\(drafts.count)")
+                        .contentTransition(.numericText())
+                        .animation(reduceMotion ? nil : Motion.reveal, value: selectedCount)
                 }
             }
+        }
+    }
 
-            if !result.summaryVI.isEmpty {
-                Section("Ý chính") {
-                    Text(result.summaryVI)
+    // MARK: - Tab Trang
+
+    /// FR-05/06 (ADR-007/030): song ngữ xen kẽ — EN + VI hiện sẵn từng đoạn, "Ý chính" thu gọn cuối.
+    @ViewBuilder
+    private func pageView(_ result: PageAnalysis) -> some View {
+        if result.segments.isEmpty && result.summaryVI.isEmpty {
+            ContentUnavailableView("Không có đoạn văn nào", systemImage: "text.alignleft")
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
+                        SegmentBlock(
+                            segment: seg,
+                            isRevealed: isRevealed(index),
+                            matcher: encounterMatcher,
+                            activePhraseIndex: activePhrase?.segmentIndex == index
+                                ? activePhrase?.phraseIndex : nil,
+                            accent: accent,
+                            onSelect: { encounterSelection = $0 },
+                            onPhraseTap: { togglePhrase(segment: index, phrase: $0) },
+                            onTap: { toggleSegment(index) })
+                    }
+                    if !result.summaryVI.isEmpty {
+                        SummaryCard(summary: result.summaryVI)
+                    }
                 }
+                .padding(Spacing.md)
             }
         }
     }
@@ -412,13 +583,49 @@ struct AnalysisView: View {
         }
     }
 
+    private func isRevealed(_ index: Int) -> Bool {
+        overriddenSegments.contains(index) ? !showTranslations : showTranslations
+    }
+
     private func toggleSegment(_ index: Int) {
         Motion.run(reduceMotion: reduceMotion) {
-            if revealedSegments.contains(index) {
-                revealedSegments.remove(index)
+            if overriddenSegments.contains(index) {
+                overriddenSegments.remove(index)
             } else {
-                revealedSegments.insert(index)
+                overriddenSegments.insert(index)
+            }
+            // Ẩn bản dịch của đoạn đang có cụm sáng → tắt luôn highlight (không
+            // còn VI để tô, sáng cụm EN một mình thì vô nghĩa).
+            if !isRevealed(index), activePhrase?.segmentIndex == index {
+                activePhrase = nil
             }
         }
+        Haptics.selection()
+    }
+
+    /// Lật riêng đoạn `index` sang hiện, KHÔNG đổi nếu đã hiện — không phát haptics
+    /// (dùng khi chạm cụm cần tự hiện bản dịch, khác chạm trực tiếp vào đoạn).
+    private func revealIfNeeded(_ index: Int) {
+        guard !isRevealed(index) else { return }
+        if overriddenSegments.contains(index) {
+            overriddenSegments.remove(index)
+        } else {
+            overriddenSegments.insert(index)
+        }
+    }
+
+    /// FR-05 (prompt-v6 T3) — chạm cụm EN: sáng/tắt cụm này, tự hiện bản dịch
+    /// đoạn nếu đang ẩn. Tối đa một cụm sáng trên cả màn (chạm cụm khác thì đổi).
+    private func togglePhrase(segment index: Int, phrase: Int) {
+        let target = ActivePhrase(segmentIndex: index, phraseIndex: phrase)
+        Motion.run(reduceMotion: reduceMotion) {
+            if activePhrase == target {
+                activePhrase = nil
+            } else {
+                activePhrase = target
+                revealIfNeeded(index)
+            }
+        }
+        Haptics.selection()
     }
 }

@@ -9,15 +9,16 @@ struct StreakCalendarView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Mở phiên ôn toàn màn qua `RootView` (ux-redesign-r1 T1a) — không giữ sheet ôn riêng.
+    @Environment(\.startReview) private var startReview
 
     /// Mở Capture→Analysis qua RootView (xem RootView.swift) — KHÔNG tự giữ
-    /// state/sheet riêng ở đây nữa: bản riêng từng thiếu `pendingHubNavigationID`
+    /// state/sheet riêng ở đây nữa: bản riêng từng thiếu bước điều hướng sau Lưu
     /// và không thật sự đưa đi Cài đặt khi `pendingSettingsNavigation` bật
     /// (hai bản dismiss lệch nhau, bug đã xác nhận 2026-10-01).
     let onCapture: () -> Void
 
     @State private var selectedDay: StreakDay?
-    @State private var showReview = false
 
     private var heatmap: StreakHeatmap? { model.streakHeatmap }
     private var hasDue: Bool { (model.dailyProgress?.dueToday ?? 0) > 0 }
@@ -35,11 +36,8 @@ struct StreakCalendarView: View {
         .navigationTitle("Lịch ôn")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.loadStreakHeatmap() }
-        .sheet(isPresented: $showReview, onDismiss: { reload() }) {
-            NavigationStack { ReviewQueueView() }
-        }
-        // Lưu xong (qua sheet Analysis của RootView) bump `dataRevision` —
-        // heatmap riêng của màn này không nằm trong `reloadOverview()`.
+        // Lưu xong (sheet Analysis) hoặc đóng cover ôn (`RootView` gọi `reloadOverview`)
+        // bump `dataRevision` — heatmap riêng của màn này không nằm trong `reloadOverview()`.
         .onChange(of: model.dataRevision) { model.loadStreakHeatmap() }
         .safeAreaInset(edge: .bottom) { cta }
     }
@@ -262,7 +260,12 @@ struct StreakCalendarView: View {
 
     private var cta: some View {
         Button {
-            if hasDue { showReview = true } else { onCapture() }
+            // scope nil = tất cả bộ: `hasDue` đếm toàn kho nên không thu hẹp theo phạm vi mặc định.
+            if hasDue {
+                startReview(ReviewRequest(scope: nil, mode: .srs))
+            } else {
+                onCapture()
+            }
         } label: {
             Label(
                 hasDue ? "Ôn ngay" : "Chụp trang",
@@ -274,13 +277,11 @@ struct StreakCalendarView: View {
         .buttonStyle(.borderedProminent)
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
+        // Màn push qua `navigationDestination` không thừa hưởng safeAreaInset của
+        // ShellTabBar (xác nhận bằng ảnh — CTA từng đè thẳng lên thanh tab) — tự
+        // cộng thêm reservedHeight để đứng NGAY TRÊN thanh, không chồng lên nó.
+        .padding(.bottom, Spacing.sm + ShellTabBar.reservedHeight)
         .background(.background)
         .overlay(alignment: .top) { Divider() }
-    }
-
-    private func reload() {
-        model.loadStreakHeatmap()
-        model.reloadOverview()
     }
 }

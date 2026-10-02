@@ -1,7 +1,7 @@
 import ReadoKit
 import SwiftUI
 
-/// T3a shell-chrome-r1 — thanh tab + `FloatShutter` ẩn khi cuộn xuống, hiện lại
+/// T3a shell-chrome-r1 — thanh tab (kèm nút chụp) ẩn khi cuộn xuống, hiện lại
 /// khi cuộn lên nhẹ (kiểu Facebook). Logic cuộn thuần (`ScrollChromeTracker`)
 /// sống ở ReadoKit (testable) — file này chỉ còn state SwiftUI + modifier.
 
@@ -29,6 +29,7 @@ private struct ShellScrollChrome: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 18, *) {
             content
+                .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
                 .onScrollGeometryChange(for: ScrollSample.self) { geometry in
                     ScrollSample(
                         offsetY: geometry.contentOffset.y + geometry.contentInsets.top,
@@ -47,6 +48,7 @@ private struct ShellScrollChrome: ViewModifier {
             // D2 shell-chrome-r1: deployment target 17.0 không có
             // `onScrollGeometryChange` — thanh luôn hiện trên iOS 17.
             content
+                .safeAreaPadding(.bottom, ShellTabBar.reservedHeight)
         }
     }
 }

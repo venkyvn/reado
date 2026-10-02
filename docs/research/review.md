@@ -946,7 +946,8 @@ Bản vẽ DDL đầy đủ (Postgres/Supabase + triggers + RLS + contract push/
 > ngoài git).
 >
 > *Đánh số lại mới 2026-09-08:* tên "v2" trước đây giờ là **v3** — migration v2 đã được
-> dùng cho bảng `analyses` ở task 3.5 (FR-14/NFR-02, xem `docs/specs/journeys.md` Phần 2 mục 4.6).
+> dùng cho bảng `analyses` ở task 3.5 (FR-14/NFR-02; bảng này thuộc bản PWA, không còn trong
+> schema Swift thật — xem `docs/specs/db.md`, bia mộ 2026-10-02 ux-redesign-r1 T11).
 > Chỉ đổi số thứ tự, không đổi nội dung DDL.
 
 | Field | Value |
