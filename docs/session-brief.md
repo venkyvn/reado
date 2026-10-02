@@ -13,7 +13,7 @@
 - verify-nav-r1 (T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG + `sim_screens.sh open` mở thẳng một màn. → `docs/plans/verify-nav-r1.md`
 - fsrs-queue-fix-r1 (T1 ✅ T2 ✅, **T3 hết chặn — chưa làm**). → `docs/plans/fsrs-queue-fix-r1.md`
 - reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, ADR-048) — FR-22 gặp lại từ cũ khi đọc. → `docs/plans/reencounter-r1.md`
-- Q-13 (mở, `CLAUDE.md` §5) — khoá so khớp FR-10 không phân biệt nghĩa; cần `/rplan` cân phương án trước khi hỏi fen.
+- q13-sense-filter-r1 (open, chưa code) — Q-13 khoá FR-10 không phân biệt nghĩa: 5 phương án, khuyến nghị B (gập thay vì xoá); chờ fen chốt 2 câu cuối plan. → `docs/plans/q13-sense-filter-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
 - 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval).
