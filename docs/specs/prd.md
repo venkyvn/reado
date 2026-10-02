@@ -434,7 +434,7 @@ thước đo trực tiếp **M-06**.
 
 Triển khai theo ba task: T1 dữ liệu (migration v4, `EncounterRepository`, `EncounterMatcher`,
 export) · T2 màn đọc (gạch chân, popover, ghi `seen`) · T3 thang tiến độ + Home.
-Plan: [plans/reencounter-r1.md](docs/plans/reencounter-r1.md).
+Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md).
 
 #### FR-07 — Book & Page Organization — BỎ ở v0.3
 

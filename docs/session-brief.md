@@ -10,10 +10,10 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- reencounter-r1 (T1 ✅ T2 ✅ T3 ✅-tạm, ADR-048) — FR-22 gặp lại từ cũ khi đọc. → `docs/plans/reencounter-r1.md`
+- (không có)
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
-- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval) · fsrs-queue-fix-r1 T3 (elapsed_days một định nghĩa — lib tự ghi đè, bỏ `CardSnapshot.dayDiff`) · q13-sense-filter-r1 (ADR-056, gập thay vì xoá — T1 kit + T2 UI "Đã thuộc · N"/fixture/ảnh, khép plan) · verify-nav-r1 T3 (fen xem tay toàn bộ §2.7 trên simulator thật — Ôn thêm/Alert lỗi/Reencounter/Capture/Settings/prompt-v6/migration/camera + nhóm "Đã thuộc · N" đều pass, khép plan) · fix nhỏ `save-banner` debug fixture thiếu `bannerHubID` (phát hiện lúc fen tự rà lại các ADR chốt nhanh). → `docs/plans/done/q13-sense-filter-r1.md`, `docs/plans/done/verify-nav-r1.md`
+- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval) · fsrs-queue-fix-r1 T3 (elapsed_days một định nghĩa — lib tự ghi đè, bỏ `CardSnapshot.dayDiff`) · q13-sense-filter-r1 (ADR-056, gập thay vì xoá — T1 kit + T2 UI "Đã thuộc · N"/fixture/ảnh, khép plan) · verify-nav-r1 T3 (fen xem tay toàn bộ §2.7 trên simulator thật — Ôn thêm/Alert lỗi/Reencounter/Capture/Settings/prompt-v6/migration/camera + nhóm "Đã thuộc · N" đều pass, khép plan) · fix nhỏ `save-banner` debug fixture thiếu `bannerHubID` (phát hiện lúc fen tự rà lại các ADR chốt nhanh) · reencounter-r1 khép hẳn (T3 hết nghi N=0, xác nhận qua verify-nav-r1 T3). → `docs/plans/done/q13-sense-filter-r1.md`, `docs/plans/done/verify-nav-r1.md`, `docs/plans/done/reencounter-r1.md`
 - 2026-10-01 → `docs/journal/2026-10-01.md`: fix-alert-sheet-dismiss-r1 (`AlertHostStack`) · master-rewrite-r1 (ADR-051) · extra-review-r1 "Ôn thêm 20" (ADR-050) · remove-proxy-r1 BYOK-only (ADR-049) · refactor-r2/r3/r4 · audit nhỏ sau refactor-r4.
 - 2026-09-30 → `docs/journal/2026-09-30.md`: new-order-r1 (ADR-047) · vision-refresh-r2 · shell-chrome-r1.
 - 2026-09-28 → `docs/journal/2026-09-28.md`: repo-hygiene-r1 (ADR-044/046) · cram-collection-r1 (ADR-043) · OCR `RecognizeDocumentsRequest` (ADR-042).
