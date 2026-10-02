@@ -1,6 +1,8 @@
 # Plan: ux-redesign-r1 — Phase 0 (Audit) + Phase 1 (IA) + Phase 2 (Plan) cho Sonnet implement
 
-> **Trạng thái:** draft (2026-10-01) - redesign UX/UI theo `task.md`; audit + IA (chọn hướng B) + 14 task, đã áp review, Q-b chốt = B (bỏ tab Ôn), chưa code
+> **Trạng thái:** open (2026-10-02) - T0–T10 code + xem tay xong (fen xác nhận 3 luồng J1 trên máy thật, 2 bug
+> che UI đã sửa). Còn **T11 (docs)** chưa làm: viết lại Phần 1 `journeys.md`, xử lý bảng Journey drift, hỏi fen về
+> việc bỏ Phần 2. Bug mở: accent không đổi màu ở `ShellTabBar`/`ShellCaptureButton` (xem MASTER.md mục Màu).
 
 ## Context
 `task.md`: fen muốn redesign UX/UI Reado cho chuyên nghiệp (không chỉ tô lại), mở khoá cấu trúc tab, shutter,
@@ -98,7 +100,9 @@ T1a/T2/T5a/T5b/T6/T7/T8/T9 dùng được cho cả hướng A lẫn B.
 | 20 | Màn ôn rỗng hoàn toàn không có CTA sang chụp (J3: "Hết new và backlog = 0 → CTA sang J1/J2") | Ôn | J3 | P2 | `ReviewQueueView.swift:198-209` |
 | 21 | Tên tab "Kho" lẫn với "Kho tạm" | Shell | — | P2 | `RootView.swift:13-19` |
 
-Chưa xem tay (T0 chụp): Ôn mặt trước/sau, SessionDone, Kho, Hub, Streak, Settings, Data, Capture, AX-XL mọi màn, theme sepia.
+Đã xem tay (2026-10-02, T0+T10): Hôm nay, Thư viện, Hub, Analysis, Settings, Streak, AX-XL (Hôm nay + Hub), theme
+sepia (Hôm nay), 3 luồng J1 + banner "Xem" trên máy thật. Chưa xem tay: Ôn mặt sau (cần lật thẻ bằng tay), SessionDone,
+Data, Capture, Reduce Motion, thứ tự VoiceOver thật (máy agent không có Simulator GUI để bật).
 
 ## Journey drift (journeys.md ↔ code)
 | journeys.md | Code thực tế | Giữ ý định? |
@@ -271,8 +275,11 @@ Mọi task: DoD có `[ ] scripts/test.sh build xanh` (fen chạy trên Mac nếu
   + shot, home + review thêm `--theme sepia`; empty: `open home --seed empty --fresh`. Ảnh → `.tmp/screens/ux-before/`.
 - Copy ảnh then chốt (Home, Analysis, Hub, Ôn mặt trước/sau, Home empty) sang `docs/investigations/ux-redesign-r1/screens/before-*.png` và commit.
 - Xác nhận/bác P0-1, P0-2, P1-3 (tap tay trên simulator nếu cần); cập nhật cột "Bằng chứng" trong bảng vấn đề ở Phase 0.
+  **Đã xác nhận (2026-10-02):** P0-1 (FloatShutter đè nội dung) hết hẳn — nút chụp giờ trong thanh, không còn overlay
+  nổi (ảnh before/after-home). P0-2 (nút "Về Home" chết) và P1-3 (mất tổng kết khi đổi tab) hết theo kiến trúc mới —
+  tab Ôn không còn tồn tại, phiên ôn là `fullScreenCover` che cả thanh tab nên không đổi tab giữa phiên được nữa.
 - Không làm: sửa code.
-- DoD: [ ] bảng vấn đề không còn "chưa xem tay" ngoài màn cần AI thật [ ] ảnh then chốt đã commit.
+- DoD: [x] bảng vấn đề không còn "chưa xem tay" ngoài màn cần AI thật [x] ảnh then chốt đã commit.
 
 ### T1a — Phiên ôn toàn màn (giữ 3 tab) [cloud]
 - Files: mới `App/ReviewLauncher.swift`, `App/RootView.swift`, `App/AppState.swift`, `Review/ReviewQueueView.swift`,
@@ -410,12 +417,18 @@ Mọi task: DoD có `[ ] scripts/test.sh build xanh` (fen chạy trên Mac nếu
 - Không làm: copy/bố cục ngoài các state trên.
 - DoD: [ ] build xanh [ ] `open home --seed empty --fresh` → bấm chụp ra form agent [ ] fixture rỗng (thêm `scripts/fixtures/analysis-empty.json` nếu cần).
 
-### T10 — Motion / haptic / a11y + vòng ảnh cuối [mac]
+### T10 — Motion / haptic / a11y + vòng ảnh cuối [mac] ✅ (2026-10-02)
 - Rà `Haptics.*`/`Motion.*`, thứ tự VoiceOver (hero → chỉ số → list), vùng chạm ≥44pt, AX-XL, 2 accent, light/dark mọi màn.
 - Cập nhật `design-system/reado/MASTER.md`: ngoại lệ `FloatShutter` → nút chụp trong thanh; luật banner; checklist.
 - So `.tmp/screens/ux-before/` với `ux-after/`; ảnh then chốt sau redesign → `docs/investigations/ux-redesign-r1/screens/after-*.png`, commit.
 - Không làm: tính năng mới.
-- DoD: [ ] checklist MASTER đủ cho mọi màn [ ] ảnh after đã commit.
+- DoD: [x] checklist MASTER đủ cho mọi màn [x] ảnh after đã commit.
+- **Kết quả:** AX-XL + 2 accent (forest/sepia) xem bằng ảnh — layout không vỡ. VoiceOver order + Reduce Motion chỉ
+  kiểm được qua code (máy agent không có Simulator GUI để bật thật) — fen xác nhận bằng máy thật: 3 luồng J1 (Hôm
+  nay/Thư viện/Hub) + banner "Xem" đều đúng; 2 bug che/chồng UI (List cuối màn, CTA Lịch streak) đã sửa và fen xác
+  nhận hết lỗi trên máy thật. **Bug còn mở, đã thử sửa không được:** `ShellTabBar`/`ShellCaptureButton` không đổi
+  màu theo accent (fen xác nhận trên máy thật — vẫn xanh iOS khi đổi Nâu giấy) — ghi ở MASTER.md mục Màu, cần
+  session riêng để điều tra.
 
 ### T11 — Docs (cuối) [cloud]
 - Viết lại Phần 1 `docs/specs/journeys.md` theo IA mới (2 tab, phiên ôn, banner sau lưu, đổi đích ở màn duyệt, 5 pin), xử lý
