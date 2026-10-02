@@ -10,9 +10,10 @@
 > Số test chính thức = số gộp scheme `Reado` — hook `session-context.sh` tự nạp kết quả gần nhất (`.tmp/results/last-summary.txt`/`kit-summary.txt`) vào đầu session, không ghi tay ở đây nữa. **Chưa xem tay UI** trên nhiều màn — §2.7 giờ mở được phần lớn bằng `scripts/sim_screens.sh open <màn>` (verify-nav-r1 T1+T2), còn chạy qua từng mục + đọc ảnh thật (T3) chưa làm.
 
 - ux-redesign-r1 (2026-10-02, T0+T10 ✅, **T11 docs chưa làm**) — đo xong 3 TODO(đo ảnh) ShellTabBar/RootView;
-  worktree build `f5336b7` chụp ảnh "trước"; sửa 2 bug che UI (List cuối màn + CTA Lịch streak bị `ShellTabBar`
-  đè — không thừa hưởng `safeAreaInset` qua `navigationDestination`); fen xác nhận trên máy thật 3 luồng J1
-  (Hôm nay/Thư viện/Hub) + banner "Xem" đều đúng. Bug accent (xem mục 7 dưới) vẫn còn, đã thử sửa không được.
+  worktree build `f5336b7` chụp ảnh "trước"; sửa 3 bug (List cuối màn + CTA Lịch streak bị `ShellTabBar` đè —
+  không thừa hưởng `safeAreaInset` qua `navigationDestination`; accent không đổi màu ở `ShellTabBar`/
+  `ShellCaptureButton` — sửa bằng đọc thẳng `AppTheme` từ `@AppStorage`, xem mục 7 dưới); fen xác nhận trên máy
+  thật 3 luồng J1 (Hôm nay/Thư viện/Hub) + banner "Xem" + cả 3 bug trên đều hết.
   → `docs/plans/ux-redesign-r1.md`
 - fix-alert-sheet-dismiss-r1 (2026-10-01, ✅ KHÉP) — bug §2 mục 8 cũ: `RootView` + sheet con cùng gắn `.appErrorAlert()` trên chung `alertMessage`, set lỗi lúc sheet mở huỷ cả sheet lẫn alert. Sửa bằng `AlertHostStack` (ReadoKit, logic thuần, 5 test) — chỉ layer mount sau cùng mới present `.alert()`; bỏ workaround debug-only trong `RootView.swift`. Verify bằng ảnh `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet "Duyệt & lưu từ vựng" + alert "Có lỗi" cùng hiện. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
 - verify-nav-r1 (2026-10-01, T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`/`-ReadoSeed`/`-ReadoAlert`) + `sim_screens.sh open` để agent mở thẳng một màn (kể cả seed lịch ôn giả, fixture phân tích) và chụp không cần chạm tay. T2 lộ bug alert+sheet có sẵn — §2 mục 8. → `docs/plans/verify-nav-r1.md`
@@ -46,10 +47,14 @@
    - **Reencounter** (reencounter-r1 T2/T3): gạch chân + "Nhận ra", hàng Home "Gặp lại N từ" (nghi N=0 — kiểm `SELECT kind, created_at FROM encounters`), thanh 4 màu/`MasteryRing`.
    - **Capture** (refactor-r4 T1): chip "Lưu vào", sheet chọn/tạo bộ.
    - **Settings** (remove-proxy-r1): ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
-   - **Accent lệch** (phát hiện lúc master-rewrite-r1, **fen xác nhận lại trên máy thật 2026-10-02**): `ShellTabBar`/`ShellCaptureButton` ra xanh iOS hệ thống dù đổi accent (Xanh rừng lẫn Nâu giấy đều vậy), trong khi `HeroCard`/nút `.borderedProminent` lên đúng màu — cả hai đều gọi `Color.accentColor`. ux-redesign-r1 T10 đã thử đổi sang `Color(uiColor: .tintColor)`, build xong vẫn không đổi màu → revert. Ghi ở `design-system/reado/MASTER.md` mục Màu, cần session riêng để điều tra (nghi `.glassEffect(...tint(...))`/foregroundStyle không đọc `.tint` môi trường cho view tự vẽ, khác buttonStyle hệ thống).
    - (c) migration v3→v4 trên DB thật (cài đè bản cũ) — chưa làm.
    - Việc kế tiếp sau khi xem xong: `prompt-v6` — một session riêng.
 8. ~~Bug alert+sheet~~ — **đã sửa 2026-10-01 (fix-alert-sheet-dismiss-r1).** `RootView` và mỗi sheet (vd `AnalysisView`) từng cùng gắn `.appErrorAlert()` trên chung `model.alertMessage`, khiến set lỗi lúc sheet đang mở huỷ cả sheet lẫn alert (UIKit "already presenting"). Sửa bằng `AlertHostStack` — chỉ layer mount sau cùng mới present `.alert()`. Verify bằng `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet + alert cùng hiện đúng. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
+9. ~~Accent lệch~~ — **đã sửa 2026-10-02 (ux-redesign-r1 T10).** `ShellTabBar`/`ShellCaptureButton` từng ra xanh
+   iOS hệ thống dù đổi accent, vì `Color.accentColor`/`.glassEffect(...tint(...))` không theo `.tint()` môi
+   trường cho view tự vẽ (khác buttonStyle hệ thống như `HeroCard`). Sửa bằng đọc thẳng `AppTheme` từ
+   `@AppStorage("appTheme")` thay vì dựa vào environment. Verify bằng ảnh: fen xác nhận trên máy thật cả 2
+   accent (Xanh rừng, Nâu giấy) đều đúng màu ở tab đang chọn + nút chụp.
 
 ## 3. Bẫy máy này
 

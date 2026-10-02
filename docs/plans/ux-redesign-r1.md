@@ -2,7 +2,7 @@
 
 > **Trạng thái:** open (2026-10-02) - T0–T10 code + xem tay xong (fen xác nhận 3 luồng J1 trên máy thật, 2 bug
 > che UI đã sửa). Còn **T11 (docs)** chưa làm: viết lại Phần 1 `journeys.md`, xử lý bảng Journey drift, hỏi fen về
-> việc bỏ Phần 2. Bug mở: accent không đổi màu ở `ShellTabBar`/`ShellCaptureButton` (xem MASTER.md mục Màu).
+> việc bỏ Phần 2.
 
 ## Context
 `task.md`: fen muốn redesign UX/UI Reado cho chuyên nghiệp (không chỉ tô lại), mở khoá cấu trúc tab, shutter,
@@ -425,10 +425,10 @@ Mọi task: DoD có `[ ] scripts/test.sh build xanh` (fen chạy trên Mac nếu
 - DoD: [x] checklist MASTER đủ cho mọi màn [x] ảnh after đã commit.
 - **Kết quả:** AX-XL + 2 accent (forest/sepia) xem bằng ảnh — layout không vỡ. VoiceOver order + Reduce Motion chỉ
   kiểm được qua code (máy agent không có Simulator GUI để bật thật) — fen xác nhận bằng máy thật: 3 luồng J1 (Hôm
-  nay/Thư viện/Hub) + banner "Xem" đều đúng; 2 bug che/chồng UI (List cuối màn, CTA Lịch streak) đã sửa và fen xác
-  nhận hết lỗi trên máy thật. **Bug còn mở, đã thử sửa không được:** `ShellTabBar`/`ShellCaptureButton` không đổi
-  màu theo accent (fen xác nhận trên máy thật — vẫn xanh iOS khi đổi Nâu giấy) — ghi ở MASTER.md mục Màu, cần
-  session riêng để điều tra.
+  nay/Thư viện/Hub) + banner "Xem" đều đúng; 3 bug che/chồng/sai màu UI (List cuối màn, CTA Lịch streak, accent
+  `ShellTabBar`/`ShellCaptureButton` không đổi theo theme) đã sửa và fen xác nhận hết lỗi trên máy thật. Bug accent
+  sửa bằng cách đọc thẳng `AppTheme` từ `@AppStorage("appTheme")` thay vì `Color.accentColor`/`.tint` (không đáng
+  tin cho view tự vẽ) — ghi lại pattern ở MASTER.md mục Màu.
 
 ### T11 — Docs (cuối) [cloud]
 - Viết lại Phần 1 `docs/specs/journeys.md` theo IA mới (2 tab, phiên ôn, banner sau lưu, đổi đích ở màn duyệt, 5 pin), xử lý
