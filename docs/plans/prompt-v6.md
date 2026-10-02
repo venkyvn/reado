@@ -1,7 +1,7 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
-> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅**, T2/T3 chưa làm. Hợp đồng gốc 09-30 vẫn đúng;
-> sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
+> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅ + T2a ✅**; T2b/T3 chưa làm.
+> Hợp đồng gốc 09-30 vẫn đúng; sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
 
 ## Chỗ cập nhật so với bản 09-30
 1. ADR cho prompt v6 → **ADR-055** (ADR-049 đã là "bỏ proxy").
@@ -59,16 +59,40 @@
   đáng chú ý cho T2, không phải lỗi script). Output đúng chỗ, không lộ key/text trang. Chi tiết:
   `docs/journal/2026-10-02.md`.
 
-### T2 — prompt v6 + decoder
-- Soạn `scripts/prompts/v6.txt`, lặp với T1 tới khi ổn, rồi port nguyên văn vào `Prompt.swift`
-  (`version = 6`). Kit test so khớp `Prompt.text(...)` với nội dung file template (chống lệch giữa
-  bản eval và bản app).
-- Prompt: dịch theo văn phong, cụm/nhịp câu tự nhiên; `phrases`; xếp hạng vocabulary.
-- `AnalysisResponseNormalizer` phải giữ `phrases` khi dựng lại segment (hiện đang làm rơi).
-- Decoder: `phrases` optional + kiểm substring, bỏ cặp sai; preselect top 5 theo thứ tự AI xếp hạng.
-- Test: decode có/không `phrases`, bỏ cặp sai, JSON phiên cũ, preselect 5 (đủ/thiếu/có unverified).
-- Docs: prompt-spec §3/§4/§7, PRD FR-09, ADR-055.
-- DoD: full xanh **và** fen chấm bảng T1: v6 không tệ hơn v5.
+### T2 — chi tiết hoá 2026-10-02: tách T2a/T2b (gộp quá nhiều cho 1 session + DoD cần model sống)
+
+#### T2a — đường ống `phrases` trong ReadoKit (thuần, không mạng) (✅ xong 2026-10-02)
+- `PageAnalysis.Segment` thêm `phrases: [Phrase]` (`Phrase { en, vi }`), mặc định `[]` → 4 chỗ gọi hiện
+  có không phải sửa.
+- `AnalysisResponseNormalizer` giữ `phrases` khi dựng lại segment (hiện đang làm rơi): chỉ cặp `en`/`vi`
+  không rỗng, `en` ⊂ `source_en`, `vi` ⊂ `translation_vi` (so khớp **qua `VerifyEngine.normalize`** —
+  case/dấu câu cong/whitespace, tái dùng util đối chiếu `example` sẵn có), tối đa 6 — cặp sai bỏ im
+  lặng. Decoder: `RawSegment.phrases` optional, thiếu = `[]`.
+- `SegmentDTO` (ReadingSession) thêm `phrases: [PhraseDTO]?`, encode `nil` khi rỗng; JSON phiên cũ (không
+  key) vẫn decode ra `[]`.
+- Files: `Analysis/PageAnalysis.swift`, `Analysis/AnalysisResponseNormalizer.swift`,
+  `Analysis/AnalysisResponseDecoder.swift`, `Session/ReadingSession.swift`.
+- Test (`AnalysisDecoderTests`, `ReadingSessionTests`): có phrases hợp lệ giữ đúng thứ tự; cặp không ⊂
+  nguồn/rỗng bị bỏ; >6 cắt còn 6; không có `phrases` → `[]`; round-trip encode/decode; JSON phiên cũ.
+- Docs: prompt-spec §4 (schema `phrases` optional, maxItems 6, luật substring); ROADMAP FR-02/FR-05.
+- DoD: `scripts/test.sh` full xanh. Không đổi `Prompt.version` (prompt v5 chưa xin `phrases`).
+- **Kết quả:** +6 test (`AnalysisDecoderTests` ×4, `ReadingSessionTests` ×2). Full test **390/392
+  xanh** (2 skip opt-in cũ), `** TEST SUCCEEDED **`. Chi tiết: `docs/journal/2026-10-02.md`.
+
+#### T2b — prompt v6 + xếp hạng + preselect top 5 (cần model sống để chấm)
+- Model eval: **`qwen3.8-flash`** (fen chốt 2026-10-02 — `deepseek-v4.1-flash` cũ đã 503 model_not_found).
+- `prompt_eval.py` thêm `--model`/`--base-url` ghi đè meta; nhận thẳng `Prompt.swift` (rút literal như
+  cách ra `v5.txt`) → so trực tiếp với bản đang sửa, không cần `v6.txt` riêng (tránh lệch template).
+- `Prompt.swift` v6 (`version = 6`): dịch theo cụm/nhịp câu tự nhiên (vision #2), xin `phrases` 2–6 cặp/
+  đoạn, `vocabulary` xếp theo giá trị học giảm dần.
+- `ReviewDraftBuilder.drafts`: verified giữ thứ tự AI (không còn thứ tự trang); preselect tối đa **5**
+  đầu trong số verified + đúng CEFR (đếm sau `excludingMature`). Unverified/suspect vẫn lên đầu, không
+  chọn sẵn.
+- Test (`ReviewDraftBuilderTests`): 8 verified → đúng 5 đầu; 3 verified → cả 3; CEFR lọc trước rồi mới
+  đếm 5; unverified không chiếm suất. Sửa `testDraftBuilderNilLevelsSelectsAllVerified` theo luật mới.
+- Docs: PRD FR-09 criterion 1; prompt-spec §3 (trỏ v6) + §7 dòng "Nên đưa từ nào vào bộ ôn tập" → "AI chỉ
+  xếp thứ tự đề xuất"; ADR-055; ROADMAP.
+- DoD: full xanh **và** fen chấm bảng `.tmp/prompt-eval/` v5 vs v6 (≥4 trang thật): v6 không tệ hơn.
 
 ### T3 — UI chạm-sáng
 - Chạm cụm EN → cụm VI tương ứng sáng (`SegmentBlock` trong `AnalysisComponents.swift` +

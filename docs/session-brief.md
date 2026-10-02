@@ -29,9 +29,11 @@
 - repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
-- prompt-v6 (2026-10-02, **T1 ✅**, T2/T3 chưa làm) — `scripts/prompt_eval.py` + `scripts/prompts/v5.txt`
-  (template rút từ `Prompt.swift` v5), chạy thật trên `.tmp/diagnostics/` có sẵn — model
-  `deepseek-v4.1-flash` trả 503 model_not_found (đáng chú ý cho T2, không phải lỗi script). → `docs/plans/prompt-v6.md`
+- prompt-v6 (2026-10-02, **T1 ✅ + T2a ✅**, T2b/T3 chưa làm) — T1: `scripts/prompt_eval.py` +
+  `scripts/prompts/v5.txt`. T2a: `PageAnalysis.Segment.phrases` (cặp cụm EN↔VI, FR-05) qua
+  normalizer (substring qua `VerifyEngine.normalize`, tối đa 6) + decoder + `SegmentDTO` optional —
+  đường ống thuần, `Prompt.version` vẫn 5. T2b (prompt v6 + xếp hạng + preselect 5) cần model sống
+  — fen chốt `qwen3.8-flash` thay `deepseek-v4.1-flash` đã 503. → `docs/plans/prompt-v6.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 

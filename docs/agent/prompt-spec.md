@@ -188,7 +188,19 @@ trình thủ công hiện tại (PRD mục 1, điểm rò rỉ thứ nhất).
         "additionalProperties": false,
         "properties": {
           "source_en":      { "type": "string", "minLength": 1 },
-          "translation_vi": { "type": "string", "minLength": 1 }
+          "translation_vi": { "type": "string", "minLength": 1 },
+          "phrases": {
+            "type": "array", "maxItems": 6,
+            "items": {
+              "type": "object",
+              "required": ["en", "vi"],
+              "additionalProperties": false,
+              "properties": {
+                "en": { "type": "string", "minLength": 1 },
+                "vi": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
         }
       }
     },
@@ -231,6 +243,14 @@ xác định đúng là bất khả, nên phải có giá trị thoát hiểm. K
 
 **`ipa` không có `minLength`.** Có từ và cụm từ không có phiên âm hợp lý — một cụm bốn
 chữ thì IPA của nó là gì? Cho phép chuỗi rỗng thay vì bắt AI bịa.
+
+**`segments[].phrases` — optional, prompt-v6 (T2a 2026-10-02, FR-05 criterion mới).** Cặp
+cụm EN↔VI chạm-sáng trong đoạn — thuần hiển thị, **không** vào `vocab_items`. `maxItems 6`
+chặn AI chảy văn thành chú giải từng-chữ (đi ngược nguyên lý #2 — bản dịch là để học văn
+phong, không phải word-by-word). Không `required`: output v5 (chưa có field này) vẫn hợp
+lệ. Luật substring (`en` ⊂ `source_en`, `vi` ⊂ `translation_vi`) + cắt 6 thi hành ở
+`AnalysisResponseNormalizer`, **không** ở decoder — cặp sai bị bỏ im lặng, không huỷ cả
+segment (khác `vocabulary`: luật "không lưu bản ghi hỏng" của FR-02 chỉ áp cho vocabulary).
 
 **`tags` / `synonyms` / `antonyms` — optional, owner mở lại 2026-09-08.** Ba field này
 bổ trợ hiển thị, **không** đưa vào `required` — output cũ vẫn hợp lệ, không phá
