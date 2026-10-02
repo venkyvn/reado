@@ -233,6 +233,7 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | Xoá agent đang `active_agent_id` → gán lại hàng placeholder | FR-21, ADR-049 |
 | `openai_compat`: `base_url` + `model` không null; HTTPS trừ loopback / RFC1918 | Self-host LAN |
 | Client POST `{base_url}/chat/completions` (prefix kiểu `https://openrouter.ai/api/v1`) | Wire OpenAI-compat |
+| `cards.due_at` luôn **đọc cột đã ghi sẵn lúc chấm**, không tính lại on-the-fly | Fuzz FSRS làm ngày "nhảy" mỗi lần tính lại → lịch ôn loạn (bia mộ từ journeys.md Phần 2 cũ, bỏ 2026-10-02) |
 
 ### A.3 Không nằm file SQLite kho từ
 

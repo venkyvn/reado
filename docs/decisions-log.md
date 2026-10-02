@@ -876,3 +876,68 @@
 - **Hệ quả:** Xoá `design-system/reado/pages/*.md` (luật web). `/raudit` grep từng
   token mà MASTER nhắc tới. Skill `reado-ui` trỏ về MASTER kèm gotcha. Đổi MASTER khi
   code đổi token là việc bình thường; đổi look phải được owner duyệt.
+
+## ADR-052 — Shell 2 tab "Hôm nay · Thư viện", nút chụp trong thanh, Ôn là phiên toàn màn
+
+- **Ngày:** 2026-10-02
+- **Bối cảnh:** Cấu trúc 3 tab (Home/Ôn/Kho, port UI lab 2026-09-23) chưa từng có ADR
+  và lộ nhiều vấn đề qua audit `ux-redesign-r1`: `FloatShutter` đè nội dung cuối list
+  (#1); nút "Về Home" của `SessionDoneView` gọi `dismiss()` trong tab không có gì để
+  dismiss → nút chết (#2); đổi tab rồi quay lại Ôn làm `onAppear` nạp lại hàng đợi,
+  mất màn tổng kết giữa phiên (#3); Ôn mở bằng 3 cách khác nhau (tab/sheet) với chrome
+  khác nhau (#13); Home có 4–6 khối ngang hàng không có 1 CTA chính (#10); mục Dữ liệu
+  nằm trên toolbar Home dù không phải việc đọc (`J-R1-D`).
+- **Quyết định:** Bỏ tab Ôn. Shell còn 2 tab `AppTab.today` ("Hôm nay") và `.library`
+  ("Thư viện"); nút chụp tròn glass đứng cùng hàng với capsule tab (không còn overlay
+  `FloatShutter`). Ôn trở thành một phiên toàn màn (`fullScreenCover(item: $reviewRequest)`,
+  `ReviewRequest { scope, mode }`), mở từ hero Hôm nay, Hub bộ, hoặc Lịch streak qua
+  `EnvironmentValues.startReview` — che cả thanh tab nên không đổi tab giữa phiên được
+  nữa (giải #2/#3 bằng kiến trúc, không vá riêng). Mục Dữ liệu dời vào menu ⋯ của
+  Thư viện (sửa vị trí J-R1-D, không còn ở Settings/Home).
+- **Hệ quả:** `app/Reado/App/RootView.swift` (`AppTab`, `reviewRequest`, `startReview`),
+  `ShellTabBar`/`ShellCaptureButton` thay `FloatShutter`, `ReviewLauncher.swift` mới.
+  `docs/specs/journeys.md` Phần 1 viết lại theo khung này (T11). Hướng A (giữ 3 tab,
+  chỉ vá #2/#3 riêng) không chọn — chi phí sau này cao hơn vì vẫn còn 2 cửa vào Ôn.
+  Verify: fen xác nhận trên máy thật 3 luồng J1 (Hôm nay/Thư viện/Hub) đều đúng
+  (2026-10-02).
+
+## ADR-053 — Lưu từ không chặn: banner thay alert, đổi đích được ở màn duyệt, bản dịch Analysis hiện sẵn
+
+- **Ngày:** 2026-10-02
+- **Bối cảnh:** Sau khi Lưu, app đổi sang tab Home + push Hub kèm alert chặn, kể cả
+  khi user chụp từ tab Kho → mất định hướng (#4). Màn duyệt ghi "Đổi bộ ở màn chụp"
+  nhưng không quay lại được → ngõ cụt khi chọn nhầm đích (#5). Bản dịch đoạn trong
+  Analysis ẩn tới khi chạm "Dịch" từng đoạn — lệch ADR-030 (mặc định hiện + 1 nút
+  ẩn/hiện toàn bộ) và nguyên lý #2 vision (#7).
+- **Quyết định:** Bỏ alert chặn sau Lưu; thay bằng `ShellBanner` không chặn ("Đã lưu
+  N từ vào X · Xem"), đứng nguyên chỗ đang đứng (không tự đổi tab/push) — bấm "Xem"
+  mới push Hub. Đích lưu đổi được ngay ở đầu màn duyệt qua `CollectionDestinationPicker`
+  (`Menu`, không sheet, để giữ ≤2 tầng modal) thay vì chỉ đọc ở màn chụp. Tab "Trang"
+  của màn duyệt áp lại cơ chế `ReadingSessionView`: EN+VI hiện sẵn, một nút đáy ẩn/hiện
+  toàn bộ bản dịch. ADR-036 (camera `fullScreenCover`) giữ nguyên.
+- **Hệ quả:** `Analysis/AnalysisView.swift`, `Shared/CollectionDestinationPicker.swift`
+  (mới), `Shared/ShellBanner.swift` (mới), `App/AppModel+Capture.swift`. Bỏ
+  `pendingHubNavigationID`; giữ `pendingRecapture`/`pendingSettingsNavigation`. Lỗi lưu
+  vẫn dùng alert (không phải banner). `docs/specs/journeys.md` J1/J2 viết lại theo đây
+  (T11).
+
+## ADR-054 — Onboarding gộp vào hero Home, agent hỏng không giấu thẻ đến hạn
+
+- **Ngày:** 2026-10-02
+- **Bối cảnh:** ADR-041 (checklist 3 bước CEFR/agent/chụp) dựng một section riêng
+  trên Home, ngang hàng với Ôn/Kho tạm/Streak — không có 1 CTA chính nhận ra trong 1
+  giây (#10); checklist bước 3 tick xanh nhưng phụ đề vẫn đọc `isEnabled` thay vì
+  `isDone`, gây sai lệch hiển thị (#9). Sau khi bỏ tab Ôn (ADR-052), hero Home trở
+  thành cửa ôn chính — code cũ ẩn lại checklist khi agent hỏng ở người dùng cũ
+  (`OnboardingChecklist.swift`), có nguy cơ giấu mất thẻ đến hạn.
+- **Quyết định:** Gộp 3 bước onboarding vào `HomeHero` làm CTA duy nhất
+  (`.confirmCefr/.connectAgent/.firstCapture/.review(n)/.extra(n)/.done`), không còn
+  checklist 3 hàng. **Luật ưu tiên:** trạng thái onboarding chỉ hiện khi `!hasFirstPage`
+  — đã có trang thì luôn `.review/.extra/.done`, kể cả khi agent đang hỏng (key hết
+  hạn); agent hỏng thể hiện bằng `agentWarning: Bool` (dòng phụ, không phải CTA) +
+  chặn lúc bấm chụp (T9), không giấu thẻ đến hạn. Bỏ dòng "Ẩn hướng dẫn" của ADR-041.
+- **Hệ quả:** `ReadoKit/Home/HomeHero.swift` (mới, có test), `Home/OnboardingChecklistSection.swift`
+  xoá (logic chuyển vào hero), `Home/HomeTabView.swift`. Sửa ADR-041 (không còn
+  checklist 3 hàng độc lập, vẫn giữ "3 bước suy từ dữ liệu thật, 2 cờ UserDefaults").
+  `docs/specs/journeys.md` không đụng — onboarding không phải journey riêng, đã ghi ở
+  J-R1-S "CEFR trống lần đầu" trỏ ADR này thay ADR-041.

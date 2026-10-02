@@ -1,8 +1,9 @@
 # Plan: ux-redesign-r1 — Phase 0 (Audit) + Phase 1 (IA) + Phase 2 (Plan) cho Sonnet implement
 
-> **Trạng thái:** open (2026-10-02) - T0–T10 code + xem tay xong (fen xác nhận 3 luồng J1 trên máy thật, 2 bug
-> che UI đã sửa). Còn **T11 (docs)** chưa làm: viết lại Phần 1 `journeys.md`, xử lý bảng Journey drift, hỏi fen về
-> việc bỏ Phần 2.
+> **Trạng thái:** ✅ KHÉP (2026-10-02) - T0–T11 xong. T0–T10 code + xem tay (fen xác nhận 3 luồng J1 trên máy thật, 3
+> bug che/chồng/sai màu UI đã sửa). **T11 (docs)** xong: `docs/specs/journeys.md` Phần 1 viết lại theo IA 2 tab/phiên
+> ôn/banner/5 pin, mọi dòng Journey drift xử lý (xem bảng dưới, cột cuối), bảng vỡ J-R1-S sửa, Phần 2 (DB schema PWA
+> cũ) **bỏ theo fen duyệt 2026-10-02** — trỏ `docs/specs/db.md`. ADR-052/053/054 đã ghi vào `docs/decisions-log.md`.
 
 ## Context
 `task.md`: fen muốn redesign UX/UI Reado cho chuyên nghiệp (không chỉ tô lại), mở khoá cấu trúc tab, shutter,
@@ -104,27 +105,28 @@ T1a/T2/T5a/T5b/T6/T7/T8/T9 dùng được cho cả hướng A lẫn B.
 sepia (Hôm nay), 3 luồng J1 + banner "Xem" trên máy thật. Chưa xem tay: Ôn mặt sau (cần lật thẻ bằng tay), SessionDone,
 Data, Capture, Reduce Motion, thứ tự VoiceOver thật (máy agent không có Simulator GUI để bật).
 
-## Journey drift (journeys.md ↔ code)
-| journeys.md | Code thực tế | Giữ ý định? |
-|---|---|---|
-| §3 "Home tối đa **hai** named collection" (l.110) | `HomePinService.maxPins = 5` | Bỏ số 2 (code đúng); giữ "có giới hạn + chooser thay thế" |
-| J-R1-S b.5 "Mục Đang đọc trên Home" trong Settings (l.350) | `SettingsView.swift:33-38` không có mục này; ghim ở Hub (`HomePinToggle`) + vuốt ở Kho | Bỏ |
-| J1 b.6 "Toast / về Home" (l.131) | push Hub sau khi lưu (`RootView.swift:146-156`) | Giữ ý định "không bắt ở lại" → IA mới: banner, giữ nguyên chỗ đang đứng |
-| J1 b.1 "Home hoặc FAB" | `FloatShutter` overlay | Viết lại: nút chụp trong thanh tab |
-| Không mô tả cấu trúc tab | 3 tab Home/Ôn/Kho (`RootView.swift:8-36`), không có ADR | Viết lại theo ADR-052 |
-| J4 b.1 "Home → Ôn" | tab Ôn | Giữ ý định → Home hero mở phiên ôn |
-| J5 b.1 "Từ Home hoặc màn ôn mở scope picker" | Chỉ trong màn ôn + "Ôn nhanh" ở Kho | Giữ: picker trong phiên ôn + mục mặc định |
-| J2 b.7 song ngữ "hiện sẵn + nút ẩn/hiện toàn bộ" (ADR-030) | ReadingSession đúng; **Analysis lệch** (chạm từng đoạn) | Giữ ý định → sửa code Analysis (T5b) |
-| J2 b.7 "control Hiện trên Home" trong session detail | `ReadingSessionView` không có | Bỏ (ghim ở Hub) |
-| J2 b.7 "Từ session này collect thêm" | Chưa làm (brief §2.3 chờ fen) | Giữ là mục mở, ngoài redesign |
-| J2 b.1 "Collection picker" như màn riêng trước Hub | Không có; chọn đích ở chip camera | Bỏ màn riêng; giữ ý định chọn đích lúc chụp |
-| J-R1-D cửa Dữ liệu trên Home (`HomeTabView.swift:42-48`) | đúng code | Đổi: menu ⋯ của Thư viện (ADR-052); giữ ý định "không đặt ở Settings" |
-| J1 "Vocab rỗng sau FR-10 → nói rõ" | Analysis ẩn im lặng | Giữ → T9 |
-| FR-15/J-R1-S `cefr_level` **một** mức | Settings chip **nhiều** mức (`SettingsView.swift:100` "CEFR đa level") | **HỎI fen** (Q-a) |
-| Phần 2 DB trỏ `syncDb.ts`/`migrate.ts`/`seed.ts` (l.611, 866, 873) | Code Swift; trùng `docs/specs/db.md` | Đề xuất bỏ Phần 2, trỏ db.md (fen duyệt trước khi xoá) |
+## Journey drift (journeys.md ↔ code) — ✅ xử lý xong ở T11 (2026-10-02)
+| journeys.md | Code thực tế | Giữ ý định? | Kết quả T11 |
+|---|---|---|---|
+| §3 "Home tối đa **hai** named collection" (l.110) | `HomePinService.maxPins = 5` | Bỏ số 2 (code đúng); giữ "có giới hạn + chooser thay thế" | ✅ Sửa thành "năm", ghi `HomePinService.maxPins` |
+| J-R1-S b.5 "Mục Đang đọc trên Home" trong Settings (l.350) | `SettingsView.swift:33-38` không có mục này; ghim ở Hub (`HomePinToggle`) + vuốt ở Kho | Bỏ | ✅ Bỏ bước, ghi "quản lý pin dời sang menu ⋯ Hub" |
+| J1 b.6 "Toast / về Home" (l.131) | push Hub sau khi lưu (`RootView.swift:146-156`) | Giữ ý định "không bắt ở lại" → IA mới: banner, giữ nguyên chỗ đang đứng | ✅ Viết lại theo ADR-053 (`ShellBanner` "Xem") |
+| J1 b.1 "Home hoặc FAB" | `FloatShutter` overlay | Viết lại: nút chụp trong thanh tab | ✅ Viết lại theo ADR-052 |
+| Không mô tả cấu trúc tab | 3 tab Home/Ôn/Kho (`RootView.swift:8-36`), không có ADR | Viết lại theo ADR-052 | ✅ Thêm đoạn "Khung app (ADR-052)" đầu Phần 1 + ADR ghi vào decisions-log |
+| J4 b.1 "Home → Ôn" | tab Ôn | Giữ ý định → Home hero mở phiên ôn | ✅ J3/J4 viết lại: hero/Hub/Lịch streak → `startReview` |
+| J5 b.1 "Từ Home hoặc màn ôn mở scope picker" | Chỉ trong màn ôn + "Ôn nhanh" ở Kho | Giữ: picker trong phiên ôn + mục mặc định | ✅ J5 viết lại: picker trong phiên + section "Mặc định khi bấm Ôn" |
+| J2 b.7 song ngữ "hiện sẵn + nút ẩn/hiện toàn bộ" (ADR-030) | ReadingSession đúng; **Analysis lệch** (chạm từng đoạn) | Giữ ý định → sửa code Analysis (T5b) | ✅ Code đã sửa ở T5b; journeys.md J2 b.7 ghi rõ Duyệt&lưu dùng chung cơ chế |
+| J2 b.7 "control Hiện trên Home" trong session detail | `ReadingSessionView` không có | Bỏ (ghim ở Hub) | ✅ Bỏ khỏi J2 b.7 |
+| J2 b.7 "Từ session này collect thêm" | Chưa làm (brief §2.3 chờ fen) | Giữ là mục mở, ngoài redesign | ✅ Giữ, ghi rõ "Mở — chưa làm" + trỏ brief §2 mục 3 |
+| J2 b.1 "Collection picker" như màn riêng trước Hub | Không có; chọn đích ở chip camera | Bỏ màn riêng; giữ ý định chọn đích lúc chụp | ✅ Bỏ bước "Collection picker"; vào Hub từ Thư viện/pin |
+| J-R1-D cửa Dữ liệu trên Home (`HomeTabView.swift:42-48`) | đúng code (trước redesign) | Đổi: menu ⋯ của Thư viện (ADR-052); giữ ý định "không đặt ở Settings" | ✅ J-R1-D viết lại: cửa vào = menu ⋯ Thư viện |
+| J1 "Vocab rỗng sau FR-10 → nói rõ" | Analysis ẩn im lặng (trước T9) | Giữ → T9 | ✅ Code đã sửa ở T9; journeys.md khớp copy thật ("Không còn từ đáng học trên trang này") |
+| FR-15/J-R1-S `cefr_level` **một** mức | Settings chip **nhiều** mức (`SettingsView.swift:100` "CEFR đa level") | **HỎI fen** (Q-a) | ⚠️ **BÁO LẠI, không tự sửa prd.md** (CLAUDE.md §6 bước 2) — journeys.md đã đổi theo code (nhiều mức, khớp `db.md` migration v3); `prd.md` FR-15 vẫn ghi số ít, owner cần xác nhận có sửa `prd.md` không |
+| Phần 2 DB trỏ `syncDb.ts`/`migrate.ts`/`seed.ts` (l.611, 866, 873) | Code Swift; trùng `docs/specs/db.md` | Đề xuất bỏ Phần 2, trỏ db.md (fen duyệt trước khi xoá) | ✅ Fen duyệt 2026-10-02 (AskUserQuestion) — Phần 2 đã bỏ, trỏ `db.md`; luật `due_at` (bia mộ) chuyển vào `db.md` A.2.2 |
 
 ## Câu hỏi cho fen (không chặn T0–T2; trả lời trước task ghi trong ngoặc)
-- **Q-a** CEFR một hay nhiều mức? Code đang nhiều mức. Mặc định: giữ code, sửa docs (T11).
+- ~~**Q-a** CEFR một hay nhiều mức?~~ **T11 áp mặc định (giữ code, sửa docs)** — nhưng đây là báo lại, không phải
+  chốt: `prd.md` FR-15 vẫn ghi một mức, owner cần xác nhận có sửa `prd.md` theo code không (xem Journey drift dòng cuối-2).
 - ~~**Q-b** Đồng ý bỏ tab Ôn (hướng B)?~~ **Chốt 2026-10-01: có, làm hướng B** (T1b bỏ tab Ôn và màn "Bắt đầu ôn" tạm của T1a).
 - **Q-c** Settings tự lưu, bỏ nút "Lưu"? Mặc định: có (T8).
 - **Q-d** Analysis mở mặc định tab "Từ vựng" (không phải "Trang")? Mặc định: Từ vựng (T5b).
@@ -430,25 +432,27 @@ Mọi task: DoD có `[ ] scripts/test.sh build xanh` (fen chạy trên Mac nếu
   sửa bằng cách đọc thẳng `AppTheme` từ `@AppStorage("appTheme")` thay vì `Color.accentColor`/`.tint` (không đáng
   tin cho view tự vẽ) — ghi lại pattern ở MASTER.md mục Màu.
 
-### T11 — Docs (cuối) [cloud]
+### T11 — Docs (cuối) [cloud] ✅ (2026-10-02)
 - Viết lại Phần 1 `docs/specs/journeys.md` theo IA mới (2 tab, phiên ôn, banner sau lưu, đổi đích ở màn duyệt, 5 pin), xử lý
   từng dòng bảng Journey drift, sửa bảng vỡ J-R1-S (l.355-372), cập nhật metadata đầu file; FR-07/FR-13 bia mộ giữ nguyên.
 - Đề xuất bỏ Phần 2 (DB, trùng `db.md`, trỏ code TypeScript cũ) — **hỏi fen trước khi xoá**.
 - `docs/session-brief.md`, `ROADMAP.md` (grep dòng liên quan), khép plan.
 - Không làm: sửa code.
-- DoD: [ ] mọi dòng Journey drift đã xử lý hoặc ghi lý do giữ [ ] fen duyệt việc bỏ Phần 2.
+- DoD: [x] mọi dòng Journey drift đã xử lý hoặc ghi lý do giữ [x] fen duyệt việc bỏ Phần 2.
+- **Kết quả:** fen chốt qua `AskUserQuestion` (2026-10-02) — bỏ hẳn Phần 2 (trỏ `db.md`, luật `due_at` chuyển vào
+  `db.md` A.2.2), ghi ADR-052/053/054 ngay trong T11 (không để session riêng). Journey drift: 14/15 dòng viết lại
+  thẳng vào journeys.md; 1 dòng (CEFR một/nhiều mức) là **báo lại cho owner**, không tự sửa `prd.md` — xem bảng
+  dưới cột "Kết quả T11". Thêm mục "8. Drift đã xử lý" cuối Phần 1 tóm tắt cho session sau không phải đọc lại
+  bảng này trong plan đã đóng.
 
-## ADR (nháp — ghi vào decisions-log sau khi fen duyệt)
-- **ADR-052 — Shell 2 tab "Hôm nay · Thư viện", nút chụp trong thanh, Ôn là phiên toàn màn** — thay cấu trúc 3 tab
-  (port UI lab 2026-09-23, chưa có ADR) và FloatShutter overlay; Dữ liệu chuyển vào menu Thư viện (sửa vị trí J-R1-D).
-  Lý do: #1, #2, #3, #10, #13 trong audit. Làm ở T1a (phiên ôn dạng cover) + T1b (2 tab + nút chụp).
-  Hướng A (Q-b) thì ADR chỉ ghi phần phiên ôn của T1a.
-- **ADR-053 — Lưu từ không chặn: banner thay alert, giữ nguyên chỗ đứng; đổi đích được ở màn duyệt; bản dịch Analysis
-  hiện sẵn theo ADR-030** — sửa "đích chỉ đọc ở màn duyệt" (port UI lab §5.2) và hành vi push Hub (§5.7). ADR-036 (camera
-  fullScreenCover) giữ nguyên. Làm ở T5a (đích + banner) + T5b (bản dịch, bố cục).
-- **ADR-054 — Onboarding gộp vào hero Home** — sửa ADR-041: vẫn 3 bước suy từ dữ liệu thật, 2 cờ UserDefaults, nhưng hiện
-  từng bước làm CTA duy nhất thay vì checklist 3 hàng; bỏ "Ẩn hướng dẫn". Onboarding chỉ chiếm hero khi chưa có trang nào
-  (`!hasFirstPage`); agent hỏng ở người dùng cũ hiện dòng cảnh báo, không giấu thẻ đến hạn. Làm ở T2 + T3.
+## ADR — ✅ đã ghi vào `docs/decisions-log.md` (T11, 2026-10-02)
+- **ADR-052** — Shell 2 tab "Hôm nay · Thư viện", nút chụp trong thanh, Ôn là phiên toàn màn. Lý do: #1, #2, #3,
+  #10, #13 trong audit. Làm ở T1a (phiên ôn dạng cover) + T1b (2 tab + nút chụp).
+- **ADR-053** — Lưu từ không chặn: banner thay alert, giữ nguyên chỗ đứng; đổi đích được ở màn duyệt; bản dịch
+  Analysis hiện sẵn theo ADR-030. Làm ở T5a (đích + banner) + T5b (bản dịch, bố cục).
+- **ADR-054** — Onboarding gộp vào hero Home (sửa ADR-041). Làm ở T2 + T3.
+
+Nội dung đầy đủ (Bối cảnh/Quyết định/Hệ quả) nằm ở `decisions-log.md`, không lặp ở đây nữa.
 
 ## Verification (toàn plan)
 - Mỗi task (task [cloud] thì fen chạy trên Mac sau khi Sonnet mở PR): `scripts/test.sh build` xanh + `scripts/test.sh kit` xanh (task chạm ReadoKit) → `sim_screens.sh open` màn đã sửa

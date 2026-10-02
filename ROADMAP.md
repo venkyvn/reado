@@ -191,7 +191,7 @@ Thứ tự code trong các phase trên **bám theo journeys**: vòng skeleton s�
 | J4 — Ôn đến hạn | Nhánh due không bị hạn mức; cùng card UI với J3 | 2.5 | Phase 2 |
 | J5 — Trộn / phạm vi | Ba chế độ scope, nợ ngoài phạm vi **nhìn thấy**; KHÔNG cram | 3.9 (FR-18) | Phase 3 |
 | J6 — Tổ chức kho tạm | Move lô sang collection có tên, FSRS giữ nguyên; **không bắt buộc** để J3/J4 chạy | 3.5 (phần FR-17) — sau happy path 1–5 | Phase 3 |
-| J-R1-S — Settings học tập | CEFR + `daily_new_limit` + quản lý shortcut (FR-17) + agent phân tích trang (FR-21); **không** login, **không** đặt export/import ở đây | 3.7 (FR-15) + 3.5 (FR-17) + 3.11 (FR-21) | Phase 3 |
+| J-R1-S — Settings học tập | CEFR (nhiều mức) + `daily_new_limit` + agent phân tích trang (FR-21); quản lý pin collection (FR-17) đã dời sang menu ⋯ Hub (ADR-052, ux-redesign-r1); **không** login, **không** đặt export/import ở đây | 3.7 (FR-15) + 3.5 (FR-17) + 3.11 (FR-21) | Phase 3 |
 | J-R1-D — Dữ liệu CSV | Xuất CSV theo collection + JSON FSRS; nhập CSV **preview rồi gộp** | 3.1 (FR-16) + 3.10 (FR-20) | Phase 3 (sớm — phao cứu sinh) |
 | J-R1-P — Lịch streak | Lens của FR-14, heatmap 18 tuần; **không** bắt buộc ở R1 | 3.6 (sau số Home) | Phase 3 — tuỳ owner |
 | J7–J9 | Login / account / cá nhân hoá | — | Later — **không** prompt UI ở R1 |

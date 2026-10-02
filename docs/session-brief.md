@@ -9,12 +9,10 @@
 
 > Số test chính thức = số gộp scheme `Reado` — hook `session-context.sh` tự nạp kết quả gần nhất (`.tmp/results/last-summary.txt`/`kit-summary.txt`) vào đầu session, không ghi tay ở đây nữa. **Chưa xem tay UI** trên nhiều màn — §2.7 giờ mở được phần lớn bằng `scripts/sim_screens.sh open <màn>` (verify-nav-r1 T1+T2), còn chạy qua từng mục + đọc ảnh thật (T3) chưa làm.
 
-- ux-redesign-r1 (2026-10-02, T0+T10 ✅, **T11 docs chưa làm**) — đo xong 3 TODO(đo ảnh) ShellTabBar/RootView;
-  worktree build `f5336b7` chụp ảnh "trước"; sửa 3 bug (List cuối màn + CTA Lịch streak bị `ShellTabBar` đè —
-  không thừa hưởng `safeAreaInset` qua `navigationDestination`; accent không đổi màu ở `ShellTabBar`/
-  `ShellCaptureButton` — sửa bằng đọc thẳng `AppTheme` từ `@AppStorage`, xem mục 7 dưới); fen xác nhận trên máy
-  thật 3 luồng J1 (Hôm nay/Thư viện/Hub) + banner "Xem" + cả 3 bug trên đều hết.
-  → `docs/plans/ux-redesign-r1.md`
+- ux-redesign-r1 (2026-10-02, ✅ KHÉP, ADR-052/053/054) — shell 2 tab Hôm nay/Thư viện + nút chụp trong thanh,
+  Ôn là phiên toàn màn, banner thay alert sau Lưu, đổi đích ở màn duyệt, pin ≤5. T0+T10 code + xem tay (chi tiết
+  3 bug đã sửa → `docs/journal/2026-10-02.md`); T11 viết lại `docs/specs/journeys.md` Phần 1 theo IA mới, bỏ
+  Phần 2 (DB schema PWA cũ, trỏ `db.md`), ghi 3 ADR. → `docs/plans/done/ux-redesign-r1.md`
 - fix-alert-sheet-dismiss-r1 (2026-10-01, ✅ KHÉP) — bug §2 mục 8 cũ: `RootView` + sheet con cùng gắn `.appErrorAlert()` trên chung `alertMessage`, set lỗi lúc sheet mở huỷ cả sheet lẫn alert. Sửa bằng `AlertHostStack` (ReadoKit, logic thuần, 5 test) — chỉ layer mount sau cùng mới present `.alert()`; bỏ workaround debug-only trong `RootView.swift`. Verify bằng ảnh `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet "Duyệt & lưu từ vựng" + alert "Có lỗi" cùng hiện. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
 - verify-nav-r1 (2026-10-01, T1 ✅ T2 ✅, T3 chưa làm) — launch argument DEBUG (`-ReadoScreen`/`-ReadoTheme`/`-ReadoSeed`/`-ReadoAlert`) + `sim_screens.sh open` để agent mở thẳng một màn (kể cả seed lịch ôn giả, fixture phân tích) và chụp không cần chạm tay. T2 lộ bug alert+sheet có sẵn — §2 mục 8. → `docs/plans/verify-nav-r1.md`
 - master-rewrite-r1 (2026-10-01, ✅, ADR-051) — MASTER.md viết lại thành luật SwiftUI (trước là output web của ui-ux-pro-max, lệch code); skill `reado-ui`; `/raudit` kiểm token MASTER. → `docs/journal/2026-10-01.md`
@@ -49,12 +47,8 @@
    - **Settings** (remove-proxy-r1): ẩn agent builtin, lỗi "chưa có agent" khi chụp lúc chưa thêm key.
    - (c) migration v3→v4 trên DB thật (cài đè bản cũ) — chưa làm.
    - Việc kế tiếp sau khi xem xong: `prompt-v6` — một session riêng.
-8. ~~Bug alert+sheet~~ — **đã sửa 2026-10-01 (fix-alert-sheet-dismiss-r1).** `RootView` và mỗi sheet (vd `AnalysisView`) từng cùng gắn `.appErrorAlert()` trên chung `model.alertMessage`, khiến set lỗi lúc sheet đang mở huỷ cả sheet lẫn alert (UIKit "already presenting"). Sửa bằng `AlertHostStack` — chỉ layer mount sau cùng mới present `.alert()`. Verify bằng `scripts/sim_screens.sh open analysis-fixture --alert dup-name`: sheet + alert cùng hiện đúng. → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
-9. ~~Accent lệch~~ — **đã sửa 2026-10-02 (ux-redesign-r1 T10).** `ShellTabBar`/`ShellCaptureButton` từng ra xanh
-   iOS hệ thống dù đổi accent, vì `Color.accentColor`/`.glassEffect(...tint(...))` không theo `.tint()` môi
-   trường cho view tự vẽ (khác buttonStyle hệ thống như `HeroCard`). Sửa bằng đọc thẳng `AppTheme` từ
-   `@AppStorage("appTheme")` thay vì dựa vào environment. Verify bằng ảnh: fen xác nhận trên máy thật cả 2
-   accent (Xanh rừng, Nâu giấy) đều đúng màu ở tab đang chọn + nút chụp.
+8. ~~Bug alert+sheet~~ — **đã sửa 2026-10-01**, `AlertHostStack` (chỉ layer mount sau cùng present `.alert()`). → `docs/plans/done/fix-alert-sheet-dismiss-r1.md`
+9. ~~Accent lệch~~ — **đã sửa 2026-10-02 (ux-redesign-r1 T10)**, đọc `AppTheme` từ `@AppStorage` thay vì environment cho view tự vẽ. → `docs/journal/2026-10-02.md`
 
 ## 3. Bẫy máy này
 

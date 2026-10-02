@@ -1,5 +1,3 @@
-> Gộp từ customer-journeys.md + db-schema.md — nội dung không đổi, chỉ nhập làm một. 
-
 ## Phần 1 — Reado — Customer Journeys
 
 | Field | Value |
@@ -7,40 +5,50 @@
 | Product | Reado |
 | Status | Draft |
 | Created | 2026-09-14 |
-| Last updated | 2026-09-18 |
-| Related | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [prompt-spec.md](docs/agent/prompt-spec.md) |
+| Last updated | 2026-10-02 (ux-redesign-r1 T11 — IA 2 tab, ADR-052/053/054) |
+| Related | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [db.md](docs/specs/db.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [prompt-spec.md](docs/agent/prompt-spec.md), [design-system/reado/MASTER.md](design-system/reado/MASTER.md) |
 | Phạm vi | Flow spec trước UI: ai làm gì, màn nào, state nào. **Không** chốt màu, font, hay Design system |
 
-**Tài liệu này tự chứa.** Session mới đọc được mà không cần chat history. Nó **không** thay PRD: FR, non-goals, và bảng "Đã chốt" ở research doc vẫn là source of truth. Journey chỉ **tách** [Core User Journey ở PRD mục 6](docs/specs/prd.md#6-core-user-journey) thành các lối đi dùng để prompt UI từng màn.
+**Tài liệu này tự chứa.** Session mới đọc được mà không cần chat history. Nó **không** thay PRD: FR, non-goals, và bảng "Đã chốt" ở research doc vẫn là source of truth. Journey chỉ **tách** [Core User Journey ở PRD mục 6](docs/specs/prd.md#6-core-user-journey) thành các lối đi dùng để prompt UI từng màn. **Code là nguồn sự thật cho hiện trạng UI** — file này tả ý định (JTBD/FR/empty-error); mâu thuẫn với code thì báo lại, không tự sửa prd.md/decisions-log.md.
 
 Hai việc journey R1 thêm so với mermaid PRD (không đổi FR):
 
 1. **Hai lối capture** — nhanh (không chọn collection → kho tạm) và đọc chủ động (**collection hub**: capture, 10 session chọn được, kho vocab theo collection).
-2. **Tối đa hai collection đang đọc trên Home** — shortcut do user chọn, không phải recent tự động và không pin session.
+2. **Tối đa năm collection ghim lên Hôm nay** — user tự ghim/bỏ ghim ở Hub, không phải recent tự động và không pin session.
 3. **Ba lối ôn** ánh xạ câu "học / ôn / trộn" của owner — xem mục 2; sai thì sửa **ở đây** trước khi prompt UI, đừng bịa chế độ thứ tư.
+
+**Khung app (ADR-052, 2026-10-02):** shell 2 tab — **Hôm nay** (hero theo trạng thái + pin + streak) và **Thư viện**
+(kho tạm + danh sách bộ) — cộng một nút chụp tròn đứng cùng hàng với capsule tab (không phải FAB nổi đè nội dung).
+Ôn **không** còn là tab: bấm "Ôn ngay"/"Ôn bộ này"/"Ôn thêm" ở hero, Hub, hoặc Lịch streak mở một **phiên ôn toàn
+màn** (che cả thanh tab) — thoát bằng ✕ hoặc "Xong", quay lại đúng chỗ đang đứng. ⚙ Cài đặt nằm trên toolbar Hôm nay;
+Dữ liệu (CSV/JSON) nằm trong menu ⋯ của Thư viện, không phải trên Hôm nay/Settings.
 
 **Later** (sau R1+R2 chứng minh giá trị — [PRD mục 10](docs/specs/prd.md#10-release-scope)): J7 login, J8 settings theo tài khoản, J9 cá nhân hoá. **Không** prompt UI R1 cho J7–J9. R1 vẫn một người dùng (NG-05); màn Settings học tập (FR-15) **không** cần login — xem J-R1-S. FR-21 (agent phân tích) cũng nằm trên J-R1-S, không phải J8.
 
 ```mermaid
 flowchart TD
   openApp[Mo app]
-  openApp --> home[Home: active collections plus due and new]
-  home --> j1[J1 Capture nhanh]
-  home --> j2[J2 Doc chu dong]
-  home --> j3[J3 Hoc moi]
-  home --> j4[J4 On due]
-  home --> j5[J5 Tron collection]
-  home --> j6[J6 To chuc kho tam]
-  home --> jS[JR1S Settings FR-15]
-  home --> jD[JR1D Du lieu CSV]
-  home --> jP[JR1P Lich streak]
+  openApp --> today["Tab Hom nay: hero + pin + streak"]
+  openApp --> library["Tab Thu vien: kho tam + bo"]
+  today --> j1[J1 Capture nhanh]
+  today --> j3[J3 Hoc moi]
+  today --> j4[J4 On due]
+  today --> j5[J5 Tron collection]
+  today --> jP[JR1P Lich streak]
+  today --> jS[JR1S Settings FR-15]
+  library --> j2[J2 Doc chu dong]
+  library --> j6[J6 To chuc kho tam]
+  library --> jD[JR1D Du lieu CSV]
   j1 --> khoTam[Kho tam]
   j2 --> namedCol[Named collection]
   khoTam --> j3
   namedCol --> j4
 ```
 
-Later — không nối vào Home R1:
+Phiên ôn (J3/J4/J5) là một `fullScreenCover` mở từ hero Hôm nay, Hub bộ, hoặc Lịch streak — không vẽ riêng trong
+mermaid trên để khỏi rối, nhưng không phải một tab thứ ba.
+
+Later — không nối vào tab nào của R1:
 
 ```mermaid
 flowchart LR
@@ -107,8 +115,8 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 | `daily_new_limit` áp **toàn cục, trước** khi lọc phạm vi | FR-11 |
 | Card: mặt trước `term` + `pos`; lật = nghĩa + IPA + câu gốc + tên collection | FR-12 |
 | Kho tạm đổi tên được, **không xoá được**; move collection **không** reset FSRS | FR-17 |
-| Home hiện tối đa **hai named collection do user chọn**; tap mở Collection Hub; collection thứ ba phải chọn shortcut để thay | FR-17 |
-| Settings R1 = một hàng `settings`: `cefr_level`, `daily_new_limit`, `day_cutoff_hour` (mặc định 04:00); `request_retention` mặc định, **không** mở user | FR-15, FR-11, ADR-031 |
+| Hôm nay hiện tối đa **năm named collection do user ghim** (`HomePinService.maxPins`); ghim/bỏ ghim ở menu ⋯ của Hub, không phải ở Settings; tap mở Collection Hub; ghim collection thứ sáu phải chọn một trong năm để thay | FR-17, ADR-052 |
+| Settings R1 = một hàng `settings`: `cefr_levels` (JSON array, **nhiều mức** A2–C1, không phải một mức đơn — `db.md` migration v3), `daily_new_limit`, `day_cutoff_hour` (mặc định 04:00); `request_retention` mặc định, **không** mở user; mọi mục **tự lưu**, không có nút "Lưu" | FR-15, FR-11, ADR-031 |
 | Agent phân tích: ~~builtin proxy mặc định~~ (bỏ, ADR-049) — user **phải** thêm OpenAI-compat trước khi dùng; **một** active cho cả FR-02; key không SQLite / không export | FR-21, NFR-07 |
 | Multi-user / authentication = **Later**, không R1, không R2 | NG-05, PRD mục 10 |
 | R1 **không tự chặn đường** Later: đừng hardcode "chỉ một người trên máy này" vào copy hay schema khiến tách user phải viết lại | PRD mục 10 Later |
@@ -123,16 +131,17 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 
 ### Happy path
 
-1. Home hoặc FAB → Camera / chọn ảnh từ thư viện.
+1. Nút chụp trên thanh (cùng hàng với 2 tab, ADR-052) → Camera / chọn ảnh từ thư viện. Chưa thêm agent BYOK →
+   mở thẳng form thêm agent (`AgentFormSheet`) thay vì chụp rồi báo lỗi sau (ADR-053, phòng lỗi trước).
 2. Không bước collection picker. Đích ngầm = kho tạm.
 3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). ~~Mặc định = proxy Reado~~ — bỏ, ADR-049: chưa thêm agent BYOK thì lỗi, không chạy được bước này. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
-4. Vocab picker: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn (FR-09). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn (FR-03).
-5. Confirm → lưu vào kho tạm, card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2).
-6. Toast / về Home. Số new trên Home đã áp `daily_new_limit` (FR-14).
+4. Màn **Duyệt & lưu**: FR-10 đã lọc từ đã thuộc. Verified chọn sẵn (FR-09). Unverified badge, không preselect (FR-02). User sửa field / bỏ chọn (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn — **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ).
+5. Nút đáy "Lưu N từ vào X" (prominent, ghim đáy) → lưu card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2). Thao tác **không chặn** — không alert xác nhận.
+6. Sau Lưu: ở lại đúng chỗ đang đứng (không tự đổi tab, không bị đẩy sang Hub) + `ShellBanner` không chặn "Đã lưu N từ vào X · Xem" (ADR-053). Bấm "Xem" mới mở Hub của X; để banner tự tắt (4s, hoặc giữ khi VoiceOver đang chạy) thì ở nguyên màn cũ. Số new trên Hôm nay đã áp `daily_new_limit` (FR-14).
 
 ### Màn UI (thứ tự prompt)
 
-Capture · Processing · Vocab picker · Home (cập nhật count).
+Capture · Processing · Duyệt & lưu (đổi đích + chọn từ) · banner "Xem" (không màn riêng).
 
 ### Empty / error (J1)
 
@@ -143,8 +152,10 @@ Capture · Processing · Vocab picker · Home (cập nhật count).
 | Schema / parse fail | Lỗi + retry, không lưu bản ghi hỏng | FR-02 |
 | BYOK 401 / timeout / JSON lệch schema | Lỗi rõ + CTA Settings; không lưu vocab dở | FR-21 |
 | Submit trùng do mạng | Không lưu hai bộ vocab trùng | FR-02 |
-| Vocab rỗng sau FR-10 | Nói rõ "không còn từ đáng học trên ảnh này", CTA chụp lại hoặc Home | FR-10 |
+| Chưa thêm agent, bấm nút chụp | Mở form thêm agent trước, không mở camera (ADR-053) | FR-21 |
+| Vocab rỗng sau FR-10 | "Không còn từ đáng học trên trang này" + [Chụp lại] [Đóng] — vẫn cho đọc tab Trang (T9) | FR-10 |
 | Thoát picker chưa confirm | Cảnh báo mất kết quả analysis | FR-03 |
+| Lưu thất bại (không phải thành công) | Vẫn alert chặn — chỉ đường **thành công** đổi sang banner (ADR-053) | FR-02 |
 | Analysis cần mạng | Fail rõ, không giả offline. Ôn (J3–J5) **chạy được offline** (NFR-03, Q-02 local-first) — không cần journey ôn-khi-mất-mạng riêng nếu hàng đợi đã trên máy | NFR-03 |
 
 ---
@@ -159,16 +170,16 @@ J2 không phải một pipeline thẳng Capture → Read → Home. Nó là **hub
 
 ```mermaid
 flowchart TD
-  picker[Collection picker]
+  entry["Thu vien (bo) hoac pin tren Hom nay"]
   hub[Collection hub]
-  picker --> hub
-  hub --> capture[Capture plus vocab picker]
+  entry --> hub
+  hub --> capture[Capture plus man duyet]
   hub --> list[Danh sach 10 session]
   hub --> colVocab[Kho vocab theo collection]
   hub --> scopedReview[On dung collection nay]
   list --> detail[Session: song ngu, summary, tu vua collect]
   capture --> hub
-  scopedReview --> review[Review FR-18]
+  scopedReview --> review[Phien on toan man FR-18]
 ```
 
 | Bề mặt | Sống bao lâu | Job |
@@ -182,29 +193,29 @@ Một **session** = một lần capture thành công đã confirm picker (một 
 
 ### Happy path — vào hub
 
-1. Collection picker: chọn collection có sẵn **hoặc** tạo mới (FR-17).
-2. **Collection hub** mở. Trên hub, cùng lúc:
-   - Control **Hiện trên Home** cho named collection này. Nếu Home đã đủ hai shortcut, mở chooser chọn collection bị thay; không tự thay ngầm.
-   - CTA Capture (camera / thư viện — cùng path J1).
-   - **Header thống kê** (cram-collection-r1 Phiên B): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) và 3 ô số — Đến hạn, "+N từ" trong 7 ngày (kèm "thêm lần cuối …"), Lần ôn tiếp ("Ngay bây giờ" nếu đang có due, không thì mốc tương đối + số thẻ cùng ngày học).
-   - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn từ mới/thẻ ôn sớm → **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, CÓ ghi lịch FSRS thật — mở thẳng chế độ Ôn thêm theo phạm vi bộ này); không còn gì → không nút, chỉ gợi ý dùng nút chụp nổi. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (ở màn ôn).
+1. Mở **Collection hub** từ danh sách "Bộ" ở tab Thư viện, hoặc từ một pin trên Hôm nay (**không** còn màn
+   "Collection picker" riêng — ADR-052; tạo bộ mới thì bấm `+` trên toolbar Thư viện trước, FR-17).
+2. Trên hub, cùng lúc:
+   - Menu ⋯ của hub có mục **"Ghim lên Hôm nay" / "Bỏ ghim"** cho collection này (`HomePinMenu`). Đã ghim đủ 5 (`HomePinService.maxPins`) → mở chooser chọn một pin bị thay; không tự thay ngầm.
+   - Nút chụp trên thanh tab, khi đang mở hub này, ngầm chọn đích = bộ đang mở (chip ở màn chụp ghi tên bộ) — không có nút "Chụp vào bộ này" riêng trên hub (chỉ 1 CTA chính, ADR-052). Đổi đích khác thì đổi chip hoặc đổi "Lưu vào" ở màn duyệt (giống J1 bước 4).
+   - **Header thống kê** (T6): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) + **một dòng meta** "Đến hạn N · +M từ/7 ngày · Lần ôn tiếp …" (không còn 3 ô số riêng).
+   - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → mở phiên ôn toàn màn với hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn từ mới/thẻ ôn sớm → **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, CÓ ghi lịch FSRS thật, cùng phiên ôn toàn màn theo phạm vi bộ này); không còn gì → không nút. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (trong phiên ôn).
    - Danh sách **tối đa 10 session** gần nhất, **chọn được** từng cái.
    - Cửa **kho từ vựng theo collection** (mọi từ đã lưu vào collection này, kể cả từ session đã trôi).
 
 ### Happy path — capture thêm một session
 
-3. Capture → Processing (FR-02).
-4. Vocab picker — cùng rule J1 (FR-09 / FR-02 / FR-10 / FR-03) — lưu vào **collection này**.
+3. Nút chụp trên thanh (đích ngầm = bộ đang mở) → Processing (FR-02).
+4. Màn **Duyệt & lưu** — cùng rule J1 (FR-09 / FR-02 / FR-10 / FR-03); đích đã là collection này nhưng vẫn đổi được qua "Lưu vào ⏷" nếu bấm nhầm bộ.
 5. Session mới **đứng đầu** danh sách 10. Nếu đã đủ 10: session cũ nhất trôi. Sắp trôi mà chưa confirm picker → cảnh báo (FR-05).
-6. Về hub, không bắt về Home.
+6. Lưu xong: ở lại/về hub (banner "Xem" nếu đang ở màn khác, ADR-053) — không bắt về Hôm nay.
 
 ### Happy path — mở một session (chọn từ list)
 
 7. Trong session:
-   - Control **Hiện collection này trên Home** dùng chung state với Collection Hub; shortcut vẫn trỏ vào Hub, không trỏ vào session này.
-   - **Song ngữ xen kẽ theo đoạn**, đúng thứ tự (FR-05, ADR-007) — bản dịch hiện sẵn ngay dưới bản gốc, 0 thao tác. **Nút nhỏ ở phía dưới màn:** 1 tap = ẩn/hiện toàn bộ bản dịch (ADR-030).
+   - **Song ngữ xen kẽ theo đoạn**, đúng thứ tự (FR-05, ADR-007) — bản dịch hiện sẵn ngay dưới bản gốc, 0 thao tác. **Nút nhỏ ở phía dưới màn:** 1 tap = ẩn/hiện toàn bộ bản dịch (ADR-030) — từ ADR-053, màn Duyệt & lưu tab "Trang" cũng dùng chung cơ chế này.
    - **Summary** nằm **dưới** phần đọc (FR-06: mặc định thu gọn trên list hoặc trên detail — không thay trang sách, vision nguyên lý 6).
-   - **Từ session này collect thêm:** danh sách vocab đã confirm từ đúng lần capture đó (subset của kho collection). Unverified từng hiện lúc picker không nằm đây trừ khi user giữ.
+   - **Từ session này collect thêm:** danh sách vocab đã confirm từ đúng lần capture đó (subset của kho collection). Unverified từng hiện lúc picker không nằm đây trừ khi user giữ. **Mở — chưa làm** (brief §2.3, thiếu `session_id` trên `vocab_items`, ngoài phạm vi ux-redesign-r1).
 8. List 10 session: mỗi hàng có thể hiện summary (snippet) để chọn đúng phiên, không bắt mở hết mới biết.
 
 ### Happy path — kho vocab theo collection
@@ -214,7 +225,7 @@ Một **session** = một lần capture thành công đã confirm picker (một 
 
 ### Màn UI (thứ tự prompt)
 
-Collection picker · **Collection hub** (capture CTA + **ôn collection này** + list 10 session + cửa kho vocab) · Capture / Processing / Vocab picker (reuse J1) · **Session detail** (song ngữ + summary dưới + từ collect session này) · **Collection vocab** (FR-08).
+Thư viện (danh sách Bộ) · **Collection hub** (menu ghim + ôn bộ này + list 10 session + cửa kho vocab) · Capture / Processing / Duyệt & lưu (reuse J1) · **Session detail** (song ngữ + summary dưới + từ collect session này — mở) · **Collection vocab** (FR-08).
 
 ### Empty / error (J2)
 
@@ -222,15 +233,15 @@ Mọi state capture của J1 cộng:
 
 | State | Hành vi | FR |
 |---|---|---|
-| Chưa chọn collection, user vẫn capture | Đây là **J1**, không phải J2. Đừng hỏi collection sau khi đã chụp rồi "sửa nhầm lối" | — |
-| Collection mới, 0 session | Hub empty: CTA Capture, kho vocab rỗng, không giả 10 hàng | — |
+| Collection mới, 0 session | Hub empty: nút chụp vẫn mở (đích = bộ này), kho vocab rỗng, không giả 10 hàng | — |
 | User mở session đã trôi | Không còn song ngữ/summary — hành vi đúng. Vocab của lần đó vẫn trong kho collection | FR-06 |
 | 0 due trong collection, ngoài còn due | Hiện số nợ + CTA ôn tất cả — không giấu FR-18 | FR-18 |
 | Session 0 từ (user bỏ hết lúc picker) | Session vẫn có thể tồn tại để đọc song ngữ + summary; hàng "từ collect" empty | FR-03 |
-| Đã có 2 shortcut, bật collection thứ ba | Cho chọn một trong hai shortcut hiện tại để thay; cancel giữ nguyên | FR-17 |
-| Collection đang ghim bị xoá | Bỏ shortcut lỗi; không mở route chết | FR-17 |
-| Kho tạm | Không hiện control "Hiện trên Home" | FR-17 |
+| Đã ghim đủ 5, bật ghim collection thứ sáu | Cho chọn một trong 5 pin hiện tại để thay; cancel giữ nguyên | FR-17 |
+| Collection đang ghim bị xoá | Bỏ pin lỗi; không mở route chết | FR-17 |
+| Kho tạm | Không hiện mục "Ghim lên Hôm nay" trong menu ⋯ | FR-17 |
 | Tạo collection trùng tên / xoá collection còn từ | FR-17: không xoá theo; cho chuyển sang collection khác | FR-17 |
+| Chỉ có kho tạm, chưa có bộ nào | Thư viện gợi ý "Tạo bộ theo tên sách" + nút, dưới card Kho tạm | — |
 
 ---
 
@@ -242,38 +253,41 @@ Mọi state capture của J1 cộng:
 
 ### Happy path
 
-1. Home → Học (nhánh new).
+1. Hôm nay → hero "N thẻ đến hạn" → "Ôn ngay" (`HomeHero.State.review(n)`, ADR-052/054) mở **phiên ôn toàn màn**
+   (`fullScreenCover`, nhánh new nạp trước theo FR-11). Cùng lối vào với J4 — một hàng đợi, khác nhánh bên trong.
 2. Mặt trước: `term` + `pos` only (FR-12).
 3. Lật: `meaning_vi`, IPA, câu gốc, **tên collection** (kho tạm cũng hiện tên, không để trống).
 4. Grade → FSRS + review log ảnh chụp **trước** khi chấm (FR-12). Undo về đúng state cũ.
-5. Hết hạn mức new hôm nay → về Home. Backlog new **không** nhồi vào queue hôm nay; Home **không hiện con số tồn** (new-order-r1) — chỉ báo "Xong phần hôm nay".
+5. Hết hạn mức new hôm nay → tiếp tục hàng đợi due nếu còn, hoặc **"Xong"** đóng phiên (`SessionDoneView`). Backlog new **không** nhồi vào queue hôm nay; hero **không hiện con số tồn** (new-order-r1) — chỉ chuyển sang trạng thái `.extra`/`.done`.
 
-Leech (FR-19) không đếm vào số Home và không vào queue — badge, không journey riêng.
+Leech (FR-19) không đếm vào số hero và không vào queue — badge, không journey riêng.
 
 ### Empty / error (J3)
 
 | State | Hành vi |
 |---|---|
-| Hết new trong hạn mức, backlog > 0 | Home: "Xong phần hôm nay", không hiện số backlog, không CTA giả "học tiếp" cùng nhánh |
-| Hết hàng đợi, vừa chấm ≥1 thẻ trong phiên, còn từ mới/thẻ ôn sớm trong phạm vi | `SessionDoneView` (J4 bước 4) thêm CTA "Ôn thêm N thẻ" (extra-review-r1 ADR-050, đảo ADR-039 "Học thêm 10 từ" — đã xoá) — bấm → nạp lượt Ôn thêm 20 thẻ trộn mới + ôn sớm, cùng scope. Không còn gì Ôn thêm được → **ẩn** CTA. Hệ thống không bao giờ tự mở. |
+| Hết new trong hạn mức, backlog > 0 | Hero: "Xong phần hôm nay ✓" + link "Chụp trang mới", không hiện số backlog, không CTA giả "học tiếp" cùng nhánh |
+| Hết hàng đợi, vừa chấm ≥1 thẻ trong phiên, còn từ mới/thẻ ôn sớm trong phạm vi | `SessionDoneView` thêm nút "Ôn thêm N thẻ" (extra-review-r1 ADR-050, đảo ADR-039 "Học thêm 10 từ" — đã xoá) — bấm → nạp lượt Ôn thêm 20 thẻ trộn mới + ôn sớm, cùng scope, **cùng phiên đang mở** (không đóng rồi mở lại). Không còn gì Ôn thêm được → nút "Xong". Hệ thống không bao giờ tự mở. |
 | Hết new và backlog = 0 | CTA sang J1/J2 |
-| 0 new vì chưa capture | Cùng CTA capture; không empty-state chết |
+| 0 new vì chưa capture | Hero ở trạng thái onboarding (`.firstCapture`), không empty-state chết (ADR-054) |
 
 ---
 
 ## J4 — Ôn đến hạn
 
-**Trigger:** Home hiện số **due**.  
+**Trigger:** Hero Hôm nay hiện số **due**, hoặc Hub bộ / Lịch streak còn due.  
 **Job:** JTBD-02.  
 **Queue:** nhánh review; **không** bị `daily_new_limit`.
 
 ### Happy path
 
-1. Home → Ôn.
+1. Hero Hôm nay "Ôn ngay" **hoặc** Hub "Ôn bộ này · N" **hoặc** Lịch streak ngày còn due → cùng mở **một phiên ôn
+   toàn màn** qua `EnvironmentValues.startReview` (ADR-052) — chrome thống nhất (✕ trái, tiêu đề + phạm vi ⏷ phải),
+   không còn 3 kiểu chrome khác nhau theo nơi mở.
 2. Cùng card UI với J3 (một component; khác nhánh queue).
-3. Grade + undo như J3. Nút chấm hiện nhịp ôn kế tiếp (ước lượng, preview `swift-fsrs` — ux-polish-r1 T1).
-4. Hết due → summary buổi: đã xong, streak theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống (FR-14). Vừa chấm hết ≥1 thẻ → `SessionDoneView` (ADR-038): số thẻ đã ôn, % không-Again, từ vừa "đã thuộc" Q-08 (≤5, "+N khác"), streak; vào due đã hết sẵn từ đầu thì giữ màn trung tính cũ, không ăn mừng.
-5. **Không** tự đẩy card chưa due để lấp chỗ (FR-11).
+3. Grade + undo như J3. Nút chấm hiện nhịp ôn kế tiếp (ước lượng, preview `swift-fsrs`).
+4. Hết due → summary buổi: đã xong, streak theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống (FR-14). Vừa chấm hết ≥1 thẻ → `SessionDoneView` (ADR-038): số thẻ đã ôn, % không-Again, từ vừa "đã thuộc" Q-08 (≤5, "+N khác"), streak, nút **"Xong"** đóng cover — về đúng chỗ đang đứng (không còn "Về Home" gọi `dismiss()` chết, giải #2 bằng kiến trúc cover); vào due đã hết sẵn từ đầu thì giữ màn trung tính cũ, không ăn mừng.
+5. **Không** tự đẩy card chưa due để lấp chỗ (FR-11). Đổi tab giữa phiên **không còn xảy ra được** — cover che cả thanh tab (giải #3).
 
 Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muốn hẹp → J5.
 
@@ -281,9 +295,10 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 | State | Hành vi |
 |---|---|
-| 0 due, còn từ mới/thẻ ôn sớm toàn kho | Home đổi dòng "Xong phần hôm nay" thành CTA **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, scope mặc định tab Ôn). Màn ôn hiện "Không có gì cần ôn" + cùng nút |
-| 0 due, không còn gì Ôn thêm được | Home nói rõ đã xong ôn hôm nay, không CTA. CTA khác vẫn là J1/J2 |
+| 0 due, còn từ mới/thẻ ôn sớm toàn kho | Hero chuyển "Xong phần hôm nay" thành **"Ôn thêm N thẻ"** (`.extra(n)`, extra-review-r1 ADR-050). Mở phiên ôn vẫn hiện "Không có gì cần ôn" + cùng nút nếu vào thẳng |
+| 0 due, không còn gì Ôn thêm được | Hero `.done`: đã xong ôn hôm nay, không CTA ôn. CTA khác vẫn là J1/J2 |
 | Due > 0 nhưng user đang ở J5 hẹp | Không phải empty J4 — xem J5 "nợ ngoài phạm vi" |
+| Kho rỗng hoàn toàn khi mở phiên | "Không có gì cần ôn" + CTA "Chụp trang" — đóng cover rồi mới mở camera, không present 2 cover cùng lúc (T7) |
 
 ---
 
@@ -295,8 +310,10 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 ### Happy path
 
-1. Từ Home hoặc từ màn ôn: mở scope picker.
-2. Ba chế độ: một collection · vài collection (trộn) · tất cả.
+1. Trong phiên ôn toàn màn (J3/J4): bấm tiêu đề "Tất cả ⏷" → mở `ScopePickerSheet` (không còn mở từ Home hay
+   một màn Ôn riêng — ADR-052, picker chỉ sống **trong** phiên).
+2. Ba chế độ: một collection · vài collection (trộn) · tất cả. Section **"Mặc định khi bấm Ôn"** trong cùng sheet
+   chỉnh phạm vi mặc định lâu dài (thay "Ôn nhanh" cũ ở tab Kho; footer "Vuốt một bộ trong Thư viện để ưu tiên").
 3. Queue = card due ∩ phạm vi. New trong phạm vi vẫn chịu `daily_new_limit` **toàn cục đã áp trước** (FR-11).
 4. Chấm điểm → FSRS **bình thường**.
 5. Hiện số card due **nằm ngoài** phạm vi. Nợ phải nhìn thấy.
@@ -335,38 +352,50 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 
 ## J-R1-S — Settings học tập (R1, không login)
 
-**Trigger:** Khối lượng ôn không hợp, capture đang trả từ quá dễ / quá khó, hoặc muốn quản lý shortcut collection đang đọc.  
-**Job:** không JTBD mới; núm của JTBD-02 (FR-15), quản lý đường vào J2 (FR-17), và chọn agent phân tích trang (FR-21).  
-**Bắt buộc trên R1:** có. Không có màn này thì `cefr_level` và `daily_new_limit` hardcode — phá FR-10 / FR-11. Không có chỗ chọn agent thì FR-21 không thi hành được. ~~walking skeleton vẫn chạy vì seed = proxy~~ — bỏ, ADR-049: walking skeleton giờ cũng cần thêm agent BYOK trước, seed chỉ là placeholder báo lỗi.
+**Trigger:** Khối lượng ôn không hợp, capture đang trả từ quá dễ / quá khó, hoặc cần thêm/sửa agent phân tích.  
+**Job:** không JTBD mới; núm của JTBD-02 (FR-15), và chọn agent phân tích trang (FR-21). Quản lý pin collection (FR-17)
+đã dời sang menu ⋯ của Hub — xem J2 (ADR-052), **không** còn ở màn này.  
+**Bắt buộc trên R1:** có. Không có màn này thì `cefr_levels` và `daily_new_limit` hardcode — phá FR-10 / FR-11. Không có chỗ chọn agent thì FR-21 không thi hành được. ~~walking skeleton vẫn chạy vì seed = proxy~~ — bỏ, ADR-049: walking skeleton giờ cũng cần thêm agent BYOK trước, seed chỉ là placeholder báo lỗi.
 
 Đây **không** phải account settings. Không email, không mật khẩu, không avatar.
 
 ### Happy path
 
-1. Home → Settings.
-2. Đặt CEFR (A2–C1). Capture **tiếp theo** dùng level mới; trang đã phân tích **không** chạy lại (FR-15).
-3. Đặt `daily_new_limit` (mặc định 10). Home / J3 đổi ở **ngày học hiện tại** theo giờ cắt ngày FR-11.
-4. Đặt **giờ chuyển ngày** `day_cutoff_hour` (mặc định 04:00, 0–23) — streak và số đếm "hôm nay" tính theo giờ này (FR-11, FR-14).
-5. Mục **Đang đọc trên Home** liệt kê named collections và trạng thái hiện tại; bật/tắt ở đây dùng cùng rule tối đa hai và chooser thay thế của J2 (FR-17).
-6. `request_retention` và tham số FSRS: **không** hiện cho user ở R1 (PRD mục 10).
-7. Mục **Agent phân tích trang** (FR-21): list radio active, subtitle = `model`. ~~“Proxy Reado”~~ — bỏ, ADR-049: placeholder không hiện trong list. Thêm agent: tên, base URL, model, key (ô bảo mật). Sửa / xoá được agent user; agent nào cũng sửa/xoá được (placeholder không hiện nên không có ca "không xoá" trong UI). Hint một dòng: OCR trên máy, agent dịch+từ (một lần gọi phân tích; không phải agent OCR riêng). Capture **tiếp theo** dùng agent mới; trang đã phân tích không chạy lại.
-8. **Không** đặt export/import trên màn này. Cửa dữ liệu là J-R1-D. Export **không** kèm key.
+1. Tab Hôm nay → ⚙ góc phải toolbar (ADR-052 — Dữ liệu **không** còn cạnh ⚙, xem J-R1-D).
+2. Đặt CEFR — **chip chọn nhiều mức** A2–C1 (`cefrLevels`, ≥1 mức bắt buộc; không phải một mức đơn, khớp `db.md`
+   migration v3 `cefr_levels` JSON array — **lệch câu chữ FR-15/prd.md "CEFR level (A2–C1)" số ít, đã báo owner,
+   không tự sửa prd.md**, xem mục "Drift đã xử lý" cuối Phần 1). Capture **tiếp theo** dùng mức mới; trang đã phân
+   tích **không** chạy lại (FR-15). Mỗi thay đổi **tự lưu ngay** (T8, ADR-053 áp cùng nguyên tắc "không chặn"),
+   không có nút "Lưu" riêng; đổi giá trị không rời màn.
+3. Đặt `daily_new_limit` (mặc định 10, tự lưu khi rời ô nhập/submit). Hero Hôm nay / J3 đổi ở **ngày học hiện tại**
+   theo giờ cắt ngày FR-11.
+4. Đặt **giờ chuyển ngày** `day_cutoff_hour` (mặc định 04:00, 0–23, tự lưu) — streak và số đếm "hôm nay" tính theo giờ này (FR-11, FR-14).
+5. `request_retention` và tham số FSRS: **không** hiện cho user ở R1 (PRD mục 10).
+6. Mục **Agent phân tích trang** (FR-21, lên đầu khi chưa có agent nào): list radio active, subtitle = `model`.
+   ~~"Proxy Reado"~~ — bỏ, ADR-049: placeholder không hiện trong list. Thêm agent: tên, base URL, model, key (ô bảo
+   mật) — tự lưu khi submit form, không có nút "Lưu" chung. Sửa / xoá được agent user. Hint một dòng: OCR trên máy,
+   agent dịch+từ (một lần gọi phân tích; không phải agent OCR riêng). Capture **tiếp theo** dùng agent mới; trang đã
+   phân tích không chạy lại.
+7. **Không** đặt export/import trên màn này. Cửa dữ liệu là J-R1-D (menu ⋯ Thư viện). Export **không** kèm key.
+8. Lỗi lưu một mục (vd agent thiếu field): dòng đỏ inline ngay dưới section đó, giá trị UI giữ nguyên để sửa lại —
+   không mất những gì đã đổi ở section khác (T8).
 
 ### Empty / error (J-R1-S)
 
 | State | Hành vi |
 |---|---|
-| CEFR trống lần đầu | Bắt chọn trước capture đầu — hoặc default B2 như schema, nhưng phải nhìn thấy được |
+| CEFR bỏ hết chip (0 mức) | Không lưu; hiện "Chọn ít nhất 1 mức" |
 | `daily_new_limit` = 0 | Cấm hoặc cảnh báo: J3 chết |
 | Giờ chuyển ngày ngoài 0–23 | Không lưu — schema `CHECK (day_cutoff_hour BETWEEN 0 AND 23)` |
-| Không có named collection | Mục Đang đọc trên Home giải thích tạo collection ở tab Đọc; không đưa kho tạm vào danh sách |
-
-→ ADR-041: checklist 3 bước ở đầu Home (CEFR/agent/chụp) đóng dòng "CEFR trống lần đầu" — bước 1 hiện CEFR đang lọc, không trang mẫu (NG-03).
 | Thiếu tên / URL / model / key khi thêm agent | Không lưu; báo field thiếu |
 | `base_url` không HTTPS (trừ loopback / RFC1918) | Không lưu |
 | Đòi xoá agent `reado_proxy` (placeholder, ADR-049) | Không cho — nhưng không hiện trong UI nên không có ca này thực tế |
 | Xoá agent đang active | Fallback về placeholder "chưa chọn agent" |
 | Agent BYOK thiếu key | Không cho chọn active; bắt sửa |
+
+CEFR trống lần đầu / checklist mở app lần đầu **không còn là ca riêng của màn Settings** — ADR-054 (sửa ADR-041,
+2026-10-02): 3 bước CEFR/agent/chụp trang gộp vào hero Hôm nay làm CTA duy nhất (`HomeHero.State`), không phải
+checklist 3 hàng; bước CEFR hiện mức đang lọc, không trang mẫu (NG-03). Chi tiết hero ở J3/J4 phía trên.
 
 ---
 
@@ -377,25 +406,27 @@ Phạm vi mặc định của J4 = **tất cả** (`collection_ids` null). Muố
 **Bắt buộc trên R1:** có — FR-16 là bảo hiểm nếu R1 sai hướng; FR-20 là chiều ngược để round-trip được.  
 **Không phải:** path capture thứ hai. NG-07 vẫn cấm PDF/ebook. Ảnh vẫn là **đúng một** lối đưa trang vào.
 
-Cửa vào: Home, CTA thứ cấp **Dữ liệu** (không cạnh bánh răng Cài đặt, không tab thứ 4 — NFR-08: từ mở app tới chụp được trang ≤ 3 thao tác). Từ kho từ collection: **Xuất bộ này**.
+Cửa vào: menu **⋯ của tab Thư viện** → "Xuất dữ liệu" / "Nhập CSV" (ADR-052 — dời khỏi Home/Settings; không tab thứ 4
+— NFR-08: từ mở app tới chụp được trang ≤ 3 thao tác vẫn giữ nguyên, Dữ liệu thêm 1 chạm so với bản Home cũ). Từ kho
+từ collection: **Xuất bộ này**.
 
 ### Happy path — xuất
 
-1. Home → Dữ liệu, hoặc kho từ collection → Xuất bộ này (collection đó đã chọn).
+1. Thư viện → ⋯ → Xuất dữ liệu, hoặc kho từ collection → Xuất bộ này (collection đó đã chọn).
 2. Chọn phạm vi: tất cả / một / vài collection.
 3. Tải CSV: `term`, `pos`, `ipa`, `meaning_vi`, `cefr`, `example`, `collection`. Định dạng nhập được vào Anki (FR-16).
 4. JSON FSRS là nút phụ cùng màn: toàn bộ backup máy, **không** lọc collection. R1 **không** nhập JSON.
 
 ### Happy path — nhập
 
-5. Chọn file CSV → parse → **preview** (checkbox, mặc định chọn hết; sửa 6 field + tên collection được).
+5. Thư viện → ⋯ → Nhập CSV → chọn file → parse → **preview** (checkbox, mặc định chọn hết; sửa 6 field + tên collection được).
 6. `term` đã có trong kho: badge cảnh báo, **không** khoá — user tự bỏ chọn. Không `unique` (structure §6.3).
 7. Xác nhận → **gộp**. Khớp collection theo tên, không phân biệt hoa thường, trim; tên trống → kho tạm; chưa có → tạo mới (FR-17). Không tạo session / song ngữ. `sessionId = null`, `verified = true`. Card `state = new`, `due_at` hôm nay — vào nhánh Học (J3). Không đụng FSRS thẻ cũ.
-8. Toast số dòng đã nhập / về Home.
+8. Toast số dòng đã nhập; ở lại màn Dữ liệu (không bị đẩy đi đâu — cùng nguyên tắc "không chặn" của ADR-053).
 
 ### Màn UI (thứ tự prompt)
 
-Home (CTA Dữ liệu) · **Dữ liệu** (xuất theo collection + nhập file) · Preview nhập (reuse pattern picker FR-03) · kho từ collection (cửa xuất bộ này).
+Thư viện (menu ⋯ Dữ liệu) · **Dữ liệu** (xuất theo collection + nhập file) · Preview nhập (reuse pattern picker FR-03) · kho từ collection (cửa xuất bộ này).
 
 ### Empty / error (J-R1-D)
 
@@ -419,15 +450,15 @@ Home (CTA Dữ liệu) · **Dữ liệu** (xuất theo collection + nhập file)
 
 ### Happy path
 
-1. Home → tap ô Streak.
+1. Tab Hôm nay → tap hàng streak ("🔥 N ngày liên tục").
 2. Màn lịch: streak hiện tại (ngày liên tục), streak dài nhất, heatmap **18 tuần** (7 hàng × 18 cột, vừa khít bề ngang phone, không scroll ngang).
 3. Một ô = một ngày học theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống. Màu = số thẻ ôn hôm đó, đếm từ `review_logs` — không dùng cột counter ([review.md mục 6.1](docs/research/review.md#61-một-mệnh-đề-where-không-dựng-nổi-hàng-đợi)).
 4. Tap một ô → dòng chi tiết **ngay dưới lưới** (không popover): ngày, số thẻ ôn, số trang chụp nếu có. Popover trên phone che mất lưới.
-5. CTA: còn due → Ôn (J4). 0 due → Chụp trang (J1). **Không** CTA Cram.
+5. CTA: còn due → mở **phiên ôn toàn màn** (J4, qua `startReview` — ADR-052). 0 due → Chụp trang (J1). **Không** CTA Cram.
 
 ### Màn UI (thứ tự prompt)
 
-Home (ô Streak bấm được) · Lịch streak (heatmap + chi tiết ngày + CTA).
+Hôm nay (hàng streak bấm được) · Lịch streak (heatmap + chi tiết ngày + CTA).
 
 ### Empty / error (J-R1-P)
 
@@ -524,7 +555,7 @@ Nhét vào từng J ở trên. **Không** tạo journey riêng cho lỗi. Tóm t
 ### Gesture (mock UI R1)
 
 - **Màn ôn (J3/J4/J5):** vuốt trái = Again, vuốt phải = Good trên **cả hai mặt thẻ** (Tinder-style: bám tay + tilt + stamp "Quên"/"Được" + fly-off). Hard / Easy vẫn là nút. Không rút FSRS còn 2 giá trị. (Chốt 2026-09-18 — ADR-025, đảo ADR-009 cũ; nới "cả hai mặt" 2026-09-24 — ADR-033.)
-- **Màn khác (trừ Home):** vuốt từ **mép trái ~24px** sang phải = back. Trên màn ôn, full-card swipe là grade — back chỉ lấy dải mép, không đụng thẻ.
+- **Màn khác (trừ Hôm nay):** vuốt từ **mép trái ~24px** sang phải = back. Trên màn ôn, full-card swipe là grade — back chỉ lấy dải mép, không đụng thẻ.
 - Vocab picker (FR-03) **không** dùng Tinder — vẫn list + sửa 6 field.
 
 ---
@@ -535,14 +566,15 @@ Một prompt = một màn (hoặc một flow ngắn). Khoá Design system **ngo�
 
 | # | Prompt | Journey cover |
 |---|---|---|
-| 1 | Home — tối đa 2 shortcut collection đang đọc, số due / new tách, backlog nhãn riêng, streak (tap → lịch), CTA capture + học + ôn + Dữ liệu | FR-14, FR-17; cửa vào J1–J5, J-R1-P, J-R1-D |
-| 2 | J1 — Capture · Processing · Vocab picker | J1 |
-| 3 | J2 — Collection hub + Session detail + kho vocab collection + control Hiện trên Home | J2; FR-17; reuse Capture + picker của #2 |
-| 4 | Session card — J3+J4 chung một card UI, hai nhánh queue | J3, J4, FR-12 |
-| 5 | J5 scope picker + nợ ngoài phạm vi | J5 |
+| 1 | Hôm nay — hero theo trạng thái (`HomeHero.State`), tối đa 5 pin collection, streak (tap → lịch), nút chụp trên thanh, ⚙ Settings | FR-14, FR-17; cửa vào J1, J3–J5, J-R1-P, J-R1-S; ADR-052/054 |
+| 1b | Thư viện — card Kho tạm, danh sách Bộ, menu ⋯ (Nhập/Xuất) | FR-17; cửa vào J2, J6, J-R1-D; ADR-052 |
+| 2 | J1 — Capture · Processing · Duyệt & lưu (đổi đích + chọn từ) | J1; ADR-053 |
+| 3 | J2 — Collection hub (menu ghim) + Session detail + kho vocab collection | J2; FR-17; reuse Capture + Duyệt & lưu của #2 |
+| 4 | Phiên ôn toàn màn — J3+J4 chung một card UI, hai nhánh queue, chrome thống nhất | J3, J4, FR-12; ADR-052 |
+| 5 | J5 scope picker (trong phiên ôn) + nợ ngoài phạm vi + "Mặc định khi bấm Ôn" | J5 |
 | 6 | J6 kho tạm + move lô | J6, FR-17 — **sau** happy path 1–5 |
-| 7 | J-R1-S Settings — CEFR + `daily_new_limit` + giờ chuyển ngày + quản lý collection đang đọc trên Home + agent phân tích trang | FR-15, FR-17, FR-21; **không** login; **không** FR-16 |
-| 8 | J-R1-D Dữ liệu — xuất CSV theo collection + JSON FSRS; nhập CSV preview rồi gộp | FR-16, FR-20 |
+| 7 | J-R1-S Settings (tự lưu) — CEFR nhiều mức + `daily_new_limit` + giờ chuyển ngày + agent phân tích trang | FR-15, FR-21; **không** login; **không** FR-16; **không** quản lý pin (dời #1b/#3) |
+| 8 | J-R1-D Dữ liệu (menu ⋯ Thư viện) — xuất CSV theo collection + JSON FSRS; nhập CSV preview rồi gộp | FR-16, FR-20 |
 | 9 | J-R1-P lịch streak — heatmap 18 tuần, tap ô xem ngày | FR-14 lens; **không** FR mới — open question |
 | — | J7–J9 | **Không prompt ở R1** |
 
@@ -562,383 +594,34 @@ Một prompt = một màn (hoặc một flow ngắn). Khoá Design system **ngo�
 
 Mermaid PRD là **một** vòng: Read → Capture → Analyze → Verify → Study → Summary → Pick → Store → Queue → Daily.
 
-Journey file này **không huỷ** vòng đó. Nó nói vòng đó sống **trong J2 collection hub**: Capture → Analyze → Pick → Store(collection) vẫn chạy, nhưng song ngữ + summary ở lại dưới dạng **session chọn được** (tối đa 10), và kho vocab theo collection là cửa durable. J1 là lối tắt: không hub, không session list, Store = kho tạm. J3–J5 là phần `Daily`. J6 dọn kho tạm. J-R1-S và J-R1-D là Epic E5 (núm học tập tách khỏi cửa dữ liệu). J-R1-P là lens của FR-14 trên Home. J7–J9 là **Later** (NG-05).
+Journey file này **không huỷ** vòng đó. Nó nói vòng đó sống **trong J2 collection hub**: Capture → Analyze → Pick → Store(collection) vẫn chạy, nhưng song ngữ + summary ở lại dưới dạng **session chọn được** (tối đa 10), và kho vocab theo collection là cửa durable. J1 là lối tắt: không hub, không session list, Store = kho tạm. J3–J5 là phần `Daily`, nay sống trong **một phiên ôn toàn màn** chứ không phải tab riêng (ADR-052). J6 dọn kho tạm. J-R1-S và J-R1-D là Epic E5 (núm học tập tách khỏi cửa dữ liệu). J-R1-P là lens của FR-14 trên tab Hôm nay. J7–J9 là **Later** (NG-05).
 
-## Phần 2 — DB Schema — Reado R1 (SQLite, local-first)
+---
 
-| Field | Value |
-|---|---|
-| Created | 2026-09-08 |
-| Nguồn DDL **thật** | `app/src/storage/schema.sql` (migration v1); các migration sau ở `app/src/storage/migrate.ts`: v2 `analyses` · v3 rich vocab (tags/synonyms/antonyms) · v4 `reading_sessions` |
-| Nơi PRAGMA + migrate + seed chạy | `app/src/storage/syncDb.ts` |
-| Phạm vi | Chỉ R1. `word_relations` không nằm ở đây (R2 — mvp-plan-pwa-gen (ADR-044) task 4.1) |
-| Quy tắc nguồn | File này **chỉ giải thích**, không phải nguồn DDL. Mâu thuẫn với code → code thắng, ghi vào mvp-plan-pwa-gen (ADR-044) mục 4 (không im lặng sửa) |
+## 8. Drift đã xử lý (ux-redesign-r1 T11, 2026-10-02)
 
-## 1. Đọc khi nào
+Đối chiếu journeys.md ↔ code trước redesign, xem đầy đủ ở [`docs/plans/done/ux-redesign-r1.md`](docs/plans/done/ux-redesign-r1.md)
+mục "Journey drift". Tóm tắt kết quả:
 
-- Làm bất kỳ task nào đụng `storage/`, migration, seed, export, hay thêm FR mới có dữ liệu.
-- Muốn biết *vì sao* một cột/constraint tồn tại — mỗi bảng ở mục 4 đều ghi lý do dẫn nguồn docs sản phẩm.
-- Agent ở session khác: đây là cổng vào duy nhất cho phần DB; DDL nguyên văn luôn ở
-  `app/src/storage/schema.sql` (file ngắn, tự comment kỹ).
+- Hầu hết dòng drift: **giữ ý định cũ, viết lại mô tả** theo khung 2 tab/phiên ôn/banner/5 pin — đã áp thẳng vào
+  J1–J-R1-P phía trên, không lặp lại danh sách ở đây.
+- **CEFR một hay nhiều mức (từng là Q-a, câu hỏi mở):** code (`cefrLevels`, nhiều mức) và `db.md` (`cefr_levels`
+  JSON array, migration v3) đã khớp nhau từ trước redesign. Journey file này giờ theo code. **`prd.md` FR-15 vẫn
+  ghi số ít** ("CEFR level (A2–C1)") — đây là chỗ *đã chốt sai* theo CLAUDE.md §6 bước 2: báo lại, không tự sửa
+  `prd.md` trong task docs-only này.
+- **"Từ session này collect thêm" (J2 bước 7):** vẫn là mục **mở**, chờ owner chốt hướng "session_id trên
+  vocab_items" (brief §2 mục 3) — ngoài phạm vi ux-redesign-r1, không giả định đã làm.
+- **Phần 2 (DB Schema PWA cũ)** đã bỏ khỏi file này — xem mục dưới, chuyển hẳn sang `docs/specs/db.md`.
 
-## 2. Sơ đồ quan hệ
+---
 
-```
-collections 1 ─── n vocab_items 1 ─── n cards 1 ─── n review_logs
-                                              └─ 1 vocab_item có TỐI ĐA 2 cards:
-                                                 receptive + productive (unique constraint)
-collections 1 ─── n reading_sessions (migration v4 — kho phiên đọc bền, task 3.15)
-settings: đúng MỘT dòng (id = 1)
-analyses: sự kiện "đã phân tích một trang" — đứng ngoài chuỗi FK
-          (migration v2, 2026-09-08 — FR-14 + NFR-02); reading_sessions.id
-          trùng analyses.id của cùng lần gọi — provenance 1:1, không cột FK riêng
-```
+## Phần 2 — DB Schema
 
-- **9 bảng vật lý khi DB mở:** 7 bảng sản phẩm (5 gốc + `analyses` +
-  `reading_sessions`) + `_migrations` + `_boot_probe` (mục 6.1). Không có gì khác.
+Schema R1 thật (SQLite trên máy, Swift) đã dời hẳn về [`docs/specs/db.md`](docs/specs/db.md) — đọc file đó khi đụng
+`Database.swift`/`Migration.swift`/export/import hay cần biết *vì sao* một cột tồn tại.
 
-## 3. Ba quyết định dialect (bắt buộc từ AGENTS mục 5)
-
-| Vấn đề | Quyết định |
-|---|---|
-| `uuid` lưu dạng gì | **TEXT, 32 ký tự hex không dấu gạch**, client tự sinh (`domain/utils.ts` `newId()` — không hỏi server, NFR-03 offline) |
-| timestamp lưu dạng gì, giữ timezone không | **TEXT ISO-8601 UTC `...Z`** — giữ tính tuyệt đối; "ngày" chỉ tính ở tầng đọc bằng múi giờ device + `day_cutoff_hour` (`domain/time.ts` `dayBounds()`) |
-| `fsrs_params` lưu dạng gì | **TEXT chứa JSON** (mảng 19 phần tử FSRS-5 hoặc 21 FSRS-6); R1 không query bên trong JSON |
-
-Hệ quả khác của SQLite: `boolean` → `integer 0/1` + `check`; `jsonb`/`timestamptz`/`uuid`
-không tồn tại nên toàn TEXT.
-
-### PRAGMA (không nằm trong `schema.sql` — chạy ở `syncDb.ts` lúc mở DB)
-
-```
-PRAGMA foreign_keys = ON;      -- bắt buộc: các `references` mới thực sự ràng buộc
-PRAGMA journal_mode = WAL;     -- thử; VFS không hỗ trợ (OPFS) thì rơi `delete` + cảnh báo hiển thị, KHÔNG nuốt
-```
-
-Cảnh báo này là cột vận hành của `SyncDb` ("journal_mode/WAL") — phải được hiển thị,
-không nuốt im lặng (bài học mvp-plan-pwa-gen (ADR-044) mục 5: OPFS thực tế là `journal_mode = delete`,
-an toàn nhờ transaction chứ không nhờ WAL).
-
-## 4. Bảng sản phẩm — DDL + vì sao
-
-### 4.1 `collections`
-
-```sql
-create table collections (
-  id          text primary key,
-  name        text not null,
-  is_default  integer not null default 0 check (is_default in (0,1)),
-  created_at  text not null
-);
-```
-
-- `is_default` = kho tạm (FR-17 phần is_default): nơi tiếp nhận từ chưa phân loại.
-  **Bất biến hệ thống: đúng một dòng `is_default=1`**, do `seed.ts` đảm bảo idempotent
-  mỗi lần boot (tên mặc định "Kho tạm").
-- `vocab_items.collection_id` không bao giờ null → bảng này luôn phải có ít nhất kho tạm.
-
-### 4.2 `vocab_items`
-
-```sql
-create table vocab_items (
-  id               text primary key,
-  collection_id    text not null references collections(id),
-  term             text not null,          -- đúng dạng đã gặp, KHÔNG đưa về nguyên thể
-  term_normalized  text not null,          -- lowercase + trim; KHÔNG lemmatize (Q-06)
-  pos              text not null check (pos in ('noun','verb','adj','adv','phrase','other')),
-  ipa              text,
-  meaning_vi       text not null,
-  example          text not null,          -- câu thật trên trang (đã qua xác minh FR-02)
-  cefr             text check (cefr in ('A2','B1','B2','C1')),
-  created_at       text not null
-);
-create index idx_vocab_collection on vocab_items (collection_id);
-create index idx_vocab_termnorm   on vocab_items (term_normalized);
-```
-
-**Migration v3 (2026-09-09, task 3.12 — rich vocab):** 3 cột TEXT JSON gắn THÊM,
-additive-only, có ở `app/src/storage/migrate.ts` (KHÔNG sửa DDL v1 ở trên — quy ước
-bất di bất dịch của migration):
-
-```sql
-alter table vocab_items add column tags     text not null default '[]';
-alter table vocab_items add column synonyms text not null default '[]';
-alter table vocab_items add column antonyms text not null default '[]';
-```
-
-- Giá trị là JSON array of string (`'["IELTS","B2"]'`); rỗng = `'[]'`; ghi thì serialize,
-  đọc thì parse với guard `json_valid` — dòng hỏng đọc ra `[]` chứ không vỡ
-  (`storage/repos/richJson.ts`). Vì sao 3 cột JSON thay vì bảng junction đã cân nhắc ở
-  `docs/research/review.md` Phần 3 mục 2 (sync nhẹ, quy mô cá nhân).
-- Giới hạn mỗi từ: 3 synonyms / 3 antonyms / 4 tags (RV-1 owner 2026-09-09) — enforce ở
-  client (`RICH_LIMITS` trong `domain/verify.ts`), AI báo thêm thì cắt chứ không từ chối.
-- Truy vấn tag (màn chọn tag của cram 3.13) dùng `json_each(v.tags)` + `json_valid`
-  guard — xem `listAllTags`/`listByTags` trong repos. `countIntroducedNew`
-  (FR-11) **chỉ đếm `mode='srs'`** từ 3.13 — log cram thẻ mới không được ăn hạn mức.
-
-- ⚠️ **CỐ Ý không có `unique(collection_id, term_normalized)`** — một từ nhiều nghĩa được
-  nhiều dòng; một dòng = một nghĩa (research/vocabulary-structure mục 6.3). Chống trùng
-  là việc của bộ lọc lúc trích xuất (FR-10), không phải của DB. **Đây là điều cấm #4
-  trong coding-conventions — đừng "sửa cho đúng".**
-- `term` giữ nguyên dạng đã gặp (ví dụ `running` không đổi thành `run`) — chỉ
-  `term_normalized` (lowercase + trim) dùng để so khớp, và **không lemmatize** (Q-06).
-- `example` phải đối chiếu được với câu thật trên trang (điều cấm #10: AI không tự đặt câu).
-
-### 4.3 `cards` — giữ state FSRS
-
-```sql
-create table cards (
-  id             text primary key,
-  vocab_item_id  text not null references vocab_items(id) on delete cascade,
-  direction      text not null default 'receptive'
-                 check (direction in ('receptive','productive')),
-
-  -- fsrs state — BỐN giá trị, không gộp (research/review-scheduling mục 3.2)
-  state          text not null default 'new'
-                 check (state in ('new','learning','review','relearning')),
-  stability      real not null default 0,
-  difficulty     real not null default 0,
-  reps           integer not null default 0,
-  lapses         integer not null default 0,
-  learning_steps integer not null default 0,  -- Q-12: tắt → luôn 0 ở R1
-  scheduled_days integer not null default 0,
-  last_review_at text,                        -- null khi state='new'
-  due_at         text not null,               -- UTC; KHÔNG tính lại on the fly (fuzz!)
-
-  suspended_at   text,                        -- FR-19 leech (ngưỡng MỞ)
-  unique (vocab_item_id, direction)
-);
-create index idx_cards_due on cards (due_at) where suspended_at is null;
-```
-
-- ⚠️ **`state` phải đủ BỐN giá trị** (`new/learning/review/relearning`) — gộp bớt là
-  FSRS chấm `difficulty` sai và sai đó tích luỹ (điều cấm #2).
-- `direction`: một vocab item có thể thành tối đa 2 cards (`unique` bảo đảm);
-  `receptive` = nhìn EN nhớ nghĩa; `productive` = nghĩ câu quanh từ.
-- `due_at` **lưu sẵn**, cột này là nguồn sự thật — không trường nào tính lại on-the-fly
-  vì `enable_fuzz` có thể làm ngày nhảy giữa hai lần đọc (điều cấm #8).
-- `learning_steps` luôn 0 ở R1 (Q-12 tắt learning steps: thẻ mới sau lần chấm đầu đi
-  thẳng vào review, interval ≥ 1 ngày); **code R1 không bao giờ ghi `state='learning'`**
-  (điều cấm #6). Các cột hai cái này giữ nguyên hình dạng để R2 bật lại không cần migrate.
-- `suspended_at`: dành cho FR-19 leech — **cột đã có, code R1 chưa ghi** (task 3.10).
-  Index `idx_cards_due` là partial (`where suspended_at is null`) nên đúng từ đầu.
-- `on delete cascade`: xoá vocab item → card đi theo; log đi theo card (4.4). Xoá
-  collection không tự xoá từ (FR-17: chỉ chuyển từ, chưa có cascade collection).
-
-### 4.4 `review_logs`
-
-```sql
-create table review_logs (
-  id                    text primary key,
-  card_id               text not null references cards(id) on delete cascade,
-  mode                  text not null check (mode in ('srs','cram','distinguish','recall')),
-  rating                integer not null check (rating between 1 and 4), -- 1 Again .. 4 Easy
-
-  -- ảnh chụp TRƯỚC khi chấm — nguồn của undo và training data
-  state_before          text not null,
-  stability_before      real not null,
-  difficulty_before     real not null,
-  learning_steps_before integer not null,
-  due_before            text not null,
-  elapsed_days          integer not null,
-  scheduled_days        integer not null,
-
-  reviewed_at           text not null
-);
-create index idx_logs_card_time on review_logs (card_id, reviewed_at);
-```
-
-- ⚠️ **Log là ảnh chụp TRƯỚC khi chấm** — không có nó thì mất undo và mất training data
-  FSRS (điều cấm #1). Mọi cột `*_before` đều đọc từ card trước khi áp kết quả chấm.
-- `mode` ở R1 hiện chỉ mang giá trị `srs` — 3 giá trị còn lại để sẵn cho R2. **Cập nhật 2026-09-08:** `cram` được kéo sớm về cuối R1 (task 3.13 — log `mode='cram'` KHÔNG đụng state, xem `docs/research/review.md` Phần 3). **Đảo lại 2026-10-01 (ADR-050, extra-review-r1):** R1 KHÔNG còn ghi `mode='cram'` — Ôn thêm giờ ghi `mode='srs'` như hàng đợi chính (có đụng state). `cram`/`distinguish`/`recall` cả ba để sẵn cho R2. Thấy code ghi `mode='cram'` ở R1 → bug (solution-design mục 5).
-- Nguồn đếm của hạn mức thẻ mới (FR-11): `state_before='new'` trong ngày học.
-
-### 4.5 `settings`
-
-```sql
-create table settings (
-  id               integer primary key default 1 check (id = 1),
-  cefr_level       text not null default 'B1',  -- owner chốt B1 2026-09-08
-  daily_new_limit  integer not null default 10,
-
-  -- BYOK (Q-03) — key của CHÍNH user, lưu local (NFR-07)
-  ai_provider      text not null default 'gemini',
-  ai_base_url      text not null default 'https://generativelanguage.googleapis.com',
-  ai_api_key       text,                     -- null = chưa nhập; app nhắc khi capture đầu tiên
-  ai_model         text,
-
-  request_retention real not null default 0.9,
-  maximum_interval  integer not null default 36500,
-  enable_fuzz       integer not null default 1 check (enable_fuzz in (0,1)),
-  day_cutoff_hour   integer not null default 4 check (day_cutoff_hour between 0 and 23),
-
-  fsrs_params       text,   -- JSON: 19 (FSRS-5) hoặc 21 (FSRS-6) phần tử; null = default
-  fsrs_version      text    -- version đi cùng params — tránh silent breakage
-);
-```
-
-- `id = 1` có `check` → **vĩnh viễn đúng một dòng**; `seed.ts` chèn `insert into settings
-  (id) values (1)` (các cột khác lấy DEFAULT). Mọi lần đọc/ghi settings đều theo `id=1`.
-- Hệ quả trực tiếp của **Q-03 (BYOK)**: 4 cột `ai_*` là bổ sung DUY NHẤT so với research
-  schema. `ai_api_key` là secret (điều cấm #9) — export/commit/whitelist đều phải chặn nó.
-- `cefr_level` mặc định **'B1'** — owner chốt ở task 0.5. Bản nháp solution-design mục 5
-  ghi `'B2'` là typo — mâu thuẫn đã ghi mvp-plan-pwa-gen (ADR-044) mục 4, code đúng theo chốt (mục 8).
-
-### 4.6 `analyses` — migration v2 (2026-09-08, task 3.5)
-
-```sql
-create table analyses (
-  id             text primary key,
-  analyzed_at    text not null,   -- UTC ISO-8601
-  cefr           text,            -- cefr_level dùng cho lần gọi này
-  provider       text,
-  model          text,
-  prompt_version integer,
-  latency_ms     integer,
-  tokens_in      integer,
-  tokens_out     integer
-);
-create index idx_analyses_time on analyses (analyzed_at);
-```
-
-- Một dòng = MỘT trang đã phân tích **thành công**. FR-14 "số trang đã phân tích" =
-  `count(*)` ở đây — đếm từ sự kiện thật, KHÔNG phải counter trong `settings`, cùng
-  luật của FR-11 ("đếm từ log, counter và log lệch nhau là lỗi không ai quan sát được").
-- Đây cũng là nơi NFR-02 "đo và ghi lại" lắng xuống (solution-design 10.3): latency +
-  token + provider/model/cefr/prompt_version → dữ liệu cho M-03 về sau.
-- **Không ai đụng bảng này** ngoài `recordAnalyzedPage` (domain/usecases/analyze.ts),
-  gọi từ AnalyzePanel SAU runId-guard — StrictMode dev chạy hiệu ứng 2 lần nên phải
-  chốt sau guard mới không đếm đúp một trang.
-- KHÔNG chứa `ai_api_key` (điều cấm #9) và KHÔNG chứa ảnh (NFR-04).
-
-### 4.7 `reading_sessions` — migration v4 (2026-09-09, task 3.15)
-
-```sql
-create table reading_sessions (
-  id             text primary key,           -- = analyses.id của lần gọi AI
-  collection_id  text not null references collections(id) on delete cascade,
-  segments       text not null,              -- JSON [{sourceEn, translationVi}]
-  vocabulary     text not null default '[]', -- JSON AnalyzedItem[]
-  summary_vi     text not null default '',
-  vocab_count    integer not null default 0,
-  created_at     text not null,              -- UTC ISO-8601
-  saved_at       text,                       -- null = trang CHƯA "Chọn từ → Lưu"
-  saved_count    integer not null default 0
-);
-create index idx_rsessions_coll_time on reading_sessions (collection_id, created_at desc);
-create index idx_rsessions_time on reading_sessions (created_at desc);
-```
-
-- Nhà của **Q-10-reopen (owner 2026-09-09)**: A-08 của PRD ("người dùng không cần
-  đọc lại trang đã đọc") bị bác bỏ bằng thực tế — lưu lại text + dịch của trang đã
-  phân tích, 10 phiên mới nhất **mỗi collection**. Phần ảnh của NFR-04 VẪN giữ
-  (không cột ảnh nào), chỉ nới phần text (mvp-plan-pwa-gen (ADR-044) mục 1/4). Một dòng = một lần gọi
-  AI thành công.
-- `id` trùng `analyses.id` — hai bảng ghi cùng lúc sau runId-guard, provenance 1:1
-  không cần cột FK riêng.
-- `segments` TEXT JSON — đủ vẽ lại màn đọc song ngữ; KHÔNG lưu `page_text` thô.
-- `vocabulary` bắt buộc: gloss tô từ ở màn đọc VÀ nút "Chọn từ" của trang CHƯA lưu
-  đều cần nó. Bản này có thể **stale** sau khi user sửa từ ở màn duyệt — chấp nhận
-  có chủ ý (gloss là trợ giúp đọc, nguồn sự thật là `vocab_items`).
-- `saved_at` null = chưa lưu từ — luật "lưu 1 lần" của bug 6723302 giờ **persist**
-  theo DB: F5/mở lại app vẫn nhớ trang nào đã lưu, khoá nút "Chọn từ".
-- Trim "10 mới nhất/collection" chạy trong **cùng transaction với insert** (repo
-  `storage/repos/readingSessions.ts`) — không đường nào làm vượt giới hạn, kể cả hai
-  tab cùng boot; test chứng minh invariant trên SQLite thật.
-- Parse JSON có guard: dòng hỏng (JSON vỡ) trả segments/vocabulary rỗng thay vì sập
-  màn đọc — cùng tinh thần guard `json_valid` của rich vocab (3.12).
-- Xoá collection → cascade xoá phiên đọc của collection đó (`on delete cascade`).
-
-## 5. Indexes — toàn bộ R1
-
-| Index | Bảng / cột | Phục vụ |
-|---|---|---|
-| `idx_vocab_collection` | `vocab_items(collection_id)` | lọc theo collection (FR-08, export FR-16) |
-| `idx_vocab_termnorm` | `vocab_items(term_normalized)` | bộ lọc "đã thuộc" FR-10 (chưa bật — Q-08/Q-09 mở) |
-| `idx_cards_due` | `cards(due_at) where suspended_at is null` | hàng đợi hai nhánh (FR-11) — partial index |
-| `idx_logs_card_time` | `review_logs(card_id, reviewed_at)` | undo, export, thống kê theo card |
-| `idx_analyses_time` | `analyses(analyzed_at)` | thống kê trang theo ngày (FR-14, M-03) — migration v2 |
-| `idx_rsessions_coll_time` | `reading_sessions(collection_id, created_at desc)` | tab "Phiên đọc" của Collection Detail (task 3.15) — migration v4 |
-| `idx_rsessions_time` | `reading_sessions(created_at desc)` | màn đọc — 10 phiên gần nhất mọi collection |
-
-## 6. Hạ tầng đi kèm DB
-
-### 6.1 Hai bảng hạ tầng (tạo trong `migrate.ts`, KHÔNG nằm `schema.sql`)
-
-| Bảng | Cột | Vai trò |
-|---|---|---|
-| `_migrations` | `version` PK, `name`, `applied_at` | migration đánh số tăng dần; **không bao giờ sửa DDL của version cũ** — mỗi lần đổi schema là một file migration mới gắn sau (kỷ luật giống backend) |
-| `_boot_probe` | `key` PK, `value` | marker "sống qua F5" — `bootProbe.ts` dùng chứng minh dữ liệu persist qua reload |
-
-### 6.2 Seed mỗi lần mở DB (`seed.ts`, idempotent)
-
-1. Kho tạm: nếu chưa có dòng `is_default=1` → chèn `("Kho tạm", is_default=1)`.
-2. `settings` dòng `id=1` → chèn nếu thiếu.
-
-Chạy chung nơi DB sống (Worker / in-process) ngay sau migrate — không đi qua RPC.
-
-### 6.3 DB sống ở đâu (kiến trúc storage — tóm tắt bài học mvp-plan-pwa-gen (ADR-044) mục 5)
-
-- SQLite-WASM **bắt buộc mở trong Web Worker** (`storage/dbWorker.ts`): VFS `opfs` cần
-  `Atomics.wait()` (main thread bị lib từ chối *trong im lặng*), `opfs-sahpool` cần
-  `createSyncAccessHandle` (Chrome chỉ expose trong Worker). Mở ở main thread → âm thầm
-  rơi `:memory:` → mất dữ liệu sau F5.
-- Thứ tự lựa chọn kernel: `opfs` → `opfs-sahpool` → `:memory:` kèm cảnh báo hiển thị.
-- Tầng repo (`storage/repos/`) là chỗ DUY NHẤT chạy SQL (coding-conventions mục 2);
-  worker nói chuyện với main qua RPC; `syncDb.ts` là lõi SQL dùng chung cho
-  Worker (browser) và Node (vitest).
-
-## 7. Ba chỗ dễ implement sai (đọc trước khi code DB)
-
-| # | Sai thường gặp | Đúng | Hậu quả nếu sai |
-|---|---|---|---|
-| 1 | `cards.state` chỉ làm `new` + `review` | **Bốn** giá trị, `learning`/`relearning` là hai pha khác | FSRS chấm `difficulty` sai, sai tích luỹ |
-| 2 | `review_logs` lưu state **sau** khi chấm | Ảnh chụp **trước** khi chấm (`state_before`, …) | Mất undo, mất training data |
-| 3 | Thêm `unique(collection_id, term_normalized)` vào `vocab_items` | Cố ý **không có** — chống trùng ở FR-10 | Chặn từ đa nghĩa, đảo quyết định đã chốt |
-| 4 | Tách `update cards` và `insert review_logs` thành hai transaction | Luôn **cùng một transaction** (điều cấm #3; see `repos/cards.ts`) | Log mất vĩnh viễn, không gì báo |
-| 5 | `due_at` tính lại on-the-fly | Đọc cột DB — ghi sẵn lúc chấm | Fuzz làm ngày "nhảy", lịch ôn loạn |
-| 6 | Timestamp không kèm timezone | Mọi cột time là TEXT ISO-8601 UTC `...Z` | Đổi múi giờ → lệch toàn bộ lịch |
-
-## 8. Khác biệt so với bản NHÁP solution-design mục 5
-
-`solution-design-pwa-gen.md` (đã xoá, ADR-044) mục 5 là DDL thiết kế (Postgres → SQLite), **không phải nguồn
-áp dụng**. `schema.sql` (migration v1) mới là thứ chạy. Hai khác biệt đã biết:
-
-| Chỗ | solution-design (nháp) | `schema.sql` (thật) |
-|---|---|---|
-| `settings.cefr_level` default | `'B2'` (typo) | **`'B1'`** — owner chốt task 0.5, comment tại chỗ |
-| PRAGMA `journal_mode`/`foreign_keys` | để trong khối DDL | không nằm trong `schema.sql` — chạy ở `syncDb.ts` lúc mở DB; OPFS thực tế rơi `delete` + cảnh báo hiển thị |
-| bảng `analyses` | không có trong nháp | **migration v2 (2026-09-08)** — bảng sự kiện FR-14/NFR-02, xem mục 4.6. Ra đời sau khi bản nháp đã được duyệt |
-| bảng `reading_sessions` | không có trong nháp (nháp chọn buffer in-memory, Q-10 cũ) | **migration v4 (2026-09-09)** — Q-10-reopen, xem mục 4.7. Bia mộ của Q-10 cũ ở solution-design mục 11 |
-
-Ngoài hai chỗ đó, cột/constraint hai bên khớp nhau. Thấy khác thêm → ghi mvp-plan-pwa-gen (ADR-044) mục 4.
-
-## 9. Chưa có trong schema này (đừng tìm)
-
-- **`word_relations`** — bảng liên kết từ vựng (PVO) thuộc R2, mvp-plan-pwa-gen (ADR-044) task 4.1. Chưa
-  có DDL.
-- **Nhãn verification / status của vocab item** — R1 không lưu cột trạng thái verify;
-  nhãn verified/suspect/unverified chỉ sống trong phiên phân tích FR-02 (xem mvp-plan-pwa-gen (ADR-044)
-  mục 4: chip chỉ là hiển thị, save không đọc verification).
-- ~~**Bảng nào cho buffer cuộn** — buffer 10 trang sống trong bộ nhớ phiên, không
-  persist (Q-10), nên không có bảng.~~ **BIA MỘ (Q-10-reopen, owner 2026-09-09):**
-  buffer in-memory đã BỎ — giờ có bảng `reading_sessions` (migration v4, mục 4.7):
-  10 phiên mới nhất **mỗi collection**, chỉ text + dịch. Chi tiết quyết định:
-  mvp-plan-pwa-gen (ADR-044) mục 1/4.
-- **Ngưỡng leech (FR-19)** — cột `suspended_at` đã có nhưng ngưỡng `lapses` chưa chốt
-  (chốt cùng lượt Q-08/Q-09 khi có dữ liệu thật). Code R1 không viết cột này.
-- **Starred/priority, note, audio** — không tồn tại ở R1. `tags`/`synonyms`/`antonyms`
-  **đã có từ 3.12** (migration v3, commit `3e6b951`) — thiết kế ở
-  `docs/research/review.md` Phần 3; doc này không mở lại các cột đó (xem bảng
-  `docs/research/vocabulary.md` mục 6.1 + `docs/research/review.md` Phần 3). Migration v4 dùng cho
-  `reading_sessions` (mục 4.7).
-
-## 10. Đã chốt & chưa chốt liên quan tới schema
-
-| Việc | Trạng thái |
-|---|---|
-| 7 bảng sản phẩm + cột như trong file này | ✅ Đã chốt + đã triển khai (5 bảng gốc 2026-09-08; `analyses` migration v2 cùng ngày; `reading_sessions` migration v4 2026-09-09, mvp-plan-pwa-gen (ADR-044) task 3.15) |
-| Dạng lưu uuid / timestamp / fsrs_params | ✅ Đã chốt (AGENTS mục 5) |
-| Không có `unique` trên `vocab_items` | ✅ Đã chốt (structure mục 6.3) |
-| Ngưỡng "đã thuộc" (Q-08) + phạm vi lọc (Q-09) | 📌 Để sau — chốt cùng lúc ngưỡng leech FR-19, khi có vài tuần review log |
-| `word_relations` schema | ⬜ R2 — chưa thiết kế, chỉ không tự chặn đường |
+Bản DB schema cũ ở mục này (viết 2026-09-08 cho kiến trúc PWA — `app/src/storage/schema.sql`, `syncDb.ts`, SQLite-WASM
+trong Web Worker) đã **bỏ 2026-10-02** (ux-redesign-r1 T11): code thật từ lâu là Swift + SQLite on-device
+(`app/ReadoKit/Sources/ReadoKit/Database/`), không còn file `.ts` nào trong repo; nội dung trùng lặp và trỏ sai
+đường. Bản PWA cũ đã archive rồi xoá ở repo-hygiene-r1 (mvp-plan-pwa-gen, ADR-044) — xem `git show
+7db1510:docs/archive/mvp-plan-pwa-gen.md` nếu cần lịch sử.
