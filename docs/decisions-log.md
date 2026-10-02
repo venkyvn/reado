@@ -967,4 +967,4 @@
   `ReviewDraftBuilderTests`), `scripts/prompt_eval.py`. Sửa PRD FR-09 criterion 1,
   `journeys.md` (J1 bước 4, bảng mục 1), prompt-spec §3/§7 (trỏ v6, "AI chỉ xếp thứ
   tự đề xuất"). Không đụng DDL, không đụng `AnalysisResponseNormalizer`/Decoder (T2a
-  đã xong). UI chạm-sáng `phrases` là việc riêng, chưa làm (T3, `docs/plans/prompt-v6.md`).
+  đã xong). UI chạm-sáng `phrases` là việc riêng, chưa làm (T3, `docs/plans/done/prompt-v6.md`).

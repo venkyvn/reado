@@ -29,16 +29,16 @@
 - repo-hygiene-r1 (2026-09-28, ✅ KHÉP Phase A+B, ADR-044/046) — pbxproj synchronized folders, chia `app/Reado` theo feature. → `docs/plans/done/repo-hygiene-r1.md`
 - cram-collection-r1 (2026-09-28, ✅ KHÉP, ADR-043) — tiền thân Cram + header collection (cơ chế chấm đã thay bằng extra-review-r1). → `docs/journal/2026-09-28.md`
 - OCR (2026-09-28, ✅, ADR-042) — `RecognizeDocumentsRequest` iOS 26+, nén ảnh 1600px thật, đã kiểm trên máy thật. → `docs/investigations/ocr-line-drop/`
-- prompt-v6 (2026-10-02, **T1+T2a+T2b+T3 ✅ code/test**, 2 việc chờ fen) — T1 eval script; T2a đường ống
-  `phrases`; T2b prompt v6 + xếp hạng + preselect 5; T3 `PhraseLocator` (ReadoKit) định vị cặp cụm →
-  chạm cụm EN thì cụm EN+VI cùng sáng (`EncounterText`/`PhraseHighlightText`, accent theo
-  `@AppStorage`). Full 406/408, kit 387/387. **Chờ fen:** (1) đọc bảng eval v5/v6
-  `.tmp/prompt-eval/20261002T041512Z.md`, (2) xem tay `ReadingSessionView` thật (chưa có launch arg mở
-  thẳng phiên đọc). → `docs/plans/prompt-v6.md`
+- prompt-v6 (2026-10-02, ✅ KHÉP) — T1 eval script; T2a đường ống `phrases`; T2b prompt v6 + xếp hạng +
+  preselect 5; T3 `PhraseLocator` (ReadoKit) định vị cặp cụm → chạm cụm EN thì cụm EN+VI cùng sáng
+  (`EncounterText`/`PhraseHighlightText`, accent theo `@AppStorage`). Full 406/408, kit 387/387. **Fen
+  chấp nhận bảng eval 2026-10-02** để mở khoá task tiếp — lưu ý nguồn OCR demo dùng để lặp đánh giá
+  chưa tốt, không coi đây là phép đo chất lượng chặt (xem nợ data ở §2 nếu cần đánh giá lại). Còn nợ
+  xem tay `ReadingSessionView` thật — §2 mục 7. → `docs/plans/done/prompt-v6.md`
 
 ## 2. Chờ owner (không tự bắt đầu)
 
-1. A-02: prompt baseline **đã có** ở `docs/agent/prompt-spec.md` §2 (owner dán 2026-09-08; dòng "vẫn trống" cũ ở đây sai). Còn thiếu: fen chấm output baseline vs app — `prompt-v6` T2b đã chạy v5 vs v6 thật (`qwen3.8-flash`, 4 trang), bảng ở `.tmp/prompt-eval/20261002T041512Z.md` chờ fen đọc.
+1. ~~A-02~~ — **đã trả lời 2026-10-02:** fen chấp nhận bảng v5/v6 (`prompt-v6` T2b) để mở khoá task tiếp. Nợ mới thay vào: nguồn OCR của bộ diagnostics dùng để lặp đánh giá (`.tmp/diagnostics/20260928T112557Z/`) **chưa tốt** — muốn đánh giá prompt chặt hơn (R2 hoặc đổi prompt lần sau) thì cần fen đưa lại data OCR sạch, hoặc chạy `pull_diagnostics.sh` lấy lượt chụp mới trên máy thật rồi `prompt_eval.py` lại.
 2. Ngưỡng leech FR-19 đã chốt = 6 (2026-09-24). Không hỏi lại.
 3. Chốt hướng "Từ session này collect thêm" (J2 bước 7 — schema không có `session_id` trên `vocab_items`, `ROADMAP.md` §4).
 4. Camera (ADR-036) permission-denied: fen test khi tiện — từ chối quyền camera có bật đúng nút "Mở Cài đặt" không. Không chặn, happy case đã xong.

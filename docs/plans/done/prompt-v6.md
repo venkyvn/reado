@@ -1,7 +1,8 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
-> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅ + T2a ✅ + T2b ✅ (code+build, chờ fen chấm
-> bảng eval) + T3 ✅ (code+test+ảnh, chờ fen xem tay `ReadingSessionView`)**.
+> **Trạng thái:** closed (2026-10-02) - T1+T2a+T2b+T3 xong; fen chấp nhận bảng eval (biết nguồn OCR
+> demo cũ chưa tốt, chấp nhận để mở khoá task tiếp theo chứ không phải xác nhận chất lượng OCR). Nợ
+> còn lại (xem tay `ReadingSessionView`) chuyển sang `docs/session-brief.md` §2.7.
 > Hợp đồng gốc 09-30 vẫn đúng; sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
 
 ## Chỗ cập nhật so với bản 09-30
@@ -103,9 +104,12 @@
   cả 4 trang hai bản đều ra JSON hợp lệ, v6 có phrases hợp lệ (11–16/trang, v5 luôn 0 vì chưa hỏi),
   vocab 2 bản tương đương về chất lượng. Bảng: `.tmp/prompt-eval/20261002T041512Z.md` (gitignore,
   **không** commit — có text trang bản quyền).
-- **DoD còn treo:** full xanh ✅ **và** fen chấm bảng v5 vs v6 — bảng đã có, **fen chưa xác nhận**.
-  Coi T2b là "code xong, build xanh", chưa coi là "prompt v6 đã kiểm chứng chất lượng" cho tới khi
-  fen đọc `.tmp/prompt-eval/20261002T041512Z.md` và nói v6 không tệ hơn.
+- **DoD ✅ 2026-10-02 — fen chấp nhận bảng eval.** Nguyên văn: hình/text trang dùng để lặp đánh giá
+  là từ bộ diagnostics cũ, OCR lúc đó chưa tốt — **nguồn vào không quá ổn**, nên bảng này không phải
+  phép đo chất lượng nghiêm ngặt. Fen chủ động chấp nhận bản nâng cấp này **để mở khoá task tiếp
+  theo**, không phải khẳng định prompt v6 đã qua kiểm chứng chất lượng chặt. Việc đánh giá kỹ hơn
+  (nếu cần) phải chạy lại `prompt_eval.py` trên dữ liệu OCR SẠCH mới — chưa có kế hoạch, ghi nợ ở
+  `docs/session-brief.md` §2 khi có nhu cầu thật.
 
 ### T3 — UI chạm-sáng (✅ code+test+ảnh xong 2026-10-02, chờ fen xem tay `ReadingSessionView`)
 - `Analysis/PhraseLocator.swift` (ReadoKit, mới): định vị `segment.phrases[].en`/`.vi` thành
