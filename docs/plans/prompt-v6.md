@@ -1,38 +1,78 @@
 # Plan — prompt-v6: dịch hay, cặp cụm EN↔VI, chọn sẵn top 5
 
-> **Trạng thái:** open (2026-09-30) - dịch hay + cặp cụm EN↔VI + chọn sẵn top 5; fen go, chưa code
+> **Trạng thái:** open (cập nhật 2026-10-02) — **T1 ✅**, T2/T3 chưa làm. Hợp đồng gốc 09-30 vẫn đúng;
+> sửa vài chỗ đã cũ sau remove-proxy (ADR-049) và ux-redesign-r1.
 
-> 3 task, T1 làm chen lúc nào cũng được; T3 sau `reencounter-r1` T2.
+## Chỗ cập nhật so với bản 09-30
+1. ADR cho prompt v6 → **ADR-055** (ADR-049 đã là "bỏ proxy").
+2. Out-of-scope cũ ghi nợ `proxy/prompt.py` — proxy đã xoá hẳn (ADR-049), bỏ.
+3. "T3 sau reencounter-r1 T2" — T2 đã xong, T3 hết chặn.
+4. File UI đúng vị trí hiện tại: `SegmentBlock` ở `app/Reado/Analysis/AnalysisComponents.swift`;
+   `ReadingSessionView` ở `app/Reado/Library/ReadingSessionView.swift`.
+5. Bẫy: `AnalysisResponseNormalizer.normalize` dựng lại segment chỉ giữ `source_en`/`translation_vi`
+   → sẽ làm rơi `phrases` nếu không sửa. T2 phải vá chỗ này.
+6. Preselect hiện tại (`ReviewDraftBuilder.drafts`) giữ verified theo **thứ tự xuất hiện trên trang**,
+   unverified/suspect lên đầu. v6 đổi: verified giữ **thứ tự AI xếp hạng giá trị học**, preselect top 5 đầu.
 
 ## Spec
-- FR / journey: FR-02 (output schema), FR-05 (hiển thị cặp cụm), **FR-09 criterion 1 "mặc định tất cả" → "chọn sẵn top 5"** (sửa PRD). J1, J2.
-- Nguyên lý: #2 (bản dịch là thứ để học văn phong, chống word by word), #3 (AI đề xuất, người duyệt cuối). Không đụng NG.
-- In-scope: prompt v6, `segments[].phrases`, xếp hạng vocabulary + preselect 5, UI chạm-sáng, script đánh giá.
-- Out-of-scope: `proxy/prompt.py` (còn v1 ảnh, proxy chưa deploy — ghi nợ), lưu cặp cụm vào kho từ.
+- FR / journey: FR-02 (output schema), FR-05 (hiển thị cặp cụm), **FR-09 criterion 1 "mặc định tất cả"
+  → "chọn sẵn top 5"** (sửa PRD). J1, J2.
+- Nguyên lý: #2 (bản dịch là thứ để học văn phong, chống word by word), #3 (AI đề xuất, người duyệt
+  cuối). Không đụng NG.
+- In-scope: prompt v6, `segments[].phrases`, xếp hạng vocabulary + preselect 5, UI chạm-sáng, script
+  đánh giá.
+- Out-of-scope: lưu cặp cụm vào kho từ; đổi transport/client.
 - Q mở: không. Fen chốt 2026-09-30: **N = 5, AI xếp hạng**; bộ đánh giá = **replay Diagnostics**.
-- Docs lệch đã thấy: prompt baseline ĐÃ có ở `prompt-spec.md` §2 (09-08) — session-brief §2 ghi "trống" là sai (đã sửa).
 
 ## Tầng 1 — HLD
-- Schema output thêm (tuỳ chọn, không phá output cũ): `segments[].phrases: [{"en": "...", "vi": "..."}]`, `maxItems 6`. `en` phải là substring của `source_en`, `vi` của `translation_vi` — sai thì bỏ im lặng (đồ hiển thị, không phải vocab; luật "không tự loại" của FR-02 chỉ áp cho vocabulary).
-- `vocabulary[]` trả về theo thứ tự giá trị học giảm dần. `ReviewDraft.drafts` chọn sẵn tối đa 5 item đầu trong số verified + đúng CEFR; phần còn lại hiện, không chọn sẵn.
-- `SegmentDTO` thêm `phrases` optional → JSON phiên đọc cũ vẫn decode; cặp cụm theo phiên đọc (tối đa 10 phiên), không vào `vocab_items`.
+- Schema output thêm (tuỳ chọn, không phá output cũ): `segments[].phrases: [{"en": "...", "vi": "..."}]`,
+  `maxItems 6`. `en` phải là substring của `source_en`, `vi` của `translation_vi` — sai thì bỏ im lặng
+  (đồ hiển thị, không phải vocab; luật "không tự loại" của FR-02 chỉ áp cho vocabulary).
+- `vocabulary[]` trả về theo thứ tự giá trị học giảm dần. `ReviewDraft.drafts` chọn sẵn tối đa 5 item
+  đầu trong số verified + đúng CEFR; phần còn lại hiện, không chọn sẵn.
+- `PageAnalysis.Segment` + `SegmentDTO` (ReadingSession) thêm `phrases` optional → JSON phiên đọc cũ
+  vẫn decode; cặp cụm theo phiên đọc (tối đa 10 phiên), không vào `vocab_items`. Không đổi DDL SQLite.
 - `Prompt.version` 5 → 6.
-- prompt-spec §7 dòng "Nên đưa từ nào vào bộ ôn tập" → sửa: AI chỉ **xếp thứ tự đề xuất**, người dùng vẫn duyệt (FR-03/FR-09).
-- File: `Analysis/Prompt.swift`, `AnalysisResponseDecoder.swift`, `AnalysisResponseNormalizer.swift`, `PageAnalysis.swift`, `ReviewDraft.swift`, `Session/ReadingSession.swift`; Reado `AnalysisView`/`SegmentBlock`, `ReadingSessionView`.
+- prompt-spec §7 dòng "Nên đưa từ nào vào bộ ôn tập" → sửa: AI chỉ **xếp thứ tự đề xuất**, người dùng
+  vẫn duyệt (FR-03/FR-09).
+- File: `Analysis/Prompt.swift`, `AnalysisResponseDecoder.swift`, `AnalysisResponseNormalizer.swift`,
+  `PageAnalysis.swift`, `ReviewDraft.swift`, `Session/ReadingSession.swift`; Reado
+  `Analysis/AnalysisComponents.swift` (SegmentBlock), `Library/ReadingSessionView.swift`.
 
 ## Tầng 2 — Tasks
 
-### T1 — công cụ đánh giá
-- `scripts/prompt_eval.py` (stdlib/urllib, không dependency): đọc OCR của ≤30 lần phân tích trong thư mục `scripts/pull_diagnostics.sh`, chạy prompt v5 và v6 (key từ `.env`), xuất bảng so song song Markdown ra `.tmp/prompt-eval/`.
-- DoD: chạy được trên 1 thư mục diagnostics thật; không ghi text trang vào repo (bản quyền).
+### T1 — công cụ đánh giá (làm trước) (✅ xong 2026-10-02)
+- `scripts/prompt_eval.py` (stdlib/urllib, không dependency): đọc OCR của ≤30 lần phân tích trong
+  thư mục `scripts/pull_diagnostics.sh` (`.tmp/diagnostics/<ts>/…/analyses/*/` có `page_ocr.txt`,
+  `meta.json` [model, baseURL, cefr], `response_raw.txt`).
+- Prompt lấy từ file template `scripts/prompts/v5.txt` (chép nguyên `Prompt.text` hiện tại, placeholder
+  `{CEFR}`/`{PAGE_OCR}`); gọi cùng model/baseURL của từng lần phân tích gốc, body giống
+  `OpenAICompatClient.body` (`response_format: json_object`).
+- Key: đọc `.env` lúc chạy (tái dùng logic `pick_key` của `scripts/sim_aibox.sh`), không in key ra bất
+  cứ đâu.
+- Xuất bảng so song song Markdown (EN · VI-vA · VI-vB · vocab rank) vào `.tmp/prompt-eval/` — không
+  ghi text trang vào repo (bản quyền).
+- DoD: chạy được trên 1 thư mục diagnostics thật với `--prompt v5.txt --prompt v5.txt` (sanity, so
+  một prompt với chính nó trước khi có v6).
+- **Kết quả:** chạy thật trên `.tmp/diagnostics/20260928T112557Z/` (4 lần phân tích) — gọi đúng API,
+  nhưng `deepseek-v4.1-flash` trả 503 model_not_found cả 4 lần (model đã đổi tên/ngừng ở provider —
+  đáng chú ý cho T2, không phải lỗi script). Output đúng chỗ, không lộ key/text trang. Chi tiết:
+  `docs/journal/2026-10-02.md`.
 
 ### T2 — prompt v6 + decoder
+- Soạn `scripts/prompts/v6.txt`, lặp với T1 tới khi ổn, rồi port nguyên văn vào `Prompt.swift`
+  (`version = 6`). Kit test so khớp `Prompt.text(...)` với nội dung file template (chống lệch giữa
+  bản eval và bản app).
 - Prompt: dịch theo văn phong, cụm/nhịp câu tự nhiên; `phrases`; xếp hạng vocabulary.
-- Decoder/normalizer: `phrases` optional + kiểm substring; preselect top 5.
-- Test: decode có/không `phrases`, bỏ cặp sai, JSON phiên cũ, preselect 5.
-- Docs: prompt-spec §3/§4/§7, PRD FR-09, ADR-049.
+- `AnalysisResponseNormalizer` phải giữ `phrases` khi dựng lại segment (hiện đang làm rơi).
+- Decoder: `phrases` optional + kiểm substring, bỏ cặp sai; preselect top 5 theo thứ tự AI xếp hạng.
+- Test: decode có/không `phrases`, bỏ cặp sai, JSON phiên cũ, preselect 5 (đủ/thiếu/có unverified).
+- Docs: prompt-spec §3/§4/§7, PRD FR-09, ADR-055.
 - DoD: full xanh **và** fen chấm bảng T1: v6 không tệ hơn v5.
 
 ### T3 — UI chạm-sáng
-- Chạm cụm EN → cụm VI tương ứng sáng (AnalysisView + ReadingSessionView). Kiểu hiển thị khác gạch chân từ kho của `reencounter-r1`.
+- Chạm cụm EN → cụm VI tương ứng sáng (`SegmentBlock` trong `AnalysisComponents.swift` +
+  `ReadingSessionView`). Kiểu hiển thị khác gạch chân từ kho của FR-22 (reencounter-r1); token theo
+  `design-system/reado/MASTER.md`.
+- Fixture `sim_screens.sh open analysis-fixture` thêm `phrases` để chụp được.
 - DoD: full xanh + fen xem tay.
