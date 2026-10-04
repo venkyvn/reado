@@ -112,4 +112,48 @@ final class DevSeedTests: XCTestCase {
         let count = try db.scalarInt64("SELECT COUNT(*) FROM cards;") ?? 0
         XCTAssertEqual(count, 0)
     }
+
+    // MARK: - markLeeches (home-eevas-r1 T3)
+
+    func testMarkLeechesSuspendsCountCardsAtThreshold() throws {
+        let db = try Fixtures.seededDB()
+        try seedNewCards(db, count: 5)
+        try DevSeed.gradeHistory(on: db, now: now, days: 20)
+        let threshold = try XCTUnwrap(LeechService.readThreshold(on: db))
+
+        try DevSeed.markLeeches(on: db, count: 2, now: now)
+
+        let suspended = try db.rows(
+            "SELECT lapses FROM cards WHERE suspended_at IS NOT NULL;")
+        XCTAssertEqual(suspended.count, 2)
+        for row in suspended {
+            XCTAssertGreaterThanOrEqual(row["lapses"].intValue ?? 0, Int64(threshold))
+        }
+    }
+
+    func testMarkLeechesIsIdempotent() throws {
+        let db = try Fixtures.seededDB()
+        try seedNewCards(db, count: 5)
+        try DevSeed.gradeHistory(on: db, now: now, days: 20)
+
+        try DevSeed.markLeeches(on: db, count: 2, now: now)
+        let firstCount = try db.scalarInt64(
+            "SELECT COUNT(*) FROM cards WHERE suspended_at IS NOT NULL;") ?? 0
+
+        try DevSeed.markLeeches(on: db, count: 2, now: now)
+        let secondCount = try db.scalarInt64(
+            "SELECT COUNT(*) FROM cards WHERE suspended_at IS NOT NULL;") ?? 0
+
+        XCTAssertEqual(firstCount, 2)
+        XCTAssertEqual(firstCount, secondCount, "gọi lại không nhân đôi leech")
+    }
+
+    func testMarkLeechesNoOpWhenNoCards() throws {
+        let db = try Fixtures.seededDB()
+        // Không crash khi kho trống.
+        try DevSeed.markLeeches(on: db, count: 2, now: now)
+        let count = try db.scalarInt64(
+            "SELECT COUNT(*) FROM cards WHERE suspended_at IS NOT NULL;") ?? 0
+        XCTAssertEqual(count, 0)
+    }
 }

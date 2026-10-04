@@ -1026,3 +1026,14 @@
   "Màn UI"): "hàng streak" → "pill 🔥N trên toolbar". Không đụng FSRS, schema, FR nào
   — chỉ lớp trình bày. T2 (banner bấm được), T3 (màn "Từ hay quên" FR-19), T4 (tìm từ
   FR-08) còn mở trong plan, chưa làm.
+- **T3 bổ sung (2026-10-04) — màn "Từ hay quên" tối thiểu:** banner
+  `"\(n) từ hay quên ›"` dưới hero Home (ẩn khi `n == 0`), dẫn tới `LeechListView`
+  (danh sách card `LeechService.fetchLeeches`, mỗi dòng 2 hành động: "Đưa lại hàng
+  đợi" = `LeechService.unsuspend`, "Xoá hẳn" = hàm mới `LeechService.deleteWord`
+  xoá `vocab_items` CASCADE xuống cards/review_logs/encounters). Quyết định phạm
+  vi: màn này CHỈ requeue/xoá — sinh lại thẻ bằng AI hay sửa tay để sau (đụng hợp
+  đồng prompt, cần `/rplan` riêng). Xoá hẳn có `confirmationDialog` xác nhận
+  (không phải swipe một chạm — mất cả lịch ôn và lần gặp lại). Ngưỡng hiển thị
+  hardcode "6 lần" trong header danh sách — đã chốt (CLAUDE.md §5, Seeder
+  `defaultLeechLapses = 6`), không đọc qua kênh AppModel riêng (chưa có, không cần
+  thêm chỉ cho một dòng chữ tĩnh).

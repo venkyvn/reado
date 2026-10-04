@@ -10,11 +10,12 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- home-eevas-r1: T1 + T2 xong. T3 (màn "Từ hay quên" FR-19) · T4 (tìm từ) đang làm tiếp cùng
-  session (fen: "đủ context"). → `docs/plans/home-eevas-r1.md`
+- home-eevas-r1: T1 + T2 + T3 xong. T4 (tìm từ) đang làm tiếp cùng session (fen: "đủ context").
+  Nợ: T3 chưa xem tay swipe/confirmationDialog trên simulator thật (chỉ đối chiếu code, ảnh tĩnh
+  không giả lập chạm). → `docs/plans/home-eevas-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
-- 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 T1 (học UI từ eevas.top theo yêu cầu fen — pill 🔥N + ⚙ tách hai nút tròn trên toolbar Home, hero thêm số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ", ADR-057; bỏ `statsSection` cũ) · T2 (màn duyệt: dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu, tự đổi theo đích ADR-053). 424/426 xanh cả hai task, ảnh xem tay.
+- 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 T1 (học UI từ eevas.top theo yêu cầu fen — pill 🔥N + ⚙ tách hai nút tròn trên toolbar Home, hero thêm số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ", ADR-057; bỏ `statsSection` cũ) · T2 (màn duyệt: dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu, tự đổi theo đích ADR-053) · T3 (màn "Từ hay quên" FR-19 tối thiểu — `LeechService.deleteWord`, `requeueLeech`/`deleteLeechWord`, banner Home + `LeechListView`). 428/430 xanh (T3 +4 test mới), ảnh xem tay (trừ swipe/dialog — nợ xem tay).
 - 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval) · fsrs-queue-fix-r1 T3 (elapsed_days một định nghĩa — lib tự ghi đè, bỏ `CardSnapshot.dayDiff`) · q13-sense-filter-r1 (ADR-056, gập thay vì xoá — T1 kit + T2 UI "Đã thuộc · N"/fixture/ảnh, khép plan) · verify-nav-r1 T3 (fen xem tay toàn bộ §2.7 trên simulator thật — Ôn thêm/Alert lỗi/Reencounter/Capture/Settings/prompt-v6/migration/camera + nhóm "Đã thuộc · N" đều pass, khép plan) · fix nhỏ `save-banner` debug fixture thiếu `bannerHubID` (phát hiện lúc fen tự rà lại các ADR chốt nhanh) · reencounter-r1 khép hẳn (T3 hết nghi N=0, xác nhận qua verify-nav-r1 T3) · fr10-close-r1 (Task 3.8 khép — `ReviewDraftBuilder.regroup` tính lại nhóm "Đã thuộc" khi đổi đích trên màn duyệt, ADR-053/Q-09; 9 test mới, full 424/426 xanh; fen xem tay đổi đích trên simulator thật, pass). → `docs/plans/done/q13-sense-filter-r1.md`, `docs/plans/done/verify-nav-r1.md`, `docs/plans/done/reencounter-r1.md`, `docs/plans/done/fr10-close-r1.md`
 - 2026-10-01 → `docs/journal/2026-10-01.md`: fix-alert-sheet-dismiss-r1 (`AlertHostStack`) · master-rewrite-r1 (ADR-051) · extra-review-r1 "Ôn thêm 20" (ADR-050) · remove-proxy-r1 BYOK-only (ADR-049) · refactor-r2/r3/r4 · audit nhỏ sau refactor-r4.
 - 2026-09-30 → `docs/journal/2026-09-30.md`: new-order-r1 (ADR-047) · vision-refresh-r2 · shell-chrome-r1.
@@ -32,6 +33,7 @@
 6. repo-hygiene-r1: repo `venkyvn/reado` public hay private? (ảnh `ref/sample` còn trong history cũ → public thì cần `git filter-repo`); key Gemini từng nằm trong `.env.example` (chưa commit) — rotate nếu dán ở nơi khác; `docs/sample.md` (untracked) và `.keep.json` (`{}`) — giữ hay xoá.
 7. ~~Xem tay UI còn treo~~ — fen xem tay trên simulator thật (2026-10-02, verify-nav-r1 T3): Ôn thêm, Alert lỗi, Reencounter, Capture, Settings, prompt-v6 (`ReadingSessionView` qua Hub), migration v3→v4 — tất cả pass. Chi tiết từng mục: `docs/plans/done/verify-nav-r1.md` T3, `docs/journal/2026-10-02.md`.
 8. ~~fr10-close-r1: xem tay đổi đích~~ — fen test tay (2026-10-02): đổi "Lưu vào ⏷" sang bộ khác và về Kho tạm trên simulator thật, nhóm "Đã thuộc · N" tính lại đúng. `docs/plans/done/fr10-close-r1.md` T1 hết nợ.
+9. home-eevas-r1 T3: xem tay màn "Từ hay quên" — vuốt trái "Đưa lại hàng đợi", vuốt phải "Xoá" + `confirmationDialog`, `contextMenu`. Ảnh tĩnh chỉ xác nhận layout, chưa xác nhận hành vi chạm thật. `docs/plans/home-eevas-r1.md`.
 
 ## 3. Bẫy máy này
 

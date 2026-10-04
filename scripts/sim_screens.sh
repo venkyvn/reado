@@ -16,7 +16,8 @@
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
 #                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
 #                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
-#                                           # encounter-sheet, phrase-highlight, analysis-fixture-mature, save-banner).
+#                                           # encounter-sheet, phrase-highlight, analysis-fixture-mature, save-banner,
+#                                           # leeches).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
 #                                           # `--agent` seed sẵn một agent AI-Box với key GIẢ (không kiểm tra, không gọi mạng)
 #                                           # để `activeAgentReady` = true — mở camera/luồng chụp không cần key thật.

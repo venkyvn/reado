@@ -103,6 +103,37 @@ public enum DevSeed {
             ])
     }
 
+    /// home-eevas-r1 T3 — chấm `.again` liên tiếp đủ ngưỡng leech cho vài thẻ để Home/màn
+    /// "Từ hay quên" có dữ liệu khi seed `demo-reviewed`. Idempotent: đã có thẻ suspended thì bỏ qua.
+    public static func markLeeches(
+        on db: SQLiteDatabase, count: Int = 2, now: Date
+    ) throws {
+        guard try (db.scalarInt64("SELECT COUNT(*) FROM cards WHERE suspended_at IS NOT NULL;") ?? 0) == 0
+        else { return }
+
+        let cardIDs = try db.rows(
+            "SELECT id FROM cards WHERE suspended_at IS NULL ORDER BY rowid LIMIT ?;",
+            [.int(Int64(count))]
+        ).compactMap { $0.first?.textValue }
+        guard !cardIDs.isEmpty else { return }
+
+        let threshold = try LeechService.readThreshold(on: db) ?? 6
+        let scheduler = try ReviewScheduler(settings: ReadoFSRS.readSettings(on: db))
+
+        for cardID in cardIDs {
+            var simNow = now
+            for _ in 0..<threshold {
+                guard let snapshot = try ReviewService.fetchSnapshot(on: db, cardID: cardID)
+                else { break }
+                let outcome = try scheduler.grade(.again, snapshot: snapshot, now: simNow)
+                try ReviewService.record(
+                    on: db, cardID: cardID, before: snapshot, outcome: outcome,
+                    leechThreshold: threshold, now: simNow)
+                simNow = simNow.addingTimeInterval(-300)
+            }
+        }
+    }
+
     /// Dọn nốt: thẻ nào vẫn due trong cửa sổ "hôm nay" (lịch FSRS ngắn hơn
     /// offset đã rải ở `gradeHistory`) → chấm thêm 1 lần Easy ngay trước `now`
     /// để đẩy `due_at` ra sau. Tối đa 3 vòng — không treo nếu interval vẫn

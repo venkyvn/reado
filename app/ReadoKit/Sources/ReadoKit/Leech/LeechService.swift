@@ -96,6 +96,12 @@ public enum LeechService {
         try db.run("DELETE FROM cards WHERE id = ?;", [.text(cardID)])
     }
 
+    /// Xoá hẳn TỪ (không chỉ card) — FR-19 "xoá hẳn". CASCADE qua vocab_item_id dọn
+    /// cards/review_logs/encounters (PRAGMA foreign_keys = ON, Database.swift).
+    public static func deleteWord(on db: SQLiteDatabase, vocabItemID: String) throws {
+        try db.run("DELETE FROM vocab_items WHERE id = ?;", [.text(vocabItemID)])
+    }
+
     /// Danh sách card đang bị suspend (leech) kèm thông tin từ vựng để hiển thị.
     /// ORDER BY suspended_at DESC — mới nhất trước.
     public static func fetchLeeches(on db: SQLiteDatabase) throws -> [LeechCard] {

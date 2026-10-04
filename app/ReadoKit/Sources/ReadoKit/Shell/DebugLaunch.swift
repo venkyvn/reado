@@ -54,6 +54,8 @@ public struct DebugLaunch: Equatable, Sendable {
         case analysisFixtureMature
         /// ux-redesign-r1 T2 — banner "Đã lưu … · Xem" mẫu (`ShellBanner`) trên Home, chưa cần luồng lưu thật.
         case saveBanner
+        /// home-eevas-r1 T3 — màn "Từ hay quên" (FR-19), danh sách card leech.
+        case leeches
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -148,6 +150,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "phrase-highlight": return .phraseHighlight
         case "analysis-fixture-mature": return .analysisFixtureMature
         case "save-banner": return .saveBanner
+        case "leeches": return .leeches
         default: return nil
         }
     }

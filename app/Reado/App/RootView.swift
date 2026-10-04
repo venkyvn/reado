@@ -39,6 +39,8 @@ enum ShellRoute: Hashable {
     case streak
     case settings
     case data
+    /// FR-19 (home-eevas-r1 T3): màn "Từ hay quên" — danh sách card leech.
+    case leeches
 }
 
 struct RootView: View {
@@ -303,6 +305,9 @@ struct RootView: View {
         case .data:
             selectedTab = .library
             libraryPath = [.data]
+        case .leeches:
+            selectedTab = .today
+            todayPath = [.leeches]
         case .capture:
             // Bỏ qua kiểm agent: chụp được màn camera kể cả `--seed empty` (chưa có agent).
             model.capture.analysisTargetCollectionID = model.shell.shutterTargetCollectionID
@@ -382,6 +387,8 @@ struct RootView: View {
             SettingsView()
         case .data:
             ExportView()
+        case .leeches:
+            LeechListView()
         }
     }
 }

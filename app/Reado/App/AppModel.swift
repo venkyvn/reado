@@ -60,6 +60,8 @@ final class AppModel {
     /// FR-22 / Home: số TỪ khác nhau được gặp lại (`seen` hoặc `recognized`) trong 7
     /// ngày gần nhất — dòng "Gặp lại N từ tuần này" (ẩn khi 0).
     private(set) var reencounteredThisWeek = 0
+    /// FR-19: danh sách từ bị suspend vì quên quá ngưỡng — "Từ hay quên" ở Home.
+    private(set) var leeches: [LeechCard] = []
     /// ADR-041/ADR-049: chỉ agent BYOK có key mới tính "sẵn sàng" — hàng
     /// placeholder bị `AnalysisAgentStore.list()` lọc khỏi `agents`, nên
     /// activeID trỏ vào nó (chưa chọn agent) tự rơi về false ở `.first` dưới.
@@ -180,6 +182,7 @@ final class AppModel {
         case .demoReviewed:
             seedDevDemoCSVIfNeeded(on: database)
             try? DevSeed.gradeHistory(on: database, now: SystemClock().now)
+            try? DevSeed.markLeeches(on: database, now: SystemClock().now)
         }
     }
     #endif
@@ -199,6 +202,9 @@ final class AppModel {
         reencounteredThisWeek = read("số từ gặp lại", fallback: 0) {
             try EncounterRepository.distinctWordsEncountered(
                 on: database, since: now.addingTimeInterval(-7 * 86_400))
+        }
+        leeches = read("từ hay quên", fallback: []) {
+            try LeechService.fetchLeeches(on: database)
         }
         homePinIDs = read("bộ ghim ở Home", fallback: []) {
             try HomePinService.ids(on: database)

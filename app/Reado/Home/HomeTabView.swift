@@ -83,6 +83,7 @@ struct HomeTabView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+            leechBannerRow
             homePinRows
         }
         .refreshable { model.reloadOverview() }
@@ -208,6 +209,25 @@ struct HomeTabView: View {
         let masteredTotal = model.collections.reduce(0) { $0 + $1.masteredCount }
         metrics.append(HeroCard.Metric(value: "\(masteredTotal) từ", label: "Đã nhớ"))
         return metrics
+    }
+
+    /// FR-19 (home-eevas-r1 T3): banner "N từ hay quên ›" dưới hero — ẩn khi N=0.
+    /// Chỉ icon tô `Theme.warn` (MASTER §Màu: `.tint` chỉ hợp lệ khi tô nền control hệ thống);
+    /// chữ giữ `.foregroundStyle(.primary)` mặc định của `Label`/`NavigationLink`.
+    @ViewBuilder
+    private var leechBannerRow: some View {
+        if !model.leeches.isEmpty {
+            Section {
+                NavigationLink(value: ShellRoute.leeches) {
+                    Label {
+                        Text("\(model.leeches.count) từ hay quên")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Theme.warn)
+                    }
+                }
+            }
+        }
     }
 
     private func loadCefrLabel() {

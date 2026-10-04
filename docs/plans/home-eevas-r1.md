@@ -27,6 +27,36 @@
 > Không chụp sepia/Dynamic Type accessibility cho T2 (DoD T2 không yêu cầu, chỉ 2 bullet trạng thái
 > hiện/ẩn + vị trí dòng chữ).
 >
+> **T3 xong (2026-10-04)** — màn "Từ hay quên" tối thiểu (FR-19). ReadoKit:
+> `LeechService.deleteWord` (DELETE vocab_items, CASCADE qua cards/review_logs/encounters —
+> FK đã bật); `DevSeed.markLeeches` (chấm `.again` liên tiếp `threshold` lần qua
+> `ReviewScheduler`+`ReviewService.record`, idempotent, gọi SAU `gradeHistory` trong
+> `seedDevIfNeeded` case `.demoReviewed`). App: `AppModel.leeches` (`fetchLeeches` trong
+> `reloadOverview`), `AppModel+Leech.swift` mới (`requeueLeech`/`deleteLeechWord` theo đúng
+> pattern `attempt`/`report`/`guard let database` có sẵn — KHÔNG có `must()`, đó chỉ là chỗ
+> giữ trong đề bài), `Library/LeechListView.swift` mới (List + swipe hai bên + contextMenu +
+> confirmationDialog xoá + `ContentUnavailableView` rỗng + `shellScrollChrome()`), route
+> `ShellRoute.leeches` (`RootView`), debug screen `leeches` (`DebugLaunch` + test +
+> `sim_screens.sh` comment), banner "N từ hay quên ›" dưới hero `HomeTabView` (chỉ icon tô
+> `Theme.warn`, chữ `.primary` mặc định — không `.tint`). ADR-057 nối thêm đoạn T3.
+> `EncounterMatcher`: đọc `AppModel+Encounter.swift` xác nhận matcher KHÔNG cache trong
+> AppModel — dựng lại mỗi lần `.onAppear` ở `AnalysisView`/`ReadingSessionView` — nên
+> `reloadOverview()` sau requeue/delete không cần làm gì thêm cho matcher.
+> Test: `scripts/test.sh kit` 409/409 xanh (thêm 1 `LeechTests.testDeleteWordCascades…`, 2
+> `DevSeedTests` cho `markLeeches`, 1 `DebugLaunchTests` case `leeches`). `scripts/test.sh build`
+> xanh. Full `scripts/test.sh`: 428/430 (2 skip — cùng baseline T1, +4 test mới so với T1/T2).
+> Xem tay: `open home --seed demo-reviewed --fresh` → `shot after-home-leech-banner` (light+dark,
+> "2 từ hay quên" đúng vị trí dưới hero, icon cam, chevron, không bị ShellTabBar che). `open
+> leeches --seed demo-reviewed --no-build` → `shot after-leeches` (light+dark, 2 dòng
+> compound/keystone, header "quên từ 6 lần trở lên", "Quên 6 lần" mỗi dòng, back nút tròn,
+> không CTA nào bị che). Không chụp swipe-action/contextMenu/confirmationDialog đang mở —
+> screenshot tĩnh không giả lập chạm được; đã đọc code đối chiếu đúng pattern
+> `LibraryTabView`/`SettingsView` (swipeActions hai bên, `.tint(Color.accentColor)` cho requeue,
+> role `.destructive` cho xoá) và `HomePinMenu.swift` (confirmationDialog isPresented binding).
+> Ngưỡng "6 lần" hardcode trong header danh sách (CLAUDE.md §5 đã chốt `defaultLeechLapses`,
+> không có kênh AppModel đọc threshold cho UI — không bịa thêm property chỉ cho một dòng chữ
+> tĩnh). T4 (tìm từ FR-08) còn mở trong plan, chưa làm.
+>
 > Bước đầu tiên khi bắt đầu T1: lưu file này thành `docs/plans/home-eevas-r1.md` (cùng commit T1).
 > Người implement: Sonnet, **1 task = 1 session**, đóng bằng `/rhandoff`. Task UI → load skill
 > `reado-ui` trước khi sửa view.

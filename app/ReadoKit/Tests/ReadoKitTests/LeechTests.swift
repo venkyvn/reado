@@ -192,6 +192,32 @@ final class LeechTests: XCTestCase {
             1)
     }
 
+    func testDeleteWordCascadesCardsAndReviewLogs() throws {
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "gone-for-good")
+        let cardID = try Fixtures.insertCard(
+            in: db, vocabItemID: vocabID, state: "review", lapses: 10,
+            suspendedIso: "2026-09-05T00:00:00Z")
+        try Fixtures.insertLog(in: db, cardID: cardID, reviewedAtIso: "2026-09-04T00:00:00Z")
+
+        try LeechService.deleteWord(on: db, vocabItemID: vocabID)
+
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM vocab_items WHERE id = ?;", [.text(vocabID)]),
+            0, "vocab_item phải bị xoá hẳn")
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM cards WHERE id = ?;", [.text(cardID)]),
+            0, "CASCADE phải dọn card")
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM review_logs WHERE card_id = ?;", [.text(cardID)]),
+            0, "CASCADE phải dọn review_logs")
+    }
+
     // MARK: — fetchLeeches
 
     func testFetchLeechesReturnsOnlySuspendedWithVocabContext() throws {
