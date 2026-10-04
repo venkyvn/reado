@@ -2,9 +2,10 @@ import Foundation
 
 /// Migration DDL — dialect SQLite R1 đúng từng dòng của docs/db.md tầng A.
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
-/// Bảy bảng v1 + `encounters` (v4) + index; seed nằm ở Seeder chứ không phải migration.
+/// Bảy bảng v1 + `encounters` (v4) + `pdf_sources` (v5) + index; seed nằm ở Seeder
+/// chứ không phải migration.
 public enum Migration {
-    public static let currentVersion: Int64 = 4
+    public static let currentVersion: Int64 = 5
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
@@ -44,6 +45,24 @@ public enum Migration {
         );
         """,
         "CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);",
+    ]
+
+    /// pdf-reader-r1 T1 (FR-23, ADR-058) — đọc PDF trong Reado. PK là
+    /// `collection_id` (không id riêng) → mỗi collection gắn tối đa 1 PDF; attach
+    /// lần 2 là UPSERT ghi đè, không INSERT dòng mới. Không CHECK chặn kho tạm —
+    /// app-rule (db.md A.2.2), vì SQLite không có cách CHECK liên-bảng gọn.
+    static let v5Statements: [String] = [
+        """
+        CREATE TABLE pdf_sources (
+          collection_id TEXT NOT NULL PRIMARY KEY
+                          REFERENCES collections(id) ON DELETE CASCADE,
+          display_name  TEXT NOT NULL,
+          bookmark      TEXT NOT NULL,
+          page_index    INTEGER NOT NULL DEFAULT 0,
+          page_count    INTEGER NOT NULL DEFAULT 0,
+          updated_at    TEXT NOT NULL
+        );
+        """,
     ]
 
     /// v2 → v3: chuyển 2 slot ghim cũ (`home_shortcut_1/2`) sang JSON `home_pin_ids`,
@@ -222,6 +241,13 @@ public enum Migration {
                         try db.exec(statement)
                     }
                     try db.exec("PRAGMA user_version = 4;")
+                }
+            case 4:
+                try db.inTransaction {
+                    for statement in v5Statements {
+                        try db.exec(statement)
+                    }
+                    try db.exec("PRAGMA user_version = 5;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

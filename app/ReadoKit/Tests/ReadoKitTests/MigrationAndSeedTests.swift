@@ -19,7 +19,7 @@ final class MigrationAndSeedTests: XCTestCase {
         XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
     }
 
-    func testAllEightTablesExist() throws {
+    func testAllNineTablesExist() throws {
         let db = try Fixtures.seededDB()
         let rows = try db.rows(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';"
@@ -30,7 +30,7 @@ final class MigrationAndSeedTests: XCTestCase {
             Set([
                 "collections", "vocab_items", "cards", "review_logs",
                 "analysis_agents", "reading_sessions", "settings",
-                "encounters",
+                "encounters", "pdf_sources",
             ]))
     }
 
@@ -38,19 +38,23 @@ final class MigrationAndSeedTests: XCTestCase {
 
     func testMigrationV3ToV4CreatesEncountersAndKeepsData() throws {
         // DB đã ở v3 (đủ 7 bảng, chưa có `encounters`) + dữ liệu thật → chạy lại
-        // Migration.run phải thêm bảng mà không mất vocab.
+        // Migration.run phải thêm bảng mà không mất vocab. seededDB() giờ lên
+        // thẳng v5 nên phải rollback CẢ pdf_sources (v5) trước khi reset về v3,
+        // không thì Migration.run đi tiếp 4→5 và CREATE TABLE pdf_sources đã
+        // tồn tại → lỗi "table already exists".
         let db = try Fixtures.seededDB()
         let collectionID = try XCTUnwrap(
             db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
         let vocabID = try Fixtures.insertVocab(
             in: db, collectionID: collectionID, term: "keep")
+        try db.exec("DROP TABLE pdf_sources;")
         try db.exec("DROP INDEX idx_encounters_item;")
         try db.exec("DROP TABLE encounters;")
         try db.exec("PRAGMA user_version = 3;")
 
         try Migration.run(on: db)
 
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 4)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 5)
         XCTAssertEqual(
             try db.scalarInt64(
                 "SELECT COUNT(*) FROM sqlite_master WHERE name = 'encounters';"), 1)
@@ -61,6 +65,66 @@ final class MigrationAndSeedTests: XCTestCase {
             try db.scalarString("SELECT term FROM vocab_items WHERE id = ?;", [.text(vocabID)]),
             "keep")
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 0)
+    }
+
+    // MARK: — v5 pdf_sources (pdf-reader-r1, FR-23/ADR-058)
+
+    func testMigrationV4ToV5CreatesPdfSourcesAndKeepsData() throws {
+        // DB đã ở v4 (đủ 8 bảng, chưa có `pdf_sources`) + dữ liệu thật → chạy lại
+        // Migration.run phải thêm bảng mà không mất vocab.
+        let db = try Fixtures.seededDB()
+        let collectionID = try XCTUnwrap(
+            db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
+        let vocabID = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "keep")
+        try db.exec("DROP TABLE pdf_sources;")
+        try db.exec("PRAGMA user_version = 4;")
+
+        try Migration.run(on: db)
+
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 5)
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'pdf_sources';"), 1)
+        XCTAssertEqual(
+            try db.scalarString("SELECT term FROM vocab_items WHERE id = ?;", [.text(vocabID)]),
+            "keep")
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM pdf_sources;"), 0)
+    }
+
+    func testPdfSourcesCollectionIDIsPrimaryKey() throws {
+        // PK = collection_id → chỉ 1 PDF/collection; INSERT trùng id thứ hai fail
+        // (không phải nghiệp vụ "ghi đè" — đó là việc của PDFSourceRepository.attach
+        // qua UPSERT, test ở PDFSourceRepositoryTests).
+        let db = try Fixtures.seededDB()
+        let collectionID = try XCTUnwrap(
+            db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
+        try db.run(
+            """
+            INSERT INTO pdf_sources (collection_id, display_name, bookmark, page_index, page_count, updated_at)
+            VALUES (?, 'a.pdf', 'Zm9v', 0, 10, '2026-10-04T00:00:00Z');
+            """, [.text(collectionID)])
+        XCTAssertThrowsError(
+            try db.run(
+                """
+                INSERT INTO pdf_sources (collection_id, display_name, bookmark, page_index, page_count, updated_at)
+                VALUES (?, 'b.pdf', 'YmFy', 0, 20, '2026-10-04T00:00:00Z');
+                """, [.text(collectionID)]))
+    }
+
+    func testPdfSourcesCascadeDeletesWithCollection() throws {
+        let db = try Fixtures.seededDB()
+        let collectionID = try Fixtures.insertCollection(in: db, name: "Sách PDF")
+        try db.run(
+            """
+            INSERT INTO pdf_sources (collection_id, display_name, bookmark, page_index, page_count, updated_at)
+            VALUES (?, 'a.pdf', 'Zm9v', 0, 10, '2026-10-04T00:00:00Z');
+            """, [.text(collectionID)])
+        try db.run("DELETE FROM collections WHERE id = ?;", [.text(collectionID)])
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM pdf_sources WHERE collection_id = ?;", [.text(collectionID)]),
+            0)
     }
 
     func testEncountersKindCheckRejectsUnknownKind() throws {
