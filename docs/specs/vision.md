@@ -31,8 +31,9 @@ tương lai đều phải trả lời được: nó phục vụ nguyên lý nào
 
 **Với Reado:** Nguồn học là văn bản thật mà người dùng tự chọn — cuốn sách giấy
 đang nằm trên bàn, bài báo mạng vừa mở ra, tài liệu chuyên ngành phải đọc cho công
-việc. Reado không sản xuất nội dung, không biên tập lại, không đơn giản hoá câu
-văn. Nó chỉ đứng cạnh người đọc.
+việc, hoặc một file PDF đang mở trên máy. Reado không sản xuất nội dung, không biên
+tập lại, không đơn giản hoá câu văn. Nó chỉ đứng cạnh người đọc — kể cả khi "cạnh"
+đó là ngay trong màn đọc PDF của chính Reado (FR-23, ADR-058).
 
 **Chống lại:** Kho bài đọc do app soạn sẵn. Ngay khi Reado bắt đầu tự viết nội
 dung, nó trở thành một graded reader nữa — và người dùng lại đọc thứ tiếng Anh
@@ -120,6 +121,10 @@ tên, đủ để mở lại mấy trang vừa đọc. Ảnh gốc không bao gi
 Hai lý do cho giới hạn này: toàn văn trang sách là bề mặt bản quyền lớn hơn hẳn một
 câu trích, và nhu cầu đọc lại có thật nhưng chỉ với vài trang gần nhất, không phải cả
 cuốn.
+
+Cùng tinh thần đó: khi nguồn là một file PDF đang đọc trên máy (FR-23, ADR-058),
+Reado không bao giờ chép file đó vào app — chỉ giữ một chỗ trỏ tới file (bookmark)
+và số trang đang đọc. File gốc vẫn luôn nằm ở nơi người dùng đặt nó.
 
 **Chống lại:** Biến Reado thành một chat interface đẹp hơn. Nếu người dùng vẫn
 phải copy thủ công từ câu trả lời sang nơi khác, Reado chưa giải quyết được gì.

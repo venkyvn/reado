@@ -10,11 +10,11 @@
 | Field | Value |
 |---|---|
 | Created | 2026-09-18 |
-| Last updated | 2026-09-24 |
+| Last updated | 2026-10-04 (pdf-reader-r1 T0 — FR-23 task 3.17, ADR-058) |
 | Thế hệ | v2 — native iOS + local-first SQLite + proxy hybrid (chốt 2026-09-17) |
 | Tiền nhiệm | `MVP_PLAN.md` (PWA-gen) → `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) |
 | Phase hiện tại | **Phase 3 — đang chạy.** Đã xong 3.1 FR-16 Export (`d23e19a`) + 3.2 FR-19 Leech (`7ea032e`) + 3.3 FR-04 Capture failure (`fb7f53a`, 91/91 test) + 3.6 FR-14 Daily Progress (`7263fb1`, 98/98) + 3.7 FR-15 Settings (`e1f5d5a`, 107/107) + 3.5 FR-08 + FR-17 (`0a5de27`, 122/122) + 3.9 FR-18 (`5060ada`, 129/129) + **3.10 FR-20 (`602ded5`, 141/141)** + **3.12 Reminder (`caa958f`, 148/148)** + **shortcut Home FR-17 (`a48b1e6`, 158/158)** + **T0 cửa Dữ liệu (`2907666`)** + **T1 J2 hub + FR-05/06 (`a7a2e15`, 165/165)** + **T2 J-R1-P heatmap (`55c2685`, 171/171)**. Toàn bộ task không-gate-Q-*/proxy đã cạn. **Q-06/08/09 đã chốt 2026-09-22 (ADR-032).** Còn chặn: 3.8 (chỉ còn dữ liệu thật) · ngưỡng leech FR-19 (số lapse) · 3.11 (0.7 proxy + 1.5 adapter) · 3.13 (dữ liệu thật) · cram FR-18 (R2) · "Từ session collect thêm" (xem §4) |
-| Nguồn nội dung | [docs/prd.md](docs/specs/prd.md) (FR-01..FR-22) · [docs/research/tech-stack.md](docs/research/tech-stack.md) · [docs/agent-rulebook.md](docs/agent/agent-rulebook.md) (mục 6: walking skeleton) · [docs/journeys.md](docs/specs/journeys.md) (J1–J6 + J-R1-*, thứ tự prompt UI) · [docs/session-brief.md](docs/session-brief.md) |
+| Nguồn nội dung | [docs/prd.md](docs/specs/prd.md) (FR-01..FR-23) · [docs/research/tech-stack.md](docs/research/tech-stack.md) · [docs/agent-rulebook.md](docs/agent/agent-rulebook.md) (mục 6: walking skeleton) · [docs/journeys.md](docs/specs/journeys.md) (J1–J6 + J2b + J-R1-*, thứ tự prompt UI) · [docs/session-brief.md](docs/session-brief.md) |
 
 ---
 
@@ -54,7 +54,7 @@
 | — | Data type | 📌 uuid `TEXT` chữ thường có gạch nối · timestamp `TEXT` ISO-8601 **UTC hậu tố `Z`** · `fsrs_params` `TEXT` JSON + cột `fsrs_version` | Mapping đầy đủ: tech-stack mục 7.2 |
 | — | Schema | 📌 `cards.state` có **bốn** giá trị; `review_logs` lưu snapshot **TRƯỚC** khi chấm, cùng transaction với update `cards`; **KHÔNG** có `unique` trên `vocab_items` | Chống trùng ở FR-10 lúc trích xuất |
 | — | Slice build đầu | 📌 **Walking skeleton** = FR-01, FR-02, FR-03, FR-09, FR-11, FR-12 + `is_default` của FR-17 (kho luật mục 6). FR-21 **sau** skeleton | Phase 2 của file này |
-| — | Tombstones | 📌 FR-07 và FR-13 đã bỏ (không implement, không xoá dòng); NG-07 một input path là ảnh chụp; NG-08 không hỏi ngữ pháp | Dính tới là dừng |
+| — | Tombstones | 📌 FR-07 và FR-13 đã bỏ (không implement, không xoá dòng); NG-07 EPUB/ebook + chép file vào app (PDF đọc tại chỗ đã đảo sang FR-23, ADR-058 2026-10-04); NG-08 không hỏi ngữ pháp | Dính tới là dừng |
 | — | Reminder | 📌 Không Web Push (tech-stack mục 8.3). R1 nhắc ôn = **local notification** trên máy (owner chốt 2026-09-18); APNs khi Later cần nhắc lúc app không mở | Task 3.12 |
 | — | Gập hoa thường tiếng Việt (FR-20) | 📌 **Hạ chữ thường Unicode, GIỮ dấu** (owner chốt 2026-09-24): `"SÁCH"≈"sách"`, `"Đá"≈"đá"`, nhưng `"Đá" ≠ "Đã"` — dùng chung `normalizedTerm` lúc trim/insert (SQLite NOCASE chỉ gập ASCII) | Khớp collection FR-20 + cảnh báo trùng term |
 | — | Proxy framework | 📌 **Python + `google-genai`** — owner duyệt đề xuất 6.2 ngày 2026-09-18 (framework cụ thể kiểu FastAPI chốt trong SD 0.6) | Task 0.7 |
@@ -160,6 +160,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | 3.11 | FR-21 đầy đủ: list agent OpenAI-compat + add key Keychain + chọn active cho FR-02 | Sau skeleton (PRD mục 10); còn chờ 0.7 proxy + 1.5 adapter | ⬜ |
 | 3.13 | Đo + ghi nhận NFR-01/NFR-02 (chưa chốt ngưỡng) + kiểm M-07 bằng dữ liệu thật | R1 chỉ đo, R2 mới chốt ngưỡng; M-07 cần dữ liệu thật → cuối | ⬜ |
 | 3.16 | FR-22 Gặp lại từ cũ khi đọc (reencounter-r1, ADR-048): T1 dữ liệu · T2 màn đọc · T3 thang tiến độ + Home | M-06; plan `docs/plans/done/reencounter-r1.md` | ✅ 2026-10-02 (migration v4 `encounters`, `EncounterRepository`, `EncounterMatcher`, export; gạch chân + popover + `seen` khi lưu trang; thang 4 mức, thanh 4 màu, `seen` vào thứ tự thẻ mới — fen xác nhận test xanh + xem tay UI; hàng Home "Gặp lại N từ" + `MasteryRing` đã thấm xác nhận cuối qua verify-nav-r1 T3 với dữ liệu thật) |
+| 3.17 | FR-23 Đọc PDF trong Reado (pdf-reader-r1, ADR-058): T1 schema `pdf_sources` · T2 lớp chữ + chấm chất lượng + prompt PDF · T3 reader (đọc + nhớ trang) · T4 nối vào màn duyệt · T5 eval prompt PDF trên PDF thật | FR-23 mới, đảo một phần NG-07; đọc tại chỗ không chép file | T0 (docs/ADR) ✅ 2026-10-04 — `docs/plans/pdf-reader-r1.md`. T1–T5 ⬜ |
 
 ### Phase 4 — R2 (cổng cứng: R1 đã dùng hằng ngày ≥ 4 tuần + owner GO; chốt **Q-11** trước)
 
@@ -178,6 +179,11 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 
 Multi-user/auth (NG-05) · dashboard sản phẩm + sync đa thiết bị (nền: [multi-client-sync](docs/research/review.md) + [sync-server-ddl](docs/specs/sync-server-ddl.md)) · secondary segment (PRD mục 4).
 
+**Từ pdf-reader-r1 (FR-23, ADR-058, out-of-scope R1):** đánh dấu trang PDF đã phân
+tích (cần cột số trang ở `reading_sessions`) · lối tắt "Đọc tiếp" PDF trên Home · nút
+thủ công "Đọc lại bằng OCR" trong reader · mở khoá PDF có mật khẩu trong app · EPUB/
+ebook (NG-07 vẫn cấm).
+
 ### 3bis. Đối chiếu journey ↔ task (nguồn: [docs/journeys.md](docs/specs/journeys.md))
 
 Thứ tự code trong các phase trên **bám theo journeys**: vòng skeleton sống trong J1 (lối tắt capture) và J3/J4 (nhánh hằng ngày); J2 hub mở ra sau khi skeleton chạy; J6 và các J-R1-* theo đúng thứ tự prompt UI (mục 5 của doc). **Mỗi task khi code mở journey tương ứng làm kịch bản kiểm, cạnh GWT của FR.**
@@ -187,6 +193,7 @@ Thứ tự code trong các phase trên **bám theo journeys**: vòng skeleton s�
 | Home (prompt #1) | ≤2 shortcut collection (FR-17), số due/new tách + backlog riêng + streak (FR-14), CTA capture/học/ôn/Dữ liệu | shell tối thiểu: Phase 2; full: 3.6 (+ 3.5 phần shortcut) | shell sớm nhất, chi tiết ở 3.6 |
 | J1 — Capture nhanh | Camera → vocab picker → kho tạm, **không** hỏi collection, không ép đọc song ngữ | 2.1 + 2.2 + 2.3 + 2.4 | Phase 2 |
 | J2 — Đọc chủ động (hub) | Collection hub: capture + **10 session chọn được** + kho vocab theo collection + ôn collection này | 3.4 (FR-05/06) + 3.5 (FR-08) + phần FR-17 còn lại | Phase 3 |
+| J2b — Đọc PDF trong bộ | Gắn 1 PDF/bộ (bookmark, không chép file) + reader nhớ trang + phân tích trang đang đọc → cùng màn duyệt J1/J2 | 3.17 (FR-23) | Phase 3 |
 | J3 — Học mới | Nhánh `new` bị `daily_new_limit`; hết hạn mức → về Home, backlog nhãn riêng | 2.5 + 3.6 (FR-14) | Phase 2 (queue), 3.6 (số Home) |
 | J4 — Ôn đến hạn | Nhánh due không bị hạn mức; cùng card UI với J3 | 2.5 | Phase 2 |
 | J5 — Trộn / phạm vi | Ba chế độ scope, nợ ngoài phạm vi **nhìn thấy**; KHÔNG cram | 3.9 (FR-18) | Phase 3 |

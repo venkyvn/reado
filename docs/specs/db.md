@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft — tầng A là DDL máy; tầng B chưa implement |
 | Created | 2026-09-17 |
-| Last updated | 2026-09-18 |
+| Last updated | 2026-10-04 (pdf-reader-r1 T0 — bảng `pdf_sources`, FR-23/ADR-058) |
 | Related | [research/vocabulary.md](docs/research/vocabulary.md) mục 6, [research/tech-stack.md](docs/research/tech-stack.md) mục 7 và 10.2, [research/review.md](docs/research/review.md), [prd.md](docs/specs/prd.md) |
 
 **Tài liệu này không thay** [vocabulary.md mục 6](docs/research/vocabulary.md#6-schema). Doc kia là *hình dạng logic* (tên cột, nullability, vì sao). File này là *dialect sẽ `CREATE`*: R1 trên iPhone, và ghi chú Later để khỏi nhồi envelope sync vào máy.
@@ -55,9 +55,12 @@ App **bật** `PRAGMA foreign_keys = ON` mỗi connection. SQLite mặc định 
 
 Id do **client sinh** lúc insert (kể cả khi đang online) — cửa sync Later không phải đánh số lại.
 
-### A.2 Tám bảng trên máy
+### A.2 Chín bảng trên máy
 
 Không có `user_id`, `usn`, `graves`. Không có `tags` / `synonyms` / `antonyms` trên item. **Không** cột API key.
+Bảng thứ 9, `pdf_sources` (migration v5, FR-23/ADR-058), ở cuối mục này — tách riêng
+vì nó không theo dialect timestamp/uuid chung của 8 bảng đầu (không `id` riêng, PK là
+`collection_id`).
 
 ```sql
 -- PRAGMA foreign_keys = ON;  -- moi connection
@@ -205,7 +208,24 @@ CREATE TABLE settings (
 );
 ```
 
-Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi. `encounters` khoá theo `vocab_item_id` (`ON DELETE CASCADE`): chuyển collection giữ nguyên, xoá vocab thì lần gặp lại đi theo.
+```sql
+-- Migration v5 (FR-23, ADR-058). Mỗi collection gắn tối đa 1 PDF — PK là
+-- collection_id, không id riêng. Kho tạm bị chặn ở tầng app (A.2.2), không CHECK SQL.
+CREATE TABLE pdf_sources (
+  collection_id TEXT NOT NULL PRIMARY KEY REFERENCES collections(id) ON DELETE CASCADE,
+  display_name  TEXT NOT NULL,   -- tên file hiện trên Hub, không phải đường dẫn
+  bookmark      TEXT NOT NULL,   -- base64 của URL.bookmarkData — không có BLOB (A.1)
+  page_index    INTEGER NOT NULL DEFAULT 0,  -- đếm từ 0; UI hiện +1
+  page_count    INTEGER NOT NULL DEFAULT 0,
+  updated_at    TEXT NOT NULL    -- ISO-8601 Z, ghi lại mỗi lần đổi trang/bookmark
+);
+```
+
+`pdf_sources` **không** export CSV/JSON (FR-16), **không** lên server (B) — bookmark
+chỉ dùng được trên đúng máy đã tạo ra nó, mang sang máy khác là vô nghĩa. Gắn PDF mới
+cho một collection đã có PDF là `UPSERT` ghi đè nguyên dòng, `page_index` về 0.
+
+Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi. `encounters` khoá theo `vocab_item_id` (`ON DELETE CASCADE`): chuyển collection giữ nguyên, xoá vocab thì lần gặp lại đi theo. `pdf_sources` cũng `ON DELETE CASCADE` theo `collection_id` — xoá bộ thì liên kết PDF mất theo, **file gốc trong Files không bị ảnh hưởng** (Reado chưa từng chép nó).
 
 `review_logs`: R1 chỉ ghi `mode = 'srs'`. Ba giá trị kia giữ đường R2, không đụng FSRS state.
 
@@ -234,6 +254,7 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | `openai_compat`: `base_url` + `model` không null; HTTPS trừ loopback / RFC1918 | Self-host LAN |
 | Client POST `{base_url}/chat/completions` (prefix kiểu `https://openrouter.ai/api/v1`) | Wire OpenAI-compat |
 | `cards.due_at` luôn **đọc cột đã ghi sẵn lúc chấm**, không tính lại on-the-fly | Fuzz FSRS làm ngày "nhảy" mỗi lần tính lại → lịch ôn loạn (bia mộ từ journeys.md Phần 2 cũ, bỏ 2026-10-02) |
+| Không `INSERT`/`UPSERT` `pdf_sources` cho collection `is_default = 1` | FR-23: kho tạm không có phiên đọc (Q-10), không có "trang đang đọc" để nhớ |
 
 ### A.3 Không nằm file SQLite kho từ
 
@@ -247,13 +268,18 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 
 ### A.4 Field cố ý không lưu
 
-Giữ nguyên bảng structure 6.1: không `cards.elapsed_days`, không `cards.retrievability`, không `review_logs.last_elapsed_days`.
+Giữ nguyên bảng structure 6.1: không `cards.elapsed_days`, không `cards.retrievability`, không `review_logs.last_elapsed_days`. Thêm từ FR-23/ADR-058: **file PDF gốc không bao giờ lưu** — `pdf_sources` chỉ giữ bookmark (chỗ trỏ) + số trang, không giữ nội dung file hay text đã đọc của cả cuốn (NFR-04 áp nguyên).
 
 ---
 
 ## B. Later — server sync / dashboard
 
 Chưa làm ở R1. Lần sync đầu = **full upload** từ máy. `usn` / `graves` / RLS chỉ cần khi đã có **client thứ hai** hoặc dashboard đọc cùng kho.
+
+**`pdf_sources` không bao giờ lên server, kể cả khi sync mở (FR-23/ADR-058).** Bookmark
+chỉ dùng được trên đúng máy đã resolve ra nó; mang sang máy/client khác là dữ liệu vô
+nghĩa, không phải một nhánh envelope cần thiết kế. Có client thứ hai muốn đọc PDF thì
+tự gắn lại trên máy đó.
 
 ### B.1 Envelope (thêm lúc mở sync, không có trên máy R1)
 

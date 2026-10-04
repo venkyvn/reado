@@ -13,7 +13,8 @@ Luật cứng sống ở `CLAUDE.md` §4–5. Protocol session / đọc file / p
 | Schema / DDL / dialect SQLite | `docs/specs/db.md` | Grep cột / bảng; cấm read nguyên |
 | Lịch ôn, FSRS, cram, sync Later | `docs/research/review.md` | Grep mục cần |
 | Tổ chức collection / thẻ / import | `docs/research/vocabulary.md` | Grep; đây **không** phải rulebook |
-| Capture AI, output schema, verify example | `docs/agent/prompt-spec.md` | FR-02 |
+| Capture AI, output schema, verify example | `docs/agent/prompt-spec.md` | FR-02 (ảnh) + mục 3b (`Prompt.pdfText`, FR-23) |
+| PDF reader, lớp chữ, chấm chất lượng, bookmark | `docs/decisions-log.md` ADR-058 | + `solution-design.md` §8b + `db.md` A.2 bảng `pdf_sources` |
 | OCR ngắt đoạn sai, chỉnh ngưỡng, log chẩn đoán | `docs/decisions-log.md` ADR-037 | `scripts/pull_diagnostics.sh` + `scripts/diag_summary.py` |
 | Module iOS, transaction, wiring skeleton | `docs/specs/solution-design.md` | §3 kiến trúc; §10 walking skeleton |
 | Slice + tiến độ FR | `ROADMAP.md` Phase 2–3 | Chỉ grep task; không read nguyên |

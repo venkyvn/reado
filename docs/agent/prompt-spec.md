@@ -4,7 +4,7 @@
 |---|---|
 | Status | **Draft — baseline đã có ở mục 2** (owner cung cấp 2026-09-08; bản tạm, mở cho tinh chỉnh theo M-03) |
 | Created | 2026-09-07 |
-| Last updated | 2026-09-08 |
+| Last updated | 2026-10-04 (pdf-reader-r1 T0 — mục 3b `Prompt.pdfText`, FR-23/ADR-058) |
 | Revision | v1.1 — điền prompt baseline ở mục 2 |
 | Related | [prd.md](docs/specs/prd.md) FR-02, [vision.md](docs/specs/vision.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/vocabulary.md](docs/research/vocabulary.md) |
 | Phạm vi | Trả lời câu hỏi: gửi gì cho AI, nhận về đúng structure nào, và làm sao biết cái nhận về là thật |
@@ -22,6 +22,7 @@ cuộc thảo luận sinh ra nó, vẫn đọc và tiếp tục được.
 - [1. Vì sao doc này tồn tại](#1-vì-sao-doc-này-tồn-tại)
 - [2. Chỗ trống chặn đường — prompt baseline](#2-chỗ-trống-chặn-đường--prompt-baseline)
 - [3. Prompt dựng lại](#3-prompt-dựng-lại)
+- [3b. Prompt PDF (`Prompt.pdfText`)](#3b-prompt-pdf-prompttext)
 - [4. Output schema](#4-output-schema)
 - [5. Mapping sang data model và sang FR-02](#5-mapping-sang-data-model-và-sang-fr-02)
 - [6. Xác minh `example`](#6-xác-minh-example)
@@ -168,6 +169,34 @@ Bốn chỗ trong prompt trên là quyết định đã chốt ở doc khác, kh
 | `term` giữ đúng dạng xuất hiện | Dạng thật sự đọc mới là dạng gắn với ký ức. Q-06 đã chốt: không lemmatize. Chuẩn hoá chữ thường làm phía client | structure mục 6.4 |
 | `meaning_vi` chỉ một nghĩa | Không có ràng buộc `unique`, nên "một dòng một nghĩa" là lời khai trung thực | structure mục 6.3 |
 | Từ đa nghĩa tách thành hai phần tử | Cùng lý do trên. Đây là Q-07 **đã được giải** | PRD mục 12 |
+
+---
+
+## 3b. Prompt PDF (`Prompt.pdfText`)
+
+**Mới — FR-23, ADR-058 (pdf-reader-r1 T2).** Khi trang vào từ PDF đọc trong Reado
+(không phải chụp ảnh) và lớp chữ của trang được chấm là dùng được, Reado gọi
+`Prompt.pdfText(cefrLevel:pageText:)` thay cho `Prompt.text` — **không** chạy OCR.
+Prompt này có `pdfVersion` riêng (bắt đầu `1`), bump độc lập với `Prompt.version`
+(ảnh, hiện 6).
+
+Output schema, luật `source_en`/`example` trích nguyên văn, và mapping sang data
+model **giữ y hệt** mục 3/4/5/6 — `VerifyEngine`, `PhraseLocator`, decoder,
+normalizer dùng chung. Khác đúng ba điểm, vì input là lớp chữ PDF thật (không phải
+kết quả OCR):
+
+| Khác với `Prompt.text` (ảnh) | Vì sao |
+|---|---|
+| Nhãn input là `PAGE_TEXT`, ghi rõ đây là lớp chữ trích từ PDF, **không phải OCR** — chữ chính xác, `\n`/`\n\n` đã dò ranh giới đoạn bằng hình học (tương tự OCR, xem ADR-037) trước khi đưa vào prompt | AI không cần "nghi ngờ" ký tự như với OCR, nhưng vẫn cần luật ngắt đoạn giống nhau để `segments[]` nhất quán giữa hai lối |
+| Dặn bỏ header, footer, số trang, tiêu đề chạy lặp mỗi trang | Lớp chữ PDF giữ nguyên cả phần layout "trang trí" mà mắt người đọc tự lọc, OCR theo ảnh crop sẵn thường không có phần này |
+| Từ bị gạch nối cuối hàng (`remark-` ở cuối dòng, `-able` đầu dòng sau) được ghép lại thành một từ khi dựng `source_en`. **Ngoại lệ duy nhất** cho luật "giữ nguyên từng chữ" — phải nói rõ trong prompt đây là ghép xuống dòng do layout, không phải AI tự sửa lỗi | PDF một cột thường ngắt dòng cứng theo khổ trang; OCR theo đoạn hình học ít gặp ca này hơn |
+| Câu bị cắt ngang ở đầu/cuối trang (tràn từ trang trước hoặc sang trang sau) vẫn được dịch bình thường trong `segments[]`, nhưng **không được chọn làm `example`** của bất kỳ `vocabulary[]` nào | Mỗi lần gọi chỉ thấy đúng một trang — không ghép nội dung hai trang lại; một `example` là câu cụt dễ sai nghĩa hơn câu đủ |
+
+Chất lượng lớp chữ được chấm **trước** khi gọi prompt này (`PDFPageText`, ReadoKit,
+pdf-reader-r1 T2) — bốn điều kiện: độ dài, ký tự lạ (`(cid:`, `\u{FFFD}`), tỷ lệ chữ
+cái/khoảng trắng/dấu câu, tỷ lệ token giống từ tiếng Anh. Rác hoặc trang chỉ là ảnh
+(PDF scan thật) → vẽ trang độ phân giải cao rồi đi đúng `Prompt.text` + OCR như ảnh
+chụp — người dùng không thấy khác biệt ngoài một dòng tiến độ.
 
 ---
 
@@ -426,6 +455,12 @@ Nói trước để kết quả xấu không bị hiểu thành thất bại c�
 - **Chất lượng kém hơn bản thủ công** → A-02 sai, và đây là kết quả nghiêm trọng nhất.
   Nhưng nó chỉ kết luận được khi **prompt baseline ở mục 2 đã có**.
 
+**Eval riêng cho `Prompt.pdfText` (mục 3b, FR-23/ADR-058):** cùng công cụ
+`scripts/prompt_eval.py` đã dùng cho A-02 ở prompt ảnh, nhưng rút literal từ
+`pdfText` thay `text` (cờ `--swift-func`) và chỉ lọc thư mục diagnostics có meta
+`source = pdf`. Owner chấm trên PDF thật trước khi chấp nhận `pdfVersion` —
+`docs/plans/pdf-reader-r1.md` T5, cùng cách đã làm cho prompt ảnh ở mục này.
+
 ---
 
 ## 9. Đã chốt và chưa chốt
@@ -444,6 +479,7 @@ Nói trước để kết quả xấu không bị hiểu thành thất bại c�
 | Không tự loại và không tự sửa item `unverified` | Mục 6 |
 | Từ đa nghĩa trả về nhiều phần tử, mỗi phần tử một nghĩa | structure mục 6.3 |
 | Tám thứ ở mục 7 **không** hỏi AI — ~~đủ tám~~ **còn sáu** từ 2026-09-08: topic tag + synonym/antonym được owner mở lại (xem mục 7) | Mục 7, rich-vocab-cram-ddl.md |
+| PDF có lớp chữ dùng được → `Prompt.pdfText` riêng, không OCR; rác/scan → vẽ ảnh rồi vẫn `Prompt.text` + OCR như cũ | Mục 3b, ADR-058, 2026-10-04 |
 
 ### Chưa chốt
 

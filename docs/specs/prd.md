@@ -5,11 +5,11 @@
 | Field | Value |
 |---|---|
 | Product | Reado |
-| Version | 0.10 |
+| Version | 0.12 |
 | Status | Draft |
 | Owner | fen |
 | Created | 2026-09-07 |
-| Last updated | 2026-10-01 |
+| Last updated | 2026-10-04 |
 | Source | [docs/idea.md](docs/idea.md) |
 | Related | [vision.md](docs/specs/vision.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [research/tech-stack.md](docs/research/tech-stack.md) |
 
@@ -63,9 +63,9 @@ song.
 
 > **v0.6 — chiều ngược của FR-16.** NFR-05 đòi mang dữ liệu đi được; round-trip còn
 > thiếu nhập CSV từ vựng. **FR-20 mới** — gộp CSV vào kho (không `unique`, preview
-> để bỏ dòng, card `new`). Đây **không** phải path capture thứ hai: NG-07 vẫn cấm
-> PDF/ebook; ảnh vẫn là đúng một lối đưa trang vào. Cửa UI tách khỏi Settings
-> (FR-15) — xem [journeys.md](docs/specs/journeys.md) J-R1-D.
+> để bỏ dòng, card `new`). Đây **không** phải path capture thứ hai: đến v0.6 vẫn chỉ
+> có ảnh là lối đưa trang vào — PDF/ebook là non-goal (NG-07 bản gốc). Cửa UI tách
+> khỏi Settings (FR-15) — xem [journeys.md](docs/specs/journeys.md) J-R1-D.
 
 > **v0.7 — đường vào nhanh cho collection đang đọc.** FR-17 cho phép chọn tối đa
 > hai named collection để hiện trên Home. Đây chỉ là shortcut vào Collection Hub,
@@ -103,6 +103,13 @@ song.
 > bao giờ deploy (ADR-041), app đã OCR trên máy từ ADR-034 — proxy chỉ còn là
 > code chết. NFR-07 chỉ còn vế key user ở Keychain, vế "key sản phẩm `.env` proxy"
 > là bia mộ. Chi tiết: [decisions-log.md ADR-049](docs/decisions-log.md).
+
+> **v0.12 — FR-23 đọc PDF trong Reado, đảo một phần NG-07.** Chốt 2026-10-04. Đọc
+> PDF trước đây phải đi vòng qua screenshot; giờ Reado đọc PDF tại chỗ (không chép
+> file vào app, chỉ giữ bookmark + trang đang đọc) và phân tích trang đang đọc —
+> cửa thu từ vựng **thứ hai**, song song ảnh chụp (FR-01). NG-07 **không bị xoá**,
+> chỉ còn giữ phần EPUB/ebook và việc chép file vào app. Chi tiết:
+> [decisions-log.md ADR-058](docs/decisions-log.md).
 
 ---
 
@@ -156,7 +163,7 @@ dù chúng có thể hợp lý về sau.
 | NG-04 | Chia sẻ deck, social feed, leaderboard | Chưa có người dùng thứ hai |
 | NG-05 | Multi-user, authentication, phân quyền | MVP một người dùng; thêm vào sẽ làm chậm G-04 |
 | NG-06 | Monetization, subscription, billing | Chỉ xem xét sau khi owner tự dùng đủ lâu để tin sản phẩm có giá trị |
-| NG-07 | Ebook / PDF import | Giữ đúng **một** input path là ảnh chụp. Nguồn nào cũng chụp được — trang giấy chụp bằng camera, màn hình chụp bằng screenshot — nên thêm path thứ hai không mở ra nguồn mới, chỉ nhân đôi bề mặt phải bảo trì. **FR-20 (nhập CSV từ vựng) không nằm trong non-goal này:** đó là chiều ngược của FR-16 / NFR-05, không phải lối đưa trang vào |
+| NG-07 | Ebook (EPUB, Kindle…); chép/lưu file nguồn vào app | **Đảo một phần 2026-10-04 (ADR-058):** PDF đọc tại chỗ trong Reado (không chép file, chỉ bookmark + trang) là cửa thu từ vựng thứ hai — xem **FR-23**. Vẫn cấm: EPUB/ebook (không có khái niệm trang cố định, cần thêm dependency đọc) và bất kỳ hình thức chép/lưu file nguồn vào app (bề mặt bản quyền, nguyên lý #5). **FR-20 (nhập CSV từ vựng) không nằm trong non-goal này:** đó là chiều ngược của FR-16 / NFR-05, không phải lối đưa trang vào |
 | NG-08 | Grammar explanation, bài tập ngữ pháp | Mở rộng scope không phục vụ job hiện tại |
 | NG-09 | Tự viết SRS algorithm | Dùng FSRS đã kiểm chứng; xem [vision.md](docs/specs/vision.md#retention-is-a-solved-problem--use-the-solution) |
 
@@ -281,6 +288,12 @@ thứ tự số trong tài liệu không còn liên tục.
 | FR-05 | Criterion 3 (chạm từ trong đoạn → nghĩa + IPA) được FR-22 mở rộng sang từ cũ trong kho |
 | Còn lại | Không đổi |
 
+| FR | Trạng thái ở v0.12 |
+|---|---|
+| FR-23 | **Mới** — đọc PDF trong Reado, cửa thu từ vựng thứ hai (bảng `pdf_sources`, prompt riêng), Epic E1. Đảo một phần NG-07 |
+| NG-07 | Nội dung viết lại: chỉ còn EPUB/ebook + chép file vào app |
+| Còn lại | Không đổi |
+
 ### Epic E1 — Capture & Analyze
 
 #### FR-01 — Page Capture
@@ -370,6 +383,46 @@ OCR và AI đều sai được. Người dùng phải là người chốt.
   dữ liệu bịa.
 - **Given** trang không phải tiếng Anh, **when** submit, **then** hệ thống
   báo không hỗ trợ và không tính phí lần gọi đó vào lịch sử.
+
+#### FR-23 — Đọc PDF trong Reado
+
+**Mới ở v0.12 (ADR-058, 2026-10-04).** Cửa thu từ vựng thứ hai, song song FR-01:
+thay vì chụp ảnh, người dùng đọc trực tiếp một file PDF trên máy ngay trong Reado và
+phân tích trang đang đọc. Đây **không** phải path capture thứ ba hay ebook reader đầy
+đủ — chỉ một PDF đọc tại chỗ cho mỗi collection có tên.
+
+- **Given** Hub của một collection có tên, **when** người dùng chọn "Gắn PDF…" và
+  chọn một file trong trình chọn file iOS, **then** collection đó gắn với file đó;
+  **file không bao giờ được chép vào app** — Reado chỉ giữ một bookmark trỏ tới file
+  và số trang đang đọc. Hub hiện hàng "Đọc PDF · tr. N".
+- **Given** kho tạm (`is_default`), **when** người dùng mở menu của nó, **then**
+  không có mục "Gắn PDF…" — kho tạm không có phiên đọc (Q-10), không có "trang đang
+  đọc" để nhớ.
+- **Given** một collection đã gắn PDF, **when** người dùng chọn "Gắn PDF…" lần nữa
+  (đổi file), **then** bookmark và trang đang đọc cũ bị ghi đè, trang đang đọc về 0.
+- **Given** đang mở reader của một PDF, **when** người dùng lật trang, **then** trang
+  hiện tại được nhớ lại; đóng reader rồi mở lại thì về đúng trang đó.
+- **Given** trang hiện tại có lớp chữ dùng được (không phải ảnh, không rác), **when**
+  người dùng bấm "Phân tích trang này", **then** hệ thống đọc thẳng lớp chữ (**không
+  OCR**) và gửi qua một prompt riêng cho PDF, rồi mở màn Duyệt & lưu giống FR-02/03;
+  đích lưu mặc định là collection đang đọc, vẫn đổi được. Lưu xong thì quay lại đúng
+  trang đang đọc.
+- **Given** trang hiện tại không có lớp chữ, hoặc lớp chữ có chất lượng quá thấp để
+  tin được (ví dụ ký tự lạ, tỷ lệ từ giống tiếng Anh quá thấp), **when** người dùng
+  bấm phân tích, **then** hệ thống tự vẽ trang thành ảnh, chạy OCR trên máy, rồi đi
+  đúng pipeline của FR-02 — người dùng không phải tự chọn hay làm gì thêm.
+- **Given** file PDF đã gắn bị xoá, di chuyển, không truy cập được (ví dụ chưa tải về
+  từ iCloud), hoặc có mật khẩu, **when** người dùng mở reader, **then** hệ thống báo
+  lỗi cụ thể và cho chọn lại file; vocabulary và session đã lưu trước đó không bị ảnh
+  hưởng.
+- FR-04 áp dụng nguyên cho trang PDF (ảnh/text không đọc được tiếng Anh thì báo lỗi,
+  không bịa dữ liệu); riêng hành động khắc phục là "Về trang đọc", không phải "Chụp
+  lại".
+
+Không thuộc phạm vi R1: EPUB/ebook (NG-07), highlight/ghi chú/mục lục trong PDF,
+phân tích nhiều trang một lượt, đánh dấu trang đã phân tích, mở khoá PDF có mật
+khẩu trong app. Chi tiết kỹ thuật: [solution-design.md §8b](docs/specs/solution-design.md),
+prompt riêng: [prompt-spec.md mục 3b](docs/agent/prompt-spec.md).
 
 ### Epic E2 — Read (thức thời)
 
@@ -807,8 +860,9 @@ xuất ở R1.
 - **Given** file hỏng (thiếu header, không parse được), **when** họ chọn file,
   **then** báo lỗi, không merge một phần.
 
-Không mâu thuẫn NG-07: capture trang vẫn đúng một path là ảnh. FR-20 không nhận
-PDF, ebook, hay ảnh.
+Không mâu thuẫn NG-07: FR-20 là nhập **CSV từ vựng** (chiều ngược của FR-16), không
+phải cửa capture trang — khác hẳn FR-23 (đọc PDF để phân tích trang). FR-20 không
+nhận PDF, ebook, hay ảnh.
 
 ---
 
@@ -819,7 +873,7 @@ PDF, ebook, hay ảnh.
 | NFR-01 | Analysis latency | Một trang sách khổ thường: mục tiêu ≤ 15s, p95 ≤ 30s. Con số này là **giả định cần đo lại** ở R1 rồi chốt |
 | NFR-02 | AI cost ceiling | Chi phí trung bình mỗi trang phải được **đo và ghi lại** ở R1. Owner đặt ngưỡng chấp nhận sau khi có số thật; không đoán trước |
 | NFR-03 | Offline review | **Đã được thoả bằng thiết kế ở v0.8 (Q-02 local-first), không còn là rủi ro mở.** Việc ôn tập chạy trên máy (SQLite + `swift-fsrs`); chỉ bước analysis (FR-02) bắt buộc online. Bảng `reading_sessions` của FR-05 nằm local nên nó không thêm ràng buộc nào; ở R2, đề xuất `word_relations` phải tải sẵn được để duyệt offline |
-| NFR-04 | Privacy & copyright | **Ảnh gốc không lưu.** Toàn văn trang chỉ được giữ tạm cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, bảng `reading_sessions` — cập nhật 2026-09-18 theo Q-10/ADR-029), rồi trôi dần; thứ giữ lâu dài từ một trang vẫn chỉ là **một câu trích cho mỗi từ vựng**. Bề mặt bản quyền vì thế nhỏ và có giới hạn rõ |
+| NFR-04 | Privacy & copyright | **Ảnh gốc không lưu.** Toàn văn trang chỉ được giữ tạm cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, bảng `reading_sessions` — cập nhật 2026-09-18 theo Q-10/ADR-029), rồi trôi dần; thứ giữ lâu dài từ một trang vẫn chỉ là **một câu trích cho mỗi từ vựng**. Bề mặt bản quyền vì thế nhỏ và có giới hạn rõ. **Cập nhật 2026-10-04 (FR-23/ADR-058):** file PDF nguồn **không bao giờ được chép vào app** — chỉ giữ bookmark + trang đang đọc (bảng `pdf_sources`) |
 | NFR-05 | Data portability | FR-16 phải luôn hoạt động; FR-20 là chiều ngược cho vocabulary CSV. Người dùng không bị lock-in — đây là điều kiện để owner tin tưởng dồn dữ liệu học tập nhiều năm vào đây |
 | NFR-06 | Durability of saved data | Card và review history không được mất khi app crash hay khi analysis lỗi. Dữ liệu đã confirm là dữ liệu đã an toàn |
 | NFR-07 | Secret management | **Đã được thoả bằng thiết kế ở v0.9 (Q-03 hybrid), không còn là rủi ro mở theo nghĩa cũ “không có key nào trên máy”.** (1) Key **sản phẩm** Reado chỉ nằm `.env` proxy — không nhúng app bundle. (2) Key **của user** (FR-21) nằm Keychain, không plaintext SQLite, không FR-16, không `analysis_events`, không lên server Reado. Network trace máy người dùng **có thể** thấy gọi tới `base_url` họ tự khai khi active là BYOK — đó là hệ quả đã chấp nhận của hybrid, không phải lộ key Reado. **ADR-049 (2026-10-01):** vế (1) là bia mộ — không còn proxy/key sản phẩm nào để thoả. Chỉ còn vế (2) |
@@ -871,6 +925,7 @@ dashboard web đọc kho từ (Later). FR-21 (BYOK) không thay proxy mặc đ�
 | Bao gồm | Loại trừ |
 |---|---|
 | FR-01, FR-02, FR-03, FR-04 | — |
+| FR-23 | Đọc PDF + phân tích trang đang đọc; **đánh dấu trang đã phân tích, lối tắt Home, nút "Đọc lại bằng OCR", mở khoá PDF có mật khẩu** để Later |
 | FR-05, FR-06 | Lưu 10 phiên đọc gần nhất mỗi collection có tên (text + dịch); **cảnh báo trước khi phiên trôi** có thể để R2 |
 | FR-22 | — |
 | FR-08, FR-09, FR-10, FR-17 | FR-08 chỉ cần lọc theo collection; **bỏ lọc theo CEFR và trạng thái** sang R2 |

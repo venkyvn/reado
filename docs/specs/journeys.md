@@ -5,7 +5,7 @@
 | Product | Reado |
 | Status | Draft |
 | Created | 2026-09-14 |
-| Last updated | 2026-10-02 (ux-redesign-r1 T11 — IA 2 tab, ADR-052/053/054) |
+| Last updated | 2026-10-04 (pdf-reader-r1 T0 — J2b đọc PDF, FR-23, ADR-058) |
 | Related | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [db.md](docs/specs/db.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [prompt-spec.md](docs/agent/prompt-spec.md), [design-system/reado/MASTER.md](design-system/reado/MASTER.md) |
 | Phạm vi | Flow spec trước UI: ai làm gì, màn nào, state nào. **Không** chốt màu, font, hay Design system |
 
@@ -42,8 +42,10 @@ flowchart TD
   library --> jD[JR1D Du lieu CSV]
   j1 --> khoTam[Kho tam]
   j2 --> namedCol[Named collection]
+  j2 --> j2b[J2b Doc PDF trong bo]
   khoTam --> j3
   namedCol --> j4
+  j2b --> namedCol
 ```
 
 Phiên ôn (J3/J4/J5) là một `fullScreenCover` mở từ hero Hôm nay, Hub bộ, hoặc Lịch streak — không vẽ riêng trong
@@ -71,7 +73,7 @@ Primary persona = owner: developer, B1–B2, đọc sách giấy / báo / tài l
 | JTBD-01 | Hiểu trang ngay lúc đọc — segment song ngữ, không đứt mạch |
 | JTBD-02 | Từ vừa khựng lại vào bộ ôn, kèm câu gốc, không gõ tay |
 
-Mọi journey **R1** dưới đây phải truy được về một trong hai. J1 chỉ JTBD-02. J2 là JTBD-01 rồi JTBD-02. J3–J5 chỉ JTBD-02. J6 phục vụ G-03 (tổ chức collection), không phải job thứ ba. J-R1-S phục vụ FR-15 (núm học tập) và FR-21 (chọn agent phân tích trang). J-R1-D phục vụ NFR-05 / FR-16 + FR-20 (mang kho từ đi và gộp lại) — không phải path capture. J-R1-P là *lens* của FR-14 (xem lịch streak), không phải job thứ ba. J7–J9 phục vụ **tài khoản**, không phải job đọc/ôn — chúng chỉ tồn tại khi có người dùng thứ hai.
+Mọi journey **R1** dưới đây phải truy được về một trong hai. J1 chỉ JTBD-02. J2 là JTBD-01 rồi JTBD-02. J2b (đọc PDF, FR-23) cùng job như J2 — chỉ khác lối vào trang. J3–J5 chỉ JTBD-02. J6 phục vụ G-03 (tổ chức collection), không phải job thứ ba. J-R1-S phục vụ FR-15 (núm học tập) và FR-21 (chọn agent phân tích trang). J-R1-D phục vụ NFR-05 / FR-16 + FR-20 (mang kho từ đi và gộp lại) — không phải path capture. J-R1-P là *lens* của FR-14 (xem lịch streak), không phải job thứ ba. J7–J9 phục vụ **tài khoản**, không phải job đọc/ôn — chúng chỉ tồn tại khi có người dùng thứ hai.
 
 ---
 
@@ -105,7 +107,7 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 |---|---|
 | Collection = bối cảnh đọc do user đặt tên; thay `book` | vision nguyên lý 4, structure §3 |
 | **Kho tạm** = collection `is_default`; `collection_id` không bao giờ null; từ trong kho tạm **ôn được ngay** | structure §3.2, FR-17 |
-| Input đúng **một** path: ảnh (camera hoặc thư viện) | NG-07 |
+| Input **hai cửa**: ảnh (camera/thư viện, FR-01) hoặc trang PDF đọc tại chỗ trong collection (FR-23) — PDF không bao giờ được chép vào app | NG-07, ADR-058 |
 | Song ngữ + summary **persist** cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, **không ảnh**) — đọc lại được để dễ đọc sách; **kho tạm không lưu session**; session thứ 11 trôi; vocab đã confirm không bao giờ trôi | Q-10 chốt 2026-09-18 (ADR-029); NFR-04; FR-05/FR-06 qua hình dạng J2 (một capture = một session) |
 | `example` phải trích nguyên văn; unverified **không** chọn sẵn; không loại trong im lặng | FR-02, prompt-spec |
 | Item verified: AI xếp theo giá trị học giảm dần, màn duyệt **chọn sẵn tối đa 5 đầu** (`preselectLimit`), còn lại user tự chọn thêm | FR-09, prompt-v6 T2b |
@@ -251,6 +253,66 @@ Mọi state capture của J1 cộng:
 | Kho tạm | Không hiện mục "Ghim lên Hôm nay" trong menu ⋯ | FR-17 |
 | Tạo collection trùng tên / xoá collection còn từ | FR-17: không xoá theo; cho chuyển sang collection khác | FR-17 |
 | Chỉ có kho tạm, chưa có bộ nào | Thư viện gợi ý "Tạo bộ theo tên sách" + nút, dưới card Kho tạm | — |
+
+---
+
+## J2b — Đọc PDF trong bộ
+
+**Mới 2026-10-04 (FR-23, ADR-058).** Cửa thu từ vựng **thứ hai**, song song J1/J2 —
+không thay thế, không phải ebook reader đầy đủ.
+
+**Trigger:** "Tối nay đọc tiếp *Atomic Habits*", có bản PDF trên máy (Files/iCloud
+Drive).
+**Job:** JTBD-01 rồi JTBD-02, giống J2 — chỉ khác lối vào trang.
+**Collection đích:** collection **đang gắn PDF**. Kho tạm không gắn được PDF (không
+có phiên đọc, Q-10).
+
+### Happy path — gắn PDF lần đầu
+
+1. Từ Hub của một collection có tên, menu ⋯ → **"Gắn PDF…"** → trình chọn file iOS
+   (`UIDocumentPickerViewController`, chỉ `.pdf`). Chọn file.
+2. Reado tạo một **security-scoped bookmark** trỏ tới file, **không chép file**.
+   Hub hiện hàng mới "📄 `<tên file>` · Đọc từ đầu", tách khỏi danh sách session.
+
+### Happy path — đọc và phân tích
+
+3. Chạm hàng "Đọc PDF · tr. N" → mở **reader** full-screen, nhảy tới đúng trang N
+   (trang 0 nếu chưa đọc).
+4. Lật ngang từng trang, pinch zoom. Thanh đáy: "tr. N / M" + CTA **"Phân tích
+   trang này"**. Trang hiện tại được nhớ tự động, không cần bấm lưu.
+5. Bấm CTA:
+   - Trang có lớp chữ dùng được → đọc thẳng lớp chữ, **không OCR**.
+   - Trang không có lớp chữ hoặc lớp chữ chất lượng thấp → tự vẽ trang thành ảnh,
+     OCR trên máy. Người dùng không thấy khác biệt ngoài tiến độ chậm hơn một chút.
+   - Cả hai ra **cùng** màn Duyệt & lưu (reuse J1 bước 4–5: tiến độ, tab Từ/Trang,
+     "Lưu vào ⏷" mặc định là bộ đang đọc).
+6. Lưu → sheet đóng, **về đúng trang đang đọc** (không phải về Hub). Banner "Đã lưu
+   N từ vào X · Xem" (ADR-053).
+7. Rời reader (back) → Hub: session mới đứng đầu danh sách 10 (cùng luật J2 bước 5),
+   từ mới nằm trong kho vocab của collection.
+
+### Màn UI (thứ tự prompt)
+
+Collection hub (menu ⋯ thêm "Gắn PDF…"/"Đổi PDF…"/"Gỡ PDF" + hàng PDF) · **PDF
+reader** (mới — lật trang, CTA phân tích) · Processing / Duyệt & lưu (reuse J1/J2).
+
+### Empty / error (J2b)
+
+| State | Hành vi | FR |
+|---|---|---|
+| Kho tạm | Không có mục "Gắn PDF…" trong menu ⋯ | FR-23 |
+| Trang không có lớp chữ dùng được (scan, lớp chữ rác) | Tự vẽ ảnh + OCR, không hỏi người dùng | FR-23 |
+| Trang trống hoặc không phải tiếng Anh | Báo lỗi cụ thể, nút **"Về trang đọc"** (không phải "Chụp lại") | FR-04, FR-23 |
+| Chưa có agent phân tích | Mở form thêm agent, giống nút chụp (J1) | FR-21 |
+| File đã xoá/di chuyển/chưa tải từ iCloud | Reader báo "Không mở được file" + nút **"Chọn lại file"**; vocab/session cũ giữ nguyên | FR-23 |
+| File có mật khẩu | Báo "PDF có mật khẩu — mở khoá ở app khác rồi gắn lại"; không có ô nhập mật khẩu ở R1 | FR-23 |
+| "Đổi PDF…" | Ghi đè bookmark, trang đang đọc về 0 | FR-23 |
+| "Gỡ PDF" | Chỉ xoá liên kết (`pdf_sources`); không đụng file hay vocab/session đã lưu | FR-23 |
+| Xoá collection đang gắn PDF | Liên kết PDF mất theo (cascade); file trong Files không bị ảnh hưởng | FR-23 |
+
+**Không có ở R1:** highlight, ghi chú, mục lục, bookmark nhiều chỗ trong PDF; phân
+tích nhiều trang một lượt; đánh dấu trang đã phân tích; lối tắt "Đọc tiếp" từ Home;
+nút thủ công "Đọc lại bằng OCR"; EPUB/ebook (NG-07 vẫn cấm).
 
 ---
 
@@ -413,7 +475,8 @@ checklist 3 hàng; bước CEFR hiện mức đang lọc, không trang mẫu (NG
 **Trigger:** Mang kho sang Anki / máy khác / file backup; hoặc gộp CSV Reado (cột giống file xuất) vào kho đang có.  
 **Job:** không JTBD mới; điều kiện NFR-05 (FR-16 xuất, FR-20 nhập). Giống J6: không phải job đọc.  
 **Bắt buộc trên R1:** có — FR-16 là bảo hiểm nếu R1 sai hướng; FR-20 là chiều ngược để round-trip được.  
-**Không phải:** path capture thứ hai. NG-07 vẫn cấm PDF/ebook. Ảnh vẫn là **đúng một** lối đưa trang vào.
+**Không phải:** path capture. FR-20 là CSV từ vựng, không phải trang sách — khác
+FR-23 (đọc PDF, J2b). NG-07 vẫn cấm EPUB/ebook.
 
 Cửa vào: menu **⋯ của tab Thư viện** → "Xuất dữ liệu" / "Nhập CSV" (ADR-052 — dời khỏi Home/Settings; không tab thứ 4
 — NFR-08: từ mở app tới chụp được trang ≤ 3 thao tác vẫn giữ nguyên, Dữ liệu thêm 1 chạm so với bản Home cũ). Từ kho
@@ -594,7 +657,7 @@ Một prompt = một màn (hoặc một flow ngắn). Khoá Design system **ngo�
 - Sửa FR, schema, FSRS, prompt baseline, **đảo NG-05**
 - Chốt Auth provider, đồng bộ realtime, billing (NG-06)
 - Cram / Feature B (PVO, Phân biệt) — R2
-- Import PDF / ebook (NG-07)
+- Import EPUB / ebook (NG-07) — PDF đọc tại chỗ đã chuyển sang J2b (FR-23, ADR-058)
 - Generate UI, code `web/`, hay token Design system
 
 ---

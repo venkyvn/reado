@@ -157,7 +157,8 @@ Reado — **MỞ** ghi nhận cục bộ (kèm nhãn agent) hay bỏ R1; chốt 
 
 **Nguồn DDL duy nhất để áp dụng = mã** `app/ReadoKit/.../Database/Migration.swift` v1
 (1.3 đã dựng, đối chiếu 40 test) — khớp [db.md tầng A](docs/specs/db.md#a-r1--sqlite-trên-máy)
-từng dòng: 7 bảng v1 + bảng `encounters` (migration v4, FR-22/ADR-048) + index, **đủ 20 cột `settings` kể cả `timezone`** (điểm "bổ sung
+từng dòng: 7 bảng v1 + bảng `encounters` (migration v4, FR-22/ADR-048) + bảng
+`pdf_sources` (migration v5, FR-23/ADR-058, §8b) + index, **đủ 20 cột `settings` kể cả `timezone`** (điểm "bổ sung
 settings.timezone" của task 0.6 đã nằm trong migration, seed lấy `TimeZone.current`,
 không tự bịa). SD **không copy DDL lần ba** — ba bản (doc, SD, code) là nguồn drift.
 Mọi đổi schema tương lai đi qua migration đánh số + `PRAGMA user_version`.
@@ -204,6 +205,12 @@ public protocol PageAnalyzer: Sendable {
     func analyze(
         image: Data, imageMime: String,
         cefr: String, imageHash: String
+    ) async throws -> PageAnalysis
+
+    // FR-23/ADR-058 (pdf-reader-r1 T2) — lớp chữ PDF, không OCR. sourceHash thay
+    // imageHash (cùng field meta.imageHash, giá trị là hash của text). Xem §8b.
+    func analyzeText(
+        _ pageText: String, cefr: String, sourceHash: String
     ) async throws -> PageAnalysis
 }
 ```
@@ -262,6 +269,27 @@ Preview → crop/xoay trên máy → encode JPEG (WebP khi nén hơn — **MỞ*
 tạm. NFR-08: ≤ 3 thao tác từ mở app tới chụp. Ảnh chỉ trên đường từ máy tới request —
 **không persist** (NFR-04), buffer memory solution sau. Đa trang một lúc: **MỞ** (FR-01
 giả định một trang/lần; hỏi owner khi chạm).
+
+## 8b. Đọc PDF trong Reado (FR-23, ADR-058, pdf-reader-r1)
+
+Cửa thu từ vựng thứ hai, song song §8. Không chép file PDF vào app — chỉ
+security-scoped bookmark (`URL.bookmarkData`) + số trang, trong bảng `pdf_sources`
+(db.md A.2).
+
+- **Reader:** `PDFView` (PDFKit, framework hệ thống — không thêm dependency), lật
+  từng trang, tự lưu `page_index` khi đổi trang (debounce).
+- **Lớp chữ trước, OCR sau:** `PDFPageText.extract(page:)` lấy hàng kèm toạ độ
+  (`PDFSelection`, không dùng `page.string` trần vì thiếu ranh giới đoạn/thứ tự cột),
+  tự dò `\n`/`\n\n` bằng hình học như `PageOCR` đã làm (ADR-037), rồi **chấm chất
+  lượng** lớp chữ (độ dài, ký tự lạ `(cid:`/`\u{FFFD}`, tỷ lệ chữ cái, tỷ lệ từ giống
+  tiếng Anh). Chữ tốt → `PageAnalyzer.analyzeText` (prompt riêng, prompt-spec mục
+  3b). Rác hoặc trang chỉ là ảnh → vẽ trang độ phân giải cao
+  (`page.thumbnail(of:for:)`, không qua `ImageCompressor` — mức nén 1600px của
+  ImageCompressor đặt ra cho thời ảnh còn upload, giờ OCR chạy trên máy) rồi đi đúng
+  pipeline §8/§7 hiện có.
+- **Transaction:** `pdf_sources` là một câu lệnh đơn (attach/updatePage/detach),
+  không đụng transaction #4/#5 (lưu vocab + session) đã có.
+- **Schema/DDL:** db.md A.2 bảng thứ 9. Prompt: prompt-spec.md mục 3b.
 
 ## 9. Thời gian & ngày học
 

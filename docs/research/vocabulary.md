@@ -849,7 +849,7 @@ nói vì sao nó thành ra như vậy.
 | Mục | Thay đổi |
 |---|---|
 | G-03 | **Chết** — "giữ lại toàn bộ lịch sử đọc" không còn là mục tiêu. Thay bằng mục tiêu tổ chức từ vựng theo collection |
-| NG-07 | Giữ nguyên non-goal, đổi lý do: không phải vì "nguồn là sách giấy" mà vì giữ đúng một input path |
+| NG-07 | Giữ nguyên non-goal, đổi lý do: không phải vì "nguồn là sách giấy" mà vì giữ đúng một input path. *Đã đảo một phần: ADR-058 (2026-10-04) — PDF đọc tại chỗ (không chép file) là cửa thu từ vựng thứ hai (FR-23); NG-07 còn giữ EPUB/ebook + chép file vào app* |
 | Mục 6 — Journey | Node lưu trữ chỉ còn vocab + collection; thêm nhánh buffer cuộn là ngõ cụt có chủ ý |
 | FR-01 | Gán page vào `book` → gán vào **collection**; thêm luồng tạo collection và rơi vào kho tạm |
 | FR-02 | Bỏ `type`, thêm `pos`; `segments` và `summary_vi` đánh dấu rõ là không lưu; thêm criterion buộc `example` là câu thật |
@@ -1343,6 +1343,9 @@ chỗ nhập lại thì dữ liệu học tập nhiều năm cứu được **ra
   dạng chính Reado xuất ra** (JSON `reado-export` + TSV), tức khôi phục/ghép dữ
   liệu, không tạo đường lấy từ vựng mới nào. Một input path capture duy nhất
   vẫn là ảnh chụp — NG-07 nguyên vẹn.
+  > Đã đảo một phần: ADR-058 (2026-10-04) — PDF đọc tại chỗ (không chép file) là
+  > cửa thu từ vựng thứ hai (FR-23). Phần lý lẽ ở trên (FR-20 không phải input
+  > path capture) **vẫn đúng** — chỉ NG-07 tự nó không còn cấm tuyệt đối PDF.
 - **Vị trí trong PRD:** PRD chưa có FR cho import. Plan đề xuất thêm
   **FR-20 — Data Import** đặt cạnh FR-16 (cùng chùm data portability), với
   criteria Given/When/Then soạn sẵn ở mục 8 — agent chỉ sửa PRD khi owner GO.
@@ -1484,7 +1487,9 @@ Dependency rule giữ nguyên: `ui → usecase → repo interface`, pure builder
 - **Không lemmatize (Q-06):** `term_normalized` trong file giữ nguyên như export
   ra — không tính lại bằng luật khác (lệch với kho cũ thì bộ lọc sau này hỏng).
 - **4 giá trị `state`:** validate đúng 4, không gộp (điều cấm #2).
-- **NG-07:** giữ (đã giải thích mục 1).
+- **NG-07:** giữ (đã giải thích mục 1). *Đã đảo một phần: ADR-058 (2026-10-04) —
+  PDF đọc tại chỗ là cửa thu từ vựng thứ hai (FR-23); CSV import của plan này
+  (FR-20) vẫn không phải input path, không đổi gì ở đây.*
 - **NFR-06/NFR-07:** atomic + không secret (mục 6).
 
 ## 8. Tiêu chí chấp nhận — đề xuất FR-20 (soạn sẵn cho PRD)

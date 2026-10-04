@@ -1048,3 +1048,69 @@
   prefix-match term trước, rồi contains-match term, rồi chỉ khớp nghĩa; mỗi dòng
   hiện tên collection, chạm mở collection đó (`ShellRoute.hub`). Không gộp khi
   cùng `term` khác nghĩa — giữ nguyên luật FR-08 crit 3.
+
+## ADR-058 — Đọc PDF trong Reado, cửa thu từ vựng thứ hai — đảo NG-07 (pdf-reader-r1)
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** NG-07 (chốt khi PRD mới sinh) cấm nhập PDF/ebook, lý do ghi là "nguồn
+  nào cũng chụp được, screenshot thay thế được, thêm path thứ hai chỉ nhân đôi bề
+  mặt bảo trì". Thực tế đọc PDF trên máy khác đi vòng 5 bước (mở app đọc → screenshot
+  → sang Reado → chọn ảnh → crop) mỗi lần muốn phân tích một trang — ngược nguyên lý
+  #3 ("một thao tác tại điểm khựng"). Fen đề xuất đọc PDF ngay trong Reado; owner
+  chốt làm, với các ràng buộc dưới.
+- **Quyết định:**
+  1. **Đảo một phần NG-07.** PDF không còn là non-goal tuyệt đối — đọc PDF tại chỗ
+     trong Reado và phân tích trang đang đọc là cửa thu từ vựng thứ hai (**FR-23**),
+     song song ảnh chụp (FR-01). Phần NG-07 còn giữ: **EPUB/ebook** (không có khái
+     niệm trang cố định, cần Readium hoặc WebView — thêm dependency, để ngoài R1) và
+     **chép/lưu file vào app** (vẫn cấm — xem 2).
+  2. **Không bao giờ chép file PDF vào app.** Reado chỉ giữ một
+     *security-scoped bookmark* (iOS, `URL.bookmarkData`) trỏ tới file đang nằm
+     trong Files/iCloud Drive của fen, cộng số trang đang đọc. Xoá/di chuyển file ở
+     nơi khác → Reado báo lỗi, không tự nhân bản để "an toàn hơn". Giữ đúng tinh
+     thần nguyên lý #5 (bề mặt bản quyền nhỏ, có giới hạn) — file nguồn còn to hơn
+     cả ảnh một trang.
+  3. **Mỗi bộ có tên gắn tối đa 1 PDF** (sách = bộ, giống cách Q-09 đã dùng collection
+     thay "tên sách + số trang"). Kho tạm không gắn được — kho tạm không có phiên
+     đọc (Q-10), không có "đang đọc tới đâu" để nhớ.
+  4. **Lớp chữ PDF trước, OCR sau — không phải "cứ PDF là vẽ ảnh rồi OCR".** Phần
+     lớn PDF sách/tài liệu đã có lớp chữ thật (xuất từ Word/web, không phải ảnh).
+     Đọc thẳng lớp chữ đó nhanh hơn, chính xác hơn, và bỏ qua được bước OCR. Nhưng
+     lớp chữ không phải lúc nào cũng tin được: PDF scan có thể tự mang theo lớp chữ
+     *rác* do phần mềm scan tự OCR hộ (`Tlie qnick brovvn`, `(cid:72)`…). Reado tự
+     chấm chất lượng lớp chữ mỗi trang (`PDFPageText`, 4 điều kiện: độ dài, ký tự lạ,
+     tỷ lệ chữ cái, tỷ lệ từ giống tiếng Anh) — tốt thì đi prompt PDF riêng; rác hoặc
+     trang chỉ là ảnh (PDF scan thật) thì vẽ trang độ phân giải cao (~300 DPI, không
+     qua `ImageCompressor` — mức nén 1600px đặt ra cho thời ảnh còn phải upload, giờ
+     OCR chạy trên máy, chỉ text đi ra ngoài) rồi chạy đúng pipeline OCR + prompt ảnh
+     v6 đang có. Người dùng không tự chọn, không thấy khác biệt ngoài một dòng tiến
+     độ "Trang scan — đang nhận dạng chữ trên máy…".
+  5. **Không gửi ảnh trang cho vision LLM.** Cân nhắc rồi loại: agent BYOK của fen
+     (AI-Box, model text) có thể không nhận ảnh, tốn token hơn nhiều, gửi ảnh sách ra
+     ngoài trong khi Reado đang cố ý OCR trên máy, và tạo ra hai lối gọi AI khó eval
+     chung. Nếu OCR-trên-máy sau này không đủ tốt, đó là quyết định riêng (ADR mới),
+     không gộp vào đây.
+  6. **EPUB để Later**, không làm trong R1.
+- **Mặc định cho hành vi chưa ai hỏi** (đổi được sau, không cần ADR mới nếu chỉ là
+  tinh chỉnh số):
+  - Phân tích lại một trang đã phân tích: **cho phép**, không chặn, không đánh dấu
+    "đã làm" (cần thêm cột số trang vào `reading_sessions` — Later). Từ trùng đã có
+    FR-10/Q-13 gập.
+  - Câu bị cắt ngang ở đầu/cuối trang (tràn sang trang khác): prompt PDF vẫn dịch
+    nhưng không lấy làm `example` — không ghép nội dung hai trang.
+  - Lối tắt "Đọc tiếp" trên Home và nút "Đọc lại bằng OCR" thủ công trong reader:
+    **Later**, không thuộc R1.
+- **Hệ quả:**
+  - **Schema:** bảng thứ 9 `pdf_sources` (migration v5, `docs/specs/db.md`) —
+    `collection_id` là khoá chính (ép 1 PDF/bộ), `bookmark` TEXT base64, `page_index`/
+    `page_count`, `updated_at`. Không export CSV, không sync Later (bookmark chỉ
+    dùng được trên máy tạo ra nó).
+  - **Prompt:** `Prompt.pdfText` + `pdfVersion` riêng, tách khỏi `Prompt.text`/
+    `version = 6` (ảnh). Cùng JSON schema, `VerifyEngine`/`PhraseLocator`/decoder
+    dùng lại không đổi. Eval riêng (`prompt_eval.py`) trước khi fen chấp nhận
+    (`docs/plans/pdf-reader-r1.md` T5), cùng cách A-02 đã làm cho prompt ảnh.
+  - **FR-23** mới trong `docs/specs/prd.md` (GWT), journey **J2b** mới trong
+    `docs/specs/journeys.md` (sau J2). NG-07 viết lại nội dung, giữ ID, không xoá
+    dòng tombstone.
+  - Chi tiết implementation: `docs/specs/solution-design.md` §8b,
+    `docs/agent/prompt-spec.md` mục 3b, task breakdown ở `docs/plans/pdf-reader-r1.md`.

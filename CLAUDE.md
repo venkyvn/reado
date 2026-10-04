@@ -71,6 +71,7 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - **Chốt thêm 2026-09-24:** ngưỡng leech FR-19 = **6** lần Again. Không gộp với Q-08.
 - **Chốt thêm 2026-10-01:** bỏ proxy Reado — ADR-049.
 - **Chốt thêm 2026-10-02:** Q-13 (khoá so khớp FR-10 `term_normalized+pos` không phân biệt nghĩa) — phương án **B**: item khớp khoá đã thuộc gập xuống nhóm riêng thay vì xoá khỏi màn duyệt; khoá có cả dòng đã thuộc lẫn dòng mới/chưa thuộc vẫn vào nhóm gập, liệt kê đủ nghĩa kèm mức thuộc (ADR-056).
+- **Chốt thêm 2026-10-04:** đọc PDF trong Reado (FR-23) — đảo một phần NG-07, ADR-058. Không chép file (bookmark + trang trong bảng `pdf_sources`); mỗi bộ có tên gắn tối đa 1 PDF; lớp chữ PDF trước, OCR sau khi rác/scan. EPUB vẫn ngoài (NG-07 giữ phần đó).
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ
