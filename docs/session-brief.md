@@ -10,16 +10,18 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0 docs/ADR ✅ · T1 schema
-  `pdf_sources` + `PDFSourceRepository` ✅ · T2 `PDFPageText` (lớp chữ + chấm chất
-  lượng) + `Prompt.pdfText` + `analyzeText` ✅ · T3 `PDFReaderView` (đọc + nhớ trang,
-  `.PDFViewPageChanged`) + gắn/đổi/gỡ PDF ở Hub + `DebugLaunch pdf-reader` ✅ — full
-  464/466 xanh, xem tay 2 theme (Hub có hàng PDF + kho tạm không có + reader hiện
-  đúng "Tr. N/M" — bắt được 1 bug `.safeAreaInset` qua ảnh, đã sửa, ghi vào skill
-  reado-ui). **Còn thiếu xem tay tương tác thật** (lật trang bằng tay, "Đổi PDF…",
-  "Gỡ PDF", xoá file ngoài → "Chọn lại file") — DebugLaunch không giả lập chạm được,
-  cần fen tự thử trên simulator/máy thật trước khi khép T3 hẳn. T4 nối màn duyệt · T5
-  eval (cần fen + PDF thật) đang chờ. → `docs/plans/pdf-reader-r1.md`
+- pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong (code + build +
+  full test 464/466), chỉ còn **T5 eval prompt PDF trên PDF thật** (cần fen + file
+  thật, xem dưới). T0 docs/ADR · T1 schema `pdf_sources` + `PDFSourceRepository` ·
+  T2 `PDFPageText` (lớp chữ + chấm chất lượng) + `Prompt.pdfText` + `analyzeText` ·
+  T3 `PDFReaderView` (đọc + nhớ trang) + gắn/đổi/gỡ PDF ở Hub + `DebugLaunch
+  pdf-reader` · T4 CTA "Phân tích trang này" → `preparePDFAnalysis` → sheet Duyệt &
+  lưu dùng chung lối ảnh, lỗi FR-04 đổi nút "Về trang đọc".
+  **Nợ xem tay (DebugLaunch không giả lập chạm được):** T3 — lật trang bằng tay,
+  "Đổi PDF…", "Gỡ PDF", xoá file ngoài → "Chọn lại file". T4 — cả vòng chạm CTA →
+  phân tích → lưu → quay lại trang đọc (cần agent thật). Xem tay layout/style qua
+  ảnh đã xong cho cả hai (bắt được 1 bug `.safeAreaInset` ở T3, đã sửa + ghi gotcha
+  vào skill reado-ui). → `docs/plans/pdf-reader-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
 - 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 — học UI từ eevas.top theo yêu cầu fen, cả 4 task trong 1 session ("đủ context"): T1 header toolbar Home kiểu nút tròn (pill 🔥N · 🔍 · ⚙, `ToolbarSpacer`) + hero số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ" (ADR-057, bỏ `statsSection` cũ) · T2 màn duyệt thêm dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu (tự đổi theo đích ADR-053) · T3 màn "Từ hay quên" tối thiểu FR-19 (`LeechService.deleteWord`, banner Home, swipe đưa lại hàng đợi/xoá) · T4 tìm từ xuyên collection FR-08 (`VocabRepository.searchVocabulary`, gập dấu tầng Swift, màn `VocabSearchView`). 435/437 xanh (424→435, +11 test mới qua 4 task, 2 skip cũ không đổi). → `docs/plans/done/home-eevas-r1.md`
@@ -41,6 +43,12 @@
 7. ~~Xem tay UI còn treo~~ — fen xem tay trên simulator thật (2026-10-02, verify-nav-r1 T3): Ôn thêm, Alert lỗi, Reencounter, Capture, Settings, prompt-v6 (`ReadingSessionView` qua Hub), migration v3→v4 — tất cả pass. Chi tiết từng mục: `docs/plans/done/verify-nav-r1.md` T3, `docs/journal/2026-10-02.md`.
 8. ~~fr10-close-r1: xem tay đổi đích~~ — fen test tay (2026-10-02): đổi "Lưu vào ⏷" sang bộ khác và về Kho tạm trên simulator thật, nhóm "Đã thuộc · N" tính lại đúng. `docs/plans/done/fr10-close-r1.md` T1 hết nợ.
 9. home-eevas-r1: xem tay 2 chỗ chưa giả lập chạm được bằng ảnh tĩnh — T3 màn "Từ hay quên" (vuốt trái "Đưa lại hàng đợi", vuốt phải "Xoá" + `confirmationDialog`, `contextMenu`) và T4 gõ tìm kiếm thật (debounce, kết quả matching/order trên simulator/máy thật — logic đã test đủ ở ReadoKit). `docs/plans/done/home-eevas-r1.md`.
+10. pdf-reader-r1: xem tay tương tác thật chưa làm được bằng DebugLaunch — T3 (lật
+    trang bằng tay, "Đổi PDF…", "Gỡ PDF", xoá file ngoài Files → "Chọn lại file") và
+    T4 (chạm CTA → phân tích thật → lưu → quay lại trang đọc, cần agent thật). T5
+    (eval prompt PDF) cần fen đưa 3–5 trang từ PDF thật (1 cột có header/footer/gạch
+    nối, 2 cột, scan không chữ, scan lớp chữ rác nếu có) rồi
+    `scripts/pull_diagnostics.sh device`. `docs/plans/pdf-reader-r1.md`.
 
 ## 3. Bẫy máy này
 
