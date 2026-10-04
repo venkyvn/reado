@@ -1208,3 +1208,20 @@
   `readoPDFPageTint` (ADR-060, enum nhị phân, chưa từng release) sang
   `readoPDFPageTintHue`/`readoPDFPageTintIntensity` — không cần migration (tính
   năng chưa ra khỏi máy dev).
+
+## ADR-062 — Dọn tông nền đọc PDF ra `SettingsView`, bỏ Menu trên toolbar reader (tinh chỉnh ADR-060/061)
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** fen: "đem mấy config đó ra ngoài setting luôn đi" — tông giấy +
+  Slider độ đậm (ADR-061) đang nằm trong một `Menu` trên toolbar `PDFReaderView`,
+  fen muốn dọn ra màn Cài đặt thay vì giữ trên toolbar đọc.
+- **Quyết định:** chuyển UI chọn (Picker "Tông giấy" gộp cả "Trắng" + Slider "Độ
+  đậm" khi đã chọn một tông) sang `SettingsView`, Section mới "Đọc PDF" ngay sau
+  "Giao diện". `PDFReaderView` **không còn nút nào trên toolbar cho việc này** —
+  chỉ còn đọc `@AppStorage` để vẽ lớp phủ. Cùng pattern `ShellTabBar` đọc chung
+  `appTheme` với `SettingsView` (hai nơi cùng khai báo `@AppStorage` trỏ một key,
+  không cần binding truyền tay).
+- **Hệ quả:** `PDFPageTintHue` đổi từ `private` sang `internal` (cùng target
+  `Reado`, `SettingsView` cần dùng). Không đổi key `@AppStorage`, không đổi logic
+  phủ `.multiply`/màu viền (ADR-061) — chỉ dọn nơi hiển thị control chọn. Mục lục
+  là nút duy nhất còn lại trên toolbar reader (ẩn khi PDF không có outline).

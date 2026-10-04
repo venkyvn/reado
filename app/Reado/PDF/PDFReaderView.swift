@@ -2,13 +2,14 @@ import PDFKit
 import ReadoKit
 import SwiftUI
 
-/// FR-23/ADR-058+059+060 (pdf-reader-r1 T3, pdf-nav-r1) — đọc một file PDF
-/// ngay trong Reado. Lật trang kiểu sách (vuốt ngang) vẫn là lối đọc chính;
-/// chạm "Tr. N / M" để gõ số trang và Mục lục (outline sẵn có trong file) là
-/// lối nhảy nhanh (ADR-059 — bỏ thanh kéo trang sau khi fen xem tay thấy
-/// không cần, ADR-060). Chạm vào trang → ẩn/hiện cả nav bar lẫn thanh đáy để
-/// tập trung đọc (ADR-060). Thanh tab luôn ẩn trong lúc đọc — xem
-/// `RootView.isReadingPDF`.
+/// FR-23/ADR-058+059+060+062 (pdf-reader-r1 T3, pdf-nav-r1) — đọc một file
+/// PDF ngay trong Reado. Lật trang kiểu sách (vuốt ngang) vẫn là lối đọc
+/// chính; chạm "Tr. N / M" để gõ số trang và Mục lục (outline sẵn có trong
+/// file) là lối nhảy nhanh (ADR-059 — bỏ thanh kéo trang sau khi fen xem tay
+/// thấy không cần, ADR-060). Chạm vào trang → ẩn/hiện cả nav bar lẫn thanh
+/// đáy để tập trung đọc (ADR-060). Thanh tab luôn ẩn trong lúc đọc — xem
+/// `RootView.isReadingPDF`. Tông nền đọc chọn ở `SettingsView`, không còn
+/// trên toolbar reader (ADR-062).
 struct PDFReaderView: View {
     let collectionID: String
 
@@ -30,12 +31,13 @@ struct PDFReaderView: View {
     /// ADR-060 — chạm vào trang để tập trung đọc: ẩn nav bar (tiêu đề + nút
     /// Mục lục) và thanh đáy (Tr. N/M + CTA) cùng lúc. Chạm lại để hiện lại.
     @State private var isChromeHidden = false
-    /// ADR-060 — tông nền trang đọc, lưu theo máy (không theo collection) —
-    /// fen hỏi "có theme màu nâu, be để dễ đọc không", rồi "cho vài option +
-    /// kéo thả độ màu". PDFKit vẽ nguyên trang PDF (không tự đổi màu theo
-    /// Dark Mode), nên đây là tuỳ chọn riêng của reader, tách khỏi `AppTheme`
-    /// (accent UI chrome). `intensity == 0` = Trắng (không phủ gì); > 0 = phủ
-    /// `hue.color` với độ đậm đó.
+    /// ADR-060/062 — tông nền trang đọc, lưu theo máy (không theo collection).
+    /// Chọn ở `SettingsView` (cùng key `@AppStorage`, kiểu `ShellTabBar` đọc
+    /// chung `appTheme` với `SettingsView` — fen: "đem mấy config đó ra ngoài
+    /// setting luôn đi"), reader chỉ ĐỌC để vẽ lớp phủ. PDFKit vẽ nguyên trang
+    /// PDF (không tự đổi màu theo Dark Mode), nên đây là tuỳ chọn riêng của
+    /// việc đọc PDF, tách khỏi `AppTheme` (accent UI chrome). `intensity == 0`
+    /// = Trắng (không phủ gì); > 0 = phủ `hue.color` với độ đậm đó.
     @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
     @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
     private var pdfPageTintHue: PDFPageTintHue { PDFPageTintHue(rawValue: pdfPageTintHueRaw) ?? .sepia }
@@ -50,41 +52,6 @@ struct PDFReaderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemBackground))
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Section("Tông giấy") {
-                            Button {
-                                Haptics.selection()
-                                pdfPageTintIntensity = 0
-                            } label: {
-                                Label("Trắng", systemImage: pdfPageTintIntensity == 0 ? "checkmark" : "circle")
-                            }
-                            ForEach(PDFPageTintHue.allCases) { hue in
-                                Button {
-                                    Haptics.selection()
-                                    pdfPageTintHueRaw = hue.rawValue
-                                    if pdfPageTintIntensity == 0 {
-                                        pdfPageTintIntensity = PDFPageTintHue.defaultIntensity
-                                    }
-                                } label: {
-                                    Label(
-                                        hue.label,
-                                        systemImage: pdfPageTintIntensity > 0 && pdfPageTintHue == hue
-                                            ? "checkmark" : "circle.fill")
-                                }
-                            }
-                        }
-                        // Chỉ hiện khi đã chọn một tông giấy — kéo thả chỉnh độ đậm
-                        // lớp phủ (fen: "kéo thả độ màu của giấy").
-                        if pdfPageTintIntensity > 0 {
-                            Section("Độ đậm") {
-                                Slider(value: $pdfPageTintIntensity, in: 0.05 ... 1)
-                            }
-                        }
-                    } label: {
-                        Label("Tông nền", systemImage: "paintpalette")
-                    }
-                }
                 if !outlineEntries.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -341,10 +308,12 @@ struct PDFReaderView: View {
     #endif
 }
 
-/// ADR-060 — các tông giấy chọn được, riêng với `AppTheme` (accent UI
+/// ADR-060/062 — các tông giấy chọn được, riêng với `AppTheme` (accent UI
 /// chrome). Mỗi tông là màu gốc ở độ đậm tối đa; Slider "Độ đậm" chỉnh alpha
-/// khi phủ (xem `pdfPageTintIntensity`), không đổi màu gốc.
-private enum PDFPageTintHue: String, CaseIterable, Identifiable {
+/// khi phủ (xem `pdfPageTintIntensity`), không đổi màu gốc. KHÔNG `private`
+/// — `SettingsView` (màn chọn, ADR-062) cũng cần kiểu này; file khác trong
+/// cùng target `Reado` đọc được nhờ mặc định `internal`.
+enum PDFPageTintHue: String, CaseIterable, Identifiable {
     case sepia
     case cream
     case sage

@@ -119,9 +119,11 @@ song.
 > ngày** bỏ thanh kéo trang + nút ◀ ▶ ban đầu sau khi fen xem tay thấy không cần.
 > **ADR-061 cùng ngày** mở rộng tông nền từ nhị phân Trắng/Nâu sang vài tông +
 > Slider độ đậm, và cố định màu viền trang (không theo Dark Mode) sau khi fen báo
-> viền trên/dưới tối gần đen khi đọc khổ dọc. Không đổi schema/prompt. Chi tiết:
-> [decisions-log.md ADR-059](docs/decisions-log.md), [ADR-060](docs/decisions-log.md),
-> [ADR-061](docs/decisions-log.md).
+> viền trên/dưới tối gần đen khi đọc khổ dọc. **ADR-062 cùng ngày** dọn control
+> tông nền từ Menu trên toolbar reader sang Section "Đọc PDF" ở màn Cài đặt. Không
+> đổi schema/prompt. Chi tiết: [decisions-log.md ADR-059](docs/decisions-log.md),
+> [ADR-060](docs/decisions-log.md), [ADR-061](docs/decisions-log.md),
+> [ADR-062](docs/decisions-log.md).
 
 ---
 
@@ -307,8 +309,7 @@ thứ tự số trong tài liệu không còn liên tục.
 
 | FR | Trạng thái ở v0.13 |
 |---|---|
-| FR-23 | Sửa — thêm GWT điều hướng trang (gõ trang/Mục lục), thanh tab ẩn khi đọc, chạm ẩn chrome, tông nền đọc (vài tông + độ đậm). "Không thuộc phạm vi R1" bỏ "mục lục" (ADR-059/060/061) |
-| Còn lại | Không đổi |
+| FR-23 | Sửa — thêm GWT điều hướng trang (gõ trang/Mục lục), thanh tab ẩn khi đọc, chạm ẩn chrome, tông nền đọc chọn ở Cài đặt (vài tông + độ đậm). "Không thuộc phạm vi R1" bỏ "mục lục" (ADR-059/060/061/062) |
 | Còn lại | Không đổi |
 
 ### Epic E1 — Capture & Analyze
@@ -435,17 +436,18 @@ phân tích trang đang đọc. Đây **không** phải path capture thứ ba ha
 - FR-04 áp dụng nguyên cho trang PDF (ảnh/text không đọc được tiếng Anh thì báo lỗi,
   không bịa dữ liệu); riêng hành động khắc phục là "Về trang đọc", không phải "Chụp
   lại".
-- **Mới ở v0.13 (ADR-059/060/061, 2026-10-04).** **Given** đang đọc một PDF nhiều
-  trang, **when** gõ số trang (chạm "Tr. N / M") hoặc chọn một mục trong Mục lục,
-  **then** reader nhảy tới đúng trang đó và trang đó được nhớ như khi lật tay. Mục
-  lục đọc outline sẵn có trong file PDF, không tự sinh; PDF không có outline thì
-  không hiện nút Mục lục. Thanh tab (Hôm nay / Thư viện) ẩn trong lúc đọc PDF; chạm
-  vào trang (không phải vuốt lật) ẩn/hiện thêm nav bar + thanh đáy để tập trung
-  đọc. Tông nền trang chọn được Trắng hoặc một trong vài tông giấy (Nâu/Kem/Xanh
-  rêu), kéo thả chỉnh độ đậm ngay trong menu, lưu theo máy (ADR-060 — ban đầu có
-  thêm thanh kéo trang + nút ◀/▶, bỏ sau khi fen xem tay thấy gõ trang + Mục lục
-  đã đủ; ADR-061 — thêm nhiều tông + độ đậm, cố định màu viền trang để không tối
-  gần đen ở Dark Mode khi đọc khổ dọc).
+- **Mới ở v0.13 (ADR-059/060/061/062, 2026-10-04).** **Given** đang đọc một PDF
+  nhiều trang, **when** gõ số trang (chạm "Tr. N / M") hoặc chọn một mục trong Mục
+  lục, **then** reader nhảy tới đúng trang đó và trang đó được nhớ như khi lật
+  tay. Mục lục đọc outline sẵn có trong file PDF, không tự sinh; PDF không có
+  outline thì không hiện nút Mục lục. Thanh tab (Hôm nay / Thư viện) ẩn trong lúc
+  đọc PDF; chạm vào trang (không phải vuốt lật) ẩn/hiện thêm nav bar + thanh đáy
+  để tập trung đọc. Tông nền trang (Trắng hoặc một trong vài tông giấy — Nâu/Kem/
+  Xanh rêu — kéo thả chỉnh độ đậm) chọn ở màn **Cài đặt**, lưu theo máy, áp ngay
+  cho reader (ADR-060 — ban đầu có thêm thanh kéo trang + nút ◀/▶, bỏ sau khi fen
+  xem tay thấy gõ trang + Mục lục đã đủ; ADR-061 — thêm nhiều tông + độ đậm, cố
+  định màu viền trang để không tối gần đen ở Dark Mode khi đọc khổ dọc; ADR-062 —
+  dọn control từ Menu trên toolbar reader sang Cài đặt).
 
 Không thuộc phạm vi R1: EPUB/ebook (NG-07), highlight/ghi chú trong PDF, tìm kiếm
 chữ trong PDF, bookmark nhiều chỗ, phân tích nhiều trang một lượt, đánh dấu trang đã

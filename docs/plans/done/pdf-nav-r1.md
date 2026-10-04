@@ -1,13 +1,15 @@
 # Plan: pdf-nav-r1 — điều hướng trang dễ hơn trong PDF reader
 
 > **Trạng thái:** closed (2026-10-04) - N0/N1/N2 xong, code+test xanh (kit
-> 462/462, full 481/483). Fen xem tay trực tiếp trên simulator 2 vòng trong lúc
+> 462/462, full 481/483). Fen xem tay trực tiếp trên simulator 3 vòng trong lúc
 > implement → ADR-060 (bỏ thanh kéo trang + nút ◀ ▶, gõ trang + Mục lục đã đủ;
-> thêm chạm-vào-trang ẩn/hiện nav bar + thanh đáy; thêm tông nền đọc) rồi ADR-061
+> thêm chạm-vào-trang ẩn/hiện nav bar + thanh đáy; thêm tông nền đọc) → ADR-061
 > (nhiều tông giấy + Slider độ đậm; cố định màu viền `PDFView` không theo Dark
-> Mode). Phần "Hàng 1" ở N2 bước 2 dưới đây (slider/◀▶) **không còn áp dụng** —
-> xem ADR-060/061 ở `docs/decisions-log.md` cho đặc tả cuối cùng. Nợ xem tay
-> (chạm-ẩn-chrome, vuốt lật trang, kéo Slider độ đậm bằng tay thật): `session-brief.md` §2.
+> Mode) → ADR-062 (dọn control tông nền từ Menu trên toolbar reader sang Section
+> "Đọc PDF" ở `SettingsView`). Phần "Hàng 1" ở N2 bước 2 dưới đây (slider/◀▶)
+> **không còn áp dụng** — xem ADR-060/061/062 ở `docs/decisions-log.md` cho đặc tả
+> cuối cùng. Nợ xem tay (chạm-ẩn-chrome, vuốt lật trang, chọn tông + kéo Slider ở
+> Cài đặt bằng tay thật): `session-brief.md` §2.
 
 ## Context
 

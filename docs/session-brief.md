@@ -23,12 +23,14 @@
   ảnh đã xong cho cả hai (bắt được 1 bug `.safeAreaInset` ở T3, đã sửa + ghi gotcha
   vào skill reado-ui). → `docs/plans/pdf-reader-r1.md`
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
-- 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (FR-23, ADR-059/060/061) —
+- 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (FR-23, ADR-059/060/061/062) —
   fen thử pdf-reader-r1 trên sách thật 254 trang thấy khó chọn/đổi trang → gõ số
   trang + Mục lục (`PDFNavigation`, `PDFOutlineSheet`, `PDFReaderNavigator`) + ẩn
-  tab bar khi đọc; fen xem tay TRỰC TIẾP trong lúc code, 2 vòng phản hồi → ADR-060
-  (bỏ slider/◀▶ ban đầu, thêm chạm-vào-trang ẩn/hiện chrome) rồi ADR-061 (nhiều
-  tông giấy + Slider độ đậm, cố định màu viền `PDFView` không theo Dark Mode). kit
+  tab bar khi đọc; fen xem tay TRỰC TIẾP trong lúc code, 3 vòng phản hồi → ADR-060
+  (bỏ slider/◀▶ ban đầu, thêm chạm-vào-trang ẩn/hiện chrome) → ADR-061 (nhiều
+  tông giấy + Slider độ đậm, cố định màu viền `PDFView` không theo Dark Mode) →
+  ADR-062 (dọn control tông nền từ Menu trên toolbar reader sang Section "Đọc
+  PDF" ở `SettingsView` — fen: "đem mấy config đó ra ngoài setting luôn đi"). kit
   462/462 (+11), full 481/483 (2 skip cũ, không đổi). Nợ xem tay: mục 11 dưới.
   → `docs/plans/done/pdf-nav-r1.md`
 - 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 — học UI từ eevas.top theo yêu cầu fen, cả 4 task trong 1 session ("đủ context"): T1 header toolbar Home kiểu nút tròn (pill 🔥N · 🔍 · ⚙, `ToolbarSpacer`) + hero số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ" (ADR-057, bỏ `statsSection` cũ) · T2 màn duyệt thêm dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu (tự đổi theo đích ADR-053) · T3 màn "Từ hay quên" tối thiểu FR-19 (`LeechService.deleteWord`, banner Home, swipe đưa lại hàng đợi/xoá) · T4 tìm từ xuyên collection FR-08 (`VocabRepository.searchVocabulary`, gập dấu tầng Swift, màn `VocabSearchView`). 435/437 xanh (424→435, +11 test mới qua 4 task, 2 skip cũ không đổi). → `docs/plans/done/home-eevas-r1.md`
@@ -59,9 +61,11 @@
 11. pdf-nav-r1 (khép 2026-10-04): xem tay 3 chỗ cần chạm thật, DebugLaunch không giả
     lập được — (a) chạm vào trang để ẩn/hiện nav bar + thanh đáy (ADR-060), (b) vuốt
     ngang lật trang thật trên PDF dài (có bị cử chỉ "vuốt mép trái để back" của iOS
-    giành không), (c) mở Menu "Tông nền" → chọn tông giấy + kéo Slider độ đậm
-    (ADR-061) — đã xác nhận layout/màu đúng qua ảnh + tiêm `UserDefaults` thẳng
-    (không qua chạm Menu thật). `docs/plans/done/pdf-nav-r1.md`.
+    giành không), (c) màn Cài đặt → Section "Đọc PDF" → chọn tông giấy (Picker) +
+    kéo Slider độ đậm, xem reader áp đúng lúc mở lại (ADR-061/062) — đã xác nhận
+    layout/màu của reader đúng qua ảnh + tiêm `UserDefaults` thẳng (không qua chạm
+    Picker/Slider thật); CHƯA chụp được Section "Đọc PDF" ở Cài đặt (nằm dưới cuộn,
+    không tự scroll được qua DebugLaunch). `docs/plans/done/pdf-nav-r1.md`.
 
 ## 3. Bẫy máy này
 

@@ -14,6 +14,12 @@ struct SettingsView: View {
     /// Mặc định mới là rừng (không còn "Hệ thống"); user cũ được migrate một
     /// lần ở ReadoApp.
     @AppStorage("appTheme") private var appTheme = AppTheme.forest.rawValue
+    /// ADR-060/062 — tông nền đọc PDF, cùng key `@AppStorage` mà
+    /// `PDFReaderView` đọc để vẽ lớp phủ (đổi ở đây thì reader áp ngay lần mở
+    /// kế tiếp, giống cách `ShellTabBar` đọc chung `appTheme`). Dọn ra khỏi
+    /// toolbar reader theo fen: "đem mấy config đó ra ngoài setting luôn đi".
+    @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
+    @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
 
     @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10
@@ -72,6 +78,7 @@ struct SettingsView: View {
             learningSection
             reminderSection
             themeSection
+            pdfReadingSection
             if !agentFirst {
                 agentSection
             }
@@ -82,6 +89,7 @@ struct SettingsView: View {
         .animation(reduceMotion ? nil : Motion.reveal, value: reminderError)
         .animation(reduceMotion ? nil : Motion.reveal, value: reminderEnabled)
         .animation(reduceMotion ? nil : Motion.reveal, value: agentError)
+        .animation(reduceMotion ? nil : Motion.reveal, value: pdfPageTintIntensity > 0)
         .navigationTitle("Cài đặt")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -321,6 +329,65 @@ struct SettingsView: View {
             Label("Giao diện", systemImage: "paintpalette")
         } footer: {
             Text("Màu nhấn toàn app — áp ngay.")
+        }
+    }
+
+    // MARK: — Đọc PDF (tông nền, ADR-060/062)
+
+    /// `.white` gộp vào cùng một Picker với các tông — chọn "Trắng" là tắt
+    /// phủ (`pdfPageTintIntensity = 0`), chọn một tông là bật lại với độ đậm
+    /// đã lưu (hoặc mặc định nếu đang tắt).
+    private enum PDFPageTintChoice: Hashable {
+        case white
+        case hue(PDFPageTintHue)
+    }
+
+    private var pdfTintSelection: Binding<PDFPageTintChoice> {
+        Binding(
+            get: {
+                pdfPageTintIntensity > 0
+                    ? .hue(PDFPageTintHue(rawValue: pdfPageTintHueRaw) ?? .sepia)
+                    : .white
+            },
+            set: { choice in
+                switch choice {
+                case .white:
+                    pdfPageTintIntensity = 0
+                case let .hue(hue):
+                    pdfPageTintHueRaw = hue.rawValue
+                    if pdfPageTintIntensity == 0 {
+                        pdfPageTintIntensity = PDFPageTintHue.defaultIntensity
+                    }
+                }
+            })
+    }
+
+    private var pdfReadingSection: some View {
+        Section {
+            Picker("Tông giấy", selection: pdfTintSelection) {
+                Text("Trắng").tag(PDFPageTintChoice.white)
+                ForEach(PDFPageTintHue.allCases) { hue in
+                    Text(hue.label).tag(PDFPageTintChoice.hue(hue))
+                }
+            }
+            // Chỉ hiện khi đã chọn một tông — kéo thả chỉnh độ đậm lớp phủ
+            // (fen: "kéo thả độ màu của giấy").
+            if pdfPageTintIntensity > 0 {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    HStack {
+                        Text("Độ đậm")
+                        Spacer()
+                        Text("\(Int(pdfPageTintIntensity * 100))%")
+                            .font(Typo.meta)
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $pdfPageTintIntensity, in: 0.05 ... 1)
+                }
+            }
+        } header: {
+            Label("Đọc PDF", systemImage: "doc.text")
+        } footer: {
+            Text("Tông nền trang khi đọc PDF trong Reado — áp ngay, không theo từng bộ.")
         }
     }
 
