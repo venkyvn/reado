@@ -12,10 +12,14 @@
 **Đang mở / hàng đợi**
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0 docs/ADR ✅ · T1 schema
   `pdf_sources` + `PDFSourceRepository` ✅ · T2 `PDFPageText` (lớp chữ + chấm chất
-  lượng) + `Prompt.pdfText` + `analyzeText` ✅ — full 464/466 xanh. T3 reader UI · T4
-  nối màn duyệt · T5 eval (cần fen + PDF thật) đang chờ — T3/T4 đụng
-  `CollectionDetailView`/`RootView` cùng chỗ home-eevas-r1 vừa sửa, không xung đột vì
-  home-eevas-r1 đã khép. → `docs/plans/pdf-reader-r1.md`
+  lượng) + `Prompt.pdfText` + `analyzeText` ✅ · T3 `PDFReaderView` (đọc + nhớ trang,
+  `.PDFViewPageChanged`) + gắn/đổi/gỡ PDF ở Hub + `DebugLaunch pdf-reader` ✅ — full
+  464/466 xanh, xem tay 2 theme (Hub có hàng PDF + kho tạm không có + reader hiện
+  đúng "Tr. N/M" — bắt được 1 bug `.safeAreaInset` qua ảnh, đã sửa, ghi vào skill
+  reado-ui). **Còn thiếu xem tay tương tác thật** (lật trang bằng tay, "Đổi PDF…",
+  "Gỡ PDF", xoá file ngoài → "Chọn lại file") — DebugLaunch không giả lập chạm được,
+  cần fen tự thử trên simulator/máy thật trước khi khép T3 hẳn. T4 nối màn duyệt · T5
+  eval (cần fen + PDF thật) đang chờ. → `docs/plans/pdf-reader-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
 - 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 — học UI từ eevas.top theo yêu cầu fen, cả 4 task trong 1 session ("đủ context"): T1 header toolbar Home kiểu nút tròn (pill 🔥N · 🔍 · ⚙, `ToolbarSpacer`) + hero số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ" (ADR-057, bỏ `statsSection` cũ) · T2 màn duyệt thêm dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu (tự đổi theo đích ADR-053) · T3 màn "Từ hay quên" tối thiểu FR-19 (`LeechService.deleteWord`, banner Home, swipe đưa lại hàng đợi/xoá) · T4 tìm từ xuyên collection FR-08 (`VocabRepository.searchVocabulary`, gập dấu tầng Swift, màn `VocabSearchView`). 435/437 xanh (424→435, +11 test mới qua 4 task, 2 skip cũ không đổi). → `docs/plans/done/home-eevas-r1.md`
