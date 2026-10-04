@@ -61,12 +61,20 @@ struct AnalysisView: View {
         drafts.filter(\.isSelected).count + matureHiddenDrafts.filter(\.isSelected).count
     }
 
+    /// pdf-reader-r1 T4 (FR-23/ADR-058) — trang PDF scan/lớp chữ rác đã được
+    /// `preparePDFAnalysis` vẽ thành ảnh (`lastCapturedImage` có giá trị,
+    /// `pdfText` thì không) nên đi đúng bước OCR như ảnh chụp — chỉ khác dòng
+    /// chữ để người dùng biết vì sao bước này chậm hơn PDF có lớp chữ thường.
+    private var isScannedPDFPage: Bool {
+        model.capture.origin == .pdf && model.capture.pdfText == nil
+    }
+
     /// Dòng chữ theo tiến độ agent (FR-02) — model.capture.analysisProgress nil
     /// (chưa kịp báo) rơi về câu chung.
     private var progressTitle: String {
         switch model.capture.analysisProgress {
         case nil, .readingPage:
-            "Đang đọc chữ trên máy…"
+            isScannedPDFPage ? "Trang scan — đang nhận dạng chữ trên máy…" : "Đang đọc chữ trên máy…"
         case .waitingAgent:
             "Đang gửi cho agent…"
         case .thinking:
@@ -192,11 +200,13 @@ struct AnalysisView: View {
         .task {
             // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
             // sheet), phân tích được kích hoạt khi màn hình này xuất hiện.
+            // FR-23/ADR-058 (pdf-reader-r1 T4): `hasPendingPage` gồm cả
+            // `capture.pdfText` — PDFReaderView hand-off y hệt CaptureView.
             if model.capture.analysisResult == nil,
                model.capture.analysisError == nil,
-               model.capture.lastCapturedImage != nil,
+               model.capture.hasPendingPage,
                !model.capture.isAnalyzing {
-                await model.analyzeCurrentImage()
+                await model.analyzeCurrentPage()
             }
         }
         #if DEBUG
@@ -263,7 +273,7 @@ struct AnalysisView: View {
                 } description: {
                     Text(failure.errorDescription ?? "Ảnh quá mờ hoặc không đọc được.")
                 } actions: {
-                    Button("Chụp lại") { recapture() }
+                    Button(recaptureLabel) { recapture() }
                         .buttonStyle(.borderedProminent)
                     Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
                 }
@@ -273,7 +283,7 @@ struct AnalysisView: View {
                 } description: {
                     Text(failure.errorDescription ?? "Trang không phải tiếng Anh.")
                 } actions: {
-                    Button("Chụp trang khác") { recapture() }
+                    Button(recaptureLabel) { recapture() }
                         .buttonStyle(.borderedProminent)
                     Button("Đóng", role: .cancel) { model.discardAnalysis(); dismiss() }
                 }
@@ -284,7 +294,7 @@ struct AnalysisView: View {
                     Text(failure.errorDescription ?? "Đã có lỗi xảy ra.")
                 } actions: {
                     Button("Thử lại") {
-                        Task { await model.analyzeCurrentImage() }
+                        Task { await model.analyzeCurrentPage() }
                     }
                     .buttonStyle(.borderedProminent)
                     // FR-21 GWT cuối: lỗi agent (401/timeout/base URL sai…) đưa
@@ -305,11 +315,19 @@ struct AnalysisView: View {
                 Text(model.capture.analysisError ?? "Đã có lỗi xảy ra.")
             } actions: {
                 Button("Thử lại") {
-                    Task { await model.analyzeCurrentImage() }
+                    Task { await model.analyzeCurrentPage() }
                 }
                 .buttonStyle(.borderedProminent)
             }
         }
+    }
+
+    /// FR-23/ADR-058 (pdf-reader-r1 T4) — GWT 6: trang vào từ PDF thì nút khắc
+    /// phục là "Về trang đọc" (đóng sheet, lộ lại `PDFReaderView` phía dưới),
+    /// không phải "Chụp lại" (mở camera vô nghĩa với nguồn không phải ảnh chụp).
+    /// `recapture()` tự biết không mở camera cho lối PDF (`AppModel.prepareRecapture`).
+    private var recaptureLabel: String {
+        model.capture.origin == .pdf ? "Về trang đọc" : "Chụp lại"
     }
 
     private func recapture() {

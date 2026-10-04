@@ -29,6 +29,24 @@ final class ReviewState {
     var extraAvailableCount = 0
 }
 
+/// FR-23/ADR-058 (pdf-reader-r1 T4) — trang vào từ đâu: ảnh chụp (OCR) hay
+/// trang PDF có lớp chữ dùng được (`analyzeText`, không OCR). PDF scan/lớp chữ
+/// rác KHÔNG dùng `.pdf` — nó được vẽ thành ảnh rồi đi lối `.camera` như cũ
+/// (chỉ khác mỗi nguồn gốc, pipeline phân tích y hệt). Không giữ `collectionID`
+/// ở đây — `capture.analysisTargetCollectionID` đã là nguồn duy nhất cho đích,
+/// tránh hai chỗ phải đồng bộ cùng một giá trị.
+enum CaptureOrigin: Equatable {
+    case camera
+    case pdf
+}
+
+/// Lớp chữ của một trang PDF đã chấm chất lượng tốt (FR-23/ADR-058) — `text`
+/// đi thẳng `PageAnalyzer.analyzeText`, không OCR.
+struct PDFTextPage: Equatable {
+    let text: String
+    let sourceHash: String
+}
+
 /// Chụp (FR-01) + phân tích (FR-02/04) một trang — vòng đời từ ảnh tới kết quả.
 @MainActor
 @Observable
@@ -36,6 +54,11 @@ final class CaptureFlow {
     // FR-01: capture state
     var lastCapturedImage: CapturedImage?
     var captureError: String?
+    /// FR-23/ADR-058 (pdf-reader-r1 T4): trang PDF có lớp chữ dùng được. Loại
+    /// trừ lẫn nhau với `lastCapturedImage` trong một lượt — PDF scan/lớp chữ
+    /// rác đặt `lastCapturedImage` (ảnh đã vẽ từ trang), không đặt field này.
+    var pdfText: PDFTextPage?
+    var origin: CaptureOrigin = .camera
 
     // FR-02: analysis state
     var isAnalyzing = false
@@ -54,6 +77,10 @@ final class CaptureFlow {
     // J2: đích collection chọn sẵn cho lần capture từ Collection Hub (nil = kho
     // tạm). AnalysisView đọc làm collection ban đầu rồi dọn sạch sau khi lưu.
     var analysisTargetCollectionID: String?
+
+    /// Có trang đang chờ phân tích chưa — ảnh HOẶC text PDF (FR-23). `AnalysisView.task`
+    /// dùng cờ này thay vì tự kiểm `lastCapturedImage` để không quên nhánh PDF.
+    var hasPendingPage: Bool { lastCapturedImage != nil || pdfText != nil }
 }
 
 /// Kết quả một lần Lưu thành công — `AnalysisView` đóng rồi `RootView` đọc để hiện banner
@@ -89,6 +116,13 @@ final class ShellSignals {
     /// Phiên đọc đang mở (push trong Hub, không vào ShellRoute) → ẩn nút chụp trong thanh tab
     /// (port UI lab §10). ReadingSessionView bật/tắt ở onAppear/onDisappear.
     var suppressFloatShutter = false
+
+    /// FR-23/ADR-058 (pdf-reader-r1 T4) — `PDFReaderView` bấm "Phân tích trang
+    /// này" xong (đã set `capture.pdfText`/`lastCapturedImage` +
+    /// `analysisTargetCollectionID`) thì bật cờ này; `RootView` tiêu thụ ở
+    /// `.onChange` — kiểm `activeAgentReady` (J1: phòng lỗi trước) giống
+    /// `openCapture`, rồi mở sheet phân tích dùng chung với lối ảnh.
+    var pendingPDFAnalysis = false
 
     #if DEBUG
     /// verify-nav-r1 T2 — `-ReadoScreen encounter-sheet` bật cờ này; AnalysisView

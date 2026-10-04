@@ -66,6 +66,11 @@ struct RootView: View {
     @State private var bannerHubID: String?
     // ux-redesign-r1 T9: chụp khi chưa có agent chạy được → mở form thêm agent thay vì camera.
     @State private var showAgentSetup = false
+    // FR-23/ADR-058 (pdf-reader-r1 T4): agent setup bị mở TỪ luồng phân tích PDF
+    // (không phải nút chụp) — onDismiss phải mở lại sheet phân tích, không mở
+    // camera. RootView-local, KHÔNG để trong ShellSignals: tiêu thụ ngay lúc
+    // đọc nên không có rủi ro "cờ pending kẹt mãi" như `shell.pendingPDFAnalysis`.
+    @State private var pdfAnalysisPendingAgent = false
     // T3a shell-chrome-r1: ẩn thanh tab (kèm nút chụp) khi cuộn xuống.
     @State private var chrome = ShellChrome()
 
@@ -185,14 +190,38 @@ struct RootView: View {
             NavigationStack { AnalysisView() }
         }
         // T9: phòng lỗi trước — không để người dùng chụp xong rồi mới biết thiếu agent. Nối agent xong thì
-        // tiếp tục việc đang làm dở (mở camera) thay vì bắt bấm lại; huỷ form thì ở nguyên chỗ.
+        // tiếp tục việc đang làm dở (mở camera, hoặc mở sheet phân tích nếu tới từ PDFReaderView — T4
+        // pdf-reader-r1) thay vì bắt bấm lại; huỷ form thì ở nguyên chỗ.
         .sheet(isPresented: $showAgentSetup, onDismiss: {
-            if model.activeAgentReady { openShutterCapture() }
+            guard model.activeAgentReady else {
+                pdfAnalysisPendingAgent = false
+                return
+            }
+            if pdfAnalysisPendingAgent {
+                pdfAnalysisPendingAgent = false
+                showAnalysis = true
+            } else {
+                openShutterCapture()
+            }
         }) {
             AgentFormSheet(agent: nil) { name, base, modelName, key in
                 model.addAgent(name: name, baseURL: base, model: modelName, apiKey: key)
             }
             .appErrorAlert()
+        }
+        // FR-23/ADR-058 (pdf-reader-r1 T4): `PDFReaderView` bấm "Phân tích trang
+        // này" xong thì bật cờ này — tiêu thụ NGAY (giống mọi cờ `pending*`
+        // khác) để không kẹt nếu agent chưa sẵn sàng, rồi quyết định mở thẳng
+        // sheet hay đi qua form thêm agent trước (cùng luật `openCapture`).
+        .onChange(of: model.shell.pendingPDFAnalysis) { _, pending in
+            guard pending else { return }
+            model.shell.pendingPDFAnalysis = false
+            guard model.activeAgentReady else {
+                pdfAnalysisPendingAgent = true
+                showAgentSetup = true
+                return
+            }
+            showAnalysis = true
         }
         .onAppear {
             model.reloadOverview()

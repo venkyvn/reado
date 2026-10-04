@@ -167,4 +167,55 @@ extension AppModel {
             DebugTrace.event("error", "pdf:savePage", ["error": String(describing: error)])
         }
     }
+
+    // MARK: — Phân tích trang đang đọc (T4)
+
+    /// Bấm "Phân tích trang này" trong `PDFReaderView`. `PDFPageText` quyết
+    /// định lớp chữ dùng được hay phải rơi về OCR — người dùng không tự chọn,
+    /// không thấy khác biệt ngoài dòng tiến độ. Cả hai nhánh set
+    /// `analysisTargetCollectionID` + `origin = .pdf` rồi bật
+    /// `shell.pendingPDFAnalysis`; `RootView` tiêu thụ cờ đó (kiểm
+    /// `activeAgentReady` trước, giống `openCapture`) rồi mở sheet phân tích
+    /// dùng CHUNG với lối ảnh (`AnalysisView.task` đọc `capture.hasPendingPage`).
+    ///
+    /// `PDFPage` không phải kiểu `Sendable` (PDFKit) nên chạy thẳng trên
+    /// MainActor thay vì tách `Task` nền — trích chữ MỘT trang là việc nhẹ,
+    /// khác hẳn OCR/gọi mạng (những chỗ thật sự cần async).
+    func preparePDFAnalysis(page: PDFPage, collectionID: String) {
+        capture.lastCapturedImage = nil
+        capture.pdfText = nil
+        capture.analysisResult = nil
+        capture.analysisFailure = nil
+        capture.origin = .pdf
+        capture.analysisTargetCollectionID = collectionID
+
+        switch PDFPageText.extract(page: page) {
+        case let .text(text):
+            capture.pdfText = PDFTextPage(
+                text: text, sourceHash: ImageHasher.hash(of: Data(text.utf8)))
+        case .needsOCR:
+            guard let image = Self.renderPageAsImage(page) else {
+                // Cực hiếm (JPEG encode hỏng) — không có gì để phân tích, báo
+                // lỗi thẳng thay vì mở sheet rỗng.
+                alertMessage = "Không đọc được trang này. Thử trang khác."
+                return
+            }
+            capture.lastCapturedImage = image
+        }
+        shell.pendingPDFAnalysis = true
+    }
+
+    /// Vẽ trang thành ảnh cho OCR — cạnh dài ~2800px (≈300 DPI). KHÔNG qua
+    /// `ImageCompressor`: mức nén 1600px của nó đặt ra cho thời ảnh còn phải
+    /// upload; giờ OCR chạy trên máy, chỉ text đi ra ngoài.
+    private static func renderPageAsImage(_ page: PDFPage) -> CapturedImage? {
+        let targetLongEdge: CGFloat = 2800
+        let bounds = page.bounds(for: .mediaBox)
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        let scale = targetLongEdge / max(bounds.width, bounds.height)
+        let size = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+        let image = page.thumbnail(of: size, for: .mediaBox)
+        guard let data = image.jpegData(compressionQuality: 0.9) else { return nil }
+        return CapturedImage(imageData: data)
+    }
 }

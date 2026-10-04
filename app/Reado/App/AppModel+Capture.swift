@@ -12,6 +12,10 @@ extension AppModel {
     /// 2.2 sẽ dùng ảnh này gọi PageAnalyzer.
     func handleCapturedImage(_ image: CapturedImage) {
         capture.lastCapturedImage = image
+        // FR-23: chụp ảnh thường luôn là lối camera — dọn sạch trang PDF cũ nếu
+        // có (fen bấm chụp giữa lúc chưa đóng hẳn một lượt phân tích PDF dở).
+        capture.pdfText = nil
+        capture.origin = .camera
         capture.captureError = nil
         capture.analysisResult = nil
         capture.analysisFailure = nil
@@ -22,12 +26,38 @@ extension AppModel {
 
     /// Gọi analyzer cho agent BYOK đang active, mock khi walking skeleton (SD 2.1).
     /// FR-02: hiện progress, nhận 3 nhóm dữ liệu; lỗi → báo + cho retry.
-    func analyzeCurrentImage() async {
-        guard let image = capture.lastCapturedImage, let database else {
-            // FR-04: không có ảnh → UI rơi về empty state "Chưa có trang để phân
-            // tích" (đây không phải lỗi phân tích, không cần đặt capture.analysisFailure).
+    /// FR-23/ADR-058 (pdf-reader-r1 T4): `capture.pdfText` có giá trị → lối PDF
+    /// (`analyzeText`, không OCR); không thì lối ảnh cũ nguyên vẹn (PDF scan/lớp
+    /// chữ rác đã được vẽ thành ảnh ở `preparePDFAnalysis`, đi đúng nhánh này).
+    func analyzeCurrentPage() async {
+        guard let database else { return }
+        if let pdfPage = capture.pdfText {
+            await runAnalysis(database: database) { analyzer, cefrLevel in
+                try await analyzer.analyzeText(
+                    pdfPage.text, cefr: cefrLevel, sourceHash: pdfPage.sourceHash)
+            }
             return
         }
+        guard let image = capture.lastCapturedImage else {
+            // FR-04: không có trang → UI rơi về empty state "Chưa có trang để
+            // phân tích" (không phải lỗi phân tích, không set analysisFailure).
+            return
+        }
+        await runAnalysis(database: database) { analyzer, cefrLevel in
+            try await analyzer.analyze(
+                image: image.imageData,
+                imageMime: image.mimeType,
+                cefr: cefrLevel,
+                imageHash: image.imageHash)
+        }
+    }
+
+    /// Phần chung của hai lối (ảnh/PDF): mở analyzer, chạy progress, map lỗi.
+    /// Tách ra T4 để `analyzeCurrentPage` chỉ còn khác nhau đúng một lời gọi.
+    private func runAnalysis(
+        database: SQLiteDatabase,
+        call: (PageAnalyzer, String) async throws -> PageAnalysis
+    ) async {
         capture.isAnalyzing = true
         capture.analysisFailure = nil
         capture.analysisResult = nil
@@ -46,11 +76,7 @@ extension AppModel {
                 onProgress: { [weak self] progress in
                     Task { @MainActor in self?.capture.analysisProgress = progress }
                 })
-            let result = try await analyzer.analyze(
-                image: image.imageData,
-                imageMime: image.mimeType,
-                cefr: cefrLevel,
-                imageHash: image.imageHash)
+            let result = try await call(analyzer, cefrLevel)
             capture.analysisResult = result
             DebugTrace.event("analysis", "ok", [
                 "segments": result.segments.count,
@@ -105,6 +131,8 @@ extension AppModel {
                     count: saved, collectionID: target, collectionName: name)
             }
             capture.lastCapturedImage = nil
+            capture.pdfText = nil
+            capture.origin = .camera
             capture.analysisResult = nil
             capture.analysisTargetCollectionID = nil
         }
@@ -117,14 +145,22 @@ extension AppModel {
         capture.analysisResult = nil
         capture.analysisFailure = nil
         capture.lastCapturedImage = nil
+        capture.pdfText = nil
+        capture.origin = .camera
         capture.captureError = nil
         capture.analysisTargetCollectionID = nil
     }
 
-    /// FR-04: dọn state phân tích + báo RootView mở lại CaptureView (ảnh mờ /
-    /// trang không phải tiếng Anh → cần ảnh khác, retry cùng ảnh vô nghĩa).
+    /// FR-04: dọn state phân tích. Lối ảnh báo RootView mở lại CaptureView (ảnh
+    /// mờ / trang không phải tiếng Anh → cần ảnh khác, retry cùng ảnh vô nghĩa).
+    /// Lối PDF (FR-23/ADR-058) KHÔNG bật `pendingRecapture` — mở camera là sai,
+    /// `AnalysisView` tự đóng sheet để lộ lại `PDFReaderView` đang đứng sẵn phía
+    /// dưới (nút "Về trang đọc", không phải "Chụp lại").
     func prepareRecapture() {
+        let wasPDF = capture.origin == .pdf
         discardAnalysis()
-        capture.pendingRecapture = true
+        if !wasPDF {
+            capture.pendingRecapture = true
+        }
     }
 }

@@ -77,7 +77,14 @@ struct PDFReaderView: View {
                 .font(Typo.meta)
                 .foregroundStyle(.secondary)
             Spacer()
-            // T4 (pdf-reader-r1): CTA "Phân tích trang này" vào đây.
+            // FR-23/ADR-058 (pdf-reader-r1 T4): lớp chữ tốt hay rơi về OCR do
+            // `PDFPageText`/`preparePDFAnalysis` tự quyết — người dùng chỉ bấm,
+            // không tự chọn. Ẩn khi đang chờ (đã bấm rồi, tránh bấm đúp).
+            Button("Phân tích trang này") {
+                triggerAnalysis()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(model.shell.pendingPDFAnalysis)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
@@ -138,6 +145,17 @@ struct PDFReaderView: View {
             guard !Task.isCancelled else { return }
             model.savePDFPage(collectionID: collectionID, pageIndex: index)
         }
+    }
+
+    /// FR-23/ADR-058 (pdf-reader-r1 T4) — bấm "Phân tích trang này": lấy đúng
+    /// `PDFPage` của trang đang đọc rồi giao cho model (chấm lớp chữ, bật
+    /// `shell.pendingPDFAnalysis`; `RootView` tiêu thụ cờ đó và mở sheet).
+    /// Không tự `dismiss()` ở đây — sheet phủ LÊN TRÊN, reader vẫn đứng nguyên
+    /// phía dưới nên đóng sheet (Lưu / "Về trang đọc") tự lộ lại đúng chỗ.
+    private func triggerAnalysis() {
+        guard let document, let page = document.page(at: currentPageIndex) else { return }
+        Haptics.action()
+        model.preparePDFAnalysis(page: page, collectionID: collectionID)
     }
 
     private func handlePicked(_ result: Result<[URL], Error>) {
