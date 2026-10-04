@@ -1114,3 +1114,35 @@
     dòng tombstone.
   - Chi tiết implementation: `docs/specs/solution-design.md` §8b,
     `docs/agent/prompt-spec.md` mục 3b, task breakdown ở `docs/plans/pdf-reader-r1.md`.
+
+## ADR-059 — Điều hướng trang + Mục lục trong PDF reader — đảo dòng "mục lục" ngoài phạm vi của FR-23 (pdf-nav-r1)
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** fen thử pdf-reader-r1 (T0–T4) với sách thật 254 trang. Reader khi đó
+  chỉ có vuốt ngang từng trang (`PDFView` + `usePageViewController`) — không có cách
+  nhảy nhanh tới một trang xa, không có mục lục, và `ShellTabBar` vẫn chiếm ~80pt
+  chỗ đọc dù đang ở trong một PDF (không phải màn danh sách). Fen: "hỗ trợ thêm
+  nhiều cách thao tác với pdf dễ hơn. hiện tại pdf thao tác khó quá.. khó chọn
+  trang, đổi trang các kiểu."
+- **Quyết định:**
+  1. Thêm **thanh kéo (slider) + nút ◀ ▶ + chạm "Tr. N / M" để gõ số trang** vào
+     thanh đáy màn đọc.
+  2. Thêm **Mục lục**, đọc outline sẵn có trong file PDF (`PDFOutline`/`PDFDestination`
+     hoặc `PDFActionGoTo` — PDF xuất từ EPUB hay dùng action thay destination). Không
+     tự sinh mục lục từ nội dung. Việc này **đảo dòng "mục lục" trong câu "Không
+     thuộc phạm vi R1"** của FR-23 — các mục khác của dòng đó (highlight, ghi chú,
+     tìm kiếm chữ, bookmark nhiều chỗ) vẫn giữ ngoài phạm vi.
+  3. **Ẩn `ShellTabBar`** (Hôm nay / Thư viện) khi đang ở màn đọc PDF, dùng lại cơ chế
+     ẩn đã có sẵn ở `ShellTabBar` (D3, offset+opacity+`allowsHitTesting`) — không viết
+     cơ chế ẩn mới.
+  4. **Không làm:** đổi sang cuộn dọc liên tục, lưới ảnh thu nhỏ (thumbnail grid). Giữ
+     lật ngang từng trang (`usePageViewController`) làm lối đọc chính; slider/◀▶/Mục
+     lục chỉ là lối nhảy nhanh.
+- **Hệ quả:**
+  - Không đổi schema — `pdf_sources`/`PDFSourceRepository.updatePage` giữ nguyên,
+    nhảy trang qua slider/◀▶/gõ số/Mục lục đều lưu trang qua đường đó như lật tay.
+  - Không đổi prompt/`PDFPageText`/luồng phân tích T4 (FR-23 CTA "Phân tích trang
+    này" không đổi hành vi).
+  - FR-23 (`docs/specs/prd.md`) thêm 1 GWT điều hướng; J2b (`docs/specs/journeys.md`)
+    cập nhật happy path + bảng empty/error. ADR-058 không sửa.
+  - Chi tiết implementation: `docs/plans/pdf-nav-r1.md`.

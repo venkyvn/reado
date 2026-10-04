@@ -20,6 +20,11 @@ proxy/.venv/
 # OS noise
 .DS_Store
 
+# PDF sách thật để test pdf-reader-r1 (T5 eval) — KHÔNG commit, bản quyền
+# (pull_diagnostics.sh/docs/plans/pdf-reader-r1.md). Chỉ chặn ở gốc repo, không
+# chặn PDF trong docs/ nếu sau này cần (rare).
+/*.pdf
+
 # 2026-09-24 (owner): bỏ whitelist "chỉ app/" — track toàn bộ source + docs.
 # Các khối bí mật + build cache phía trên vẫn áp dụng.
 

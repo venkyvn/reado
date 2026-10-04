@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Product | Reado |
-| Version | 0.12 |
+| Version | 0.13 |
 | Status | Draft |
 | Owner | fen |
 | Created | 2026-09-07 |
@@ -110,6 +110,12 @@ song.
 > cửa thu từ vựng **thứ hai**, song song ảnh chụp (FR-01). NG-07 **không bị xoá**,
 > chỉ còn giữ phần EPUB/ebook và việc chép file vào app. Chi tiết:
 > [decisions-log.md ADR-058](docs/decisions-log.md).
+
+> **v0.13 — FR-23 thêm điều hướng trang + Mục lục (pdf-nav-r1).** Chốt 2026-10-04.
+> Fen thử sách thật 254 trang: vuốt từng trang không đủ. Thêm thanh kéo + nút ◀ ▶ +
+> gõ số trang, và Mục lục đọc outline sẵn có trong file (đảo dòng "mục lục" khỏi
+> "Không thuộc phạm vi R1" của FR-23). Thanh tab ẩn khi đang đọc PDF. Không đổi
+> schema/prompt. Chi tiết: [decisions-log.md ADR-059](docs/decisions-log.md).
 
 ---
 
@@ -292,6 +298,11 @@ thứ tự số trong tài liệu không còn liên tục.
 |---|---|
 | FR-23 | **Mới** — đọc PDF trong Reado, cửa thu từ vựng thứ hai (bảng `pdf_sources`, prompt riêng), Epic E1. Đảo một phần NG-07 |
 | NG-07 | Nội dung viết lại: chỉ còn EPUB/ebook + chép file vào app |
+
+| FR | Trạng thái ở v0.13 |
+|---|---|
+| FR-23 | Sửa — thêm GWT điều hướng trang (slider/◀▶/gõ trang/Mục lục), thanh tab ẩn khi đọc. "Không thuộc phạm vi R1" bỏ "mục lục" (ADR-059) |
+| Còn lại | Không đổi |
 | Còn lại | Không đổi |
 
 ### Epic E1 — Capture & Analyze
@@ -418,10 +429,16 @@ phân tích trang đang đọc. Đây **không** phải path capture thứ ba ha
 - FR-04 áp dụng nguyên cho trang PDF (ảnh/text không đọc được tiếng Anh thì báo lỗi,
   không bịa dữ liệu); riêng hành động khắc phục là "Về trang đọc", không phải "Chụp
   lại".
+- **Mới ở v0.13 (ADR-059, 2026-10-04).** **Given** đang đọc một PDF nhiều trang,
+  **when** kéo thanh trang, bấm ◀/▶, gõ số trang, hoặc chọn một mục trong Mục lục,
+  **then** reader nhảy tới đúng trang đó và trang đó được nhớ như khi lật tay. Mục
+  lục đọc outline sẵn có trong file PDF, không tự sinh; PDF không có outline thì
+  không hiện nút Mục lục. Thanh tab (Hôm nay / Thư viện) ẩn trong lúc đọc PDF.
 
-Không thuộc phạm vi R1: EPUB/ebook (NG-07), highlight/ghi chú/mục lục trong PDF,
-phân tích nhiều trang một lượt, đánh dấu trang đã phân tích, mở khoá PDF có mật
-khẩu trong app. Chi tiết kỹ thuật: [solution-design.md §8b](docs/specs/solution-design.md),
+Không thuộc phạm vi R1: EPUB/ebook (NG-07), highlight/ghi chú trong PDF, tìm kiếm
+chữ trong PDF, bookmark nhiều chỗ, phân tích nhiều trang một lượt, đánh dấu trang đã
+phân tích, mở khoá PDF có mật khẩu trong app (mục lục: đã có từ ADR-059, không còn
+ngoài phạm vi). Chi tiết kỹ thuật: [solution-design.md §8b](docs/specs/solution-design.md),
 prompt riêng: [prompt-spec.md mục 3b](docs/agent/prompt-spec.md).
 
 ### Epic E2 — Read (thức thời)

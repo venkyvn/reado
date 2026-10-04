@@ -5,7 +5,7 @@
 | Product | Reado |
 | Status | Draft |
 | Created | 2026-09-14 |
-| Last updated | 2026-10-04 (pdf-reader-r1 T0 — J2b đọc PDF, FR-23, ADR-058) |
+| Last updated | 2026-10-04 (pdf-nav-r1 — J2b thêm điều hướng trang + Mục lục, ADR-059) |
 | Related | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [db.md](docs/specs/db.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [prompt-spec.md](docs/agent/prompt-spec.md), [design-system/reado/MASTER.md](design-system/reado/MASTER.md) |
 | Phạm vi | Flow spec trước UI: ai làm gì, màn nào, state nào. **Không** chốt màu, font, hay Design system |
 
@@ -277,9 +277,14 @@ có phiên đọc, Q-10).
 ### Happy path — đọc và phân tích
 
 3. Chạm hàng "Đọc PDF · tr. N" → mở **reader** full-screen, nhảy tới đúng trang N
-   (trang 0 nếu chưa đọc).
-4. Lật ngang từng trang, pinch zoom. Thanh đáy: "tr. N / M" + CTA **"Phân tích
-   trang này"**. Trang hiện tại được nhớ tự động, không cần bấm lưu.
+   (trang 0 nếu chưa đọc). Thanh tab (Hôm nay / Thư viện) **ẩn** trong lúc đọc
+   (ADR-059) — đọc PDF chiếm toàn màn.
+4. Lật ngang từng trang, pinch zoom. Thanh đáy hai hàng: **hàng 1** thanh kéo trang +
+   nút ◀ ▶ để nhảy nhanh; **hàng 2** chạm "Tr. N / M" để gõ số trang thẳng, cộng CTA
+   **"Phân tích trang này"**. Góc trên toolbar có nút **Mục lục** (chỉ hiện khi PDF
+   có outline) — chọn một mục nhảy thẳng tới trang đó, mục đang đọc có dấu ✓
+   (ADR-059). Trang hiện tại được nhớ tự động dù nhảy bằng cách nào, không cần bấm
+   lưu.
 5. Bấm CTA:
    - Trang có lớp chữ dùng được → đọc thẳng lớp chữ, **không OCR**.
    - Trang không có lớp chữ hoặc lớp chữ chất lượng thấp → tự vẽ trang thành ảnh,
@@ -309,10 +314,13 @@ reader** (mới — lật trang, CTA phân tích) · Processing / Duyệt & lưu
 | "Đổi PDF…" | Ghi đè bookmark, trang đang đọc về 0 | FR-23 |
 | "Gỡ PDF" | Chỉ xoá liên kết (`pdf_sources`); không đụng file hay vocab/session đã lưu | FR-23 |
 | Xoá collection đang gắn PDF | Liên kết PDF mất theo (cascade); file trong Files không bị ảnh hưởng | FR-23 |
+| PDF không có outline (`/Outlines`) | Không hiện nút Mục lục trên toolbar | FR-23 |
+| Gõ số trang ngoài khoảng 1–M (hoặc không phải số) | Rung báo lỗi, không nhảy, alert vẫn mở | FR-23 |
 
-**Không có ở R1:** highlight, ghi chú, mục lục, bookmark nhiều chỗ trong PDF; phân
-tích nhiều trang một lượt; đánh dấu trang đã phân tích; lối tắt "Đọc tiếp" từ Home;
-nút thủ công "Đọc lại bằng OCR"; EPUB/ebook (NG-07 vẫn cấm).
+**Không có ở R1:** highlight, ghi chú, tìm kiếm chữ, bookmark nhiều chỗ trong PDF
+(mục lục: đã có từ ADR-059); phân tích nhiều trang một lượt; đánh dấu trang đã
+phân tích; lối tắt "Đọc tiếp" từ Home; nút thủ công "Đọc lại bằng OCR"; EPUB/ebook
+(NG-07 vẫn cấm).
 
 ---
 
