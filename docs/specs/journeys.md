@@ -282,9 +282,10 @@ có phiên đọc, Q-10).
 4. Lật ngang từng trang, pinch zoom. Thanh đáy: chạm "Tr. N / M" để gõ số trang
    thẳng (alert, kiểm khoảng hợp lệ), cộng CTA **"Phân tích trang này"**. Góc trên
    toolbar có nút **Mục lục** (chỉ hiện khi PDF có outline) — chọn một mục nhảy
-   thẳng tới trang đó, mục đang đọc có dấu ✓; và nút **tông nền đọc** (Trắng/Giấy
-   nâu — ADR-060, tuỳ chọn hiển thị thuần tuý, lưu theo máy). Trang hiện tại được
-   nhớ tự động dù nhảy bằng cách nào, không cần bấm lưu. **Chạm vào trang** (không
+   thẳng tới trang đó, mục đang đọc có dấu ✓; và nút **tông nền đọc** (Trắng hoặc
+   một trong vài tông giấy — Nâu/Kem/Xanh rêu — kéo thả chỉnh độ đậm ngay trong
+   menu, ADR-060/061, tuỳ chọn hiển thị thuần tuý, lưu theo máy). Trang hiện tại
+   được nhớ tự động dù nhảy bằng cách nào, không cần bấm lưu. **Chạm vào trang** (không
    phải vuốt lật) → ẩn/hiện cả nav bar lẫn thanh đáy, tập trung đọc hơn (ADR-060 —
    bỏ thanh kéo trang sau khi fen xem tay thấy không cần, gõ trang + Mục lục đã đủ).
 5. Bấm CTA:

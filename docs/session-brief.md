@@ -22,25 +22,15 @@
   phân tích → lưu → quay lại trang đọc (cần agent thật). Xem tay layout/style qua
   ảnh đã xong cho cả hai (bắt được 1 bug `.safeAreaInset` ở T3, đã sửa + ghi gotcha
   vào skill reado-ui). → `docs/plans/pdf-reader-r1.md`
-- pdf-nav-r1 (FR-23, ADR-059/060, branch `pdf-reader-r1`): fen thử bản T0-T4 trên
-  sách thật 254 trang, thấy khó chọn/đổi trang → N0-N2 xong cùng session (build +
-  full test 481/483). `PDFNavigation` (ReadoKit, kit, 11 test: clamp/gõ trang/outline
-  → Mục lục). UI: gõ số trang qua alert (`PDFNavigation.pageIndex(fromInput:)`) +
-  sheet Mục lục (`PDFOutlineSheet`, cuộn sẵn tới mục đang đọc, dấu ✓) +
-  `PDFReaderNavigator` điều khiển `PDFView` từ ngoài. Tab bar luôn ẩn khi đọc PDF
-  (`RootView.isReadingPDF`). Fen xem tay TRỰC TIẾP trong lúc code (ảnh + PDF mẫu
-  254 trang thật, không commit) → phản hồi ngay → **ADR-060** (tinh chỉnh ADR-059):
-  bỏ thanh kéo trang + nút ◀ ▶ (gõ trang + Mục lục đã đủ, thanh kéo "dùng không
-  hiệu quả"); thêm chạm-vào-trang để ẩn/hiện nav bar + thanh đáy (tập trung đọc);
-  thêm tông nền đọc Trắng/Giấy nâu (`PDFPageTint`, lớp phủ `.multiply`, lưu
-  `@AppStorage` theo máy). Cũng sửa `openPDFDocument` (không fail khi
-  `startAccessingSecurityScopedResource()` trả `false`) + hàng PDF ở Hub đổi sang
-  `IconTile`. Debug hook: `READO_DEV_PDF_FIXTURE`/`READO_DEV_PDF_PAGE`,
-  `DebugLaunch pdf-reader-toc/-goto`, `sim_screens.sh --pdf/--pdf-page`.
-  **Nợ xem tay:** chạm-để-ẩn-chrome, vuốt lật trang thật, chọn tông nền đọc qua
-  Menu (DebugLaunch không giả lập chạm/Menu) — cần fen. → `docs/plans/pdf-nav-r1.md`
-
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
+- 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (FR-23, ADR-059/060/061) —
+  fen thử pdf-reader-r1 trên sách thật 254 trang thấy khó chọn/đổi trang → gõ số
+  trang + Mục lục (`PDFNavigation`, `PDFOutlineSheet`, `PDFReaderNavigator`) + ẩn
+  tab bar khi đọc; fen xem tay TRỰC TIẾP trong lúc code, 2 vòng phản hồi → ADR-060
+  (bỏ slider/◀▶ ban đầu, thêm chạm-vào-trang ẩn/hiện chrome) rồi ADR-061 (nhiều
+  tông giấy + Slider độ đậm, cố định màu viền `PDFView` không theo Dark Mode). kit
+  462/462 (+11), full 481/483 (2 skip cũ, không đổi). Nợ xem tay: mục 11 dưới.
+  → `docs/plans/done/pdf-nav-r1.md`
 - 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 — học UI từ eevas.top theo yêu cầu fen, cả 4 task trong 1 session ("đủ context"): T1 header toolbar Home kiểu nút tròn (pill 🔥N · 🔍 · ⚙, `ToolbarSpacer`) + hero số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ" (ADR-057, bỏ `statsSection` cũ) · T2 màn duyệt thêm dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu (tự đổi theo đích ADR-053) · T3 màn "Từ hay quên" tối thiểu FR-19 (`LeechService.deleteWord`, banner Home, swipe đưa lại hàng đợi/xoá) · T4 tìm từ xuyên collection FR-08 (`VocabRepository.searchVocabulary`, gập dấu tầng Swift, màn `VocabSearchView`). 435/437 xanh (424→435, +11 test mới qua 4 task, 2 skip cũ không đổi). → `docs/plans/done/home-eevas-r1.md`
 - 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054, shell 2 tab, `journeys.md` Phần 1 viết lại) · prompt-v6 (prompt v6 + `phrases` chạm-sáng + preselect 5; fen chấp nhận bảng eval) · fsrs-queue-fix-r1 T3 (elapsed_days một định nghĩa — lib tự ghi đè, bỏ `CardSnapshot.dayDiff`) · q13-sense-filter-r1 (ADR-056, gập thay vì xoá — T1 kit + T2 UI "Đã thuộc · N"/fixture/ảnh, khép plan) · verify-nav-r1 T3 (fen xem tay toàn bộ §2.7 trên simulator thật — Ôn thêm/Alert lỗi/Reencounter/Capture/Settings/prompt-v6/migration/camera + nhóm "Đã thuộc · N" đều pass, khép plan) · fix nhỏ `save-banner` debug fixture thiếu `bannerHubID` (phát hiện lúc fen tự rà lại các ADR chốt nhanh) · reencounter-r1 khép hẳn (T3 hết nghi N=0, xác nhận qua verify-nav-r1 T3) · fr10-close-r1 (Task 3.8 khép — `ReviewDraftBuilder.regroup` tính lại nhóm "Đã thuộc" khi đổi đích trên màn duyệt, ADR-053/Q-09; 9 test mới, full 424/426 xanh; fen xem tay đổi đích trên simulator thật, pass). → `docs/plans/done/q13-sense-filter-r1.md`, `docs/plans/done/verify-nav-r1.md`, `docs/plans/done/reencounter-r1.md`, `docs/plans/done/fr10-close-r1.md`
 - 2026-10-01 → `docs/journal/2026-10-01.md`: fix-alert-sheet-dismiss-r1 (`AlertHostStack`) · master-rewrite-r1 (ADR-051) · extra-review-r1 "Ôn thêm 20" (ADR-050) · remove-proxy-r1 BYOK-only (ADR-049) · refactor-r2/r3/r4 · audit nhỏ sau refactor-r4.
@@ -66,6 +56,12 @@
     (eval prompt PDF) cần fen đưa 3–5 trang từ PDF thật (1 cột có header/footer/gạch
     nối, 2 cột, scan không chữ, scan lớp chữ rác nếu có) rồi
     `scripts/pull_diagnostics.sh device`. `docs/plans/pdf-reader-r1.md`.
+11. pdf-nav-r1 (khép 2026-10-04): xem tay 3 chỗ cần chạm thật, DebugLaunch không giả
+    lập được — (a) chạm vào trang để ẩn/hiện nav bar + thanh đáy (ADR-060), (b) vuốt
+    ngang lật trang thật trên PDF dài (có bị cử chỉ "vuốt mép trái để back" của iOS
+    giành không), (c) mở Menu "Tông nền" → chọn tông giấy + kéo Slider độ đậm
+    (ADR-061) — đã xác nhận layout/màu đúng qua ảnh + tiêm `UserDefaults` thẳng
+    (không qua chạm Menu thật). `docs/plans/done/pdf-nav-r1.md`.
 
 ## 3. Bẫy máy này
 

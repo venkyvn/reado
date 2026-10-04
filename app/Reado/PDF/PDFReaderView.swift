@@ -30,12 +30,15 @@ struct PDFReaderView: View {
     /// ADR-060 — chạm vào trang để tập trung đọc: ẩn nav bar (tiêu đề + nút
     /// Mục lục) và thanh đáy (Tr. N/M + CTA) cùng lúc. Chạm lại để hiện lại.
     @State private var isChromeHidden = false
-    /// ADR-060 — tông nền trang đọc (trắng/giấy nâu), lưu theo máy (không
-    /// theo collection) — fen hỏi "có theme màu nâu, be để dễ đọc không".
-    /// PDFKit vẽ nguyên trang PDF (không tự đổi màu theo Dark Mode), nên đây
-    /// là tuỳ chọn riêng của reader, tách khỏi `AppTheme` (accent UI chrome).
-    @AppStorage("readoPDFPageTint") private var pdfPageTintRaw = PDFPageTint.white.rawValue
-    private var pdfPageTint: PDFPageTint { PDFPageTint(rawValue: pdfPageTintRaw) ?? .white }
+    /// ADR-060 — tông nền trang đọc, lưu theo máy (không theo collection) —
+    /// fen hỏi "có theme màu nâu, be để dễ đọc không", rồi "cho vài option +
+    /// kéo thả độ màu". PDFKit vẽ nguyên trang PDF (không tự đổi màu theo
+    /// Dark Mode), nên đây là tuỳ chọn riêng của reader, tách khỏi `AppTheme`
+    /// (accent UI chrome). `intensity == 0` = Trắng (không phủ gì); > 0 = phủ
+    /// `hue.color` với độ đậm đó.
+    @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
+    @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
+    private var pdfPageTintHue: PDFPageTintHue { PDFPageTintHue(rawValue: pdfPageTintHueRaw) ?? .sepia }
 
     private var collectionName: String {
         model.collections.first { $0.id == collectionID }?.name ?? "Bộ"
@@ -49,12 +52,33 @@ struct PDFReaderView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        ForEach(PDFPageTint.allCases) { tint in
+                        Section("Tông giấy") {
                             Button {
                                 Haptics.selection()
-                                pdfPageTintRaw = tint.rawValue
+                                pdfPageTintIntensity = 0
                             } label: {
-                                Label(tint.label, systemImage: pdfPageTint == tint ? "checkmark" : tint.symbol)
+                                Label("Trắng", systemImage: pdfPageTintIntensity == 0 ? "checkmark" : "circle")
+                            }
+                            ForEach(PDFPageTintHue.allCases) { hue in
+                                Button {
+                                    Haptics.selection()
+                                    pdfPageTintHueRaw = hue.rawValue
+                                    if pdfPageTintIntensity == 0 {
+                                        pdfPageTintIntensity = PDFPageTintHue.defaultIntensity
+                                    }
+                                } label: {
+                                    Label(
+                                        hue.label,
+                                        systemImage: pdfPageTintIntensity > 0 && pdfPageTintHue == hue
+                                            ? "checkmark" : "circle.fill")
+                                }
+                            }
+                        }
+                        // Chỉ hiện khi đã chọn một tông giấy — kéo thả chỉnh độ đậm
+                        // lớp phủ (fen: "kéo thả độ màu của giấy").
+                        if pdfPageTintIntensity > 0 {
+                            Section("Độ đậm") {
+                                Slider(value: $pdfPageTintIntensity, in: 0.05 ... 1)
                             }
                         }
                     } label: {
@@ -132,8 +156,11 @@ struct PDFReaderView: View {
                 // lại từng trang. `allowsHitTesting(false)` để không chặn
                 // vuốt lật trang / chạm ẩn chrome của view bên dưới.
                 .overlay {
-                    if let tint = pdfPageTint.color {
-                        tint.blendMode(.multiply).allowsHitTesting(false)
+                    if pdfPageTintIntensity > 0 {
+                        pdfPageTintHue.color
+                            .opacity(pdfPageTintIntensity)
+                            .blendMode(.multiply)
+                            .allowsHitTesting(false)
                     }
                 }
                 .contentShape(Rectangle())
@@ -314,38 +341,38 @@ struct PDFReaderView: View {
     #endif
 }
 
-/// ADR-060 — tông nền trang đọc, riêng với `AppTheme` (accent UI chrome).
-/// `.white` = không phủ gì (nguyên trang PDF).
-private enum PDFPageTint: String, CaseIterable, Identifiable {
-    case white
+/// ADR-060 — các tông giấy chọn được, riêng với `AppTheme` (accent UI
+/// chrome). Mỗi tông là màu gốc ở độ đậm tối đa; Slider "Độ đậm" chỉnh alpha
+/// khi phủ (xem `pdfPageTintIntensity`), không đổi màu gốc.
+private enum PDFPageTintHue: String, CaseIterable, Identifiable {
     case sepia
+    case cream
+    case sage
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .white: "Trắng"
-        case .sepia: "Giấy nâu"
+        case .sepia: "Nâu"
+        case .cream: "Kem"
+        case .sage: "Xanh rêu"
         }
     }
 
-    var symbol: String {
+    /// Không lấy từ `DesignSystem` (token ở đó là accent UI chrome, không
+    /// phải màu giấy nội dung đọc). Không cần bản dark mode riêng vì PDFKit
+    /// luôn vẽ trang trắng bất kể Appearance hệ thống.
+    var color: Color {
         switch self {
-        case .white: "circle"
-        case .sepia: "circle.fill"
+        case .sepia: Color(red: 0.80, green: 0.62, blue: 0.36)
+        case .cream: Color(red: 0.96, green: 0.90, blue: 0.70)
+        case .sage: Color(red: 0.76, green: 0.84, blue: 0.76)
         }
     }
 
-    /// Màu phủ blend `.multiply` lên trang — không lấy từ `DesignSystem`
-    /// (token ở đó là accent UI chrome, không phải màu giấy nội dung đọc).
-    /// Một sắc độ duy nhất, không cần bản dark mode riêng vì PDFKit luôn vẽ
-    /// trang trắng bất kể Appearance hệ thống.
-    var color: Color? {
-        switch self {
-        case .white: nil
-        case .sepia: Color(red: 0.94, green: 0.88, blue: 0.74)
-        }
-    }
+    /// Độ đậm gán sẵn khi vừa chọn một tông từ Trắng (0) — fen kéo thả tự do
+    /// sau đó qua Slider "Độ đậm".
+    static let defaultIntensity: Double = 0.45
 }
 
 /// `PDFView` (PDFKit) bọc trong `UIViewRepresentable` — lật trang kiểu sách
@@ -359,12 +386,21 @@ private struct PDFPageView: UIViewRepresentable {
     let initialPageIndex: Int
     let onPageChanged: (Int) -> Void
 
+    /// Xám nhạt cố định — xem comment ở `makeUIView`.
+    private static let pageMarginColor = UIColor(white: 0.83, alpha: 1)
+
     func makeUIView(context: Context) -> PDFView {
         let view = PDFView()
         view.autoScales = true
         view.displayMode = .singlePage
         view.displayDirection = .horizontal
         view.usePageViewController(true, withViewOptions: nil)
+        // ADR-060 — mặc định PDFKit đọc màu viền theo Dark Mode, gần như đen
+        // trên nền tối → đọc dọc (trang không lấp hết chiều cao) thấy dải
+        // trên/dưới "đen hơi nhiều" (fen). Cố định một xám nhạt trung tính,
+        // KHÔNG theo Appearance — khớp việc trang PDF cũng luôn vẽ trắng bất
+        // kể Dark Mode, tránh chênh màu đột ngột giữa viền và trang.
+        view.backgroundColor = Self.pageMarginColor
         view.document = document
         if let page = document.page(at: initialPageIndex) {
             view.go(to: page)

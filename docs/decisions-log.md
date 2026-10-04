@@ -1183,3 +1183,28 @@
     điều hướng cho khớp.
   - Tông nền trang là tuỳ chọn hiển thị thuần tuý (CLAUDE.md §6.4) — không cần Q
     mới, không ảnh hưởng dữ liệu/lịch ôn.
+
+## ADR-061 — Nhiều tông giấy + kéo thả độ đậm, cố định màu viền trang (tinh chỉnh ADR-060)
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** fen xem bản ADR-060 (tông nền Trắng/Giấy nâu, nhị phân) ngay trong
+  phiên implement, phản hồi hai điểm:
+  1. "cho 1 vài option thay vì chỉ giấy nâu. có thể kéo thả độ màu của giấy" — muốn
+     nhiều tông màu hơn, và chỉnh được độ đậm liên tục thay vì bật/tắt.
+  2. "khi đọc dọc thì 2 phần trên dưới đen hơi nhiều" — viền trên/dưới `PDFView`
+     (khi trang không lấp hết chiều cao màn, khổ dọc) tối gần đen, đặc biệt lệch
+     hẳn với trang luôn vẽ trắng.
+- **Quyết định:**
+  1. **`PDFPageTintHue`** (Nâu / Kem / Xanh rêu) + **`pdfPageTintIntensity`**
+     (`Double`, `@AppStorage`, 0 = Trắng). Chọn một tông từ Trắng → gán đậm mặc định
+     0.45; Slider "Độ đậm" (0.05…1) nằm NGAY trong cùng `Menu` (iOS hỗ trợ `Slider`
+     trong `Menu` từ 16) để kéo thả tại chỗ, không cần sheet riêng. Vẫn lớp phủ
+     `.multiply`, không vẽ lại trang.
+  2. **`PDFView.backgroundColor` cố định một xám nhạt trung tính** (không đọc theo
+     Dark Mode — mặc định PDFKit tối theo Appearance, gần đen ở Dark Mode), khớp
+     nguyên tắc trang luôn vẽ trắng bất kể giao diện hệ thống (ADR-060). Áp dụng cho
+     cả lớp phủ tông giấy (margin cũng bị nhân `.multiply` theo, đồng màu với trang).
+- **Hệ quả:** không đổi schema/prompt/logic điều hướng. Đổi key `@AppStorage` từ
+  `readoPDFPageTint` (ADR-060, enum nhị phân, chưa từng release) sang
+  `readoPDFPageTintHue`/`readoPDFPageTintIntensity` — không cần migration (tính
+  năng chưa ra khỏi máy dev).
