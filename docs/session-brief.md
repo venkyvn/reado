@@ -22,6 +22,23 @@
   phân tích → lưu → quay lại trang đọc (cần agent thật). Xem tay layout/style qua
   ảnh đã xong cho cả hai (bắt được 1 bug `.safeAreaInset` ở T3, đã sửa + ghi gotcha
   vào skill reado-ui). → `docs/plans/pdf-reader-r1.md`
+- pdf-nav-r1 (FR-23, ADR-059/060, branch `pdf-reader-r1`): fen thử bản T0-T4 trên
+  sách thật 254 trang, thấy khó chọn/đổi trang → N0-N2 xong cùng session (build +
+  full test 481/483). `PDFNavigation` (ReadoKit, kit, 11 test: clamp/gõ trang/outline
+  → Mục lục). UI: gõ số trang qua alert (`PDFNavigation.pageIndex(fromInput:)`) +
+  sheet Mục lục (`PDFOutlineSheet`, cuộn sẵn tới mục đang đọc, dấu ✓) +
+  `PDFReaderNavigator` điều khiển `PDFView` từ ngoài. Tab bar luôn ẩn khi đọc PDF
+  (`RootView.isReadingPDF`). Fen xem tay TRỰC TIẾP trong lúc code (ảnh + PDF mẫu
+  254 trang thật, không commit) → phản hồi ngay → **ADR-060** (tinh chỉnh ADR-059):
+  bỏ thanh kéo trang + nút ◀ ▶ (gõ trang + Mục lục đã đủ, thanh kéo "dùng không
+  hiệu quả"); thêm chạm-vào-trang để ẩn/hiện nav bar + thanh đáy (tập trung đọc);
+  thêm tông nền đọc Trắng/Giấy nâu (`PDFPageTint`, lớp phủ `.multiply`, lưu
+  `@AppStorage` theo máy). Cũng sửa `openPDFDocument` (không fail khi
+  `startAccessingSecurityScopedResource()` trả `false`) + hàng PDF ở Hub đổi sang
+  `IconTile`. Debug hook: `READO_DEV_PDF_FIXTURE`/`READO_DEV_PDF_PAGE`,
+  `DebugLaunch pdf-reader-toc/-goto`, `sim_screens.sh --pdf/--pdf-page`.
+  **Nợ xem tay:** chạm-để-ẩn-chrome, vuốt lật trang thật, chọn tông nền đọc qua
+  Menu (DebugLaunch không giả lập chạm/Menu) — cần fen. → `docs/plans/pdf-nav-r1.md`
 
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
 - 2026-10-04 → `docs/journal/2026-10-04.md`: home-eevas-r1 — học UI từ eevas.top theo yêu cầu fen, cả 4 task trong 1 session ("đủ context"): T1 header toolbar Home kiểu nút tròn (pill 🔥N · 🔍 · ⚙, `ToolbarSpacer`) + hero số to "N thẻ đến hạn" + 2 số phụ "Gặp lại tuần này"/"Đã nhớ" (ADR-057, bỏ `statsSection` cũ) · T2 màn duyệt thêm dòng "AI chọn sẵn N từ…" + báo trước số từ sau khi lưu (tự đổi theo đích ADR-053) · T3 màn "Từ hay quên" tối thiểu FR-19 (`LeechService.deleteWord`, banner Home, swipe đưa lại hàng đợi/xoá) · T4 tìm từ xuyên collection FR-08 (`VocabRepository.searchVocabulary`, gập dấu tầng Swift, màn `VocabSearchView`). 435/437 xanh (424→435, +11 test mới qua 4 task, 2 skip cũ không đổi). → `docs/plans/done/home-eevas-r1.md`

@@ -139,6 +139,13 @@ final class ShellSignals {
     /// đọc ở `onAppear` để tự mở nhóm gập "Đã thuộc" (mặc định gập) rồi dọn sạch — simulator
     /// không có cách giả lập chạm để chụp trạng thái mở.
     var debugExpandMatureHidden = false
+    /// pdf-nav-r1 (FR-23/ADR-059) — `-ReadoScreen pdf-reader-toc` bật cờ này;
+    /// `PDFReaderView` đọc ở `.task` (sau khi document mở xong) để tự mở sheet
+    /// Mục lục rồi dọn sạch — simulator không giả lập chạm được nút toolbar.
+    var debugShowPDFOutline = false
+    /// pdf-nav-r1 — `-ReadoScreen pdf-reader-goto` bật cờ này; `PDFReaderView`
+    /// tự mở alert "Đi tới trang" rồi dọn sạch, cùng luật trên.
+    var debugShowPDFGoTo = false
     #endif
 }
 

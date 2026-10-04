@@ -160,8 +160,7 @@ struct CollectionDetailView: View {
             Section {
                 NavigationLink(value: ShellRoute.pdfReader(collectionID)) {
                     HStack(spacing: Spacing.row) {
-                        Image(systemName: "doc.text")
-                            .foregroundStyle(.secondary)
+                        IconTile(systemImage: "doc.text")
                         VStack(alignment: .leading, spacing: Spacing.tight) {
                             Text(source.displayName)
                                 .font(Typo.rowSubtitle)

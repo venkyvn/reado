@@ -61,6 +61,11 @@ public struct DebugLaunch: Equatable, Sendable {
         /// pdf-reader-r1 T3 (FR-23/ADR-058) — gắn PDF demo vào bộ đầu tiên rồi
         /// mở thẳng reader, để chụp màn không cần tay gắn file trên simulator.
         case pdfReader
+        /// pdf-nav-r1 (FR-23/ADR-059) — như `pdfReader` nhưng mở sẵn sheet Mục
+        /// lục, để chụp màn không cần chạm nút toolbar.
+        case pdfReaderTOC
+        /// pdf-nav-r1 — như `pdfReader` nhưng mở sẵn alert "Đi tới trang".
+        case pdfReaderGoTo
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -158,6 +163,8 @@ public struct DebugLaunch: Equatable, Sendable {
         case "leeches": return .leeches
         case "search": return .search
         case "pdf-reader": return .pdfReader
+        case "pdf-reader-toc": return .pdfReaderTOC
+        case "pdf-reader-goto": return .pdfReaderGoTo
         default: return nil
         }
     }

@@ -103,12 +103,13 @@ extension AppModel {
 
     /// Resolve bookmark → mở `PDFDocument`. Trả thêm `url` (caller GIỮ access
     /// mở suốt vòng đời reader — PDFKit đọc trang lười, không phải lúc mở —
-    /// rồi tự `stopAccessingSecurityScopedResource()` ở `onDisappear`) và
-    /// `pageIndex` đã lưu (kẹp về khoảng hợp lệ nếu trang đã lưu vượt quá số
-    /// trang thật, ví dụ file bị thay bằng bản ngắn hơn).
+    /// rồi tự `stopAccessingSecurityScopedResource()` ở `onDisappear`, NHƯNG
+    /// chỉ khi `didStartAccess` — xem comment ở `startAccessingSecurityScopedResource`
+    /// dưới) và `pageIndex` đã lưu (kẹp về khoảng hợp lệ nếu trang đã lưu vượt
+    /// quá số trang thật, ví dụ file bị thay bằng bản ngắn hơn).
     func openPDFDocument(
         collectionID: String
-    ) -> Result<(document: PDFDocument, url: URL, pageIndex: Int), PDFOpenError> {
+    ) -> Result<(document: PDFDocument, url: URL, pageIndex: Int, didStartAccess: Bool), PDFOpenError> {
         guard let database else { return .failure(.unreadable) }
         let source: PDFSource?
         do {
@@ -137,21 +138,23 @@ extension AppModel {
                 bookmark: refreshed.base64EncodedString(), now: clock.now)
         }
 
-        guard url.startAccessingSecurityScopedResource() else {
-            return .failure(.accessDenied)
-        }
+        // Apple: `false` không chắc nghĩa "không đọc được" — URL không thật
+        // security-scoped (file trong container app, ổ đĩa host của simulator)
+        // cũng trả `false` nhưng vẫn mở được bình thường. Chỉ coi là lỗi khi
+        // CẢ hai cùng fail: không start được VÀ không mở được document.
+        let didStartAccess = url.startAccessingSecurityScopedResource()
         guard let document = PDFDocument(url: url) else {
-            url.stopAccessingSecurityScopedResource()
-            return .failure(.unreadable)
+            if didStartAccess { url.stopAccessingSecurityScopedResource() }
+            return .failure(didStartAccess ? .unreadable : .accessDenied)
         }
         if document.isLocked {
-            url.stopAccessingSecurityScopedResource()
+            if didStartAccess { url.stopAccessingSecurityScopedResource() }
             return .failure(.locked)
         }
         let pageIndex = document.pageCount > 0
             ? min(max(source.pageIndex, 0), document.pageCount - 1)
             : 0
-        return .success((document, url, pageIndex))
+        return .success((document, url, pageIndex, didStartAccess))
     }
 
     // MARK: — Lưu trang đang đọc (gọi liên tục lúc lật trang — không alert)

@@ -1146,3 +1146,40 @@
   - FR-23 (`docs/specs/prd.md`) thêm 1 GWT điều hướng; J2b (`docs/specs/journeys.md`)
     cập nhật happy path + bảng empty/error. ADR-058 không sửa.
   - Chi tiết implementation: `docs/plans/pdf-nav-r1.md`.
+
+## ADR-060 — Bỏ thanh kéo trang, thêm ẩn chrome khi chạm + tông nền đọc (tinh chỉnh ADR-059)
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** fen xem tay bản build N2 của ADR-059 (slider + ◀ ▶ + gõ trang + Mục
+  lục) trên simulator với PDF thật 254 trang, ngay trong cùng phiên implement. Hai
+  phản hồi trực tiếp:
+  1. "cái thanh ngang có vẻ k cần.. tại dùng k hiệu quả. bấm vào đi tới trang với
+     cái phụ lục cx đủ hỗ trợ r" — thanh kéo + nút ◀ ▶ thừa, gõ số trang (alert) +
+     Mục lục đã đủ nhảy nhanh.
+  2. "có thể che cái header với footer đi để tập trung sách hơn" — muốn một chế độ
+     đọc tập trung, ẩn được nav bar + thanh đáy.
+  3. "có cách nào cho nó có theme màu nâu, be gì đó để dễ đọc không" — muốn tông nền
+     trang ấm hơn nền trắng mặc định, giống chế độ "giấy" của app đọc sách khác.
+- **Quyết định:**
+  1. **Bỏ thanh kéo trang + nút ◀ ▶** khỏi thanh đáy (`PDFReaderView`). Giữ nguyên
+     "Tr. N / M" (chạm để gõ số trang, alert `PDFNavigation.pageIndex(fromInput:)`)
+     và Mục lục (ADR-059) làm hai lối nhảy nhanh duy nhất; vuốt ngang từng trang vẫn
+     là lối đọc chính.
+  2. **Chạm vào trang (không phải vuốt) → ẩn/hiện nav bar + thanh đáy cùng lúc**
+     (`isChromeHidden`, `.toolbar(_:for: .navigationBar)` + `.transition` cho thanh
+     đáy). Không đụng cơ chế ẩn `ShellTabBar` (D3/ADR-059) — đây là lớp ẩn RIÊNG,
+     nằm trong `PDFReaderView`, tab bar vẫn luôn ẩn sẵn khi đọc PDF.
+  3. **Tông nền trang đọc** (`PDFPageTint`: Trắng/Giấy nâu), chọn qua Menu trên
+     toolbar (icon `paintpalette`), lưu `@AppStorage` theo máy (không theo
+     collection/PDF). PDFKit vẽ nguyên trang PDF, không có API đổi màu giấy — giả
+     lập bằng lớp phủ `Color.blendMode(.multiply)` phía trên `PDFView` (trắng ×
+     tint = tint, chữ đen gần như không đổi), không vẽ lại từng trang. Tách khỏi
+     `AppTheme` (đó là accent UI chrome, không phải màu nội dung đọc).
+- **Hệ quả:**
+  - `PDFNavigationTests`/`PDFNavigation` không đổi (logic gõ trang/Mục lục vẫn vậy,
+    chỉ bớt một đường gọi UI). Không đổi schema/prompt.
+  - `docs/specs/journeys.md` J2b bớt dòng mô tả thanh kéo, thêm "chạm vào trang để
+    ẩn/hiện nav bar + thanh đáy" và tông nền đọc. `docs/specs/prd.md` FR-23 sửa GWT
+    điều hướng cho khớp.
+  - Tông nền trang là tuỳ chọn hiển thị thuần tuý (CLAUDE.md §6.4) — không cần Q
+    mới, không ảnh hưởng dữ liệu/lịch ôn.

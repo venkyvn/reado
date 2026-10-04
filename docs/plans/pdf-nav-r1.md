@@ -1,7 +1,11 @@
 # Plan: pdf-nav-r1 — điều hướng trang dễ hơn trong PDF reader
 
-> **Trạng thái:** open (2026-10-04) - fen chốt slider+◀▶+gõ trang, Mục lục (ADR-059),
-> ẩn tab bar khi đọc. Chưa code, bắt đầu từ N0.
+> **Trạng thái:** open (2026-10-04) - N0/N1 xong. N2 code xong, fen xem tay trực
+> tiếp trên simulator trong lúc implement → ADR-060 (tinh chỉnh ADR-059 dưới đây):
+> bỏ thanh kéo trang + nút ◀ ▶ (gõ trang + Mục lục đã đủ), thêm chạm vào trang để
+> ẩn/hiện nav bar + thanh đáy (tập trung đọc), thêm tông nền đọc Trắng/Giấy nâu.
+> Phần "Hàng 1" ở N2 bước 2 dưới đây (slider/◀▶) **không còn áp dụng** — xem
+> ADR-060 ở `docs/decisions-log.md` cho đặc tả cuối cùng.
 
 ## Context
 

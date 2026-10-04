@@ -279,12 +279,14 @@ có phiên đọc, Q-10).
 3. Chạm hàng "Đọc PDF · tr. N" → mở **reader** full-screen, nhảy tới đúng trang N
    (trang 0 nếu chưa đọc). Thanh tab (Hôm nay / Thư viện) **ẩn** trong lúc đọc
    (ADR-059) — đọc PDF chiếm toàn màn.
-4. Lật ngang từng trang, pinch zoom. Thanh đáy hai hàng: **hàng 1** thanh kéo trang +
-   nút ◀ ▶ để nhảy nhanh; **hàng 2** chạm "Tr. N / M" để gõ số trang thẳng, cộng CTA
-   **"Phân tích trang này"**. Góc trên toolbar có nút **Mục lục** (chỉ hiện khi PDF
-   có outline) — chọn một mục nhảy thẳng tới trang đó, mục đang đọc có dấu ✓
-   (ADR-059). Trang hiện tại được nhớ tự động dù nhảy bằng cách nào, không cần bấm
-   lưu.
+4. Lật ngang từng trang, pinch zoom. Thanh đáy: chạm "Tr. N / M" để gõ số trang
+   thẳng (alert, kiểm khoảng hợp lệ), cộng CTA **"Phân tích trang này"**. Góc trên
+   toolbar có nút **Mục lục** (chỉ hiện khi PDF có outline) — chọn một mục nhảy
+   thẳng tới trang đó, mục đang đọc có dấu ✓; và nút **tông nền đọc** (Trắng/Giấy
+   nâu — ADR-060, tuỳ chọn hiển thị thuần tuý, lưu theo máy). Trang hiện tại được
+   nhớ tự động dù nhảy bằng cách nào, không cần bấm lưu. **Chạm vào trang** (không
+   phải vuốt lật) → ẩn/hiện cả nav bar lẫn thanh đáy, tập trung đọc hơn (ADR-060 —
+   bỏ thanh kéo trang sau khi fen xem tay thấy không cần, gõ trang + Mục lục đã đủ).
 5. Bấm CTA:
    - Trang có lớp chữ dùng được → đọc thẳng lớp chữ, **không OCR**.
    - Trang không có lớp chữ hoặc lớp chữ chất lượng thấp → tự vẽ trang thành ảnh,
@@ -315,7 +317,7 @@ reader** (mới — lật trang, CTA phân tích) · Processing / Duyệt & lưu
 | "Gỡ PDF" | Chỉ xoá liên kết (`pdf_sources`); không đụng file hay vocab/session đã lưu | FR-23 |
 | Xoá collection đang gắn PDF | Liên kết PDF mất theo (cascade); file trong Files không bị ảnh hưởng | FR-23 |
 | PDF không có outline (`/Outlines`) | Không hiện nút Mục lục trên toolbar | FR-23 |
-| Gõ số trang ngoài khoảng 1–M (hoặc không phải số) | Rung báo lỗi, không nhảy, alert vẫn mở | FR-23 |
+| Gõ số trang ngoài khoảng 1–M (hoặc không phải số) | Rung báo lỗi + alert lỗi dùng chung, không nhảy | FR-23 |
 
 **Không có ở R1:** highlight, ghi chú, tìm kiếm chữ, bookmark nhiều chỗ trong PDF
 (mục lục: đã có từ ADR-059); phân tích nhiều trang một lượt; đánh dấu trang đã

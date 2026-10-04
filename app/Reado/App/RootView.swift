@@ -1,3 +1,4 @@
+import PDFKit
 import ReadoKit
 import SwiftUI
 
@@ -127,7 +128,10 @@ struct RootView: View {
             ShellTabBar(
                 selection: $selectedTab,
                 onReselect: popSelectedTabToRoot,
-                isHidden: chrome.isHidden,
+                // ADR-059 (pdf-nav-r1): đang đọc PDF (route cuối stack là
+                // `.pdfReader`) → ẩn luôn thanh tab, không chỉ lúc cuộn xuống —
+                // dùng lại cơ chế ẩn D3 (offset+opacity), không viết mới.
+                isHidden: chrome.isHidden || isReadingPDF,
                 showsCapture: showsCaptureButton,
                 onCapture: openShutterCapture,
                 badgedTabs: (model.dailyProgress?.dueToday ?? 0) > 0 ? [.today] : [])
@@ -301,6 +305,14 @@ struct RootView: View {
         return false
     }
 
+    /// ADR-059 — route cuối của stack đang đứng là `.pdfReader` → đang đọc
+    /// PDF toàn màn, ẩn thanh tab.
+    private var isReadingPDF: Bool {
+        let path = selectedTab == .today ? todayPath : libraryPath
+        if case .pdfReader = path.last { return true }
+        return false
+    }
+
     #if DEBUG
     /// verify-nav-r1 — `-ReadoScreen …` (`DebugLaunch`, `scripts/sim_screens.sh
     /// open`) để agent mở thẳng một màn và chụp, không cần chạm tay. `problems`
@@ -374,6 +386,12 @@ struct RootView: View {
             }
         case .pdfReader:
             openDebugPDFReader()
+        case .pdfReaderTOC:
+            model.shell.debugShowPDFOutline = true
+            openDebugPDFReader()
+        case .pdfReaderGoTo:
+            model.shell.debugShowPDFGoTo = true
+            openDebugPDFReader()
         }
         if let alert = launch.alert {
             Task { @MainActor in
@@ -411,19 +429,38 @@ struct RootView: View {
         }
     }
 
-    /// pdf-reader-r1 T3 — `-ReadoScreen pdf-reader`: sinh một PDF 2 trang DEBUG
-    /// (`DebugPDFFixture`, text tự viết — KHÔNG phải sách thật) gắn vào bộ có
-    /// tên đầu tiên, rồi mở thẳng reader. Không có bộ nào → alert như
-    /// `.collection(key)`, không âm thầm đứng im ở Home.
+    /// pdf-reader-r1 T3 — `-ReadoScreen pdf-reader`: gắn PDF vào bộ có tên đầu
+    /// tiên rồi mở thẳng reader. Không có bộ nào → alert như `.collection(key)`,
+    /// không âm thầm đứng im ở Home. Mặc định sinh PDF 2 trang DEBUG
+    /// (`DebugPDFFixture`, KHÔNG phải sách thật); pdf-nav-r1 thêm
+    /// `READO_DEV_PDF_FIXTURE` (đường dẫn PDF thật trên máy, qua
+    /// `sim_screens.sh --pdf`) để agent chụp màn với mục lục/254 trang thật mà
+    /// KHÔNG cần commit file đó.
     private func openDebugPDFReader() {
         guard let target = model.collections.first(where: { !$0.isDefault }) else {
             model.alertMessage = "Launch arg lạ: chưa có bộ nào (không phải kho tạm) để gắn PDF demo"
             return
         }
-        let url = DebugPDFFixture.makeTwoPagePDF()
+        let url = debugPDFFixtureURL()
         guard model.attachPDFOrAlert(url: url, collectionID: target.id) else { return }
+        if let pageEnv = ProcessInfo.processInfo.environment["READO_DEV_PDF_PAGE"] {
+            let pageCount = PDFDocument(url: url)?.pageCount ?? 0
+            if let pageIndex = PDFNavigation.pageIndex(fromInput: pageEnv, pageCount: pageCount) {
+                model.savePDFPage(collectionID: target.id, pageIndex: pageIndex)
+            } else {
+                model.alertMessage = "Launch arg lạ: READO_DEV_PDF_PAGE='\(pageEnv)' ngoài khoảng 1–\(pageCount)"
+            }
+        }
         selectedTab = .library
         libraryPath = [.pdfReader(target.id)]
+    }
+
+    private func debugPDFFixtureURL() -> URL {
+        if let path = ProcessInfo.processInfo.environment["READO_DEV_PDF_FIXTURE"],
+           FileManager.default.fileExists(atPath: path) {
+            return URL(fileURLWithPath: path)
+        }
+        return DebugPDFFixture.makeTwoPagePDF()
     }
     #endif
 

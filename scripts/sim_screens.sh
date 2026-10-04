@@ -11,13 +11,14 @@
 #   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system]
 #                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
 #                                      [--fixture <file.json>] [--agent] [--fresh] [--no-build]
+#                                      [--pdf <file.pdf>] [--pdf-page <N>]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
 #                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
 #                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
 #                                           # encounter-sheet, phrase-highlight, analysis-fixture-mature, save-banner,
-#                                           # leeches, search).
+#                                           # leeches, search, pdf-reader, pdf-reader-toc, pdf-reader-goto).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
 #                                           # `--agent` seed sẵn một agent AI-Box với key GIẢ (không kiểm tra, không gọi mạng)
 #                                           # để `activeAgentReady` = true — mở camera/luồng chụp không cần key thật.
@@ -27,6 +28,9 @@
 #                                           # `--seed` chỉ có tác dụng khi kho ĐANG TRỐNG (seed-once, như CSV cũ)
 #                                           # — đổi seed thì luôn kèm `--fresh`. `demo-reviewed` dựng lịch ôn giả
 #                                           # (`DevSeed.gradeHistory`) cho CTA "Ôn thêm" + heatmap nhiều mức màu.
+#                                           # `--pdf` (pdf-nav-r1): dùng file PDF THẬT trên máy thay PDF fixture 2
+#                                           # trang cho 3 màn pdf-reader* — KHÔNG commit file đó (xem .gitignore
+#                                           # `/*.pdf`). `--pdf-page N` mở sẵn đúng trang N (1-based).
 #
 # Bẫy: alert xin quyền camera đã hiện một lần thì kẹt qua cả uninstall/relaunch và che
 # ảnh chụp; cấp quyền sau đó không tắt được. Xử lý: `xcrun simctl shutdown <udid>` rồi
@@ -84,6 +88,8 @@ case "${1:-}" in
     WITH_AGENT=0
     OPEN_FRESH=0
     OPEN_BUILD=1
+    PDF_FIXTURE=""
+    PDF_PAGE=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
@@ -93,6 +99,8 @@ case "${1:-}" in
         --agent) WITH_AGENT=1; shift ;;
         --fresh) OPEN_FRESH=1; shift ;;
         --no-build) OPEN_BUILD=0; shift ;;
+        --pdf) PDF_FIXTURE="${2:?Thiếu đường dẫn cho --pdf}"; shift 2 ;;
+        --pdf-page) PDF_PAGE="${2:?Thiếu số trang cho --pdf-page}"; shift 2 ;;
         *) echo "Tham số lạ: $1" >&2; exit 2 ;;
       esac
     done
@@ -101,6 +109,16 @@ case "${1:-}" in
       /*) ;;
       *) ANALYSIS_FIXTURE="$ROOT/$ANALYSIS_FIXTURE" ;;
     esac
+    if [[ -n "$PDF_FIXTURE" ]]; then
+      case "$PDF_FIXTURE" in
+        /*) ;;
+        *) PDF_FIXTURE="$ROOT/$PDF_FIXTURE" ;;
+      esac
+      if [[ ! -f "$PDF_FIXTURE" ]]; then
+        echo "Không thấy file PDF: $PDF_FIXTURE" >&2
+        exit 2
+      fi
+    fi
     if [[ -n "$SEED" && "$OPEN_FRESH" == 0 ]]; then
       echo "Lưu ý: --seed chỉ áp khi kho trống — kèm --fresh nếu muốn chắc seed mới." >&2
     fi
@@ -141,6 +159,20 @@ case "${1:-}" in
     else
       unset SIMCTL_CHILD_READO_DEV_AIBOX_KEY
     fi
+    PDF_NOTE=""
+    if [[ -n "$PDF_FIXTURE" ]]; then
+      PDF_NOTE=" (pdf $PDF_FIXTURE)"
+      # RootView.debugPDFFixtureURL (pdf-nav-r1) đọc biến này thay PDF fixture 2 trang.
+      export SIMCTL_CHILD_READO_DEV_PDF_FIXTURE="$PDF_FIXTURE"
+    else
+      unset SIMCTL_CHILD_READO_DEV_PDF_FIXTURE
+    fi
+    if [[ -n "$PDF_PAGE" ]]; then
+      PDF_NOTE="$PDF_NOTE (trang $PDF_PAGE)"
+      export SIMCTL_CHILD_READO_DEV_PDF_PAGE="$PDF_PAGE"
+    else
+      unset SIMCTL_CHILD_READO_DEV_PDF_PAGE
+    fi
     # --terminate-running-process: launch trước đó (nếu còn sống) không đọc argv
     # mới — phải buộc khởi động lại để `-ReadoScreen` mới có hiệu lực.
     SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" \
@@ -148,7 +180,7 @@ case "${1:-}" in
       xcrun simctl launch \
       --terminate-running-process "$UDID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}" >/dev/null
     sleep 4  # đợi app mở + điều hướng xong trước khi `shot`
-    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)}${AGENT_NOTE} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
+    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)}${AGENT_NOTE}${PDF_NOTE} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
     exit 0
     ;;
 esac
