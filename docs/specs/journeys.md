@@ -21,7 +21,7 @@ Hai việc journey R1 thêm so với mermaid PRD (không đổi FR):
 (kho tạm + danh sách bộ) — cộng một nút chụp tròn đứng cùng hàng với capsule tab (không phải FAB nổi đè nội dung).
 Ôn **không** còn là tab: bấm "Ôn ngay"/"Ôn bộ này"/"Ôn thêm" ở hero, Hub, hoặc Lịch streak mở một **phiên ôn toàn
 màn** (che cả thanh tab) — thoát bằng ✕ hoặc "Xong", quay lại đúng chỗ đang đứng. Toolbar Hôm nay: pill
-🔥N (Lịch streak) · ⚙ (home-eevas-r1 T1, ADR-057 — hai nút tròn tách, không gộp capsule);
+🔥N (Lịch streak) · 🔍 (Tìm từ) · ⚙ (home-eevas-r1 T1/T4, ADR-057 — các nút tròn tách, không gộp capsule);
 Dữ liệu (CSV/JSON) nằm trong menu ⋯ của Thư viện, không phải trên Hôm nay/Settings.
 
 **Later** (sau R1+R2 chứng minh giá trị — [PRD mục 10](docs/specs/prd.md#10-release-scope)): J7 login, J8 settings theo tài khoản, J9 cá nhân hoá. **Không** prompt UI R1 cho J7–J9. R1 vẫn một người dùng (NG-05); màn Settings học tập (FR-15) **không** cần login — xem J-R1-S. FR-21 (agent phân tích) cũng nằm trên J-R1-S, không phải J8.

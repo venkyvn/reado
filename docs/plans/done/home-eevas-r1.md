@@ -1,6 +1,9 @@
 # Plan: home-eevas-r1 — học UI từ eevas: header nút tròn, hero số phụ, từ hay quên, tìm từ
 
-> **Trạng thái:** T1 xong (2026-10-04, ADR-057) — code + commit. Build xanh, full suite
+> **Trạng thái:** closed (2026-10-04) - T1–T4 xong, cả 4 task code+test xanh. Nợ xem tay: T3
+> swipe/confirmationDialog, T4 gõ tìm kiếm thật trên simulator — ghi ở session-brief §2.
+>
+> **T1 xong (2026-10-04, ADR-057)** — code + commit. Build xanh, full suite
 > 424/426 (2 skip opt-in, cùng baseline trước task). Đã xem tay trên simulator (`sim_screens.sh`):
 > Home light + dark với seed `demo-reviewed` (trạng thái `.extra`, 2 metric "Gặp lại tuần này" +
 > "Đã nhớ") và seed `demo` (trạng thái `.review`, hero `value`+title to, 1 metric vì
@@ -56,6 +59,39 @@
 > Ngưỡng "6 lần" hardcode trong header danh sách (CLAUDE.md §5 đã chốt `defaultLeechLapses`,
 > không có kênh AppModel đọc threshold cho UI — không bịa thêm property chỉ cho một dòng chữ
 > tĩnh). T4 (tìm từ FR-08) còn mở trong plan, chưa làm.
+>
+> **T4 xong (2026-10-04)** — "Tìm từ" xuyên mọi collection (FR-08). ReadoKit
+> (`VocabRepository.swift`): tách `entry(from: SQLRow)` dùng chung cho `listVocabulary` +
+> `searchVocabulary` mới; `searchFold` gập cho tìm kiếm (bỏ dấu + lower qua
+> `.folding(.diacriticInsensitive, .caseInsensitive)` + replace thủ công `đ/Đ` → `d` — symbol này
+> không tự gập qua `.folding`, phải thay tay) — **khác** `normalizedTerm`/khoá so khớp FR-10 (giữ
+> dấu, không đụng). `searchVocabulary(query:limit:)` SELECT toàn bộ `vocab_items` JOIN
+> `collections`, chấm điểm bằng Swift (0 = prefix-match term, 1 = contains-match term, 2 =
+> meaning-only), `sorted(by:)` ổn định trong nhóm điểm (Swift 5 Array.sorted là stable) nên giữ thứ
+> tự SQL (`term_normalized, pos, id`) trong cùng nhóm. App: `AppModel.searchVocabulary(_:)` wrapper
+> theo đúng pattern `read("…", fallback:)` có sẵn; `Library/VocabSearchView.swift` mới (`List` +
+> `.searchable` navigationBarDrawer + debounce 200ms qua `.task(id: query)`, rỗng → gợi ý tĩnh
+> `ContentUnavailableView`, không rỗng/0 kết quả → `ContentUnavailableView.search(text:)`, mỗi dòng
+> `VocabSummary` + tên collection dạng `Text` meta dưới (đúng pattern `LeechListView.row` — meta line
+> dưới `VocabSummary`), `NavigationLink(value: ShellRoute.hub(entry.collectionID))`). Route
+> `ShellRoute.search` (`RootView`), debug screen `search` (`DebugLaunch` + test +
+> `sim_screens.sh` comment). Toolbar Home (`HomeTabView.swift`): 🔍 chèn giữa pill 🔥N và ⚙, tách
+> bằng `ToolbarSpacer(.fixed, …)` hai phía (ba hình tròn riêng, không gộp capsule) — nút LUÔN hiện
+> (không điều kiện `hasFirstPage` như pill, vì tìm kiếm có ý nghĩa cả khi chưa có due card).
+> ADR-057 nối thêm đoạn T4. `prd.md` FR-08 thêm 1 Given/When/Then; `journeys.md` khung toolbar Home
+> sửa "pill 🔥N · ⚙" → "pill 🔥N · 🔍 · ⚙".
+> Test: `scripts/test.sh kit` 416/416 xanh (`VocabularySearchTests.swift` mới — 7 case: fold
+> đ/Đ+hoa, khớp term, khớp nghĩa, xuyên 2 collection, query rỗng/blank, thứ tự
+> prefix>contains>meaning, limit cắt bớt; +1 case `search` vào bảng `DebugLaunchTests`).
+> `scripts/test.sh build` xanh. Full `scripts/test.sh`: 435/437 (2 skip — cùng baseline T1/T3, +7
+> so với T3).
+> Xem tay: `open search --seed demo --fresh` → `shot after-search-empty` (light+dark, ô tìm rỗng,
+> icon kính lúp to + chữ gợi ý đúng, back nút tròn, không CTA nào bị che). `open home --seed demo
+> --no-build` → `shot after-home-3buttons` (light+dark, ba hình tròn tách rời 🔥0 · 🔍 · ⚙, không
+> gộp capsule). **Không chụp được** kết quả tìm kiếm thật (gõ "kien"/"habit" khớp term/nghĩa) —
+> screenshot tĩnh trên simulator không giả lập gõ bàn phím được; fen cần xem tay bằng cách gõ thật
+> trong Simulator app hoặc máy thật. Không chụp sepia/Dynamic Type accessibility cho T4 (DoD T4
+> không yêu cầu, chỉ 2 bullet ảnh tĩnh ở trên).
 >
 > Bước đầu tiên khi bắt đầu T1: lưu file này thành `docs/plans/home-eevas-r1.md` (cùng commit T1).
 > Người implement: Sonnet, **1 task = 1 session**, đóng bằng `/rhandoff`. Task UI → load skill

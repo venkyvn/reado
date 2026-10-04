@@ -1037,3 +1037,14 @@
   hardcode "6 lần" trong header danh sách — đã chốt (CLAUDE.md §5, Seeder
   `defaultLeechLapses = 6`), không đọc qua kênh AppModel riêng (chưa có, không cần
   thêm chỉ cho một dòng chữ tĩnh).
+- **T4 bổ sung (2026-10-04) — 🔍 Tìm từ, tìm xuyên collection:** nút 🔍 thêm vào
+  toolbar Home, giữa pill 🔥N và ⚙ (ba hình tròn tách bằng `ToolbarSpacer`), mở
+  `VocabSearchView` (`ShellRoute.search`) — `.searchable` + debounce 200ms gọi
+  `VocabRepository.searchVocabulary` (`AppModel.searchVocabulary`). Khớp `term`
+  hoặc `meaning_vi`, không phân biệt hoa/thường/dấu: gập ở **tầng Swift**
+  (`VocabRepository.searchFold` — `.folding(.diacriticInsensitive)` + replace
+  thủ công `đ/Đ` → `d`, vì symbol đó không phải "d có dấu" trong Unicode) —
+  KHÔNG đụng `normalizedTerm`/khoá so khớp FR-10 (vẫn giữ dấu). Thứ tự kết quả:
+  prefix-match term trước, rồi contains-match term, rồi chỉ khớp nghĩa; mỗi dòng
+  hiện tên collection, chạm mở collection đó (`ShellRoute.hub`). Không gộp khi
+  cùng `term` khác nghĩa — giữ nguyên luật FR-08 crit 3.

@@ -64,6 +64,14 @@ extension AppModel {
         }
     }
 
+    /// Tìm từ xuyên mọi collection theo `term` hoặc `meaning_vi` (FR-08, T4).
+    func searchVocabulary(_ query: String) -> [VocabRepository.VocabularyListEntry] {
+        guard let database else { return [] }
+        return read("tìm từ", fallback: []) {
+            try VocabRepository.searchVocabulary(on: database, query: query)
+        }
+    }
+
     /// Nạp các phiên đọc của một collection cho J2 hub (mới nhất trước).
     func loadSessions(collectionID: String) {
         guard let database else {

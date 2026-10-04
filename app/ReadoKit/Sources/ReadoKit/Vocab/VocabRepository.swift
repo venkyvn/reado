@@ -301,19 +301,59 @@ public enum VocabRepository {
             ORDER BY \(orderClause);
             """,
             [.text(collectionID)])
-        return rows.map { row in
-            VocabularyListEntry(
-                id: row["id"].textValue ?? "",
-                collectionID: row["collection_id"].textValue ?? "",
-                collectionName: row["collection_name"].textValue ?? "",
-                term: row["term"].textValue ?? "",
-                termNormalized: row["term_normalized"].textValue ?? "",
-                pos: row["pos"].textValue ?? "other",
-                ipa: row["ipa"].textValue,
-                meaningVI: row["meaning_vi"].textValue ?? "",
-                example: row["example"].textValue ?? "",
-                cefr: row["cefr"].textValue,
-                createdAt: ISOTimestamp.date(from: row["created_at"].textValue ?? "") ?? Date())
+        return rows.map(entry(from:))
+    }
+
+    private static func entry(from row: SQLRow) -> VocabularyListEntry {
+        VocabularyListEntry(
+            id: row["id"].textValue ?? "",
+            collectionID: row["collection_id"].textValue ?? "",
+            collectionName: row["collection_name"].textValue ?? "",
+            term: row["term"].textValue ?? "",
+            termNormalized: row["term_normalized"].textValue ?? "",
+            pos: row["pos"].textValue ?? "other",
+            ipa: row["ipa"].textValue,
+            meaningVI: row["meaning_vi"].textValue ?? "",
+            example: row["example"].textValue ?? "",
+            cefr: row["cefr"].textValue,
+            createdAt: ISOTimestamp.date(from: row["created_at"].textValue ?? "") ?? Date())
+    }
+
+    /// Gập cho tìm kiếm (khác `normalizedTerm` — khoá so khớp FR-10 giữ dấu). Bỏ dấu + lower +
+    /// đ→d. SQLite NOCASE chỉ gập ASCII (CLAUDE.md §7) nên lọc ở tầng Swift.
+    public static func searchFold(_ s: String) -> String {
+        let folded = s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "vi_VN"))
+        return folded.replacingOccurrences(of: "đ", with: "d")
+            .replacingOccurrences(of: "Đ", with: "d")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// FR-08: tìm từ xuyên mọi collection theo term hoặc nghĩa, không phân biệt hoa/thường/dấu.
+    public static func searchVocabulary(
+        on db: SQLiteDatabase, query: String, limit: Int = 100
+    ) throws -> [VocabularyListEntry] {
+        let q = searchFold(query)
+        guard !q.isEmpty else { return [] }
+        let rows = try db.rows(
+            """
+            SELECT v.id AS id, v.collection_id AS collection_id,
+                   c.name AS collection_name, v.term AS term,
+                   v.term_normalized AS term_normalized, v.pos AS pos,
+                   v.ipa AS ipa, v.meaning_vi AS meaning_vi, v.example AS example,
+                   v.cefr AS cefr, v.created_at AS created_at
+            FROM vocab_items v
+            JOIN collections c ON c.id = v.collection_id
+            ORDER BY v.term_normalized, v.pos, v.id;
+            """, [])
+        let entries = rows.map(entry(from:))
+        let scored = entries.compactMap { entry -> (Int, VocabularyListEntry)? in
+            let termFold = searchFold(entry.term)
+            let meaningFold = searchFold(entry.meaningVI)
+            if termFold.hasPrefix(q) { return (0, entry) }
+            if termFold.contains(q) { return (1, entry) }
+            if meaningFold.contains(q) { return (2, entry) }
+            return nil
         }
+        return scored.sorted { $0.0 < $1.0 }.prefix(limit).map(\.1)
     }
 }

@@ -17,7 +17,7 @@
 #                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
 #                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
 #                                           # encounter-sheet, phrase-highlight, analysis-fixture-mature, save-banner,
-#                                           # leeches).
+#                                           # leeches, search).
 #                                           # Gõ sai tên màn → app tự alert "Launch arg lạ", không đứng im.
 #                                           # `--agent` seed sẵn một agent AI-Box với key GIẢ (không kiểm tra, không gọi mạng)
 #                                           # để `activeAgentReady` = true — mở camera/luồng chụp không cần key thật.

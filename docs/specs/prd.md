@@ -455,6 +455,9 @@ Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md).
 - **Given** cùng một `term` có nhiều dòng vì mang nghĩa khác nhau, **when** danh
   sách hiển thị, **then** các dòng đó nằm cạnh nhau và phân biệt được bằng `pos`
   cùng câu gốc — **không** gộp lại thành một.
+- **Given** kho đã có từ, **when** người dùng gõ một chuỗi vào ô tìm (Hôm nay → 🔍), **then** thấy
+  mọi từ khớp `term` hoặc `meaning_vi` **xuyên collection**, không phân biệt hoa thường/dấu, mỗi
+  dòng ghi tên collection, chạm mở collection đó.
 
 #### FR-09 — Select Items For Review
 

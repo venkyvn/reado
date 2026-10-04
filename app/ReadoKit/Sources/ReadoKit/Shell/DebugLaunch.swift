@@ -56,6 +56,8 @@ public struct DebugLaunch: Equatable, Sendable {
         case saveBanner
         /// home-eevas-r1 T3 — màn "Từ hay quên" (FR-19), danh sách card leech.
         case leeches
+        /// home-eevas-r1 T4 — màn "Tìm từ" (FR-08), tìm xuyên mọi collection.
+        case search
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -151,6 +153,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "analysis-fixture-mature": return .analysisFixtureMature
         case "save-banner": return .saveBanner
         case "leeches": return .leeches
+        case "search": return .search
         default: return nil
         }
     }

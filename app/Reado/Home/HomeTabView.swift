@@ -6,6 +6,7 @@ import SwiftUI
 /// Màn Hôm nay (ux-redesign-r1 T3) — một hero cho việc cần làm lúc này (`HomeHero`, ADR-054),
 /// rồi "Đang đọc" (pin). Kho tạm nằm ở Thư viện, onboarding gộp vào hero. Streak lên pill
 /// toolbar, "Gặp lại tuần này"/"Đã nhớ" thành số phụ trong hero (home-eevas-r1 T1, ADR-057).
+/// Toolbar: pill 🔥N · 🔍 Tìm từ (home-eevas-r1 T4, FR-08) · ⚙ — ba hình tròn tách nhau.
 /// Không còn CTA "Chụp trang" to dưới đáy (nút chụp nằm trong thanh tab).
 struct HomeTabView: View {
     @Environment(AppModel.self) private var model
@@ -61,9 +62,20 @@ struct HomeTabView: View {
                     .accessibilityLabel("Chuỗi \(progress.streak) ngày, mở lịch streak")
                 }
                 if #available(iOS 26, *) {
-                    // Tách pill streak khỏi ⚙ thành hai hình tròn riêng — không gộp capsule.
+                    // Tách pill streak khỏi 🔍 thành hai hình tròn riêng — không gộp capsule.
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
+            }
+            // home-eevas-r1 T4 (FR-08): tìm từ xuyên mọi collection — giữa pill streak và ⚙.
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(value: ShellRoute.search) {
+                    Label("Tìm từ", systemImage: "magnifyingglass")
+                }
+                .accessibilityLabel("Tìm từ")
+            }
+            if #available(iOS 26, *) {
+                // Tách 🔍 khỏi ⚙ thành hai hình tròn riêng — không gộp capsule.
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
             }
             // ux-redesign-r1 T1b: cửa Dữ liệu chuyển sang Thư viện, ⚙ chỉ còn Cài đặt.
             ToolbarItem(placement: .topBarTrailing) {
