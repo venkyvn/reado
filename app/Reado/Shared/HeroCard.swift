@@ -17,15 +17,28 @@ struct HeroCard: View {
         var fix: Action?
     }
 
+    /// Một số phụ dưới title (vd "Gặp lại tuần này", "Đã nhớ") — eevas-r1 T1 (ADR-057).
+    struct Metric: Identifiable {
+        let value: String
+        let label: String
+        var id: String { label }
+    }
+
     let title: String
     /// Symbol nhỏ đứng trước title (vd checkmark ở trạng thái xong) — tô `titleTint`.
     var titleSystemImage: String?
     var titleTint: Color = Color.accentColor
+    /// Số to đứng trước title (vd "12" + "thẻ đến hạn") — nil = title đứng một mình như cũ.
+    var value: String? = nil
     var subtitle: String?
+    /// 0–2 số phụ, rỗng = không vẽ hàng.
+    var metrics: [Metric] = []
     /// nil = không có nút chính (trạng thái xong chỉ còn link phụ).
     var primary: Action?
     var secondary: Action?
     var warning: Warning?
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.row) {
@@ -37,6 +50,7 @@ struct HeroCard: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            metricsRow
             if let primary {
                 Button(action: primary.handler) {
                     label(for: primary)
@@ -66,7 +80,16 @@ struct HeroCard: View {
 
     @ViewBuilder
     private var titleView: some View {
-        if let titleSystemImage {
+        if let value {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+                Text(value)
+                    .font(.largeTitle.weight(.bold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                Text(title)
+                    .font(.title3.weight(.semibold))
+            }
+        } else if let titleSystemImage {
             Label {
                 Text(title)
             } icon: {
@@ -77,6 +100,29 @@ struct HeroCard: View {
         } else {
             Text(title)
                 .font(.title3.weight(.semibold))
+        }
+    }
+
+    /// Hàng số phụ dưới title/subtitle — xếp dọc ở cỡ chữ accessibility (như `statsSection` cũ).
+    @ViewBuilder
+    private var metricsRow: some View {
+        if !metrics.isEmpty {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+                : AnyLayout(HStackLayout(spacing: Spacing.lg))
+            layout {
+                ForEach(metrics) { metric in
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
+                        Text(metric.value)
+                            .font(.headline)
+                            .monospacedDigit()
+                        Text(metric.label)
+                            .font(Typo.meta)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
         }
     }
 
@@ -114,8 +160,13 @@ struct HeroCard: View {
 #Preview("HeroCard") {
     VStack(spacing: Spacing.md) {
         HeroCard(
-            title: "10 thẻ đến hạn",
-            subtitle: "Phạm vi: Tất cả bộ",
+            title: "thẻ đến hạn",
+            value: "10",
+            subtitle: "Hôm nay chưa ôn — 1 thẻ là giữ streak",
+            metrics: [
+                HeroCard.Metric(value: "3", label: "Gặp lại tuần này"),
+                HeroCard.Metric(value: "42 từ", label: "Đã nhớ"),
+            ],
             primary: HeroCard.Action(title: "Ôn ngay", handler: {}),
             secondary: HeroCard.Action(title: "Đổi phạm vi", systemImage: "chevron.down", handler: {}),
             warning: HeroCard.Warning(

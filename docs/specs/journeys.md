@@ -20,7 +20,8 @@ Hai việc journey R1 thêm so với mermaid PRD (không đổi FR):
 **Khung app (ADR-052, 2026-10-02):** shell 2 tab — **Hôm nay** (hero theo trạng thái + pin + streak) và **Thư viện**
 (kho tạm + danh sách bộ) — cộng một nút chụp tròn đứng cùng hàng với capsule tab (không phải FAB nổi đè nội dung).
 Ôn **không** còn là tab: bấm "Ôn ngay"/"Ôn bộ này"/"Ôn thêm" ở hero, Hub, hoặc Lịch streak mở một **phiên ôn toàn
-màn** (che cả thanh tab) — thoát bằng ✕ hoặc "Xong", quay lại đúng chỗ đang đứng. ⚙ Cài đặt nằm trên toolbar Hôm nay;
+màn** (che cả thanh tab) — thoát bằng ✕ hoặc "Xong", quay lại đúng chỗ đang đứng. Toolbar Hôm nay: pill
+🔥N (Lịch streak) · ⚙ (home-eevas-r1 T1, ADR-057 — hai nút tròn tách, không gộp capsule);
 Dữ liệu (CSV/JSON) nằm trong menu ⋯ của Thư viện, không phải trên Hôm nay/Settings.
 
 **Later** (sau R1+R2 chứng minh giá trị — [PRD mục 10](docs/specs/prd.md#10-release-scope)): J7 login, J8 settings theo tài khoản, J9 cá nhân hoá. **Không** prompt UI R1 cho J7–J9. R1 vẫn một người dùng (NG-05); màn Settings học tập (FR-15) **không** cần login — xem J-R1-S. FR-21 (agent phân tích) cũng nằm trên J-R1-S, không phải J8.
@@ -458,7 +459,7 @@ Thư viện (menu ⋯ Dữ liệu) · **Dữ liệu** (xuất theo collection + 
 
 ### Happy path
 
-1. Tab Hôm nay → tap hàng streak ("🔥 N ngày liên tục").
+1. Tab Hôm nay → tap pill 🔥N trên toolbar (home-eevas-r1 T1).
 2. Màn lịch: streak hiện tại (ngày liên tục), streak dài nhất, heatmap **18 tuần** (7 hàng × 18 cột, vừa khít bề ngang phone, không scroll ngang).
 3. Một ô = một ngày học theo **giờ chuyển ngày** FR-11 (mặc định 04:00), không nửa đêm hệ thống. Màu = số thẻ ôn hôm đó, đếm từ `review_logs` — không dùng cột counter ([review.md mục 6.1](docs/research/review.md#61-một-mệnh-đề-where-không-dựng-nổi-hàng-đợi)).
 4. Tap một ô → dòng chi tiết **ngay dưới lưới** (không popover): ngày, số thẻ ôn, số trang chụp nếu có. Popover trên phone che mất lưới.
@@ -466,7 +467,7 @@ Thư viện (menu ⋯ Dữ liệu) · **Dữ liệu** (xuất theo collection + 
 
 ### Màn UI (thứ tự prompt)
 
-Hôm nay (hàng streak bấm được) · Lịch streak (heatmap + chi tiết ngày + CTA).
+Hôm nay (pill streak trên toolbar bấm được) · Lịch streak (heatmap + chi tiết ngày + CTA).
 
 ### Empty / error (J-R1-P)
 

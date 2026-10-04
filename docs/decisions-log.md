@@ -999,3 +999,30 @@
   `draftResult.matureHidden` tạm chưa hiển thị, `AnalysisView` vẫn dùng
   `draftResult.visible` y như hành vi trước khi đổi (không xoá, chỉ chưa có UI).
   Không đụng schema/migration, `saveCapture`, `Prompt*.swift`.
+
+## ADR-057 — Header Home kiểu nút tròn tách, streak từ hàng riêng lên pill toolbar, hero số phụ
+
+- **Ngày:** 2026-10-04
+- **Bối cảnh:** Fen xem app eevas.top (quản lý chi tiêu, không liên quan Reado) và
+  thích hàng nút tròn góc phải header Home của nó, cùng khối hero có số to + số phụ.
+  Trước đó streak + "Gặp lại N từ tuần này" nằm trong một `Section` riêng
+  (`statsSection`, hàng bấm được) ngay dưới hero — chiếm một hàng List riêng, còn ⚙
+  là nút tròn duy nhất trên toolbar.
+- **Quyết định (T1 trong `docs/plans/home-eevas-r1.md`):** Bỏ `statsSection`. Streak
+  lên pill 🔥N trên `topBarTrailing` (label `.titleAndIcon`, `NavigationLink` tới
+  `ShellRoute.streak` như cũ), tách khỏi ⚙ bằng `ToolbarSpacer(.fixed, …)` (iOS 26+;
+  dưới đó hai nút gộp capsule, chấp nhận vì fallback hiếm) thành hai hình tròn riêng
+  kiểu eevas — chỉ hiện khi đã có trang (`hasFirstPage`). `HeroCard` thêm `value`
+  (số to đứng trước title, vd "12" + "thẻ đến hạn") và `metrics` (0–2 số phụ dưới
+  title/subtitle): "Gặp lại tuần này" (FR-22, ẩn khi 0 — 0 trông như lỗi) và "Đã nhớ"
+  (Q-08, tổng `masteredCount` mọi collection, luôn hiện kể cả 0 — số đo thật). Dòng
+  nhắc giữ streak ("Hôm nay chưa ôn — 1 thẻ là giữ streak") chuyển từ `statsSection`
+  thành `subtitle` của hero ở trạng thái `.review`. Không làm cấp/huy hiệu, lượt khôi
+  phục streak, nền gradient, hay "tiến độ kiểu ngân sách" — đã có `MasteryRing` +
+  thanh 4 màu `CollectionStatsHeader`.
+- **Hệ quả:** `Home/HomeTabView.swift` (toolbar + `heroCard`, bỏ `statsSection`),
+  `Shared/HeroCard.swift` (`Metric`, `value`, `metrics`, mọi call site cũ vẫn biên
+  dịch nhờ default `nil`/`[]`). `journeys.md` (khung app dòng ~20, J-R1-P bước 1 +
+  "Màn UI"): "hàng streak" → "pill 🔥N trên toolbar". Không đụng FSRS, schema, FR nào
+  — chỉ lớp trình bày. T2 (banner bấm được), T3 (màn "Từ hay quên" FR-19), T4 (tìm từ
+  FR-08) còn mở trong plan, chưa làm.

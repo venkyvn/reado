@@ -4,12 +4,12 @@ import SwiftUI
 // Tách từ RootView.swift (repo-hygiene-r1 B3).
 
 /// Màn Hôm nay (ux-redesign-r1 T3) — một hero cho việc cần làm lúc này (`HomeHero`, ADR-054),
-/// hàng chỉ số gọn, rồi "Đang đọc" (pin). Kho tạm nằm ở Thư viện, onboarding gộp vào hero.
+/// rồi "Đang đọc" (pin). Kho tạm nằm ở Thư viện, onboarding gộp vào hero. Streak lên pill
+/// toolbar, "Gặp lại tuần này"/"Đã nhớ" thành số phụ trong hero (home-eevas-r1 T1, ADR-057).
 /// Không còn CTA "Chụp trang" to dưới đáy (nút chụp nằm trong thanh tab).
 struct HomeTabView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// ux-redesign-r1 T1a: "Ôn ngay" / "Ôn thêm" mở phiên ôn toàn màn qua `RootView`,
     /// không còn đổi sang tab Ôn.
     @Environment(\.startReview) private var startReview
@@ -42,7 +42,30 @@ struct HomeTabView: View {
         }
         .navigationTitle("Hôm nay")
         .toolbar {
-            // ux-redesign-r1 T1b: chỉ còn ⚙ ở góc phải (quy ước iOS) — cửa Dữ liệu chuyển sang Thư viện.
+            // home-eevas-r1 T1 (ADR-057): pill streak tách khỏi hàng riêng, lên góc phải toolbar
+            // kiểu eevas — ẩn lúc onboarding (chưa có trang để streak có nghĩa).
+            if let progress = model.dailyProgress, model.hasFirstPage {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(value: ShellRoute.streak) {
+                        // `Label` tự rút về chỉ-icon trong nút tròn toolbar iOS 26 dù đã
+                        // `.labelStyle(.titleAndIcon)` — HStack thường để số streak luôn hiện.
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(Theme.due)
+                                .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
+                            Text("\(progress.streak)")
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                        }
+                    }
+                    .accessibilityLabel("Chuỗi \(progress.streak) ngày, mở lịch streak")
+                }
+                if #available(iOS 26, *) {
+                    // Tách pill streak khỏi ⚙ thành hai hình tròn riêng — không gộp capsule.
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
+            }
+            // ux-redesign-r1 T1b: cửa Dữ liệu chuyển sang Thư viện, ⚙ chỉ còn Cài đặt.
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onSettings) {
                     Label("Cài đặt", systemImage: "gearshape")
@@ -60,7 +83,6 @@ struct HomeTabView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
-            statsSection
             homePinRows
         }
         .refreshable { model.reloadOverview() }
@@ -143,8 +165,13 @@ struct HomeTabView: View {
                 primary: HeroCard.Action(
                     title: "Chụp trang", systemImage: "camera.fill", handler: onCapture))
         case let .review(count):
+            let progress = model.dailyProgress
+            let keepStreakSubtitle = (progress?.streak ?? 0) > 0 && !(progress?.reviewedToday ?? true)
             return HeroCard(
-                title: "\(count) thẻ đến hạn",
+                title: "thẻ đến hạn",
+                value: "\(count)",
+                subtitle: keepStreakSubtitle ? "Hôm nay chưa ôn — 1 thẻ là giữ streak" : nil,
+                metrics: heroMetrics,
                 primary: HeroCard.Action(title: "Ôn ngay", handler: { start(.srs) }),
                 secondary: scopeAction,
                 warning: warning)
@@ -154,6 +181,7 @@ struct HomeTabView: View {
                 titleSystemImage: "checkmark.circle.fill",
                 titleTint: Theme.ok,
                 subtitle: "Bạn vẫn có thể ôn thêm từ mới hoặc ôn sớm.",
+                metrics: heroMetrics,
                 primary: HeroCard.Action(title: "Ôn thêm \(count) thẻ", handler: { start(.extra) }),
                 secondary: scopeAction,
                 warning: warning)
@@ -162,61 +190,29 @@ struct HomeTabView: View {
                 title: "Xong phần hôm nay",
                 titleSystemImage: "checkmark.circle.fill",
                 titleTint: Theme.ok,
+                metrics: heroMetrics,
                 secondary: HeroCard.Action(
                     title: "Chụp trang mới", systemImage: "camera", handler: onCapture),
                 warning: warning)
         }
     }
 
+    /// "Gặp lại tuần này" (FR-22, ẩn khi 0 — 0 trông như lỗi) · "Đã nhớ" (Q-08, luôn hiện —
+    /// số đo thật kể cả 0). Chỉ dùng ở trạng thái đã có trang (`.review/.extra/.done`).
+    private var heroMetrics: [HeroCard.Metric] {
+        var metrics: [HeroCard.Metric] = []
+        if model.reencounteredThisWeek > 0 {
+            metrics.append(
+                HeroCard.Metric(value: "\(model.reencounteredThisWeek)", label: "Gặp lại tuần này"))
+        }
+        let masteredTotal = model.collections.reduce(0) { $0 + $1.masteredCount }
+        metrics.append(HeroCard.Metric(value: "\(masteredTotal) từ", label: "Đã nhớ"))
+        return metrics
+    }
+
     private func loadCefrLabel() {
         let levels = model.loadLearningSettings()?.cefrLevels ?? [.b2]
         cefrLabel = levels.map(\.rawValue).joined(separator: ", ")
-    }
-
-    // MARK: — Chỉ số gọn
-
-    /// Streak bấm được → Lịch streak (heatmap 18 tuần); "Gặp lại N từ tuần này" (FR-22) chỉ để
-    /// đọc, ẩn khi 0 (0 trông như lỗi, không phải tiến bộ). Ý 7 motivation-r1: streak > 0 mà hôm
-    /// nay CHƯA ôn thẻ nào thì thêm lời nhắc giữ streak (không nhắc người mới).
-    @ViewBuilder
-    private var statsSection: some View {
-        if let progress = model.dailyProgress {
-            Section {
-                NavigationLink(value: ShellRoute.streak) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        let layout = dynamicTypeSize.isAccessibilitySize
-                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
-                            : AnyLayout(HStackLayout(spacing: Spacing.md))
-                        layout {
-                            Label {
-                                Text("\(progress.streak) ngày liên tục")
-                                    .contentTransition(.numericText())
-                            } icon: {
-                                Image(systemName: "flame.fill")
-                                    .foregroundStyle(Theme.due)
-                                    .symbolEffect(.bounce, value: reduceMotion ? 0 : progress.streak)
-                            }
-                            if model.reencounteredThisWeek > 0 {
-                                Label {
-                                    Text("Gặp lại \(model.reencounteredThisWeek) từ tuần này")
-                                        .contentTransition(.numericText())
-                                } icon: {
-                                    Image(systemName: "eye")
-                                        .foregroundStyle(Theme.ok)
-                                }
-                            }
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        if progress.streak > 0 && !progress.reviewedToday {
-                            Text("Hôm nay chưa ôn — 1 thẻ là giữ streak")
-                                .font(Typo.meta)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .animation(reduceMotion ? nil : Motion.reveal, value: progress.streak)
-                }
-            }
-        }
     }
 
     // Pin Home — "Đang đọc" tối đa 5 (port UI lab), mở thẳng Collection Hub.
