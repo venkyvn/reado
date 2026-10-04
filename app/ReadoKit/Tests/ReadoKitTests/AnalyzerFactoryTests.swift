@@ -16,6 +16,31 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
         await assertThrowsNetworkError(analyzer)
     }
 
+    /// pdf-reader-r1 T2 — placeholder báo lỗi rõ cho CẢ hai lối (ảnh + PDF).
+    func testNoAgentAnalyzerAnalyzeTextThrowsNetworkError() async {
+        do {
+            _ = try await NoAgentAnalyzer().analyzeText("text", cefr: "B2", sourceHash: "h")
+            XCTFail("mong đợi lỗi chưa có agent")
+        } catch {
+            guard case AnalysisError.networkError = error else {
+                return XCTFail("mong đợi networkError, nhận \(error)")
+            }
+        }
+    }
+
+    /// `MockAnalyzer.analyzeText` trả cùng dữ liệu mẫu như `analyze`, nhưng
+    /// `promptVersion` phải là `Prompt.pdfVersion` — meta không được lẫn lối ảnh.
+    func testMockAnalyzerAnalyzeTextMatchesAnalyzeShapeWithPdfVersion() async throws {
+        let mock = MockAnalyzer()
+        let viaImage = try await mock.analyze(
+            image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h1")
+        let viaText = try await mock.analyzeText("page text", cefr: "B2", sourceHash: "h2")
+        XCTAssertEqual(viaText.segments, viaImage.segments)
+        XCTAssertEqual(viaText.vocabulary, viaImage.vocabulary)
+        XCTAssertEqual(viaText.meta.imageHash, "h2")
+        XCTAssertEqual(viaText.meta.promptVersion, Prompt.pdfVersion)
+    }
+
     /// `analyze()` của placeholder phải ném lỗi rõ, không im lặng/không gọi mạng.
     private func assertThrowsNetworkError(_ analyzer: PageAnalyzer) async {
         do {

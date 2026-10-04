@@ -2,8 +2,9 @@ import Foundation
 import os
 
 /// FR-21 — `{base}/chat/completions`, Bearer từ Keychain ngay trước khi gửi.
-/// OCR trên máy trước POST; body chỉ `type:text`. `verification` thiếu thì
-/// decoder gọi VerifyEngine; không verify lần hai.
+/// Ảnh: OCR trên máy trước POST. PDF (FR-23/ADR-058, `analyzeText`): lớp chữ
+/// trang đã có sẵn, không OCR. Cả hai body chỉ `type:text`. `verification`
+/// thiếu thì decoder gọi VerifyEngine; không verify lần hai.
 ///
 /// **Đo thật trên AI-Box (2026-09-26, `deepseek-v4.1-flash`, trang ~200 từ):**
 /// non-stream, không tắt suy nghĩ (cấu hình cũ) → byte đầu ở **63s**, quá
@@ -54,7 +55,10 @@ public struct OpenAICompatClient: PageAnalyzer {
         // `#if DEBUG` ở đây.
         let trace = DebugTrace.startAnalysis()
         trace.write(image: image)
-        trace.mergeMeta(["model": model, "baseURL": baseURL, "cefr": cefr, "imageHash": imageHash])
+        trace.mergeMeta([
+            "model": model, "baseURL": baseURL, "cefr": cefr, "imageHash": imageHash,
+            "source": "image",
+        ])
         onProgress?(.readingPage)
         let apiKey = apiKeyOverride ?? KeychainStore.load(agentID: agentID)
         guard let apiKey, !apiKey.isEmpty else {
@@ -76,25 +80,75 @@ public struct OpenAICompatClient: PageAnalyzer {
             throw AnalysisError.imageUnreadable
         }
 
+        return try await run(
+            prompt: Prompt.text(cefrLevel: cefr, pageOCR: pageOCR),
+            promptVersion: Prompt.version,
+            sourceHash: imageHash,
+            apiKey: apiKey,
+            trace: trace)
+    }
+
+    /// FR-23/ADR-058 (pdf-reader-r1 T2) — lớp chữ của một trang PDF, **không
+    /// OCR**: `pageText` đã được `PDFPageText` (tầng app) dò ranh giới đoạn
+    /// bằng hình học và chấm chất lượng trước khi tới đây — trang rác/scan đi
+    /// lối `analyze(image:...)` thay vì vào đây. `sourceHash` thay `imageHash`
+    /// (cùng field `meta.imageHash` — giá trị là hash của text, không phải ảnh).
+    public func analyzeText(
+        _ pageText: String, cefr: String, sourceHash: String
+    ) async throws -> PageAnalysis {
+        let trace = DebugTrace.startAnalysis()
+        // Ghi vào CÙNG file `page_ocr.txt` (không phải file riêng) — để
+        // `prompt_eval.py` và `diag_summary.py` đọc được không cần đổi layout.
+        trace.write(pageOCR: pageText)
+        trace.mergeMeta([
+            "model": model, "baseURL": baseURL, "cefr": cefr, "imageHash": sourceHash,
+            "source": "pdf",
+        ])
+        onProgress?(.readingPage)
+        let apiKey = apiKeyOverride ?? KeychainStore.load(agentID: agentID)
+        guard let apiKey, !apiKey.isEmpty else {
+            throw AnalysisError.providerError("Chưa có API key — mở Cài đặt và thêm key")
+        }
+        guard !pageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            trace.mergeMeta(["error": "imageUnreadable"])
+            throw AnalysisError.imageUnreadable
+        }
+
+        return try await run(
+            prompt: Prompt.pdfText(cefrLevel: cefr, pageText: pageText),
+            promptVersion: Prompt.pdfVersion,
+            sourceHash: sourceHash,
+            apiKey: apiKey,
+            trace: trace)
+    }
+
+    /// Phần chung của `analyze`/`analyzeText` sau khi đã có prompt text sẵn
+    /// sàng gửi: gọi agent (kèm retry bỏ `response_format`), map lỗi, gắn
+    /// `meta`. Tách ra pdf-reader-r1 T2 để hai lối dùng chung logic retry/lỗi.
+    private func run(
+        prompt: String,
+        promptVersion: Int,
+        sourceHash: String,
+        apiKey: String,
+        trace: DebugTrace.AnalysisSession
+    ) async throws -> PageAnalysis {
         onProgress?(.waitingAgent)
         let started = Date()
         do {
             let analysis: PageAnalysis
             do {
                 analysis = try await send(
-                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: true,
-                    trace: trace)
+                    prompt: prompt, apiKey: apiKey, includeResponseFormat: true, trace: trace)
             } catch is ResponseFormatRejected {
                 // Server trả 400/422 nhắc response_format — một số OpenAI-compat
                 // gateway không hỗ trợ field này. Thử lại đúng một lần, bỏ field.
                 trace.mergeMeta(["retriedWithoutResponseFormat": true])
                 analysis = try await send(
-                    pageOCR: pageOCR, cefr: cefr, apiKey: apiKey, includeResponseFormat: false,
-                    trace: trace)
+                    prompt: prompt, apiKey: apiKey, includeResponseFormat: false, trace: trace)
             }
             #if DEBUG
             Self.logger.debug(
-                "analysis ok model=\(model, privacy: .public) totalMs=\(Int(Date().timeIntervalSince(started) * 1000), privacy: .public) ocrChars=\(pageOCR.count, privacy: .public)"
+                "analysis ok model=\(model, privacy: .public) totalMs=\(Int(Date().timeIntervalSince(started) * 1000), privacy: .public)"
             )
             #endif
             trace.mergeMeta(["totalMs": Int(Date().timeIntervalSince(started) * 1000)])
@@ -102,7 +156,7 @@ public struct OpenAICompatClient: PageAnalyzer {
                 segments: analysis.segments,
                 vocabulary: analysis.vocabulary,
                 summaryVI: analysis.summaryVI,
-                meta: .init(imageHash: imageHash, model: model, promptVersion: Prompt.version))
+                meta: .init(imageHash: sourceHash, model: model, promptVersion: promptVersion))
         } catch let urlError as URLError {
             #if DEBUG
             Self.logger.debug(
@@ -151,8 +205,7 @@ public struct OpenAICompatClient: PageAnalyzer {
     /// `application/json`, không dòng nào bắt đầu `data:`) vẫn decode được —
     /// đi qua đường `AnalysisResponseExtractor.messageContent(from:)` cũ.
     private func send(
-        pageOCR: String,
-        cefr: String,
+        prompt: String,
         apiKey: String,
         includeResponseFormat: Bool,
         trace: DebugTrace.AnalysisSession
@@ -166,7 +219,7 @@ public struct OpenAICompatClient: PageAnalyzer {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try Self.body(
             model: model,
-            prompt: Prompt.text(cefrLevel: cefr, pageOCR: pageOCR),
+            prompt: prompt,
             extra: Self.extraBodyParams(forBaseURL: baseURL),
             includeResponseFormat: includeResponseFormat)
 

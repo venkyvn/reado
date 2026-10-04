@@ -58,6 +58,14 @@ struct FixedPageOCR: PageTextRecognizer {
     func recognize(imageData: Data) async throws -> String { text }
 }
 
+/// pdf-reader-r1 T2 — `analyzeText` không được chạm `self.ocr`; cấp ocr này
+/// cho test `analyzeText` để tự ném lỗi nếu lỡ bị gọi, thay vì chỉ đọc code.
+struct FailingPageOCR: PageTextRecognizer {
+    func recognize(imageData _: Data) async throws -> String {
+        throw AnalysisError.providerError("analyzeText không được gọi OCR")
+    }
+}
+
 final class MemorySecrets: AgentSecretStore, @unchecked Sendable {
     private var keys: [String: String] = [:]
 

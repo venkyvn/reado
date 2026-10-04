@@ -1,14 +1,24 @@
 import Foundation
 
-/// Cổng giao tiếp với AI (FR-02). UI chỉ thấy protocol này — đổi provider
-/// không đụng SwiftUI (ADR-028). Input vẫn là ảnh (NG-07). `openai_compat`
-/// OCR trên máy rồi **một** lần gọi text (dịch + vocab).
+/// Cổng giao tiếp với AI (FR-02 + FR-23/ADR-058). UI chỉ thấy protocol này —
+/// đổi provider không đụng SwiftUI (ADR-028). Hai lối vào: ảnh chụp
+/// (`analyze`, OCR trên máy rồi **một** lần gọi text) và trang PDF đọc tại
+/// chỗ trong Reado (`analyzeText`, lớp chữ đã sẵn, không OCR — pdf-reader-r1).
 public protocol PageAnalyzer: Sendable {
     func analyze(
         image: Data,
         imageMime: String,
         cefr: String,
         imageHash: String
+    ) async throws -> PageAnalysis
+
+    /// FR-23/ADR-058 — `pageText` là lớp chữ của một trang PDF, đã được
+    /// `PDFPageText` (tầng app) dò ranh giới đoạn bằng hình học và chấm chất
+    /// lượng trước khi tới đây (trang rác/scan đi `analyze(image:...)`).
+    /// `sourceHash` thay `imageHash` — cùng field `meta.imageHash`, giá trị là
+    /// hash của text thay vì ảnh.
+    func analyzeText(
+        _ pageText: String, cefr: String, sourceHash: String
     ) async throws -> PageAnalysis
 }
 
@@ -109,6 +119,13 @@ public struct NoAgentAnalyzer: PageAnalyzer {
         throw AnalysisError.networkError(
             "Chưa có agent phân tích — thêm agent (vd AI-Box) trong Cài đặt")
     }
+
+    public func analyzeText(
+        _: String, cefr _: String, sourceHash _: String
+    ) async throws -> PageAnalysis {
+        throw AnalysisError.networkError(
+            "Chưa có agent phân tích — thêm agent (vd AI-Box) trong Cài đặt")
+    }
 }
 
 /// Analyzer giả cho walking skeleton (FR-02 loẹt step UI trước khi có agent BYOK).
@@ -123,6 +140,19 @@ public struct MockAnalyzer: PageAnalyzer {
         cefr _: String,
         imageHash: String
     ) async throws -> PageAnalysis {
+        try await Self.sample(hash: imageHash, promptVersion: Prompt.version)
+    }
+
+    /// pdf-reader-r1 T2 — trả cùng dữ liệu mẫu như `analyze`, `promptVersion`
+    /// đổi sang `Prompt.pdfVersion` (mock không thật sự gọi prompt nào, nhưng
+    /// meta phải khớp lối đang chạy để UI/debug không lẫn ảnh với PDF).
+    public func analyzeText(
+        _: String, cefr _: String, sourceHash: String
+    ) async throws -> PageAnalysis {
+        try await Self.sample(hash: sourceHash, promptVersion: Prompt.pdfVersion)
+    }
+
+    private static func sample(hash: String, promptVersion: Int) async throws -> PageAnalysis {
         // Mô phỏng độ trễ network để UI progress dễ thấy.
         try await Task.sleep(nanoseconds: 1_200_000_000)
 
@@ -184,7 +214,7 @@ public struct MockAnalyzer: PageAnalyzer {
             ],
             summaryVI:
                 "Mô tả ngọn hải đăng cổ và người gác đèn già — công việc quen thuộc mỗi sáng đã gắn bó với ông suốt hơn bốn mươi năm.",
-            meta: .init(imageHash: imageHash, model: "mock", promptVersion: 1)
+            meta: .init(imageHash: hash, model: "mock", promptVersion: promptVersion)
         )
     }
 }
