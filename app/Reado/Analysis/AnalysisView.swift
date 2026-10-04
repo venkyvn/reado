@@ -19,6 +19,9 @@ struct AnalysisView: View {
     }
 
     @State private var drafts: [ReviewDraft] = []
+    // home-eevas-r1 T2: "AI chọn sẵn N từ" — chụp số preselect NGAY LÚC drafts được dựng lần đầu,
+    // không cập nhật lại ở `regroupMatureIfNeeded()` (đổi đích không đổi việc AI đã đề xuất lúc đầu).
+    @State private var aiPreselectedCount = 0
     // Q-13 phương án B (ADR-056): item khớp khoá `term|pos` đã thuộc — gập xuống
     // nhóm riêng (không xoá), không preselect, không chiếm suất 5 của `drafts`.
     // Mảng riêng (không lồng trong `drafts`) để binding tới từng ô chọn vẫn hoạt
@@ -326,6 +329,7 @@ struct AnalysisView: View {
             selectedLevels: levels.map(Set.init),
             matureSenses: model.matureSensesForCapture())
         drafts = draftResult.visible
+        aiPreselectedCount = drafts.filter(\.isSelected).count
         // Q-13 phương án B (ADR-056): tách riêng thành mảng + dict để binding
         // (`$matureHiddenDrafts[index]`) đi được tới từng ô chọn — `knownMeanings`
         // tra theo id draft, hiển thị ở `MatureHiddenRow`.
@@ -475,10 +479,40 @@ struct AnalysisView: View {
     private var resultHeader: some View {
         VStack(spacing: Spacing.sm) {
             destinationRow
+            destinationConsequenceRow
             tabPicker
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
+    }
+
+    /// home-eevas-r1 T2: số từ hiện có → sau khi lưu ở bộ đích — đọc trực tiếp
+    /// `model.capture.analysisTargetCollectionID` mỗi lần render nên tự cập nhật khi đổi đích
+    /// (ADR-053, `CollectionDestinationPicker`), không cache riêng.
+    private var targetCount: Int {
+        let overview: AppModel.CollectionOverview?
+        if let id = model.capture.analysisTargetCollectionID {
+            overview = model.collections.first { $0.id == id }
+        } else {
+            overview = model.collections.first { $0.isDefault }
+        }
+        return overview?.totalItems ?? 0
+    }
+
+    /// Tổng item đang chọn ở cả danh sách chính và nhóm gập "Đã thuộc" (Q-13).
+    private var selectedTotal: Int {
+        (drafts + matureHiddenDrafts).filter(\.isSelected).count
+    }
+
+    @ViewBuilder
+    private var destinationConsequenceRow: some View {
+        if selectedTotal > 0 {
+            Text("\(destinationName): \(targetCount) → \(targetCount + selectedTotal) từ")
+                .font(Typo.meta)
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : Motion.reveal, value: selectedTotal)
+        }
     }
 
     /// ADR-053: đổi đích ngay ở đầu màn duyệt (trước: chỉ đọc, "Đổi bộ ở màn chụp" là ngõ cụt).
@@ -597,9 +631,18 @@ struct AnalysisView: View {
                             }
                     }
                 } header: {
-                    Text("Đã chọn \(visibleSelectedCount)/\(drafts.count)")
-                        .contentTransition(.numericText())
-                        .animation(reduceMotion ? nil : Motion.reveal, value: visibleSelectedCount)
+                    VStack(alignment: .leading) {
+                        Text("Đã chọn \(visibleSelectedCount)/\(drafts.count)")
+                            .contentTransition(.numericText())
+                            .animation(reduceMotion ? nil : Motion.reveal, value: visibleSelectedCount)
+                        if aiPreselectedCount > 0 {
+                            Label(
+                                "AI chọn sẵn \(aiPreselectedCount) từ đáng học nhất — bỏ chọn từ bạn đã biết",
+                                systemImage: "sparkles")
+                                .font(Typo.meta)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
             if !matureHiddenDrafts.isEmpty {

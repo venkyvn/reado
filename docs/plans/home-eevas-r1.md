@@ -13,6 +13,20 @@
 > đã ép labelStyle; đổi sang `HStack(Image, Text)` thường thì số hiện đúng, pill/⚙ vẫn tách thành
 > hai hình tròn riêng nhờ `ToolbarSpacer`. T2/T3/T4 **chưa làm** — xem phần dưới.
 >
+> **T2 xong (2026-10-04)** — code `app/Reado/Analysis/AnalysisView.swift`: `aiPreselectedCount`
+> chụp lúc `syncDraftsIfNeeded()` (không cập nhật lại ở `regroupMatureIfNeeded()`); dòng "AI chọn
+> sẵn N từ…" dưới header "Đã chọn X/Y"; dòng hậu quả "Lưu vào: target → target+selectedTotal từ"
+> trong `resultHeader` giữa `destinationRow` và `tabPicker`, ẩn khi `selectedTotal == 0`, tự đọc
+> `model.capture.analysisTargetCollectionID` mỗi lần render nên theo kịp đổi đích (ADR-053).
+> `scripts/test.sh build` xanh. Xem tay bằng `sim_screens.sh`: `analysis-fixture --seed demo
+> --fresh` (fixture `analysis-demo.json`) cho `aiPreselectedCount == 0` VÀ `selectedTotal == 0`
+> cùng lúc (seed `demo` đã học sẵn "setback" nên nó gập vào "Đã thuộc", còn "quitting" verified
+> nhưng không nằm trong cefrLevels mặc định nên không preselect) — xác nhận cả hai dòng mới đều ẨN
+> đúng, không cần fixture riêng. `analysis-fixture --seed empty --fresh` cho `aiPreselectedCount
+> == 1`, `selectedTotal == 1` — xác nhận cả hai dòng mới HIỆN đúng chữ, đúng vị trí, light + dark.
+> Không chụp sepia/Dynamic Type accessibility cho T2 (DoD T2 không yêu cầu, chỉ 2 bullet trạng thái
+> hiện/ẩn + vị trí dòng chữ).
+>
 > Bước đầu tiên khi bắt đầu T1: lưu file này thành `docs/plans/home-eevas-r1.md` (cùng commit T1).
 > Người implement: Sonnet, **1 task = 1 session**, đóng bằng `/rhandoff`. Task UI → load skill
 > `reado-ui` trước khi sửa view.
