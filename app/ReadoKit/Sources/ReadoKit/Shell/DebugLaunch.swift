@@ -58,6 +58,9 @@ public struct DebugLaunch: Equatable, Sendable {
         case leeches
         /// home-eevas-r1 T4 — màn "Tìm từ" (FR-08), tìm xuyên mọi collection.
         case search
+        /// pdf-reader-r1 T3 (FR-23/ADR-058) — gắn PDF demo vào bộ đầu tiên rồi
+        /// mở thẳng reader, để chụp màn không cần tay gắn file trên simulator.
+        case pdfReader
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -154,6 +157,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "save-banner": return .saveBanner
         case "leeches": return .leeches
         case "search": return .search
+        case "pdf-reader": return .pdfReader
         default: return nil
         }
     }

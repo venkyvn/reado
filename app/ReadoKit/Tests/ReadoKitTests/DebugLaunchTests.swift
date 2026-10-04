@@ -33,6 +33,7 @@ final class DebugLaunchTests: XCTestCase {
             ("save-banner", .saveBanner),
             ("leeches", .leeches),
             ("search", .search),
+            ("pdf-reader", .pdfReader),
         ]
         for (raw, expected) in cases {
             let launch = DebugLaunch.parse(["-ReadoScreen", raw])

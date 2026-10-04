@@ -118,4 +118,7 @@ final class LibraryState {
     var sessions: [ReadingSession] = []
     /// Lần ôn kế tiếp (header, cram-collection-r1).
     var collectionNextDue: VocabRepository.NextDue?
+    /// FR-23/ADR-058 (pdf-reader-r1 T3) — PDF đang gắn với collection này, `nil`
+    /// = chưa gắn (hoặc đang xem kho tạm — kho tạm không gắn được).
+    var pdfSource: PDFSource?
 }

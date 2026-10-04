@@ -43,6 +43,10 @@ enum ShellRoute: Hashable {
     case leeches
     /// FR-08 (home-eevas-r1 T4): tìm từ xuyên mọi collection.
     case search
+    /// FR-23/ADR-058 (pdf-reader-r1 T3): đọc PDF đang gắn với một collection.
+    /// Luôn push TRÊN `.hub(collectionID)` cùng id — không phải "bề mặt chụp"
+    /// (`isCaptureSurface` đã tự false vì `path.count > 1`).
+    case pdfReader(String)
 }
 
 struct RootView: View {
@@ -339,6 +343,8 @@ struct RootView: View {
                 banner = ShellBannerItem(
                     message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem", autoHides: false)
             }
+        case .pdfReader:
+            openDebugPDFReader()
         }
         if let alert = launch.alert {
             Task { @MainActor in
@@ -375,6 +381,21 @@ struct RootView: View {
             model.alertMessage = "Launch arg lạ: fixture phân tích lỗi — \(error.localizedDescription)"
         }
     }
+
+    /// pdf-reader-r1 T3 — `-ReadoScreen pdf-reader`: sinh một PDF 2 trang DEBUG
+    /// (`DebugPDFFixture`, text tự viết — KHÔNG phải sách thật) gắn vào bộ có
+    /// tên đầu tiên, rồi mở thẳng reader. Không có bộ nào → alert như
+    /// `.collection(key)`, không âm thầm đứng im ở Home.
+    private func openDebugPDFReader() {
+        guard let target = model.collections.first(where: { !$0.isDefault }) else {
+            model.alertMessage = "Launch arg lạ: chưa có bộ nào (không phải kho tạm) để gắn PDF demo"
+            return
+        }
+        let url = DebugPDFFixture.makeTwoPagePDF()
+        guard model.attachPDFOrAlert(url: url, collectionID: target.id) else { return }
+        selectedTab = .library
+        libraryPath = [.pdfReader(target.id)]
+    }
     #endif
 
     /// Đích chung cho cả hai stack Hôm nay & Thư viện.
@@ -396,6 +417,8 @@ struct RootView: View {
             LeechListView()
         case .search:
             VocabSearchView()
+        case let .pdfReader(collectionID):
+            PDFReaderView(collectionID: collectionID)
         }
     }
 }

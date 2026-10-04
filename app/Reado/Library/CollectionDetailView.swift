@@ -22,6 +22,8 @@ struct CollectionDetailView: View {
     @State private var moveSheetIntention: MoveIntention?
     @State private var showExport = false
     @State private var showPinChooser = false
+    // FR-23/ADR-058 (pdf-reader-r1 T3) — chọn file PDF để gắn/đổi cho bộ này.
+    @State private var showPDFPicker = false
 
     // J2 hub: ôn bộ này (scoped) mở phiên ôn toàn màn qua `startReview` (RootView giữ
     // cover). Chụp đi qua nút chụp trong thanh tab (port UI lab §6) — không còn
@@ -50,6 +52,8 @@ struct CollectionDetailView: View {
                         })
                 }
             }
+
+            pdfSourceSection
 
             sessionsSection
 
@@ -128,10 +132,51 @@ struct CollectionDetailView: View {
         .sheet(isPresented: $showExport) {
             NavigationStack { ExportView(initialCollectionIDs: [collectionID]) }
         }
+        // FR-23/ADR-058 — "Gắn PDF…"/"Đổi PDF…" ở menu ⋯ mở picker này; gắn lại
+        // (đổi file) là UPSERT ghi đè, trang đang đọc về 0 (`attachPDFOrAlert`).
+        .fileImporter(
+            isPresented: $showPDFPicker,
+            allowedContentTypes: [.pdf],
+            allowsMultipleSelection: false
+        ) { result in
+            guard let url = try? result.get().first else { return }
+            if model.attachPDFOrAlert(url: url, collectionID: collectionID) {
+                Haptics.success()
+            }
+        }
     }
 
     private var deleteAlertTitle: String {
         wordCount > 0 ? "Xoá bộ" : "Xoá bộ này?"
+    }
+
+    // FR-23/ADR-058 (pdf-reader-r1 T3) — hàng "Đọc PDF · tr. N" đặt TRÊN danh
+    // sách session, không phải CTA chính (ADR-052: Hub chỉ có 1 CTA chính —
+    // "Ôn bộ này"/"Ôn thêm" ở `CollectionStatsHeader`). Chưa gắn PDF → không
+    // hiện hàng, chỉ có mục "Gắn PDF…" trong menu ⋯.
+    @ViewBuilder
+    private var pdfSourceSection: some View {
+        if let source = model.library.pdfSource {
+            Section {
+                NavigationLink(value: ShellRoute.pdfReader(collectionID)) {
+                    HStack(spacing: Spacing.row) {
+                        Image(systemName: "doc.text")
+                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: Spacing.tight) {
+                            Text(source.displayName)
+                                .font(Typo.rowSubtitle)
+                                .lineLimit(1)
+                            Text(
+                                source.pageIndex == 0
+                                    ? "Đọc từ đầu"
+                                    : "Đọc PDF · tr. \(source.pageIndex + 1)")
+                                .font(Typo.meta)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // J2 hub: danh sách phiên đọc song ngữ (tối đa 10, mới nhất trước). Kho tạm
@@ -202,6 +247,19 @@ struct CollectionDetailView: View {
                 if !isInbox {
                     HomePinMenuButton(
                         collectionID: collectionID, onFull: { showPinChooser = true })
+                }
+                // FR-23/ADR-058: kho tạm không gắn được PDF (không có phiên đọc,
+                // Q-10 — không có "trang đang đọc" để nhớ). Nhãn đổi theo đã-gắn
+                // chưa, cùng một picker (`showPDFPicker`).
+                if !isInbox {
+                    Button(model.library.pdfSource == nil ? "Gắn PDF…" : "Đổi PDF…") {
+                        showPDFPicker = true
+                    }
+                    if model.library.pdfSource != nil {
+                        Button("Gỡ PDF", role: .destructive) {
+                            model.detachPDFOrAlert(collectionID: collectionID)
+                        }
+                    }
                 }
                 Button("Đổi tên") {
                     renameText = overview?.name ?? ""
@@ -283,6 +341,13 @@ struct CollectionDetailView: View {
             order: isInbox ? .byDateAdded : .byTerm)
         model.loadSessions(collectionID: collectionID)
         model.loadNextDue(collectionID: collectionID)
+        // FR-23: kho tạm không gắn PDF — không đọc, tránh hiện nhầm hàng cũ
+        // của Hub trước đó (LibraryState còn lại giữa hai lần mở Hub khác nhau).
+        if isInbox {
+            model.library.pdfSource = nil
+        } else {
+            model.loadPDFSource(collectionID: collectionID)
+        }
     }
 
     private func commitMove(to targetID: String, intention: MoveIntention) {
