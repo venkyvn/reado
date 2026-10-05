@@ -80,4 +80,22 @@ final class FoundationPrimitivesTests: XCTestCase {
         XCTAssertEqual(window.start, "2026-09-17T21:00:00Z")
         XCTAssertEqual(window.end, "2026-09-18T21:00:00Z")
     }
+
+    // MARK: DayBoundary.daysBetween — ngày học, không phải nửa đêm (engagement-r1 T3)
+
+    func testDaysBetweenUsesLearningDay() throws {
+        let tz = try XCTUnwrap(TimeZone(identifier: Fixtures.timezoneID))
+        // 03:59 và 04:01 cùng ngày lịch 18/09 nhưng khác ngày học (cutoff 4h).
+        let before = dayAt(2026, 9, 18, 3, 59, timezone: tz)
+        let after = dayAt(2026, 9, 18, 4, 1, timezone: tz)
+        XCTAssertEqual(DayBoundary.daysBetween(before, after, timezone: tz), 1)
+        // Cùng ngày học → 0.
+        let sameDay = dayAt(2026, 9, 18, 23, 0, timezone: tz)
+        XCTAssertEqual(DayBoundary.daysBetween(after, sameDay, timezone: tz), 0)
+        // 12 ngày học.
+        let later = dayAt(2026, 9, 30, 10, 0, timezone: tz)
+        XCTAssertEqual(DayBoundary.daysBetween(after, later, timezone: tz), 12)
+        // Ngược chiều → 0.
+        XCTAssertEqual(DayBoundary.daysBetween(later, after, timezone: tz), 0)
+    }
 }

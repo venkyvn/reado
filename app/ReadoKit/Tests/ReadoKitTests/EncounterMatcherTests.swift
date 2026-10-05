@@ -165,4 +165,25 @@ final class EncounterMatcherTests: XCTestCase {
         XCTAssertTrue(sentence.hasPrefix("…"))
         XCTAssertTrue(sentence.hasSuffix("…"))
     }
+
+    // MARK: engagement-r1 T3
+
+    func testMatchedTermCountCountsDistinctTerms() {
+        let matcher = EncounterMatcher(lexicon: [
+            entry("bank", id: "b1"), entry("bank", id: "b2"), entry("river"),
+        ])
+        XCTAssertEqual(matcher.matchedTermCount(in: ["The bank by the river."]), 2)
+        XCTAssertEqual(
+            matcher.matchedTermCount(in: ["bank bank Bank", "the BANK again"]), 1,
+            "cùng term nhiều lần / nhiều nghĩa = 1")
+        XCTAssertEqual(matcher.matchedTermCount(in: ["Nothing here."]), 0)
+        XCTAssertEqual(matcher.matchedTermCount(in: []), 0)
+    }
+
+    func testSentenceContainingIsPublic() {
+        let text = "First sentence. The bank was closed. Last one."
+        let range = text.range(of: "bank")!
+        XCTAssertEqual(
+            EncounterMatcher.sentence(containing: range, in: text), "The bank was closed.")
+    }
 }

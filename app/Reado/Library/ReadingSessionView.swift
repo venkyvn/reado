@@ -88,6 +88,8 @@ struct ReadingSessionView: View {
 
     private var segmentsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
+            RevisitedWordsLine(
+                count: encounterMatcher.matchedTermCount(in: session.segments.map(\.sourceEN)))
             ForEach(Array(session.segments.enumerated()), id: \.offset) { index, seg in
                 // `onTapGesture` thay `Button`: Button nuốt chạm của link từ cũ (FR-22).
                 let phraseSpans = PhraseLocator.spans(for: seg)

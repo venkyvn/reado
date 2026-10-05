@@ -250,7 +250,9 @@ struct AnalysisView: View {
                   let match = encounterMatcher.matches(in: firstSegment.sourceEN).first
             else { return }
             encounterSelection = EncounterSelection(
-                surface: String(firstSegment.sourceEN[match.range]), entries: match.entries)
+                surface: String(firstSegment.sourceEN[match.range]), entries: match.entries,
+                sentence: EncounterMatcher.sentence(
+                    containing: match.range, in: firstSegment.sourceEN))
         }
         .task {
             // prompt-v6 T3 — `-ReadoScreen phrase-highlight`: sáng sẵn cụm đầu
@@ -714,6 +716,8 @@ struct AnalysisView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.md) {
+                    RevisitedWordsLine(
+                        count: encounterMatcher.matchedTermCount(in: result.segments.map(\.sourceEN)))
                     ForEach(Array(result.segments.enumerated()), id: \.offset) { index, seg in
                         SegmentBlock(
                             segment: seg,

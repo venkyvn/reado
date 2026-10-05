@@ -46,4 +46,12 @@ final class MasteryLevelTests: XCTestCase {
     func testFourLevelsAreExhaustive() {
         XCTAssertEqual(Set(Mastery.Level.allCases), [.new, .learning, .remembered, .absorbed])
     }
+
+    func testReachedAbsorbed() {
+        XCTAssertTrue(Mastery.reachedAbsorbed(before: .remembered, after: .absorbed))
+        XCTAssertTrue(Mastery.reachedAbsorbed(before: nil, after: .absorbed))
+        XCTAssertFalse(Mastery.reachedAbsorbed(before: .absorbed, after: .absorbed))
+        XCTAssertFalse(Mastery.reachedAbsorbed(before: .remembered, after: .remembered))
+        XCTAssertFalse(Mastery.reachedAbsorbed(before: .learning, after: nil))
+    }
 }

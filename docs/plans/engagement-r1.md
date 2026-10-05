@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng xong; T3-T8 đã chi tiết hoá (2026-10-05), chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra xong; T4-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -426,7 +426,7 @@ public enum DuplicateMerge {
 > - T8: "Tuần qua" = tuần lịch thứ Hai → Chủ nhật trước (theo ngày học FR-11); khoá
 >   `@AppStorage("reado.home.weekStoryDismissedWeek")` (cùng kiểu khoá chấm của Home).
 
-### T3 — Ý 1: khoảnh khắc nhận ra (FR-22)
+### T3 — Ý 1: khoảnh khắc nhận ra (FR-22) ✅ 2026-10-05 (full 586/590; nợ xem tay brief §2.16)
 
 **ReadoKit**
 1. `Encounter/EncounterMatcher.swift`:

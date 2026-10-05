@@ -11,6 +11,10 @@ public struct EncounterLexiconEntry: Equatable, Sendable, Identifiable {
     public let meaningVI: String
     public let collectionID: String
     public let collectionName: String
+    /// Câu gốc lúc lưu (`vocab_items.example`) — sheet gặp lại hiện cạnh câu đang đọc (engagement-r1 T3).
+    public let example: String
+    /// Lúc lưu từ (`vocab_items.created_at`, ISO `Z`) — "Lần đầu · N ngày trước".
+    public let createdAt: String?
 
     public var id: String { vocabItemID }
 
@@ -21,7 +25,9 @@ public struct EncounterLexiconEntry: Equatable, Sendable, Identifiable {
         ipa: String?,
         meaningVI: String,
         collectionID: String,
-        collectionName: String
+        collectionName: String,
+        example: String = "",
+        createdAt: String? = nil
     ) {
         self.vocabItemID = vocabItemID
         self.term = term
@@ -30,6 +36,8 @@ public struct EncounterLexiconEntry: Equatable, Sendable, Identifiable {
         self.meaningVI = meaningVI
         self.collectionID = collectionID
         self.collectionName = collectionName
+        self.example = example
+        self.createdAt = createdAt
     }
 }
 
@@ -170,13 +178,27 @@ public struct EncounterMatcher: Sendable {
         return ordered
     }
 
+    /// Số TỪ khác nhau (theo `term` chuẩn hoá) có mặt trong `texts` — dòng "Trang này có N từ bạn đã
+    /// gặp" (engagement-r1 T3). Một term nhiều nghĩa/nhiều bộ = 1; cùng term xuất hiện nhiều lần = 1.
+    public func matchedTermCount(in texts: [String]) -> Int {
+        var terms = Set<String>()
+        for text in texts {
+            for match in matches(in: text) {
+                guard let term = match.entries.first?.term else { continue }
+                let key = VocabRepository.normalizedTerm(term)
+                if !key.isEmpty { terms.insert(key) }
+            }
+        }
+        return terms.count
+    }
+
     /// Ngưỡng + nửa cửa sổ khi "câu" quá dài (OCR thiếu dấu câu) — Q6.
     static let maxSentenceLength = 300
     static let sentenceWindow = 120
 
     /// Câu chứa `range` (NLTokenizer .sentence), đã trim. Dài hơn 300 ký tự → cửa sổ
     /// ±120 ký tự quanh match, nới về khoảng trắng, "…" ở đầu/cuối bị cắt.
-    static func sentence(containing range: Range<String.Index>, in text: String) -> String {
+    public static func sentence(containing range: Range<String.Index>, in text: String) -> String {
         let tokenizer = NLTokenizer(unit: .sentence)
         tokenizer.string = text
         var bounds: Range<String.Index> = text.startIndex..<text.endIndex

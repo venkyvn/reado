@@ -139,7 +139,7 @@ public enum EncounterRepository {
             """
             SELECT v.id AS id, v.term AS term, v.pos AS pos, v.ipa AS ipa,
                    v.meaning_vi AS meaning_vi, v.collection_id AS collection_id,
-                   c.name AS collection_name
+                   c.name AS collection_name, v.example AS example, v.created_at AS created_at
             FROM vocab_items v
             JOIN collections c ON c.id = v.collection_id
             WHERE NOT EXISTS (
@@ -155,8 +155,32 @@ public enum EncounterRepository {
                 ipa: row["ipa"].textValue,
                 meaningVI: row["meaning_vi"].textValue ?? "",
                 collectionID: row["collection_id"].textValue ?? "",
-                collectionName: row["collection_name"].textValue ?? "")
+                collectionName: row["collection_name"].textValue ?? "",
+                example: row["example"].textValue ?? "",
+                createdAt: row["created_at"].textValue)
         }
+    }
+
+    /// Mức hiện tại của một từ (vision #6): thẻ receptive + số lần "nhận ra" khi đọc. nil khi từ
+    /// không còn thẻ. Luật mức ở `Mastery.level`.
+    public static func masteryLevel(
+        on db: SQLiteDatabase, vocabItemID: String
+    ) throws -> Mastery.Level? {
+        let rows = try db.rows(
+            """
+            SELECT c.state AS state, c.stability AS stability,
+                   (SELECT COUNT(*) FROM encounters e
+                     WHERE e.vocab_item_id = ? AND e.kind = 'recognized') AS rec
+            FROM cards c
+            WHERE c.vocab_item_id = ? AND c.direction = 'receptive'
+            LIMIT 1;
+            """,
+            [.text(vocabItemID), .text(vocabItemID)])
+        guard let row = rows.first, let state = row["state"].textValue else { return nil }
+        let stability = row["stability"].doubleValue ?? row["stability"].intValue.map(Double.init) ?? 0
+        return Mastery.level(
+            state: state, stability: stability,
+            recognizedCount: Int(row["rec"].intValue ?? 0))
     }
 
     // MARK: — private

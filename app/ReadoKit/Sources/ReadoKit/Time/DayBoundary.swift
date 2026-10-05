@@ -43,4 +43,19 @@ public enum DayBoundary {
             start: ISOTimestamp.string(from: start),
             end: ISOTimestamp.string(from: end))
     }
+
+    /// Số NGÀY HỌC (FR-11) từ `earlier` tới `later` — cùng ngày học = 0; `later` < `earlier` → 0.
+    public static func daysBetween(
+        _ earlier: Date, _ later: Date, timezone: TimeZone, dayCutoffHour: Int = 4
+    ) -> Int {
+        guard later > earlier,
+              let from = ISOTimestamp.date(
+                from: window(now: earlier, timezone: timezone, dayCutoffHour: dayCutoffHour).start),
+              let to = ISOTimestamp.date(
+                from: window(now: later, timezone: timezone, dayCutoffHour: dayCutoffHour).start)
+        else { return 0 }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timezone
+        return max(0, calendar.dateComponents([.day], from: from, to: to).day ?? 0)
+    }
 }

@@ -467,4 +467,47 @@ final class EncounterRepositoryTests: XCTestCase {
         XCTAssertEqual(rows.count, 1)
         XCTAssertNil(rows[0].collectionName)
     }
+
+    // MARK: engagement-r1 T3
+
+    func testLoadLexiconCarriesExampleAndCreatedAt() throws {
+        let db = try Fixtures.seededDB()
+        let id = try vocab(db, "alpha")
+        try db.run(
+            "UPDATE vocab_items SET example = ?, created_at = ? WHERE id = ?;",
+            [.text("An alpha example."), .text("2026-09-02T00:00:00Z"), .text(id)])
+
+        let entry = try XCTUnwrap(
+            EncounterRepository.loadLexicon(on: db).first { $0.vocabItemID == id })
+
+        XCTAssertEqual(entry.example, "An alpha example.")
+        XCTAssertEqual(entry.createdAt, "2026-09-02T00:00:00Z")
+    }
+
+    func testMasteryLevelPerVocab() throws {
+        let db = try Fixtures.seededDB()
+        let fresh = try vocab(db, "fresh")
+        let learning = try vocab(db, "learning")
+        let remembered = try vocab(db, "remembered")
+        let noCard = try vocab(db, "nocard")
+        _ = try Fixtures.insertCard(in: db, vocabItemID: fresh)
+        _ = try Fixtures.insertCard(in: db, vocabItemID: learning, state: "review", stability: 5)
+        _ = try Fixtures.insertCard(in: db, vocabItemID: remembered, state: "review", stability: 30)
+
+        XCTAssertEqual(try EncounterRepository.masteryLevel(on: db, vocabItemID: fresh), .new)
+        XCTAssertEqual(try EncounterRepository.masteryLevel(on: db, vocabItemID: learning), .learning)
+        XCTAssertEqual(
+            try EncounterRepository.masteryLevel(on: db, vocabItemID: remembered), .remembered)
+        XCTAssertNil(try EncounterRepository.masteryLevel(on: db, vocabItemID: noCard))
+
+        try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: remembered, now: Fixtures.fixedNow)
+        XCTAssertEqual(
+            try EncounterRepository.masteryLevel(on: db, vocabItemID: remembered), .absorbed)
+        try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: learning, now: Fixtures.fixedNow)
+        XCTAssertEqual(
+            try EncounterRepository.masteryLevel(on: db, vocabItemID: learning), .learning,
+            "nhận ra không nâng từ chưa đạt Q-08")
+    }
 }

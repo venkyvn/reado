@@ -28,6 +28,11 @@ public enum Mastery: Sendable {
         return recognizedCount > 0 ? .absorbed : .remembered
     }
 
+    /// Lần "nhận ra" vừa đưa từ lên **Đã thấm** (engagement-r1 T3): trước chưa ở mức đó, sau đã ở.
+    public static func reachedAbsorbed(before: Level?, after: Level?) -> Bool {
+        after == .absorbed && before != .absorbed
+    }
+
     /// Thẻ vừa VƯỢT ngưỡng "đã thuộc" trong lượt chấm này: TRƯỚC chưa đạt,
     /// SAU đã đạt, và state SAU phải là `review` (thẻ `learning`/`relearning`
     /// dù stability cao vẫn chưa tính — khớp điều kiện `matureKeys`).

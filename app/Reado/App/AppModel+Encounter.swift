@@ -41,18 +41,44 @@ extension AppModel {
         }
     }
 
-    /// Ghi một lần "nhận ra" khi đọc. `true` = vừa ghi; `false` = hôm nay đã ghi
-    /// rồi hoặc lỗi. Không đụng lịch ôn (FR-22).
+    /// Kết quả một lần bấm "Nhận ra": `recorded` = vừa ghi (false = hôm nay đã ghi rồi hoặc lỗi);
+    /// `reachedAbsorbed` = lần này đưa từ lên mức **Đã thấm** (engagement-r1 T3).
+    struct RecognizeResult {
+        let recorded: Bool
+        let reachedAbsorbed: Bool
+    }
+
+    /// Mức hiện tại của một từ (4 mức, vision #6). nil khi từ không còn thẻ hoặc đọc lỗi.
+    func masteryLevel(_ vocabItemID: String) -> Mastery.Level? {
+        guard let database else { return nil }
+        return readQuietly("mức của từ", fallback: nil) { () throws -> Mastery.Level? in
+            try EncounterRepository.masteryLevel(on: database, vocabItemID: vocabItemID)
+        }
+    }
+
+    /// Số NGÀY HỌC (FR-11) từ `iso` tới giờ — "N ngày trước". nil khi không đọc được mốc.
+    func daysSince(_ iso: String?) -> Int? {
+        guard let database, let iso, let date = ISOTimestamp.date(from: iso) else { return nil }
+        let (timezone, cutoffHour) = DayContext.read(on: database)
+        return DayBoundary.daysBetween(
+            date, clock.now, timezone: timezone, dayCutoffHour: cutoffHour)
+    }
+
+    /// Ghi một lần "nhận ra" khi đọc. Không đụng lịch ôn (FR-22).
     @discardableResult
-    func recognizeWord(_ vocabItemID: String) -> Bool {
-        guard let database else { return false }
+    func recognizeWord(_ vocabItemID: String) -> RecognizeResult {
+        guard let database else { return RecognizeResult(recorded: false, reachedAbsorbed: false) }
         let now = clock.now
+        let before = masteryLevel(vocabItemID)
         let recorded = attempt("ghi lần nhận ra") {
             try EncounterRepository.recordRecognized(
                 on: database, vocabItemID: vocabItemID, now: now)
         } ?? false
         // Đã thấm / "Gặp lại N từ" đổi theo → nạp lại số liệu Home + Hub.
-        if recorded { reloadOverview() }
-        return recorded
+        guard recorded else { return RecognizeResult(recorded: false, reachedAbsorbed: false) }
+        reloadOverview()
+        return RecognizeResult(
+            recorded: true,
+            reachedAbsorbed: Mastery.reachedAbsorbed(before: before, after: masteryLevel(vocabItemID)))
     }
 }
