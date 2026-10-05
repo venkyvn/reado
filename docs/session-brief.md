@@ -47,14 +47,9 @@
     (eval prompt PDF) cần fen đưa 3–5 trang từ PDF thật (1 cột có header/footer/gạch
     nối, 2 cột, scan không chữ, scan lớp chữ rác nếu có) rồi
     `scripts/pull_diagnostics.sh device`. `docs/plans/pdf-reader-r1.md`.
-11. pdf-nav-r1 (khép 2026-10-04): xem tay 3 chỗ cần chạm thật, DebugLaunch không giả
-    lập được — (a) chạm vào trang để ẩn/hiện nav bar + thanh đáy (ADR-060), (b) vuốt
-    ngang lật trang thật trên PDF dài (có bị cử chỉ "vuốt mép trái để back" của iOS
-    giành không), (c) màn Cài đặt → Section "Đọc PDF" → chọn tông giấy (Picker) +
-    kéo Slider độ đậm, xem reader áp đúng lúc mở lại (ADR-061/062) — đã xác nhận
-    layout/màu của reader đúng qua ảnh + tiêm `UserDefaults` thẳng (không qua chạm
-    Picker/Slider thật); CHƯA chụp được Section "Đọc PDF" ở Cài đặt (nằm dưới cuộn,
-    không tự scroll được qua DebugLaunch). `docs/plans/done/pdf-nav-r1.md`.
+11. pdf-nav-r1 (khép 2026-10-04): xem tay 3 chỗ cần chạm — (a) chạm trang ẩn/hiện chrome (ADR-060), (b) vuốt ngang lật trang có
+    bị cử chỉ "vuốt mép trái để back" giành không, (c) Cài đặt → "Đọc PDF" chọn tông giấy + Slider độ đậm (ADR-061/062; chưa chụp được
+    vì nằm dưới cuộn). `docs/plans/done/pdf-nav-r1.md`.
 12. ocr-quality-r1 T6 (gợi ý loại nguồn cho prompt — `sourceKind` 'page'/'screenshot'/
     'label', đổi `Prompt.version` 6→7): **D3 chưa chốt** — tự nhận qua metadata Photos
     (cần quyền thư viện ảnh), để người dùng tự chọn tay, hay để hẳn R2. Không làm cho
@@ -65,7 +60,10 @@
     `docs/plans/done/vocab-identity-r1.md`. Agent không truy cập được DB thật trên máy fen —
     fen export JSON (Settings → Dữ liệu → Xuất dữ liệu, FR-16) đưa file, hoặc tự chạy
     3 query rồi báo 3 con số.
-14. vocab-identity-r1 (đã khép): xem tay những chỗ ảnh tĩnh không dựng được — (a) ngân sách ngày: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy "Hôm nay đã đủ 1 từ mới…"; (b) bỏ chọn hết từ mới → nút "Ghi gặp lại N từ" → banner "Đã ghi gặp lại M từ"; (c) lưu một trang PDF có từ cũ ở bộ khác rồi chạy 3 query T0 (khoá trùng không tăng); (d) lật một thẻ có ≥ 2 ngữ cảnh, đặc biệt ở Dynamic Type lớn — agent thấy mặt sau thẻ trắng ở `accessibility-extra-large` kể cả khi bỏ khối ngữ cảnh mới, nên có thể là lỗi có sẵn (ScrollView trong `.drawingGroup()`); nếu thẻ trắng thật thì mở bug riêng.
+14. vocab-identity-r1 (đã khép): xem tay — (a) "Từ mới mỗi ngày" = 1 → phân tích 2 trang, trang 2 báo đủ hạn mức; (b) bỏ chọn hết từ
+    mới → nút "Ghi gặp lại N từ" + banner; (c) lưu trang PDF có từ cũ ở bộ khác rồi chạy 3 query T0 (khoá trùng không tăng); (d) lật thẻ
+    ≥ 2 ngữ cảnh ở Dynamic Type lớn — mặt sau thẻ trắng ở `accessibility-extra-large` kể cả khi bỏ khối ngữ cảnh (có thể lỗi có sẵn:
+    ScrollView trong `.drawingGroup()`; thật thì mở bug riêng).
 15. engagement-r1 T2 (màn "Gộp từ trùng", FR-24): xem tay những chỗ DebugLaunch không chạm/cuộn được — bấm chọn/bỏ chọn dòng
     (nhãn "Giữ thẻ này" đổi theo), hộp thoại xác nhận, **gộp thật trên dữ liệu thật** (xuất JSON backup trước; xong mở thẻ giữ
     xem mục "Gặp lại" có câu của dòng gộp; chạy lại 3 query T0 §2.13), mục "Dọn kho" ở cuối màn Dữ liệu khi cuộn xuống
