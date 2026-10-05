@@ -69,6 +69,11 @@ struct ReviewCardRow: View {
             summaryText
             HStack {
                 VerificationBadge(status: draft.verification)
+                // ocr-quality-r1 T4 (ADR-064) — không tự sửa, chỉ gắn nhãn;
+                // người dùng vẫn lưu được bình thường.
+                if draft.isOCRSuspicious {
+                    Pill(text: "Kiểm tra lại", systemImage: "magnifyingglass", tone: .warn)
+                }
                 Spacer(minLength: Spacing.xs)
                 expandChevron
             }
