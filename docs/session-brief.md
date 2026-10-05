@@ -68,11 +68,10 @@
     xem mục "Gặp lại" có câu của dòng gộp; chạy lại 3 query T0 §2.13), mục "Dọn kho" ở cuối màn Dữ liệu khi cuộn xuống
     (không bị ShellTabBar che). Ảnh đã xem: light/dark, Nâu giấy, `accessibility-extra-large`, trạng thái trống.
     `docs/plans/done/engagement-r1.md`.
-16. engagement-r1 T3–T8 (xem tay phần ảnh tĩnh không dựng được): T3 bấm "Nhận ra ✓" thật (chip → "Đã thấm" + "Lên mức Đã thấm" +
-    haptic) và "Lần đầu · N ngày trước" với N ≥ 1; T4 hero có dòng "Tuần này ôn N/7 ngày" (cần còn thẻ đến hạn + có streak + chưa ôn hôm
-    nay — seed chưa dựng) và mặt sau thẻ "Gặp lần đầu N ngày trước" với từ ≥ 7 ngày; T5 chấm 3 thẻ thật → màn "Xong phiên nhanh" +
-    nút "Ôn tiếp (còn N)"; T6 chạm/kéo chọn chấm ở Hub + bộ ~300 từ (seed chỉ có 12); T7 lưu trang thật → cụm thật trong banner;
-    T8 đóng thẻ "Tuần qua" rồi mở lại sang tuần mới + thẻ khi cuộn xuống ở cỡ chữ lớn (nằm dưới hero). `docs/plans/done/engagement-r1.md`.
+16. engagement-r1 (còn cần chạm thật; layout/trạng thái đã xác minh bằng ảnh qua `--seed demo-streak` + màn `review-back`/`quick-done`):
+    T3 bấm "Nhận ra ✓" thật (chip → "Đã thấm" + "Lên mức Đã thấm" + haptic); T5 chấm 3 thẻ thật → "Xong phiên nhanh" + "Ôn tiếp";
+    T6 chạm/kéo chọn chấm ở Hub + bộ ~300 từ; T7 lưu trang thật → cụm thật trong banner; T8 đóng thẻ "Tuần qua" rồi mở lại sang tuần mới
+    + thẻ khi cuộn xuống ở cỡ chữ lớn. `docs/plans/done/engagement-r1.md`.
 
 ## 3. Bẫy máy này
 

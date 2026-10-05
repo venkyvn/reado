@@ -155,6 +155,9 @@ final class ShellSignals {
     /// engagement-r1 T2 — `-ReadoScreen dup-merge` bật cờ này; `ExportView` đọc ở `onAppear` để tự
     /// mở sheet "Gộp từ trùng" rồi dọn sạch — simulator không giả lập chạm được nút.
     var debugShowDuplicateMerge = false
+    /// engagement-r1 — `-ReadoScreen review-back` bật cờ này; `ReviewQueueView` đọc sau khi nạp hàng đợi để lật sẵn
+    /// thẻ đầu (simctl không chạm được), rồi dọn sạch.
+    var debugFlipFirstReviewCard = false
     #endif
 }
 

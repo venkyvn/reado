@@ -261,4 +261,35 @@ public enum DevSeed {
             }
         }
     }
+
+    /// engagement-r1 — dựng LỊCH SỬ ÔN có streak mà KHÔNG có hôm nay, và từ lưu cách đây 40 ngày, để chụp ảnh dòng
+    /// "Tuần này ôn N/7 ngày" (hero, cần streak > 0 + chưa ôn hôm nay + còn thẻ đến hạn) và "Gặp lần đầu N ngày trước"
+    /// (mặt sau thẻ, cần từ ≥ 7 ngày). Chèn 4 dòng `review_logs` (5/3/2/1 ngày trước → streak 3, N/7 = 4) cho MỘT thẻ
+    /// (thẻ cuối) bằng raw SQL — cùng tiền lệ `markMature`: đây là dữ liệu demo tĩnh, không phải lượt chấm thật, và thẻ
+    /// giữ nguyên `new` nên vẫn đến hạn hôm nay. Idempotent: đã có `review_logs` thì bỏ qua.
+    public static func addStreakHistory(on db: SQLiteDatabase, now: Date) throws {
+        guard try (db.scalarInt64("SELECT COUNT(*) FROM review_logs;") ?? 0) == 0 else { return }
+        guard let cardID = try db.scalarString("SELECT id FROM cards ORDER BY rowid DESC LIMIT 1;")
+        else { return }
+        let nowIso = ISOTimestamp.string(from: now)
+        try db.inTransaction {
+            for daysAgo in [5.0, 3.0, 2.0, 1.0] {
+                try db.run(
+                    """
+                    INSERT INTO review_logs (
+                      id, card_id, mode, rating, state_before, stability_before,
+                      difficulty_before, learning_steps_before, due_before,
+                      elapsed_days, scheduled_days, reviewed_at
+                    ) VALUES (?, ?, 'srs', 3, 'new', 0, 0, 0, ?, 0, 1, ?);
+                    """,
+                    [
+                        .text(Identifier.uuid()), .text(cardID), .text(nowIso),
+                        .text(ISOTimestamp.string(from: now.addingTimeInterval(-daysAgo * 86_400))),
+                    ])
+            }
+            try db.run(
+                "UPDATE vocab_items SET created_at = ?;",
+                [.text(ISOTimestamp.string(from: now.addingTimeInterval(-40 * 86_400)))])
+        }
+    }
 }

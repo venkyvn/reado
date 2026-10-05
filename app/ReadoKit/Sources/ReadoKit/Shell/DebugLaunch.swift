@@ -69,6 +69,11 @@ public struct DebugLaunch: Equatable, Sendable {
         /// engagement-r1 T2 (FR-24) — mở màn Dữ liệu kèm sheet "Gộp từ trùng"; dùng với
         /// `-ReadoSeed demo-dups` để kho có nhóm trùng mà chụp.
         case duplicateMerge
+        /// engagement-r1 — mở phiên ôn với MẶT SAU của thẻ đầu đã lật sẵn (simctl không chạm được để lật), dùng
+        /// với `-ReadoSeed demo-streak` để thấy dòng "Gặp lần đầu N ngày trước".
+        case reviewBack
+        /// engagement-r1 T5 — màn "Xong phiên nhanh" với tally mẫu (không cần chấm 3 thẻ bằng tay).
+        case quickDone
     }
 
     public enum Seed: String, Equatable, Sendable {
@@ -76,6 +81,9 @@ public struct DebugLaunch: Equatable, Sendable {
         case demoReviewed = "demo-reviewed"
         /// engagement-r1 T2 — demo + vài dòng trùng `term+pos` ở bộ khác (`DevSeed.addDuplicates`).
         case demoDups = "demo-dups"
+        /// engagement-r1 — demo + lịch sử ôn vài ngày liền KHÔNG có hôm nay (streak > 0, còn thẻ đến hạn) và từ lưu
+        /// cách đây 40 ngày: để chụp dòng "Tuần này ôn N/7 ngày" ở hero và "Gặp lần đầu N ngày trước" ở mặt sau thẻ.
+        case demoStreak = "demo-streak"
         case empty
     }
 
@@ -171,6 +179,8 @@ public struct DebugLaunch: Equatable, Sendable {
         case "pdf-reader-toc": return .pdfReaderTOC
         case "pdf-reader-goto": return .pdfReaderGoTo
         case "dup-merge": return .duplicateMerge
+        case "review-back": return .reviewBack
+        case "quick-done": return .quickDone
         default: return nil
         }
     }

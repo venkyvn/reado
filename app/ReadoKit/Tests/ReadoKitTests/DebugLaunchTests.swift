@@ -37,6 +37,8 @@ final class DebugLaunchTests: XCTestCase {
             ("pdf-reader-toc", .pdfReaderTOC),
             ("pdf-reader-goto", .pdfReaderGoTo),
             ("dup-merge", .duplicateMerge),
+            ("review-back", .reviewBack),
+            ("quick-done", .quickDone),
         ]
         for (raw, expected) in cases {
             let launch = DebugLaunch.parse(["-ReadoScreen", raw])
@@ -74,6 +76,11 @@ final class DebugLaunchTests: XCTestCase {
         XCTAssertEqual(launch.seed, .demoReviewed)
         XCTAssertEqual(launch.alert, .pinLimit)
         XCTAssertTrue(launch.problems.isEmpty)
+    }
+
+    func testEngagementSeedsParse() {
+        XCTAssertEqual(DebugLaunch.parse(["-ReadoSeed", "demo-dups"]).seed, .demoDups)
+        XCTAssertEqual(DebugLaunch.parse(["-ReadoSeed", "demo-streak"]).seed, .demoStreak)
     }
 
     func testUnknownSeedAndAlertAreProblems() {

@@ -61,6 +61,10 @@ struct RootView: View {
     @State private var showAnalysis = false
     // ux-redesign-r1 T1a: phiên ôn toàn màn — nil = đóng.
     @State private var reviewRequest: ReviewRequest?
+    #if DEBUG
+    /// engagement-r1 — màn debug `quick-done`: "Xong phiên nhanh" với tally mẫu.
+    @State private var showDebugQuickDone = false
+    #endif
     // ux-redesign-r1 T2/T5a: banner không chặn ở đáy (ADR-053) — hiện sau Lưu; màn debug
     // `save-banner` cũng đặt nó. `bannerHubID` = Hub mà nút "Xem" mở (nil = banner không có đích).
     @State private var banner: ShellBannerItem?
@@ -165,6 +169,16 @@ struct RootView: View {
             }
             .appErrorAlert()
         }
+        #if DEBUG
+        .fullScreenCover(isPresented: $showDebugQuickDone) {
+            SessionDoneView(
+                tally: Self.debugQuickDoneTally, streak: 4, extraAvailable: 0,
+                title: "Xong phiên nhanh", continueCount: 7, onContinue: {}, onExtra: {}
+            ) {
+                showDebugQuickDone = false
+            }
+        }
+        #endif
         .sheet(isPresented: $showAnalysis, onDismiss: {
             chrome.reveal()
             // ADR-053: Lưu xong → ở NGUYÊN chỗ đang đứng, chỉ hiện banner "Đã lưu N từ vào X · Xem"
@@ -397,6 +411,11 @@ struct RootView: View {
         case .pdfReaderGoTo:
             model.shell.debugShowPDFGoTo = true
             openDebugPDFReader()
+        case .reviewBack:
+            model.shell.debugFlipFirstReviewCard = true
+            reviewRequest = ReviewRequest(scope: model.reviewScopeDefault.scopeSet, mode: .srs)
+        case .quickDone:
+            showDebugQuickDone = true
         case .duplicateMerge:
             selectedTab = .library
             libraryPath = [.data]
@@ -496,4 +515,15 @@ struct RootView: View {
             PDFReaderView(collectionID: collectionID)
         }
     }
+
+    #if DEBUG
+    /// Tally mẫu cho màn debug `quick-done` (3 thẻ: 2 nhớ, 1 quên, 1 từ vừa thuộc).
+    private static var debugQuickDoneTally: SessionTally {
+        var tally = SessionTally()
+        tally.record(rating: .good, crossed: true, term: "routine")
+        tally.record(rating: .good, crossed: false, term: "resilient")
+        tally.record(rating: .again, crossed: false, term: "discipline")
+        return tally
+    }
+    #endif
 }

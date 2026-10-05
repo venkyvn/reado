@@ -351,6 +351,12 @@ struct ReviewQueueView: View {
                 lastSnapshot = nil
             }
             refreshIntervals()
+            #if DEBUG
+            if model.shell.debugFlipFirstReviewCard {
+                model.shell.debugFlipFirstReviewCard = false
+                self.flipDegrees = 180
+            }
+            #endif
         } catch {
             // review.error đã set trong model.
         }
