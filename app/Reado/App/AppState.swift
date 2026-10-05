@@ -148,6 +148,9 @@ final class ShellSignals {
     /// pdf-nav-r1 — `-ReadoScreen pdf-reader-goto` bật cờ này; `PDFReaderView`
     /// tự mở alert "Đi tới trang" rồi dọn sạch, cùng luật trên.
     var debugShowPDFGoTo = false
+    /// engagement-r1 T2 — `-ReadoScreen dup-merge` bật cờ này; `ExportView` đọc ở `onAppear` để tự
+    /// mở sheet "Gộp từ trùng" rồi dọn sạch — simulator không giả lập chạm được nút.
+    var debugShowDuplicateMerge = false
     #endif
 }
 

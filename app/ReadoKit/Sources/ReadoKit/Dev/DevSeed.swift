@@ -191,4 +191,74 @@ public enum DevSeed {
             }
         }
     }
+
+    /// Tên collection phụ chứa các dòng trùng của `addDuplicates`.
+    public static let duplicatesCollectionName = "Bộ trùng (demo)"
+
+    /// engagement-r1 T2 (FR-24) — dựng NHÓM TRÙNG để chụp màn "Gộp từ trùng": với 2 vocab đầu
+    /// (theo `rowid`), thêm bản sao cùng `term+pos` vào một collection phụ, nghĩa khác, thẻ `new`
+    /// (từ đầu có 2 bản sao → nhóm 3 dòng) và cho thẻ gốc của từ đầu lên `review` để mức khác nhau.
+    /// Idempotent: collection phụ đã có thì bỏ qua.
+    public static func addDuplicates(on db: SQLiteDatabase, now: Date) throws {
+        let existing = try db.scalarInt64(
+            "SELECT COUNT(*) FROM collections WHERE name = ?;",
+            [.text(duplicatesCollectionName)]) ?? 0
+        guard existing == 0 else { return }
+        let nowIso = ISOTimestamp.string(from: now)
+        let learnedAt = ISOTimestamp.string(from: now.addingTimeInterval(-5 * 86_400))
+        let dueAt = ISOTimestamp.string(from: now.addingTimeInterval(20 * 86_400))
+        try db.inTransaction {
+            let originals = try db.rows(
+                """
+                SELECT id, term, term_normalized, pos, ipa, example, cefr
+                FROM vocab_items ORDER BY rowid LIMIT 2;
+                """, [])
+            guard !originals.isEmpty else { return }
+            let collectionID = Identifier.uuid()
+            try db.run(
+                "INSERT INTO collections (id, name, is_default, created_at) VALUES (?, ?, 0, ?);",
+                [.text(collectionID), .text(duplicatesCollectionName), .text(nowIso)])
+            for (index, row) in originals.enumerated() {
+                for copy in 0..<(index == 0 ? 2 : 1) {
+                    let vocabID = Identifier.uuid()
+                    try db.run(
+                        """
+                        INSERT INTO vocab_items (
+                          id, collection_id, term, term_normalized, pos,
+                          ipa, meaning_vi, example, cefr, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        """,
+                        [
+                            .text(vocabID), .text(collectionID),
+                            .text(row["term"].textValue ?? ""),
+                            .text(row["term_normalized"].textValue ?? ""),
+                            .text(row["pos"].textValue ?? "other"),
+                            row["ipa"].textValue.map { .text($0) } ?? .null,
+                            .text("nghĩa khác (demo \(copy + 1))"),
+                            .text(row["example"].textValue ?? ""),
+                            row["cefr"].textValue.map { .text($0) } ?? .null,
+                            .text(nowIso),
+                        ])
+                    try db.run(
+                        """
+                        INSERT INTO cards (
+                          id, vocab_item_id, direction, state,
+                          stability, difficulty, reps, lapses, learning_steps,
+                          scheduled_days, last_review_at, due_at, suspended_at
+                        ) VALUES (?, ?, 'receptive', 'new', 0, 0, 0, 0, 0, 0, NULL, ?, NULL);
+                        """,
+                        [.text(Identifier.uuid()), .text(vocabID), .text(nowIso)])
+                }
+            }
+            if let firstID = originals[0]["id"].textValue {
+                try db.run(
+                    """
+                    UPDATE cards SET state = 'review', stability = 25, difficulty = 5,
+                           reps = 3, scheduled_days = 25, last_review_at = ?, due_at = ?
+                    WHERE vocab_item_id = ?;
+                    """,
+                    [.text(learnedAt), .text(dueAt), .text(firstID)])
+            }
+        }
+    }
 }

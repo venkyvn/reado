@@ -36,6 +36,7 @@ final class DebugLaunchTests: XCTestCase {
             ("pdf-reader", .pdfReader),
             ("pdf-reader-toc", .pdfReaderTOC),
             ("pdf-reader-goto", .pdfReaderGoTo),
+            ("dup-merge", .duplicateMerge),
         ]
         for (raw, expected) in cases {
             let launch = DebugLaunch.parse(["-ReadoScreen", raw])

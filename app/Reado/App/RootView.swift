@@ -394,6 +394,10 @@ struct RootView: View {
         case .pdfReaderGoTo:
             model.shell.debugShowPDFGoTo = true
             openDebugPDFReader()
+        case .duplicateMerge:
+            selectedTab = .library
+            libraryPath = [.data]
+            model.shell.debugShowDuplicateMerge = true
         }
         if let alert = launch.alert {
             Task { @MainActor in

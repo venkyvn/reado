@@ -198,6 +198,9 @@ final class AppModel {
             return
         case .demo, nil:
             seedDevDemoCSVIfNeeded(on: database)
+        case .demoDups:
+            seedDevDemoCSVIfNeeded(on: database)
+            try? DevSeed.addDuplicates(on: database, now: SystemClock().now)
         case .demoReviewed:
             seedDevDemoCSVIfNeeded(on: database)
             try? DevSeed.gradeHistory(on: database, now: SystemClock().now)

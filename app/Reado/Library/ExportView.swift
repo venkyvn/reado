@@ -16,6 +16,8 @@ struct ExportView: View {
     @State private var showShareCSV = false
     @State private var showShareJSON = false
     @State private var showImport = false
+    @State private var showMerge = false
+    @State private var duplicateCount = 0
 
     /// Collection chọn sẵn khi mở từ "Xuất bộ này" (J-R1-D/J2 #9); rỗng = tất cả.
     init(initialCollectionIDs: Set<String> = []) {
@@ -27,6 +29,7 @@ struct ExportView: View {
             scopeSection
             actionsSection
             importSection
+            dedupeSection
             if let err = exportError {
                 errorSection(err)
             }
@@ -48,7 +51,19 @@ struct ExportView: View {
         .sheet(isPresented: $showImport) {
             ImportView()
         }
-        .onAppear { model.reloadOverview() }
+        .sheet(isPresented: $showMerge, onDismiss: { duplicateCount = model.duplicateGroups().count }) {
+            DuplicateMergeView()
+        }
+        .onAppear {
+            model.reloadOverview()
+            duplicateCount = model.duplicateGroups().count
+            #if DEBUG
+            if model.shell.debugShowDuplicateMerge {
+                model.shell.debugShowDuplicateMerge = false
+                showMerge = true
+            }
+            #endif
+        }
     }
 
     // MARK: — Chọn phạm vi (theo collection; empty = tất cả)
@@ -136,6 +151,31 @@ struct ExportView: View {
             } label: {
                 Label("Nhập CSV từ vựng", systemImage: "square.and.arrow.down")
             }
+        }
+    }
+
+    private var dedupeSection: some View {
+        Section {
+            Button {
+                showMerge = true
+            } label: {
+                HStack {
+                    Label("Gộp từ trùng", systemImage: "arrow.triangle.merge")
+                    Spacer()
+                    if duplicateCount > 0 {
+                        Text("\(duplicateCount) nhóm")
+                            .font(Typo.meta)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .disabled(duplicateCount == 0)
+        } header: {
+            Text("Dọn kho")
+        } footer: {
+            Text(duplicateCount == 0
+                 ? "Không có từ trùng."
+                 : "Cùng chữ và loại từ ở nhiều bộ, lưu trước khi Reado tự gộp.")
         }
     }
 

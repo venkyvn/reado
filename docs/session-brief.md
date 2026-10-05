@@ -11,9 +11,9 @@
 
 **Đang mở / hàng đợi**
 - **engagement-r1** (branch `engagement-r1`, FR-24 gộp từ trùng + ý 1–6 của `idea/tang_gang_bo.md`, ADR-067/068,
-  `docs/plans/engagement-r1.md`): **T0 docs + T1 `DuplicateMerge` (ReadoKit) xong 2026-10-05** (577/581 xanh).
-  Kế tiếp **T2** màn "Gộp từ trùng" (UI, ExportView + `DuplicateMergeView`). **Fen chưa chạy baseline đếm khoá `term+pos`
-  trùng** (§2.13) — hỏi lại trước T2: 0 nhóm trên dữ liệu thật thì bỏ T2. T3–T8 chi tiết hoá ở đầu mỗi session.
+  `docs/plans/engagement-r1.md`): **T0 docs + T1 `DuplicateMerge` + T2 màn "Gộp từ trùng" xong 2026-10-05**
+  (579/583 xanh). Kế tiếp **T3** (ý 1: khoảnh khắc nhận ra) — chi tiết hoá T3 trên code mới nhất trước khi code. Fen bỏ qua
+  tiêu chí dừng baseline (§2.13) khi làm T2; nợ xem tay màn gộp ở §2.15. T3–T8 chi tiết hoá ở đầu mỗi session.
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
   (`PDFPageTextProbeTests` xác nhận extract tốt; thiếu `prompt_eval.py --swift-func` + chạy eval + chỉnh ngưỡng).
   Nợ xem tay T3/T4 — `docs/plans/pdf-reader-r1.md`.
@@ -66,6 +66,11 @@
     fen export JSON (Settings → Dữ liệu → Xuất dữ liệu, FR-16) đưa file, hoặc tự chạy
     3 query rồi báo 3 con số.
 14. vocab-identity-r1 (đã khép): xem tay những chỗ ảnh tĩnh không dựng được — (a) ngân sách ngày: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy "Hôm nay đã đủ 1 từ mới…"; (b) bỏ chọn hết từ mới → nút "Ghi gặp lại N từ" → banner "Đã ghi gặp lại M từ"; (c) lưu một trang PDF có từ cũ ở bộ khác rồi chạy 3 query T0 (khoá trùng không tăng); (d) lật một thẻ có ≥ 2 ngữ cảnh, đặc biệt ở Dynamic Type lớn — agent thấy mặt sau thẻ trắng ở `accessibility-extra-large` kể cả khi bỏ khối ngữ cảnh mới, nên có thể là lỗi có sẵn (ScrollView trong `.drawingGroup()`); nếu thẻ trắng thật thì mở bug riêng.
+15. engagement-r1 T2 (màn "Gộp từ trùng", FR-24): xem tay những chỗ DebugLaunch không chạm/cuộn được — bấm chọn/bỏ chọn dòng
+    (nhãn "Giữ thẻ này" đổi theo), hộp thoại xác nhận, **gộp thật trên dữ liệu thật** (xuất JSON backup trước; xong mở thẻ giữ
+    xem mục "Gặp lại" có câu của dòng gộp; chạy lại 3 query T0 §2.13), mục "Dọn kho" ở cuối màn Dữ liệu khi cuộn xuống
+    (không bị ShellTabBar che). Ảnh đã xem: light/dark, Nâu giấy, `accessibility-extra-large`, trạng thái trống.
+    `docs/plans/engagement-r1.md`.
 
 ## 3. Bẫy máy này
 

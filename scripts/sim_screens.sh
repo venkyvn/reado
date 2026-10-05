@@ -9,14 +9,14 @@
 #   scripts/sim_screens.sh shot <tên>      # chụp <tên>-light.png + <tên>-dark.png màn hiện tại
 #   scripts/sim_screens.sh size <cỡ>       # Dynamic Type: extra-extra-large | large | ... (xcrun simctl ui)
 #   scripts/sim_screens.sh open <màn> [--theme forest|sepia|indigo|system]
-#                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
+#                                      [--seed demo|demo-reviewed|demo-dups|empty] [--alert dup-name|pin-limit]
 #                                      [--fixture <file.json>] [--agent] [--fresh] [--no-build]
 #                                      [--pdf <file.pdf>] [--pdf-page <N>]
 #                                      [--apple-ai available|off|nodevice]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
-#                                           # (home, kho|library, review, review-extra, collection:<id|tên>,
+#                                           # (home, kho|library, dup-merge, review, review-extra, collection:<id|tên>,
 #                                           # settings, streak, data, capture, analysis-fixture, analysis-fixture-page,
 #                                           # encounter-sheet, phrase-highlight, analysis-fixture-mature, save-banner,
 #                                           # leeches, search, pdf-reader, pdf-reader-toc, pdf-reader-goto).

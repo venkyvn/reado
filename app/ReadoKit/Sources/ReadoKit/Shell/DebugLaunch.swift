@@ -66,11 +66,16 @@ public struct DebugLaunch: Equatable, Sendable {
         case pdfReaderTOC
         /// pdf-nav-r1 — như `pdfReader` nhưng mở sẵn alert "Đi tới trang".
         case pdfReaderGoTo
+        /// engagement-r1 T2 (FR-24) — mở màn Dữ liệu kèm sheet "Gộp từ trùng"; dùng với
+        /// `-ReadoSeed demo-dups` để kho có nhóm trùng mà chụp.
+        case duplicateMerge
     }
 
     public enum Seed: String, Equatable, Sendable {
         case demo
         case demoReviewed = "demo-reviewed"
+        /// engagement-r1 T2 — demo + vài dòng trùng `term+pos` ở bộ khác (`DevSeed.addDuplicates`).
+        case demoDups = "demo-dups"
         case empty
     }
 
@@ -165,6 +170,7 @@ public struct DebugLaunch: Equatable, Sendable {
         case "pdf-reader": return .pdfReader
         case "pdf-reader-toc": return .pdfReaderTOC
         case "pdf-reader-goto": return .pdfReaderGoTo
+        case "dup-merge": return .duplicateMerge
         default: return nil
         }
     }

@@ -322,4 +322,24 @@ extension AppModel {
         guard let database else { throw ReviewError.modelUnavailable }
         return try ExportService.buildJSON(on: database, now: clock.now)
     }
+
+    // MARK: — Gộp từ trùng (FR-24, ADR-067)
+
+    /// Các nhóm cùng `term+pos` trong kho (toàn app). Lỗi đọc → rỗng + alert.
+    func duplicateGroups() -> [DuplicateMerge.Group] {
+        guard let database else { return [] }
+        return read("nhóm từ trùng", fallback: []) {
+            try DuplicateMerge.groups(on: database)
+        }
+    }
+
+    /// Một transaction cho mọi nhóm đã duyệt; xong thì nạp lại Home/Hub. Ném lỗi để view hiện
+    /// inline (giống `importRows`) — rollback toàn bộ khi lỗi.
+    @discardableResult
+    func mergeDuplicates(_ selections: [DuplicateMerge.Selection]) throws -> DuplicateMerge.Summary {
+        guard let database else { throw ReviewError.modelUnavailable }
+        let summary = try DuplicateMerge.merge(on: database, selections: selections)
+        reloadOverview()
+        return summary
+    }
 }

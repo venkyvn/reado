@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge xong; T2-T8 chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng xong; T3-T8 chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -326,7 +326,7 @@ public enum DuplicateMerge {
 - **DoD:** lane `kit` xanh; không đổi `Migration.currentVersion` (vẫn 7); không file nào
   trong `app/Reado` đổi; `EncounterRepositoryTests` vẫn xanh.
 
-### T2 — màn "Gộp từ trùng", UI (dùng skill `reado-ui`)
+### T2 — màn "Gộp từ trùng", UI (dùng skill `reado-ui`) ✅ 2026-10-05 (full 579/583; nợ xem tay brief §2.15)
 
 1. **`app/Reado/App/AppModel+Collections.swift`**: thêm vào cuối, cạnh MARK Export,
    theo mẫu `AppModel+Leech.swift`:
