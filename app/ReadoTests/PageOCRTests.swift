@@ -211,6 +211,27 @@ final class PageOCRTests: XCTestCase {
         XCTAssertEqual(merged, "X Y Z")
     }
 
+    /// code-review (sau T3a): làm tròn ĐỘC LẬP từng đoạn (bản cũ) dồn sai số
+    /// vào cuối trang — trên trang nhiều đoạn NGẮN (hội thoại, giống
+    /// courage-p12 thật: 14 đoạn, nhiều đoạn <5 từ) có thể làm rỗng một đoạn
+    /// giữa trang dù tổng số từ khớp. Biên tích luỹ phải giữ đủ 10 đoạn.
+    func testMergeParagraphBoundariesManyShortParagraphsNoDrift() {
+        let documents = (1...10).map { "w\($0)" }.joined(separator: "\n\n")
+        let live = (1...10).map { "W\($0)" }.joined(separator: " ")
+        let merged = PageOCR.mergeParagraphBoundaries(liveText: live, documents: documents)
+        XCTAssertEqual(merged.components(separatedBy: "\n\n").count, 10)
+        XCTAssertEqual(merged, (1...10).map { "W\($0)" }.joined(separator: "\n\n"))
+    }
+
+    /// `liveText` ít từ hơn SỐ ĐOẠN — không đủ để mỗi đoạn có cơ hội nhận ≥1
+    /// từ, trả nguyên `documents` thay vì làm rỗng một đoạn bất kỳ.
+    func testMergeParagraphBoundariesFewerLiveWordsThanParagraphsFallsBack() {
+        let documents = (1...10).map { "w\($0)" }.joined(separator: "\n\n")
+        let live = "only nine words here yes really still not enough" // 9 từ, 10 đoạn
+        let merged = PageOCR.mergeParagraphBoundaries(liveText: live, documents: documents)
+        XCTAssertEqual(merged, documents)
+    }
+
     func testGarbageBytesYieldEmpty() async throws {
         let text = try await PageOCR.recognize(imageData: Data([0x00, 0x01, 0x02]))
         XCTAssertEqual(text, "")

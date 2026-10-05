@@ -64,8 +64,17 @@ public enum PageOCR {
         /// Observation bị loại vì `confidence < minConfidence` — rỗng khi dựng
         /// bằng `detailedReadingOrder` (lọc confidence chỉ xảy ra ở đường Vision thật).
         public let droppedLowConfidence: [Observation]
+        /// "liveText" (ocr-quality-r1 T3a, ADR-064 — `text` đã GHÉP, xem dưới) |
         /// "documents" (`RecognizeDocumentsRequest`, iOS 26+, ADR-042) | "legacy"
         /// (`VNRecognizeTextRequest` + ngắt đoạn hình học ADR-037).
+        ///
+        /// **Bẫy khi engine = "liveText":** `text` là bản ĐÃ GHÉP Live Text +
+        /// khung đoạn `documents` (`mergeParagraphBoundaries`), nhưng
+        /// `lines`/`observations`/`rawObservationCount` dưới đây vẫn là của
+        /// lượt `documents` TRƯỚC KHI ghép — nội dung từng dòng ở đó có thể
+        /// còn lỗi mà bản `text` cuối đã sửa (review tìm được: log chẩn đoán
+        /// — `ocrDebugJSON`/`diag_summary.py` — đọc `lines[].text` mà tưởng đó
+        /// là bản đã phân tích thì bị sai).
         public let engine: String
         /// apple-ai-r1 T3 (ADR-063) — OCR TRƯỚC khi Apple Intelligence soát;
         /// nil = chưa soát (toggle tắt / Apple không sẵn sàng). `text` ở trên
@@ -132,10 +141,7 @@ public enum PageOCR {
     }
 
     @available(iOS 26.0, macOS 26.0, *)
-    private static func recognizeDocuments(imageData: Data) async throws -> OCRResult {
-        guard let image = cgImage(from: imageData) else {
-            return OCRResult(text: "", observations: [], lines: [], engine: "documents")
-        }
+    private static func recognizeDocuments(image: CGImage) async throws -> OCRResult {
         var request = RecognizeDocumentsRequest()
         request.textRecognitionOptions.useLanguageCorrection = true
         let observations = try await request.perform(on: image)
@@ -160,53 +166,81 @@ public enum PageOCR {
     /// ghép chữ Live Text vào khung đoạn `documents` đã có sẵn.
     @available(iOS 26.0, macOS 26.0, *)
     private static func recognizeLiveTextMerged(imageData: Data) async throws -> OCRResult {
-        let documentsResult = try await recognizeDocuments(imageData: imageData)
-        guard !documentsResult.text.isEmpty, ImageAnalyzer.isSupported,
-              let image = cgImage(from: imageData)
-        else { return documentsResult }
-        let analyzer = ImageAnalyzer()
-        let configuration = ImageAnalyzer.Configuration([.text])
-        guard let analysis = try? await analyzer.analyze(
-            image, orientation: .up, configuration: configuration),
-            !analysis.transcript.isEmpty
-        else { return documentsResult }
-        let merged = mergeParagraphBoundaries(
-            liveText: analysis.transcript, documents: documentsResult.text)
+        guard let image = cgImage(from: imageData) else {
+            return OCRResult(text: "", observations: [], lines: [], engine: "documents")
+        }
+        // Review tìm được: trước đây `await` nối tiếp documents RỒI MỚI chạy
+        // liveText (cộng dồn độ trễ, documents cũng decode CGImage riêng — tốn
+        // 2 lần). Hai engine độc lập trên CÙNG ảnh đã decode 1 lần → chạy song
+        // song (`async let`), lỗi/rỗng của liveText không làm hỏng documents
+        // đang chạy cùng lúc.
+        async let documentsTask = recognizeDocuments(image: image)
+        async let liveTextTask = liveTextTranscript(image: image)
+        let documentsResult = try await documentsTask
+        guard !documentsResult.text.isEmpty else { return documentsResult }
+        guard let transcript = await liveTextTask, !transcript.isEmpty else { return documentsResult }
+        let merged = mergeParagraphBoundaries(liveText: transcript, documents: documentsResult.text)
         return OCRResult(
             text: merged, observations: documentsResult.observations, lines: documentsResult.lines,
             rawObservationCount: documentsResult.rawObservationCount, engine: "liveText")
+    }
+
+    /// `nil` khi Live Text không hỗ trợ hoặc lỗi — KHÔNG `throws`, lỗi ở đây
+    /// không được làm hỏng lượt `documents` đang chạy song song.
+    @available(iOS 26.0, macOS 26.0, *)
+    private static func liveTextTranscript(image: CGImage) async -> String? {
+        guard ImageAnalyzer.isSupported else { return nil }
+        let analyzer = ImageAnalyzer()
+        let configuration = ImageAnalyzer.Configuration([.text])
+        guard let analysis = try? await analyzer.analyze(
+            image, orientation: .up, configuration: configuration)
+        else { return nil }
+        return analysis.transcript
     }
 
     /// Testable: không gọi VisionKit. Chuyển chữ `liveText` (phẳng, không
     /// `\n\n`) vào khung đoạn của `documents` (có `\n\n` đúng chỗ), theo TỈ LỆ
     /// số từ mỗi đoạn — hai engine đọc cùng ảnh nên số từ mỗi đoạn gần như
     /// bằng nhau (đo thật T2: lệch ≤ 1 từ trên cả 3 trang), không cần thuật
-    /// toán căn chữ phức tạp hơn (Needleman-Wunsch…). `documents` hoặc
-    /// `liveText` trống → trả nguyên `documents`, an toàn không mất chữ.
+    /// toán căn chữ phức tạp hơn (Needleman-Wunsch…).
+    ///
+    /// Review tìm được: làm tròn ĐỘC LẬP từng đoạn (thay vì theo biên tích
+    /// luỹ) làm sai số dồn lại trên trang nhiều đoạn NGẮN (hội thoại) — đoạn
+    /// cuối hứng hết sai số dồn, có thể lệch vài từ chứ không phải ≤1 như số
+    /// đo T2 (T2 chỉ đo trên 3 trang ít đoạn dài). Sửa: tính BIÊN theo tỉ lệ
+    /// SỐ TỪ CỘNG DỒN (kiểu "largest remainder" trong bài toán chia ghế), mỗi
+    /// biên không lùi sau biên trước — sai số không dồn quá 1 vị trí.
+    ///
+    /// `documents` hoặc `liveText` trống, hoặc `liveText` ÍT TỪ HƠN số đoạn
+    /// (không đủ để mỗi đoạn có cơ hội nhận ≥1 từ) → trả nguyên `documents`,
+    /// an toàn không mất/lẫn chữ giữa các đoạn.
     public static func mergeParagraphBoundaries(liveText: String, documents: String) -> String {
         let docParagraphs = documents.components(separatedBy: "\n\n").filter { !$0.isEmpty }
         let docWordCounts = docParagraphs.map { $0.split(whereSeparator: \.isWhitespace).count }
         let totalDocWords = docWordCounts.reduce(0, +)
         let liveWords = liveText.split(whereSeparator: \.isWhitespace).map(String.init)
-        guard totalDocWords > 0, !liveWords.isEmpty else { return documents }
+        guard totalDocWords > 0, liveWords.count >= docParagraphs.count else { return documents }
+
+        var boundaries: [Int] = []
+        var cumulative = 0
+        for (index, count) in docWordCounts.enumerated() {
+            cumulative += count
+            if index == docWordCounts.count - 1 {
+                boundaries.append(liveWords.count)
+            } else {
+                let raw = Double(cumulative) / Double(totalDocWords) * Double(liveWords.count)
+                let previous = boundaries.last ?? 0
+                boundaries.append(max(previous, min(liveWords.count, Int(raw.rounded()))))
+            }
+        }
 
         var result: [String] = []
-        var consumed = 0
-        for (index, count) in docWordCounts.enumerated() {
-            let isLast = index == docWordCounts.count - 1
-            let remaining = liveWords.count - consumed
-            let share: Int
-            if isLast {
-                share = remaining
-            } else {
-                let proportion = Double(count) / Double(totalDocWords)
-                share = max(0, min(remaining, Int((proportion * Double(liveWords.count)).rounded())))
+        var start = 0
+        for end in boundaries {
+            if start < end {
+                result.append(liveWords[start..<end].joined(separator: " "))
             }
-            let end = min(consumed + share, liveWords.count)
-            if consumed < end {
-                result.append(liveWords[consumed..<end].joined(separator: " "))
-            }
-            consumed = end
+            start = end
         }
         return result.isEmpty ? documents : result.joined(separator: "\n\n")
     }

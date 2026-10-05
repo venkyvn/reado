@@ -60,6 +60,10 @@ def summarize_analysis(folder: Path, full: bool) -> None:
                 # dùng để ghép) — không phải số liệu riêng của Live Text, "unseen"
                 # không áp dụng ở đây.
                 print(f"OCR liveText (ghép khung đoạn documents): paragraphs={raw} lines={kept}")
+                print(
+                    "  ⚠️  'lines' dưới đây là bản documents TRƯỚC khi ghép — "
+                    "có thể còn lỗi mà bản text đã phân tích (ocrChars ở trên) đã sửa."
+                )
             else:
                 # ocr-line-drop: raw > kept + len(dropped) nghĩa Vision không hề thấy
                 # phần chênh lệch đó — không phải do code mình lọc confidence.

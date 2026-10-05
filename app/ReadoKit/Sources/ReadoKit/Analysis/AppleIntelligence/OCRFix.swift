@@ -136,24 +136,7 @@ public enum OCRFixApplier {
 
     /// Public để test: khoảng cách Levenshtein theo Character.
     public static func editDistance(_ a: String, _ b: String) -> Int {
-        let aChars = Array(a)
-        let bChars = Array(b)
-        if aChars.isEmpty { return bChars.count }
-        if bChars.isEmpty { return aChars.count }
-        var previous = Array(0...bChars.count)
-        var current = [Int](repeating: 0, count: bChars.count + 1)
-        for i in 1...aChars.count {
-            current[0] = i
-            for j in 1...bChars.count {
-                if aChars[i - 1] == bChars[j - 1] {
-                    current[j] = previous[j - 1]
-                } else {
-                    current[j] = min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1)
-                }
-            }
-            previous = current
-        }
-        return previous[bChars.count]
+        EditDistance.levenshtein(Array(a), Array(b))
     }
 
     private static func wordCount(_ s: String) -> Int {

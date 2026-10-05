@@ -208,27 +208,6 @@ final class OCRProbeTests: XCTestCase {
         return Int(components.seconds * 1000 + components.attoseconds / 1_000_000_000_000_000)
     }
 
-    /// Thuần — test bằng chuỗi dựng tay, không cần Vision. Generic nên dùng
-    /// chung cho cả WER (mảng từ) và CER (mảng ký tự).
-    private func levenshtein<T: Equatable>(_ a: [T], _ b: [T]) -> Int {
-        if a.isEmpty { return b.count }
-        if b.isEmpty { return a.count }
-        var previous = Array(0...b.count)
-        var current = [Int](repeating: 0, count: b.count + 1)
-        for i in 1...a.count {
-            current[0] = i
-            for j in 1...b.count {
-                if a[i - 1] == b[j - 1] {
-                    current[j] = previous[j - 1]
-                } else {
-                    current[j] = min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1)
-                }
-            }
-            previous = current
-        }
-        return previous[b.count]
-    }
-
     /// Cùng luật gập dash/quote/gạch nối cuối hàng với `normalize(_:)` — tránh
     /// WER bị chi phối bởi khác biệt ký tự typographic/ngắt dòng, như
     /// investigation ocr-line-drop §11 đã thấy (WER 0.131 chủ yếu 1 câu thiếu,
@@ -237,14 +216,14 @@ final class OCRProbeTests: XCTestCase {
         let refWords = normalize(reference).split(separator: " ").map(String.init)
         guard !refWords.isEmpty else { return 0 }
         let hypWords = normalize(hypothesis).split(separator: " ").map(String.init)
-        return Double(levenshtein(hypWords, refWords)) / Double(refWords.count)
+        return Double(EditDistance.levenshtein(hypWords, refWords)) / Double(refWords.count)
     }
 
     private func characterErrorRate(hypothesis: String, reference: String) -> Double {
         let refChars = Array(normalize(reference))
         guard !refChars.isEmpty else { return 0 }
         let hypChars = Array(normalize(hypothesis))
-        return Double(levenshtein(hypChars, refChars)) / Double(refChars.count)
+        return Double(EditDistance.levenshtein(hypChars, refChars)) / Double(refChars.count)
     }
 
     private func scaledTo1600(_ image: CGImage) -> CGImage {
