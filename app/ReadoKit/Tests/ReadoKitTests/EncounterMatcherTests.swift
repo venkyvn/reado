@@ -125,4 +125,44 @@ final class EncounterMatcherTests: XCTestCase {
         XCTAssertEqual(matcher.vocabItemIDs(in: ["nothing here", ""]), [])
         XCTAssertEqual(matcher.vocabItemIDs(in: []), [])
     }
+
+    // MARK: — contexts (vocab-identity-r1 T2)
+
+    private func contexts(_ terms: [String], in texts: [String]) -> [EncounterContext] {
+        EncounterMatcher(lexicon: terms.map { entry($0) }).contexts(in: texts)
+    }
+
+    func testContextsReturnsSentenceContainingMatch() {
+        let result = contexts(
+            ["serendipity"], in: ["It was late. What a serendipity it was! Then we left."])
+        XCTAssertEqual(result.map(\.vocabItemID), ["id-serendipity"])
+        XCTAssertEqual(result.first?.sentence, "What a serendipity it was!")
+    }
+
+    func testContextsMultiWordPhrase() {
+        let result = contexts(["look up"], in: ["First line. She had to look up the word. End."])
+        XCTAssertEqual(result.first?.sentence, "She had to look up the word.")
+    }
+
+    func testContextsPossessiveSuffix() {
+        let result = contexts(["author"], in: ["Nothing here. The author's voice was clear."])
+        XCTAssertEqual(result.first?.sentence, "The author's voice was clear.")
+    }
+
+    func testContextsOneVocabSeenTwiceKeepsFirstSentence() {
+        let result = contexts(["cat"], in: ["The cat sat. Another cat ran.", "A cat again."])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.sentence, "The cat sat.")
+    }
+
+    func testContextsLongSentenceWithoutPunctuationIsWindowed() {
+        let filler = Array(repeating: "lorem", count: 45).joined(separator: " ")
+        let text = "\(filler) serendipity \(filler)"
+        XCTAssertGreaterThan(text.count, 450)
+        let sentence = contexts(["serendipity"], in: [text]).first?.sentence ?? ""
+        XCTAssertTrue(sentence.contains("serendipity"))
+        XCTAssertLessThanOrEqual(sentence.count, 300)
+        XCTAssertTrue(sentence.hasPrefix("…"))
+        XCTAssertTrue(sentence.hasSuffix("…"))
+    }
 }

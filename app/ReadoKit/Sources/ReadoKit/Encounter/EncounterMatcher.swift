@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Một dòng từ vựng trong "từ điển" để dò khi đọc (FR-22) — đủ trường cho
 /// popover: nghĩa, IPA, "đã gặp ở ‹collection›".
@@ -29,6 +30,17 @@ public struct EncounterLexiconEntry: Equatable, Sendable, Identifiable {
         self.meaningVI = meaningVI
         self.collectionID = collectionID
         self.collectionName = collectionName
+    }
+}
+
+/// Một vocab gặp trong trang + câu chứa lần khớp đầu (vocab-identity-r1 T2).
+public struct EncounterContext: Equatable, Sendable {
+    public let vocabItemID: String
+    public let sentence: String?
+
+    public init(vocabItemID: String, sentence: String?) {
+        self.vocabItemID = vocabItemID
+        self.sentence = sentence
     }
 }
 
@@ -138,6 +150,70 @@ public struct EncounterMatcher: Sendable {
             }
         }
         return ordered
+    }
+
+    /// Mỗi vocab một ngữ cảnh (lần khớp ĐẦU TIÊN), cùng thứ tự `vocabItemIDs(in:)`.
+    public func contexts(in texts: [String]) -> [EncounterContext] {
+        var seen = Set<String>()
+        var ordered: [EncounterContext] = []
+        for text in texts {
+            for match in matches(in: text) {
+                var sentence: String?
+                for entry in match.entries where seen.insert(entry.vocabItemID).inserted {
+                    if sentence == nil {
+                        sentence = Self.sentence(containing: match.range, in: text)
+                    }
+                    ordered.append(EncounterContext(vocabItemID: entry.vocabItemID, sentence: sentence))
+                }
+            }
+        }
+        return ordered
+    }
+
+    /// Ngưỡng + nửa cửa sổ khi "câu" quá dài (OCR thiếu dấu câu) — Q6.
+    static let maxSentenceLength = 300
+    static let sentenceWindow = 120
+
+    /// Câu chứa `range` (NLTokenizer .sentence), đã trim. Dài hơn 300 ký tự → cửa sổ
+    /// ±120 ký tự quanh match, nới về khoảng trắng, "…" ở đầu/cuối bị cắt.
+    static func sentence(containing range: Range<String.Index>, in text: String) -> String {
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = text
+        var bounds: Range<String.Index> = text.startIndex..<text.endIndex
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { tokenRange, _ in
+            if tokenRange.upperBound > range.lowerBound {
+                bounds = tokenRange
+                return false
+            }
+            return true
+        }
+        // Trim khoảng trắng hai đầu nhưng vẫn giữ `bounds` hợp lệ.
+        var start = bounds.lowerBound
+        var end = bounds.upperBound
+        while start < end, text[start].isWhitespace { start = text.index(after: start) }
+        while start < end, text[text.index(before: end)].isWhitespace { end = text.index(before: end) }
+        guard text.distance(from: start, to: end) > maxSentenceLength else {
+            return String(text[start..<end])
+        }
+        var lower = text.index(range.lowerBound, offsetBy: -sentenceWindow, limitedBy: start) ?? start
+        var upper = text.index(range.upperBound, offsetBy: sentenceWindow, limitedBy: end) ?? end
+        let cutStart = lower > start
+        let cutEnd = upper < end
+        // Nới vào trong tới ranh giới khoảng trắng (không cắt giữa chữ), không vượt match.
+        if cutStart {
+            while lower < range.lowerBound, !text[text.index(before: lower)].isWhitespace {
+                lower = text.index(after: lower)
+            }
+        }
+        if cutEnd {
+            while upper > range.upperBound, !text[upper].isWhitespace {
+                upper = text.index(before: upper)
+            }
+        }
+        var result = String(text[lower..<upper]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if cutStart { result = "…" + result }
+        if cutEnd { result += "…" }
+        return result
     }
 
     // MARK: — Tokenizer

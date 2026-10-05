@@ -221,6 +221,56 @@ final class EncounterRepositoryTests: XCTestCase {
                        "từ vừa lưu không phải gặp lại")
     }
 
+    func testSaveCaptureStoresSentenceAndTargetCollectionOnSeen() throws {
+        let db = try Fixtures.seededDB()
+        let bookA = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let bookB = try Fixtures.insertCollection(in: db, name: "Sách B")
+        let old = try vocab(db, "serendipity", in: bookA)
+
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("novel")], collectionID: bookB,
+            segments: segments("It was dark. Pure serendipity struck him."), now: Fixtures.fixedNow)
+
+        let row = try XCTUnwrap(db.rows(
+            "SELECT sentence, collection_id FROM encounters WHERE vocab_item_id = ? AND kind = 'seen';",
+            [.text(old)]).first)
+        XCTAssertEqual(row["sentence"].textValue, "Pure serendipity struck him.")
+        XCTAssertEqual(row["collection_id"].textValue, bookB)
+    }
+
+    func testSaveCaptureToTempStoreRecordsTempStoreIDOnSeen() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let old = try vocab(db, "serendipity", in: book)
+
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [item("novel")], collectionID: nil,
+            segments: segments("Pure serendipity struck him."), now: Fixtures.fixedNow)
+
+        let inbox = try XCTUnwrap(db.scalarString(
+            "SELECT id FROM collections WHERE is_default = 1 LIMIT 1;"))
+        XCTAssertEqual(
+            try db.scalarString(
+                "SELECT collection_id FROM encounters WHERE vocab_item_id = ?;", [.text(old)]),
+            inbox)
+    }
+
+    func testDeletingCollectionNullsEncounterCollectionKeepsRow() throws {
+        let db = try Fixtures.seededDB()
+        let bookA = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let bookX = try Fixtures.insertCollection(in: db, name: "Sách X")
+        let old = try vocab(db, "serendipity", in: bookA)
+        try EncounterRepository.insertSeen(
+            on: db, contexts: [EncounterContext(vocabItemID: old, sentence: "Câu.")],
+            collectionID: bookX, now: Fixtures.fixedNow)
+
+        _ = try VocabRepository.deleteCollection(on: db, id: bookX)
+
+        XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: old, kind: .seen), 1)
+        XCTAssertEqual(
+            try db.scalarInt64("SELECT COUNT(*) FROM encounters WHERE collection_id IS NULL;"), 1)
+    }
+
     func testSaveCaptureSameTermSavedAgainOnlyMarksTheOldRowSeen() throws {
         let db = try Fixtures.seededDB()
         let book = try Fixtures.insertCollection(in: db, name: "Sách A")

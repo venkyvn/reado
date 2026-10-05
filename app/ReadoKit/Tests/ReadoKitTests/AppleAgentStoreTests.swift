@@ -17,7 +17,7 @@ final class AppleAgentStoreTests: XCTestCase {
             model: "gemini", apiKey: "secret", secrets: secrets)
         XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 5)
 
-        try Migration.run(on: db)
+        try Migration.run(on: db, upTo: 6)
 
         XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 6)
         let byokRow = try db.rows(

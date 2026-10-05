@@ -5,9 +5,10 @@ import Foundation
 /// Bảy bảng v1 + `encounters` (v4) + `pdf_sources` (v5) + index +
 /// kind `apple_intelligence` + hàng builtin (v6, apple-ai-r1 T5/ADR-063); seed
 /// nằm ở Seeder chứ không phải migration (NGOẠI LỆ: hàng Apple Intelligence —
-/// id cố định nên tạo ở v6Statements, không ở Seeder, để DB cũ nâng cấp cũng có).
+/// id cố định nên tạo ở v6Statements, không ở Seeder, để DB cũ nâng cấp cũng có) +
+/// hai cột ngữ cảnh `encounters.sentence`/`collection_id` (v7, vocab-identity-r1 T2/ADR-066).
 public enum Migration {
-    public static let currentVersion: Int64 = 6
+    public static let currentVersion: Int64 = 7
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
@@ -238,6 +239,14 @@ public enum Migration {
         """,
     ]
 
+    /// v7 (vocab-identity-r1 T2) — ngữ cảnh cho mỗi lần gặp lại: câu chứa từ + collection
+    /// đang lưu lúc gặp. Một ALTER mỗi câu; cột nullable, không DEFAULT (dòng cũ giữ NULL)
+    /// nên SQLite cho ADD kèm REFERENCES, không cần rebuild bảng / tắt FK.
+    static let v7Statements: [String] = [
+        "ALTER TABLE encounters ADD COLUMN sentence TEXT;",
+        "ALTER TABLE encounters ADD COLUMN collection_id TEXT REFERENCES collections(id) ON DELETE SET NULL;",
+    ]
+
     /// `upTo`: apple-ai-r1 T5 — chỉ test dùng để dựng DB dừng ở một version cụ
     /// thể (v5→v6 phải thấy dữ liệu v5 THẬT trước khi migrate tiếp); production
     /// luôn gọi không truyền, chạy hết tới `currentVersion`.
@@ -311,6 +320,13 @@ public enum Migration {
                             statement: "PRAGMA foreign_key_check;")
                     }
                     try db.exec("PRAGMA user_version = 6;")
+                }
+            case 6:
+                try db.inTransaction {
+                    for statement in v7Statements {
+                        try db.exec(statement)
+                    }
+                    try db.exec("PRAGMA user_version = 7;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

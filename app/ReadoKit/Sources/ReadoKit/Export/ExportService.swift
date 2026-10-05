@@ -122,6 +122,10 @@ public struct ExportEncounter: Codable, Equatable, Sendable {
     /// `seen` | `recognized`.
     public let kind: String
     public let createdAt: String
+    /// Câu chứa từ lúc gặp (v7); nil với dòng cũ / `recognized`.
+    public let sentence: String?
+    /// Collection đang lưu lúc gặp (v7); nil với dòng cũ hoặc collection đã xoá.
+    public let collectionID: String?
 }
 
 // MARK: - TSV builder (Anki-compatible)
@@ -303,13 +307,15 @@ public enum ExportService {
 
         // Encounters (FR-22) — gặp lại từ cũ khi đọc, ngoài FSRS
         let encounterRows = try db.rows(
-            "SELECT id, vocab_item_id, kind, created_at FROM encounters ORDER BY created_at, id;")
+            "SELECT id, vocab_item_id, kind, created_at, sentence, collection_id FROM encounters ORDER BY created_at, id;")
         let encounters: [ExportEncounter] = encounterRows.map { r in
             ExportEncounter(
                 id: r["id"].textValue ?? "",
                 vocabItemID: r["vocab_item_id"].textValue ?? "",
                 kind: r["kind"].textValue ?? "seen",
-                createdAt: r["created_at"].textValue ?? ""
+                createdAt: r["created_at"].textValue ?? "",
+                sentence: r["sentence"].textValue,
+                collectionID: r["collection_id"].textValue
             )
         }
 

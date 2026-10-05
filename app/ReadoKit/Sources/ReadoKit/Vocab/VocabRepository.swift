@@ -274,8 +274,9 @@ public enum VocabRepository {
             // FR-22 / SD §6 khối #8 — `seen` CÙNG transaction (kể cả kho tạm: trang vẫn
             // được đọc dù không lưu phiên).
             if let seenMatcher {
-                let ids = seenMatcher.vocabItemIDs(in: segments.map(\.sourceEN))
-                try EncounterRepository.insertSeen(on: db, vocabItemIDs: ids, now: now)
+                let contexts = seenMatcher.contexts(in: segments.map(\.sourceEN))
+                try EncounterRepository.insertSeen(
+                    on: db, contexts: contexts, collectionID: targetID, now: now)
             }
         }
         return count

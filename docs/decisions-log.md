@@ -1508,4 +1508,12 @@
   - `CLAUDE.md` §5, `prd.md` FR-09/FR-10/FR-22, `journeys.md` J1/J2b, `vocabulary.md` §6.3
     sửa theo ADR này (vocab-identity-r1 T0).
   - Không đụng FSRS/`cards`/`review_logs`, `Prompt.version` (giữ v6), `PDFPageText`/OCR.
+  - **T2 (2026-10-05, dữ liệu ngữ cảnh) — tự quyết của plan:**
+    - **Q6** — câu ngữ cảnh > 300 ký tự (OCR thiếu dấu câu): cắt cửa sổ ±120 ký tự quanh
+      từ khớp, nới về ranh giới khoảng trắng, "…" ở phía bị cắt.
+    - **Q10** — field JSON export là `collectionID` (theo `ExportVocabItem`), Optional;
+      `version` giữ 1.
+    - **Q11** — dùng `NLTokenizer` qua `import NaturalLanguage`, không sửa `Package.swift`
+      (link tự động; đã build kit macOS + iOS OK).
+    - Migration v7 = hai `ALTER TABLE encounters ADD COLUMN` riêng, nullable không DEFAULT.
   - Plan đầy đủ: `docs/plans/vocab-identity-r1.md`.

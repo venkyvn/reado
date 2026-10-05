@@ -2,7 +2,7 @@
 
 > **Trạng thái:** open (2026-10-05) - T0 xong (ADR-066 + docs đồng bộ, baseline chờ fen export);
 > T1 xong (kit 506/507 + full 532/536, 0 fail; ảnh analysis-fixture light+dark ổn, ca budget 0 fen xem tay);
-> T2-T4 còn lại.
+> T2 xong (migration v7 + EncounterContext + export; kit 515/516 skip 1, full 541/545, 4 skip, 0 fail); T3-T4 còn lại.
 
 > ADR: **ADR-066**. Migration: **v7** (`currentVersion` hiện = 6, không nhánh nào tranh số).
 > Đảo **Q-09** (ADR-032) cho FR-10; mở rộng FR-09, FR-22. D1-D4 đã fen chốt 2026-10-05

@@ -21,10 +21,24 @@ public enum EncounterRepository {
     public static func insertSeen(
         on db: SQLiteDatabase, vocabItemIDs: [String], now: Date
     ) throws -> Int {
+        try insertSeen(
+            on: db,
+            contexts: vocabItemIDs.map { EncounterContext(vocabItemID: $0, sentence: nil) },
+            collectionID: nil, now: now)
+    }
+
+    /// Như trên nhưng kèm câu chứa từ + collection đang lưu (vocab-identity-r1 T2).
+    /// Khử trùng theo `vocabItemID` (lần đầu thắng). KHÔNG tự mở transaction.
+    @discardableResult
+    public static func insertSeen(
+        on db: SQLiteDatabase, contexts: [EncounterContext], collectionID: String?, now: Date
+    ) throws -> Int {
         let createdAt = ISOTimestamp.string(from: now)
         var written = Set<String>()
-        for id in vocabItemIDs where written.insert(id).inserted {
-            try insert(on: db, vocabItemID: id, kind: .seen, createdAt: createdAt)
+        for context in contexts where written.insert(context.vocabItemID).inserted {
+            try insert(
+                on: db, vocabItemID: context.vocabItemID, kind: .seen, createdAt: createdAt,
+                sentence: context.sentence, collectionID: collectionID)
         }
         return written.count
     }
@@ -122,16 +136,19 @@ public enum EncounterRepository {
     }
 
     private static func insert(
-        on db: SQLiteDatabase, vocabItemID: String, kind: EncounterKind, createdAt: String
+        on db: SQLiteDatabase, vocabItemID: String, kind: EncounterKind, createdAt: String,
+        sentence: String? = nil, collectionID: String? = nil
     ) throws {
         try db.run(
             """
-            INSERT INTO encounters (id, vocab_item_id, kind, created_at)
-            VALUES (?, ?, ?, ?);
+            INSERT INTO encounters (id, vocab_item_id, kind, created_at, sentence, collection_id)
+            VALUES (?, ?, ?, ?, ?, ?);
             """,
             [
                 .text(Identifier.uuid()), .text(vocabItemID),
                 .text(kind.rawValue), .text(createdAt),
+                sentence.map { .text($0) } ?? .null,
+                collectionID.map { .text($0) } ?? .null,
             ])
     }
 }

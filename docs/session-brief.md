@@ -20,7 +20,9 @@
   **T1 xong** (2026-10-05): `VocabRepository.newSavedToday` + `drafts(preselectBudget:)`, suất
   chọn sẵn = `min(5, daily_new_limit − đã lưu hôm nay)`, dòng "Hôm nay đã đủ N từ mới" khi hết.
   Nợ xem tay: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy dòng đó (ảnh tĩnh
-  không dựng được ca budget = 0). Plan đã chi tiết hoá T1–T4. Task tiếp: **T2** (migration v7).
+  không dựng được ca budget = 0). Plan đã chi tiết hoá T1–T4. **T2 xong**: migration v7 (`encounters.sentence` + `collection_id`), `EncounterMatcher.contexts`
+  (NLTokenizer, cắt câu dài ±120 ký tự), `saveCapture` ghi câu + bộ vào `seen`, export thêm 2 field.
+  Chưa có UI (hiện ở T4). Task tiếp: **T3** (so khớp toàn app + nhóm "Đã có trong kho").
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
   ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem

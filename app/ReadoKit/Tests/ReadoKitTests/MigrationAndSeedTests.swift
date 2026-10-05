@@ -12,6 +12,28 @@ final class MigrationAndSeedTests: XCTestCase {
         XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
     }
 
+    func testMigrationV6ToV7AddsEncounterContextColumns() throws {
+        let db = try SQLiteDatabase(inMemory: ())
+        try Migration.run(on: db, upTo: 6)
+        try Seeder.seed(on: db, timezone: Fixtures.timezoneID, now: Fixtures.fixedNow)
+        let col = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let vocabID = try Fixtures.insertVocab(in: db, collectionID: col, term: "hello")
+        try db.run(
+            "INSERT INTO encounters (id, vocab_item_id, kind, created_at) VALUES (?, ?, 'seen', ?);",
+            [.text(Identifier.uuid()), .text(vocabID), .text("2026-10-01T00:00:00Z")])
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 6)
+
+        try Migration.run(on: db)
+
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 7)
+        XCTAssertEqual(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM encounters WHERE sentence IS NULL AND collection_id IS NULL;"),
+            1)
+        XCTAssertTrue(try db.rows("PRAGMA foreign_key_check;").isEmpty)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA foreign_keys;"), 1)
+    }
+
     func testMigrationIsIdempotent() throws {
         let db = try SQLiteDatabase(inMemory: ())
         try Migration.run(on: db)
@@ -75,15 +97,16 @@ final class MigrationAndSeedTests: XCTestCase {
     func testMigrationV4ToV5CreatesPdfSourcesAndKeepsData() throws {
         // DB đã ở v4 (đủ 8 bảng, chưa có `pdf_sources`) + dữ liệu thật → chạy lại
         // Migration.run phải thêm bảng mà không mất vocab.
-        let db = try Fixtures.seededDB()
+        // vocab-identity-r1 T2: dựng DB v4 thật (`upTo: 4`) thay vì hạ user_version của
+        // DB mới nhất — cột v7 đã có sẽ làm ALTER v7 trùng cột.
+        let db = try SQLiteDatabase(inMemory: ())
+        try Migration.run(on: db, upTo: 4)
+        try Seeder.seed(on: db, timezone: Fixtures.timezoneID, now: Fixtures.fixedNow)
         let collectionID = try XCTUnwrap(
             db.scalarString("SELECT id FROM collections WHERE is_default = 1;"))
         let vocabID = try Fixtures.insertVocab(
             in: db, collectionID: collectionID, term: "keep")
-        try db.exec("DROP TABLE pdf_sources;")
-        // apple-ai-r1 T5: như trên — xoá hàng Apple trước khi "giả" DB v4 cũ.
-        try db.run("DELETE FROM analysis_agents WHERE id = ?;", [.text(Seeder.appleAgentID)])
-        try db.exec("PRAGMA user_version = 4;")
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 4)
 
         try Migration.run(on: db)
 

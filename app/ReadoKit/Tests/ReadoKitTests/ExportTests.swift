@@ -118,17 +118,27 @@ final class ExportTests: XCTestCase {
     }
 
     func testJSON_includesEncounters() throws {
-        let (db, _, vocabID, _) = try makeCol(term: "hello")
+        let (db, colID, vocabID, _) = try makeCol(term: "hello")
         try EncounterRepository.insertSeen(
             on: db, vocabItemIDs: [vocabID], now: Fixtures.fixedNow)
+        try EncounterRepository.insertSeen(
+            on: db, contexts: [EncounterContext(vocabItemID: vocabID, sentence: "Hello there.")],
+            collectionID: colID, now: Fixtures.fixedNow)
         try EncounterRepository.recordRecognized(
             on: db, vocabItemID: vocabID, now: Fixtures.fixedNow)
 
         let data = try ExportService.buildJSON(on: db, now: Fixtures.fixedNow)
         let bundle = try JSONDecoder().decode(ExportBundle.self, from: data)
 
-        XCTAssertEqual(bundle.counts.encounters, 2)
+        XCTAssertEqual(bundle.counts.encounters, 3)
         XCTAssertEqual(Set(bundle.encounters.map(\.kind)), ["seen", "recognized"])
+        let withContext = bundle.encounters.filter { $0.sentence != nil }
+        XCTAssertEqual(withContext.count, 1)
+        XCTAssertEqual(withContext.first?.sentence, "Hello there.")
+        XCTAssertEqual(withContext.first?.collectionID, colID)
+        XCTAssertTrue(
+            bundle.encounters.filter { $0.sentence == nil }.allSatisfy { $0.collectionID == nil },
+            "dòng cũ / recognized: nil")
         XCTAssertTrue(bundle.encounters.allSatisfy { $0.vocabItemID == vocabID })
         XCTAssertEqual(bundle.version, 1, "thêm khoá, không đổi version")
     }
