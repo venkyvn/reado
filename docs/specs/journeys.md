@@ -211,7 +211,7 @@ Một **session** = một lần capture thành công đã confirm picker (một 
 2. Trên hub, cùng lúc:
    - Menu ⋯ của hub có mục **"Ghim lên Hôm nay" / "Bỏ ghim"** cho collection này (`HomePinMenu`). Đã ghim đủ 5 (`HomePinService.maxPins`) → mở chooser chọn một pin bị thay; không tự thay ngầm.
    - Nút chụp trên thanh tab, khi đang mở hub này, ngầm chọn đích = bộ đang mở (chip ở màn chụp ghi tên bộ) — không có nút "Chụp vào bộ này" riêng trên hub (chỉ 1 CTA chính, ADR-052). Đổi đích khác thì đổi chip hoặc đổi "Lưu vào" ở màn duyệt (giống J1 bước 4).
-   - **Header thống kê** (T6): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) + **một dòng meta** "Đến hạn N · +M từ/7 ngày · Lần ôn tiếp …" (không còn 3 ô số riêng).
+   - **Header thống kê** (T6): thẻ tiến độ "Đã thuộc X/Y" + thanh 4 màu theo từ (Đã thuộc · Đang nhớ · Đang học · Chưa học; bộ rỗng ẩn thanh) **[engagement-r1 T6: thay bằng bản đồ chấm theo 4 mức, ADR-068]** + **một dòng meta** "Đến hạn N · +M từ/7 ngày · Lần ôn tiếp …" (không còn 3 ô số riêng).
    - CTA chính **đổi theo ngữ cảnh**: còn due → **"Ôn bộ này · N đến hạn"** → mở phiên ôn toàn màn với hàng đợi due đã lọc `collection_id` (FR-18); hết due mà còn từ mới/thẻ ôn sớm → **"Ôn thêm N thẻ"** (extra-review-r1 ADR-050, CÓ ghi lịch FSRS thật, cùng phiên ôn toàn màn theo phạm vi bộ này); không còn gì → không nút. 0 due trong bộ nhưng còn due ngoài → hiện số nợ + CTA ôn tất cả (trong phiên ôn).
    - Danh sách **tối đa 10 session** gần nhất, **chọn được** từng cái.
    - Cửa **kho từ vựng theo collection** (mọi từ đã lưu vào collection này, kể cả từ session đã trôi).
@@ -494,7 +494,7 @@ FR-23 (đọc PDF, J2b). NG-07 vẫn cấm EPUB/ebook.
 
 Cửa vào: menu **⋯ của tab Thư viện** → "Xuất dữ liệu" / "Nhập CSV" (ADR-052 — dời khỏi Home/Settings; không tab thứ 4
 — NFR-08: từ mở app tới chụp được trang ≤ 3 thao tác vẫn giữ nguyên, Dữ liệu thêm 1 chạm so với bản Home cũ). Từ kho
-từ collection: **Xuất bộ này**.
+từ collection: **Xuất bộ này**. Cùng màn **Dữ liệu** có thêm "Gộp từ trùng" (FR-24, ADR-067).
 
 ### Happy path — xuất
 
@@ -510,6 +510,14 @@ từ collection: **Xuất bộ này**.
 7. Xác nhận → **gộp**. Khớp collection theo tên, không phân biệt hoa thường, trim; tên trống → kho tạm; chưa có → tạo mới (FR-17). Không tạo session / song ngữ. `sessionId = null`, `verified = true`. Card `state = new`, `due_at` hôm nay — vào nhánh Học (J3). Không đụng FSRS thẻ cũ.
 8. Toast số dòng đã nhập; ở lại màn Dữ liệu (không bị đẩy đi đâu — cùng nguyên tắc "không chặn" của ADR-053).
 
+### Happy path — gộp từ trùng (FR-24)
+
+9. Dữ liệu → "Dọn kho" → **Gộp từ trùng (N nhóm)** (tắt + "Không có từ trùng" khi 0 nhóm).
+10. Duyệt từng nhóm cùng `term + pos`: mỗi dòng có nghĩa, bộ, mức; mặc định chọn hết; dòng sẽ
+    giữ có nhãn "Giữ thẻ này"; bỏ chọn dòng mang nghĩa khác.
+11. "Gộp (N)" → hộp thoại nhắc xuất JSON backup trước (không hoàn tác) → xác nhận.
+12. Quay về màn Dữ liệu, số nhóm cập nhật; nhóm đã bỏ qua hiện lại ở lần mở sau.
+
 ### Màn UI (thứ tự prompt)
 
 Thư viện (menu ⋯ Dữ liệu) · **Dữ liệu** (xuất theo collection + nhập file) · Preview nhập (reuse pattern picker FR-03) · kho từ collection (cửa xuất bộ này).
@@ -523,6 +531,8 @@ Thư viện (menu ⋯ Dữ liệu) · **Dữ liệu** (xuất theo collection + 
 | File chỉ có header, 0 dòng | Preview trống; xác nhận không ghi | FR-20 |
 | Thoát preview chưa confirm | Cảnh báo: bỏ bản parse, không ghi | FR-20 |
 | 0 dòng còn chọn lúc xác nhận | Không ghi; nói rõ | FR-20 |
+| 0 nhóm trùng | Nút "Gộp từ trùng" tắt, chú thích "Không có từ trùng" | FR-24 |
+| Gộp lỗi giữa chừng | Rollback toàn bộ, lỗi inline trên màn gộp | FR-24 |
 
 ---
 

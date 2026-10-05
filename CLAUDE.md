@@ -91,6 +91,10 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
   thêm setting riêng. D2 nhóm "Đã có trong kho" gồm mọi từ đã có (đang học + đã thuộc, mọi
   collection). D3 ôn theo bộ không kéo từ gặp ở bộ khác vào — để R2. D4 gạch chân từ cũ
   trong màn đọc PDF — để sau, không làm trong plan này.
+- **Chốt thêm 2026-10-05 (engagement-r1, ADR-067/068):** gộp từ trùng cũ (FR-24) do fen duyệt
+  từng nhóm, giữ thẻ tiến bộ nhất, dòng gộp thành một lần `seen` có câu — không tự động. Làm ý
+  1–6 của `idea/tang_gang_bo.md` (ý 7 chia sẻ để sau); dòng nhắc streak đổi sang "N/7 ngày",
+  **giữ pill streak**; không đổi prompt, không đổi schema.
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ

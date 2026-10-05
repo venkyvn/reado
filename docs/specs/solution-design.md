@@ -189,6 +189,7 @@ Mỗi khối dưới là **một transaction** — không có trạng thái nử
 | 7 | FR-20 gộp CSV | Một transaction; 0 dòng chọn = không ghi | ◻ sau skeleton |
 | 8 | Lưu trang có từ cũ (FR-22) | `INSERT encounters(kind='seen')` cho mỗi vocab đã có trong kho — **cùng transaction** với khối 4 + 5 (`EncounterRepository.insertSeen`, không tự mở transaction; `inTransaction` không lồng được) | ✅ repository (T1) · ◻ nối vào lưu trang (T2) |
 | 9 | "Nhận ra" khi đọc (FR-22) | Kiểm "đã nhận ra hôm nay chưa" + `INSERT encounters(kind='recognized')` — một transaction riêng (`EncounterRepository.recordRecognized`); không đụng `cards`/`review_logs` | ✅ T1 |
+| 10 | Gộp từ trùng (FR-24) | Mọi nhóm đã chọn trong MỘT transaction — `DuplicateMerge.merge`; chuyển `review_logs`/`encounters`, thêm `seen`, xoá dòng gộp; không đụng FSRS thẻ giữ (ADR-067) | ◻ |
 
 Ràng buộc FK đã định hình sẵn ranh giới: `vocab_items ON DELETE RESTRICT` (xoá
 collection phải xử lý vocab trước — rule ở PRD FR-17), `cards ON DELETE

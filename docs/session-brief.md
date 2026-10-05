@@ -10,32 +10,23 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
-  **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
-  ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem
-  `docs/journal/2026-10-05.md`) xác nhận `PDFPageText.extract()` chạy tốt trên PDF
-  này (10/12 trang mẫu dùng được, không lỗi tách khoảng trắng). Còn thiếu để làm T5
-  đầy đủ: `prompt_eval.py --swift-func` (chưa viết) + chạy eval thật + chỉnh ngưỡng.
-  Nợ xem tay T3/T4 (DebugLaunch không giả lập chạm được) — chi tiết
-  `docs/plans/pdf-reader-r1.md`.
-**Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
-- 2026-10-05 → `docs/journal/2026-10-05.md`: vocab-identity-r1 khép (ADR-066, đảo Q-09 cho FR-10 — một từ, một thẻ, nhiều ngữ cảnh): T0 docs · T1 ngân sách chọn sẵn `min(5, daily_new_limit − đã lưu hôm nay)` · T2 migration v7 (`encounters.sentence`/`collection_id`) + `EncounterMatcher.contexts` · T3 so khớp toàn app (`knownSenses`), nhóm "Đã có trong kho", nút "Ghi gặp lại N từ" · T4 popover "Gặp lại N lần" + mục "Gặp lại" ở mặt sau thẻ. `scripts/test.sh` 562/566 xanh (4 skip cũ). → `docs/plans/done/vocab-identity-r1.md`
-- 2026-10-05 → `docs/journal/2026-10-05.md`: ocr-quality-r1 (branch `ocr-quality-r1` từ `main`,
-  ADR-064/065 — plan nháp `plan_ocr_quality_r1.md` gốc repo, chưa vào `docs/plans/`) — T0 OCR-fix
-  mặc định TẮT · T4 nhãn "kiểm tra lại" · T1 rút gọn (6 ảnh thật, thiếu nhóm PDF-scan/label — fen
-  chốt bỏ qua) · T2 probe `liveText` (WER thấp hơn `documents` rõ rệt, không giữ `\n\n`) · T3a engine
-  mặc định `liveText` ghép khung đoạn `documents`, xem tay máy thật xong · code review sau T3a sửa 4
-  phát hiện thật (quan trọng nhất: `mergeParagraphBoundaries` làm tròn dồn sai số trên trang nhiều
-  đoạn ngắn) · T7 gỡ hẳn nhánh OCR-fix bằng LLM sau khi fen tự thử thấy ổn (xoá
-  `CorrectingTextRecognizer`/`FoundationModelsOCRCorrector`/`OCRFixApplier` + toggle Settings, tách
-  riêng `TimeoutRunner` còn dùng). T5 fen chốt bỏ qua. `scripts/test.sh` 525/528 xanh (3 skip cũ).
-- 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (ADR-059/060/061/062, gõ số
-  trang + Mục lục + ẩn chrome khi đọc) → `docs/plans/done/pdf-nav-r1.md` · home-eevas-r1
-  (header nút tròn, "Từ hay quên" FR-19, tìm từ FR-08) → `docs/plans/done/home-eevas-r1.md`.
-- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 (ADR-052/053/054) ·
-  prompt-v6 · q13-sense-filter-r1 (ADR-056) · verify-nav-r1 (xem tay toàn bộ §2.7) ·
-  fr10-close-r1 · reencounter-r1 khép. → `docs/plans/done/{q13-sense-filter-r1,verify-nav-r1,reencounter-r1,fr10-close-r1}.md`
-- 2026-10-01 trở về trước → xem `docs/journal/2026-10-01.md` và các file ngày trước đó.
+- **engagement-r1** (branch `engagement-r1`, FR-24 gộp từ trùng + ý 1–6 của `idea/tang_gang_bo.md`, ADR-067/068,
+  `docs/plans/engagement-r1.md`): **T0 docs xong 2026-10-05** (docs-only, không chạy test). Kế tiếp **T1**
+  `DuplicateMerge` (ReadoKit, lane `kit`). **Trước T1 cần fen chạy query đếm khoá `term+pos` trùng** (§2.13) hoặc đưa
+  JSON FR-16 — 0 nhóm trùng thì bỏ T1/T2. T3–T8 chi tiết hoá ở đầu mỗi session.
+- pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
+  (`PDFPageTextProbeTests` xác nhận extract tốt; thiếu `prompt_eval.py --swift-func` + chạy eval + chỉnh ngưỡng).
+  Nợ xem tay T3/T4 — `docs/plans/pdf-reader-r1.md`.
+- ocr-quality-r1 (branch `ocr-quality-r1`, nháp `plan_ocr_quality_r1.md` ở gốc repo): D3/T6 chưa chốt (§2.12).
+- Plan mở khác ở `docs/plans/`: `structure-review-r1`, `visual-polish-r1`, `apple-ai-r1` (T1–T7 xong).
+
+**Đã khép gần đây** (chi tiết ở journal)
+- 2026-10-05 → `docs/journal/2026-10-05.md`: vocab-identity-r1 (ADR-066, FR-10 toàn app, migration v7; 562/566 xanh) →
+  `docs/plans/done/vocab-identity-r1.md` · ocr-quality-r1 T0–T4 + T7 (ADR-064/065, engine `liveText`, gỡ OCR-fix LLM).
+- 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (ADR-059–062) · home-eevas-r1 → `docs/plans/done/`.
+- 2026-10-02 → `docs/journal/2026-10-02.md`: ux-redesign-r1 · prompt-v6 · q13-sense-filter-r1 · verify-nav-r1 ·
+  fr10-close-r1 · reencounter-r1 → `docs/plans/done/`.
+- 2026-10-01 trở về trước → các file ngày trước trong `docs/journal/`.
 
 ## 2. Chờ owner (không tự bắt đầu)
 

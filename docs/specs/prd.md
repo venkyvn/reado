@@ -344,6 +344,25 @@ thứ tự số trong tài liệu không còn liên tục.
 > `sentence`/`collection_id` (migration v7) để FR-22 hiện được ngữ cảnh gặp lại. Chi tiết:
 > [decisions-log.md ADR-066](docs/decisions-log.md), [plans/vocab-identity-r1.md](docs/plans/done/vocab-identity-r1.md).
 
+| FR | Trạng thái ở v0.17 |
+|---|---|
+| FR-24 | **Mới** — gộp từ trùng trong kho (fen duyệt từng nhóm), Epic E5 (ADR-067) |
+| FR-22 | Sửa — sheet hiện câu gốc lần đầu + "N ngày trước" + mức; haptic khi lên Đã thấm; dòng "Trang này có N từ bạn đã gặp" (ADR-068) |
+| FR-14 | Sửa — dòng nhắc trong hero đổi thành "N/7 ngày"; thẻ "Tuần qua" (ADR-068) |
+| FR-11 | Sửa — phiên ôn nhanh 3 thẻ (ADR-068) |
+| FR-02 | Sửa — cụm đáng nhớ sau khi lưu trang, chọn từ `segments[].phrases`; không đổi prompt (ADR-068) |
+| Còn lại | Không đổi |
+
+> **v0.17 — engagement-r1: gộp từ trùng cũ (FR-24) + tăng gắn bó.** Chốt 2026-10-05
+> (ADR-067, ADR-068). FR-10 (ADR-066) chỉ chặn trùng **mới**; các dòng lưu trước đó cùng
+> `term_normalized + pos` ở nhiều bộ vẫn mỗi dòng một thẻ ôn riêng, nên một từ bị ôn nhiều
+> lần. FR-24 cho fen duyệt từng nhóm và gộp, giữ thẻ tiến bộ nhất (không tự viết FSRS), còn
+> câu gốc của dòng gộp thành một lần gặp lại. Song song, các ý trong `idea/tang_gang_bo.md`
+> được làm theo vision #6 (tiến bộ thật, không ảo): khoảnh khắc nhận ra (FR-22), phiên ôn
+> nhanh (FR-11), dòng nhắc "N/7 ngày" (FR-14, bổ sung ADR-038 — pill streak giữ nguyên),
+> cụm đáng nhớ (FR-02). Chi tiết: [decisions-log.md ADR-067/068](docs/decisions-log.md),
+> [plans/engagement-r1.md](docs/plans/engagement-r1.md).
+
 ### Epic E1 — Capture & Analyze
 
 #### FR-01 — Page Capture
@@ -416,6 +435,11 @@ một câu ví dụ có thật hay không.
 để xác minh** trong cùng một lần gọi. Nên hai nhóm dữ liệu tưởng như rời nhau lại phụ
 thuộc nhau, và điều đó là một lý do nữa để giữ đúng **một** lần gọi (A-01): tách OCR
 thành bước riêng thì mất luôn cơ chế xác minh này.
+
+Cụm đáng nhớ (engagement-r1, ADR-068): sau khi lưu trang, banner "Đã lưu" hiện thêm một
+cụm EN–VI lấy từ `segments[].phrases` — ưu tiên cụm có EN chứa một từ vừa lưu, không có
+thì cụm dài nhất; không có cụm nào thì không hiện. **Không đổi prompt** (`Prompt.version`
+giữ nguyên).
 
 Prompt cụ thể, output schema, và thuật toán đối chiếu nằm ở
 [prompt-spec.md](docs/agent/prompt-spec.md).
@@ -566,6 +590,17 @@ thước đo trực tiếp **M-06**.
   (mức tính lúc đọc, không lưu cột).
 - **Given** trong tuần có từ được gặp lại, **when** mở Home, **then** thấy dòng
   "Gặp lại N từ tuần này" (N = số từ khác nhau có `seen` hoặc `recognized` trong 7 ngày).
+
+- **Given** popover đang mở cho một từ đã có lần đầu lưu (engagement-r1, ADR-068), **when**
+  từ đó đã lưu từ ≥ 1 ngày học trước, **then** sheet hiện khối "Lần đầu · N ngày trước ·
+  ‹bộ›" chứa câu gốc `example` của từ, đặt cạnh câu đang đọc, và chip mức (Mới · Đang học ·
+  Đã nhớ · Đã thấm).
+- **Given** lần "Nhận ra ✓" làm từ chuyển từ Đã nhớ lên **Đã thấm**, **when** ghi xong, **then**
+  có haptic thành công + animation đổi mức (tôn trọng Reduce Motion); các lần nhận ra khác
+  chỉ giữ haptic cũ.
+- **Given** một trang (vừa phân tích hoặc phiên đã lưu) có từ đang gạch chân, **when** hiển
+  thị, **then** có dòng "Trang này có N từ bạn đã gặp" (N = số từ khác nhau được gạch chân;
+  N = 0 thì ẩn).
 
 Triển khai theo ba task: T1 dữ liệu (migration v4, `EncounterRepository`, `EncounterMatcher`,
 export) · T2 màn đọc (gạch chân, popover, ghi `seen`) · T3 thang tiến độ + Home.
@@ -743,6 +778,12 @@ thống tính thành ôn cách ngày, nên streak ở FR-14 vừa sai vừa làm
 vô nghĩa — và nó sai với **đúng nhóm người dùng chăm nhất**. Xem
 [research/review.md mục 6.2](docs/research/review.md#62-chưa-có-định-nghĩa-một-ngày).
 
+Phiên ôn nhanh (engagement-r1, ADR-068): hero Home có nút phụ "Ôn nhanh 3 thẻ · ~2 phút"
+dưới "Ôn ngay". Xong 3 thẻ đầu của hàng đợi (giữ thứ tự ưu tiên hiện có) thì màn xong hiện
+"Ôn tiếp (còn N)" và "Xong"; chọn Xong thì không bị nhắc phần còn lại. 3 thẻ vẫn tính streak
+(FR-14: ≥ 1 thẻ) và chấm bằng đúng `ReviewService.record` như phiên thường — lịch FSRS
+không khác. Số "đến hạn" trên hero giữ nguyên (FR-14 không đổi).
+
 Một điểm về hình dạng hàng đợi, ghi ở đây để FR-18 không bị đọc sai: điều kiện đến hạn
 `due_at <= now()` **không** đủ để dựng cả queue, vì FR-09 cho card mới đến hạn ngay
 trong ngày nên nó cũng thoả điều kiện đó, trong khi criterion trên chặn card mới và
@@ -795,6 +836,14 @@ nhất. Xem
   số trên được tính, **then** card đó **không** được tính vào bất kỳ con số nào.
 - **Given** streak được tính, **when** hệ thống xác định một ngày có ôn hay không,
   **then** nó dùng **giờ chuyển ngày** của FR-11, không dùng nửa đêm hệ thống.
+- **Given** hôm nay chưa ôn và có streak > 0 (engagement-r1, ADR-068, bổ sung ADR-038),
+  **when** hero Home hiện, **then** dòng nhắc là "Tuần này ôn N/7 ngày" (N = số ngày học
+  trong 7 ngày gần nhất có ≥ 1 `review_log`, mọi mode — cùng luật với streak, giờ chuyển
+  ngày FR-11); **pill streak** trên toolbar giữ nguyên. Khớp M-02 (≥ 5/7 ngày).
+- **Given** tuần mới bắt đầu có hoạt động, **when** mở Home, **then** hiện thẻ "Tuần qua"
+  (đóng được) kể: số từ giữ lại, số từ gặp lại, số lần nhận ra, từ gặp nhiều nhất trong 7
+  ngày. **Không** đếm số trang đã phân tích (`reading_sessions` chỉ giữ 10 phiên/bộ — không
+  có nguồn bền). Mọi số = 0 thì ẩn thẻ.
 
 Ba criterion đầu tồn tại vì ba FR va nhau ở đúng con số này: FR-09 cho card mới đến hạn
 **ngay trong ngày**, nên một buổi capture 25 trang tạo ra hàng trăm card cùng `due_at`
@@ -978,6 +1027,32 @@ xuất ở R1.
 Không mâu thuẫn NG-07: FR-20 là nhập **CSV từ vựng** (chiều ngược của FR-16), không
 phải cửa capture trang — khác hẳn FR-23 (đọc PDF để phân tích trang). FR-20 không
 nhận PDF, ebook, hay ảnh.
+
+#### FR-24 — Gộp từ trùng trong kho
+
+Mới ở v0.17 (engagement-r1, ADR-067). FR-10 (ADR-066) chặn trùng **mới**; FR-24 dọn các
+dòng trùng **cũ**, lưu trước ADR-066. Không có `unique` trên `vocab_items` (luật cứng giữ
+nguyên) — gộp là thao tác có người duyệt, không phải ràng buộc DB.
+
+- **Given** kho có ≥ 2 dòng `vocab_items` cùng khoá `term_normalized + pos` (pos so không
+  phân biệt hoa thường, đã trim — cùng khoá FR-10), **when** mở Dữ liệu → "Gộp từ trùng",
+  **then** mỗi khoá là một nhóm; mỗi dòng hiện nghĩa, collection và mức (4 mức vision #6).
+  Mặc định chọn hết; dòng hệ thống sẽ giữ có nhãn "Giữ thẻ này".
+- **Given** một nhóm còn ≥ 2 dòng được chọn, **when** gộp, **then** giữ **một** dòng theo
+  luật: thẻ không leech trước → `stability` cao nhất → `last_review_at` mới nhất →
+  `created_at` cũ nhất. Các dòng được chọn còn lại gộp vào dòng đó; dòng bỏ chọn không đổi.
+- **Given** gộp, **then** trong **một** transaction cho mọi nhóm đã chọn: `review_logs` của
+  thẻ gộp chuyển sang thẻ giữ; `encounters` chuyển sang dòng giữ (`recognized` trùng ngày
+  học FR-11 với một `recognized` đã có thì bỏ bớt — giữ luật một lần/ngày của FR-22); mỗi
+  dòng gộp thành một `encounters.seen` mang `example`, `collection_id`, `created_at` của
+  chính nó (câu gốc không mất — vision #4); dòng gộp bị xoá (thẻ đi theo cascade). Trạng
+  thái FSRS của thẻ giữ **không đổi**; dòng giữ ở nguyên collection của nó. Lỗi bất kỳ →
+  rollback toàn bộ.
+- **Given** bỏ chọn tới mức nhóm còn < 2 dòng, **then** nhóm đó không gộp và quyết định
+  không được lưu (không thêm schema) — lần mở sau nhóm vẫn hiện.
+- **Given** 0 nhóm, **then** cửa "Gộp từ trùng" bị tắt, kèm chú thích "Không có từ trùng".
+- **Given** gộp không hoàn tác được và JSON FSRS (FR-16) chưa nhập lại được, **when** xác
+  nhận, **then** hộp thoại nhắc xuất JSON backup trước.
 
 ---
 

@@ -1529,3 +1529,60 @@
     - Dữ liệu demo DEBUG: 2 dòng `seen` có câu "Demo: ..." gắn vào "routine" (fallback vocab đầu tiên) vì fixture
       `analysis-demo.json` mở popover của match đầu tiên còn trong từ điển là "routine".
   - Plan đầy đủ: `docs/plans/done/vocab-identity-r1.md`.
+
+---
+
+## ADR-067 — Gộp từ trùng cũ (FR-24) — engagement-r1 T0
+
+- **Ngày:** 2026-10-05
+- **Bối cảnh:** ADR-066 chỉ chặn trùng **mới** (hệ quả N5 ghi "công cụ gộp để Later vì rủi ro
+  hỏng dữ liệu nếu làm tự động"). Các dòng lưu trước đó cùng `term_normalized + pos` ở nhiều
+  bộ vẫn mỗi dòng một thẻ ôn, nên một từ bị ôn nhiều lần và các con số "Gặp lại"/"Đã nhớ" lệch.
+  Fen muốn dọn nhưng vẫn có người duyệt (cùng khoá có thể là hai nghĩa khác — đồng âm lưu qua
+  "Nghĩa khác — lưu").
+- **Quyết định:** FR-24 — màn "Gộp từ trùng" ở Dữ liệu; **fen duyệt từng nhóm** (mặc định chọn
+  gộp, bỏ chọn dòng mang nghĩa khác). Giữ **một** dòng/thẻ: không leech → `stability` cao nhất →
+  `last_review_at` mới nhất → `created_at` cũ nhất. `review_logs` chuyển sang thẻ giữ;
+  `encounters` chuyển sang dòng giữ (bỏ `recognized` trùng ngày học); mỗi dòng gộp thành một
+  `seen` mang câu + bộ của nó; dòng gộp bị xoá. Một transaction cho cả lượt gộp.
+- **Lý do:** không tự viết FSRS (NG-09) — chỉ chọn thẻ có sẵn, trạng thái FSRS của thẻ giữ
+  không đổi; không mất ngữ cảnh (vision #4); không lịch sử `review_logs` nào bị mất.
+- **Hệ quả:**
+  - Đảo một phần N5 của ADR-066 (công cụ gộp từ "Later" thành làm ngay), nhưng **không** tự
+    động: luôn qua duyệt tay.
+  - "Gặp lại N lần" của từ tăng thêm 1 cho mỗi dòng gộp; tổng số `review_logs` không đổi.
+  - Không lưu nhóm đã bỏ qua (không thêm schema, vẫn v7): nhóm hiện lại ở lần mở sau.
+  - Gộp không hoàn tác; JSON FR-16 chưa nhập lại được → hộp thoại nhắc xuất backup trước.
+  - Tiêu chí dừng: 0 nhóm trùng trên dữ liệu thật → không cần làm (xem plan).
+- Plan: `docs/plans/engagement-r1.md`.
+
+---
+
+## ADR-068 — Tăng gắn bó (engagement-r1): ý 1–6 của tang_gang_bo — engagement-r1 T0
+
+- **Ngày:** 2026-10-05
+- **Bối cảnh:** `idea/tang_gang_bo.md` (brainstorm 2026-10-02) liệt kê 7 ý tăng gắn bó. Nguyên
+  tắc: phần thưởng là bằng chứng việc đọc tiến bộ thật (vision #6), không XP/huy hiệu ảo
+  (NG-04). Dò code 2026-10-05: sheet gặp lại đã có "Gặp lại N lần" + haptic khi Nhận ra nhưng
+  thiếu câu gốc lần đầu/"N ngày trước"/mức; `Mastery.level` chưa UI nào gọi; chưa có điểm dừng
+  giữa phiên ôn; dòng nhắc streak dựa vào nỗi sợ mất chuỗi.
+- **Quyết định:** làm ý **1, 2, 3, 4, 5, 6**; ý 7 (thẻ chia sẻ) để sau (NG-05/NG-04).
+  - **Ý 1 + 6:** sheet gặp lại thêm câu gốc lần đầu + "N ngày trước" + mức; haptic/animation
+    khi lên Đã thấm (Reduce Motion); "Trang này có N từ bạn đã gặp"; mặt sau thẻ "Gặp lần đầu
+    N ngày trước" (chỉ khi từ đã lưu ≥ 7 ngày).
+  - **Ý 2:** nút phụ "Ôn nhanh 3 thẻ · ~2 phút" ở hero; xong thì được dừng hẳn. Số đến hạn của
+    hero giữ nguyên nên FR-14 không đổi.
+  - **Ý 3:** bản đồ chấm theo 4 mức **thay** thanh 4 màu ở header Hub (không thêm khối mới).
+  - **Ý 4:** cụm đáng nhớ chọn từ `segments[].phrases` bằng heuristic (cụm có EN chứa từ vừa
+    lưu, không có thì cụm dài nhất); không đổi prompt.
+  - **Ý 5:** thẻ "Tuần qua" trên Home (không notification); **không đếm số trang** — không có
+    nguồn bền (`reading_sessions` chỉ giữ 10 phiên/bộ, NFR-04).
+  - **Streak (bổ sung ADR-038):** giữ pill; dòng nhắc trong hero đổi sang "Tuần này ôn N/7
+    ngày" (khớp M-02). N/7 đếm mọi mode giống streak (thống nhất với `reviewedToday` chỉ đếm
+    `srs`).
+- **Lý do:** mỗi con số đo được từ `encounters`/`review_logs`/`vocab_items`; đồng bộ với "mỗi
+  ngày giữ thêm vài từ là đủ" (Retention) thay vì đòi học hết.
+- **Hệ quả:** FR-22/14/11/02 thêm GWT (prd v0.17); không đổi schema (v7), không đổi
+  `Prompt.version`. Ghi nhận, chưa sửa: bộ đếm overview dùng `Mastery.stabilityThreshold` cứng
+  bỏ qua `known_stability` (`VocabRepository+Overview.swift`).
+- Plan: `docs/plans/engagement-r1.md`.
