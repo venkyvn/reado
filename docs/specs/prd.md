@@ -361,7 +361,7 @@ thứ tự số trong tài liệu không còn liên tục.
 > được làm theo vision #6 (tiến bộ thật, không ảo): khoảnh khắc nhận ra (FR-22), phiên ôn
 > nhanh (FR-11), dòng nhắc "N/7 ngày" (FR-14, bổ sung ADR-038 — pill streak giữ nguyên),
 > cụm đáng nhớ (FR-02). Chi tiết: [decisions-log.md ADR-067/068](docs/decisions-log.md),
-> [plans/engagement-r1.md](docs/plans/engagement-r1.md).
+> [plans/done/engagement-r1.md](docs/plans/done/engagement-r1.md).
 
 ### Epic E1 — Capture & Analyze
 

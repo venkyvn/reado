@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ + T7 cụm đáng nhớ + T8 Tuần qua xong. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** closed (2026-10-05) - T0–T8 xong: gộp từ trùng cũ (FR-24) + ý 1–6 của tang_gang_bo (ADR-067/068, prd v0.17), full `scripts/test.sh` 611/615 xanh; nợ xem tay ở `docs/session-brief.md` §2.15–2.16.
 
 ## Context
 
@@ -198,7 +198,7 @@ cho khớp giọng file.
 6. **`ROADMAP.md`**: thêm dòng `3.21` sau `3.20` (L168), cùng format: engagement-r1, các
    task T0–T8, trạng thái T0 ✅.
 7. **`idea/tang_gang_bo.md`**: frontmatter `status: planned`, `modified: 2026-10-05`, thêm
-   `docs/plans/engagement-r1.md` vào `related`.
+   `docs/plans/done/engagement-r1.md` vào `related`.
 
 - **DoD:** chạy `/raudit` không báo link/anchor hỏng; dòng bia mộ FR-07/FR-13 còn nguyên;
   `grep -n 'FR-24' docs/specs/prd.md` có ≥ 3 chỗ (ghi chú, bảng, section).
@@ -714,4 +714,4 @@ hoa thường; không khớp → cụm dài nhất; hoà → cụm đứng trư�
   `reado-ui`.
 - Gộp trùng (sau T2): chạy lại 3 query baseline T0 của vocab-identity-r1 trên dữ liệu thật.
   Số khoá trùng phải về 0 (trừ nhóm fen chủ động giữ), tổng số review_logs không đổi.
-- Plan chỉ được lưu `docs/plans/engagement-r1.md` khi fen OK. Sau OK chỉ làm **một** task.
+- Plan chỉ được lưu `docs/plans/done/engagement-r1.md` khi fen OK. Sau OK chỉ làm **một** task.

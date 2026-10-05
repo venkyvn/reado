@@ -1554,7 +1554,7 @@
   - Không lưu nhóm đã bỏ qua (không thêm schema, vẫn v7): nhóm hiện lại ở lần mở sau.
   - Gộp không hoàn tác; JSON FR-16 chưa nhập lại được → hộp thoại nhắc xuất backup trước.
   - Tiêu chí dừng: 0 nhóm trùng trên dữ liệu thật → không cần làm (xem plan).
-- Plan: `docs/plans/engagement-r1.md`.
+- Plan: `docs/plans/done/engagement-r1.md`.
 
 ---
 
@@ -1585,4 +1585,4 @@
 - **Hệ quả:** FR-22/14/11/02 thêm GWT (prd v0.17); không đổi schema (v7), không đổi
   `Prompt.version`. Ghi nhận, chưa sửa: bộ đếm overview dùng `Mastery.stabilityThreshold` cứng
   bỏ qua `known_stability` (`VocabRepository+Overview.swift`).
-- Plan: `docs/plans/engagement-r1.md`.
+- Plan: `docs/plans/done/engagement-r1.md`.
