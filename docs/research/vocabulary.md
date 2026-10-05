@@ -599,6 +599,17 @@ vẹn dữ liệu.** Một từ chưa thuộc mà gặp lại lần nữa thì g
 đã thuộc thì đừng làm phiền nữa. Không ràng buộc `unique` nào diễn đạt được sự
 phân biệt ấy.
 
+**Cập nhật 2026-10-05 (vocab-identity-r1, ADR-066):** đoạn trên vẫn đúng tinh
+thần, nhưng phạm vi bộ lọc đã đổi. Ban đầu (Q-09, ADR-032) bộ lọc chỉ so khớp
+trong một collection, vì lúc đó cách duy nhất ghi nhận "gặp lại từ chưa thuộc"
+là tạo thêm một dòng `vocab_items`. Từ khi có FR-22 (bảng `encounters`, ghi
+được lần gặp lại **xuyên mọi collection** mà không cần thẻ mới), giữ Q-09 cũ
+cho FR-10 chỉ còn cái giá — thẻ trùng mỗi lần gặp một từ cũ ở collection khác —
+mà không còn cái lợi. FR-10 giờ so khớp `term+pos` **toàn app**, cùng phạm vi
+FR-22; nhóm gập cũng mở rộng từ "đã thuộc" sang **mọi từ đã có trong kho** (đang
+học + đã thuộc). "Một dòng một nghĩa" không đổi — đồng âm (`bank`) hay nghĩa
+mới của một dạng cũ vẫn lưu thành dòng mới khi người dùng xác nhận "Nghĩa khác".
+
 ### 6.4 Giải thích từng field
 
 Cách dễ nhất để nhớ vì sao schema trông như vậy: **nó là hình chiếu của cái thẻ.**
@@ -792,7 +803,7 @@ chúng là chốt ở đó chứ không phải ở đây.
 | Câu hỏi | Ghi chú |
 |---|---|
 | Ngưỡng "đã thuộc" để bộ lọc trích xuất bỏ qua một từ | Đã chốt Q-08: `stability >= 21`. Task 3.8 chưa bật trong code |
-| Bộ lọc trích xuất so khớp trong phạm vi collection hay toàn cục | Đã chốt Q-09: theo collection |
+| Bộ lọc trích xuất so khớp trong phạm vi collection hay toàn cục | Đã chốt Q-09: **toàn app** (đảo 2026-10-05, ADR-066 — chốt gốc 2026-09-22 "theo collection" là bia mộ; xem §6.3) |
 | Có lemmatize `term_normalized` không | Đã chốt Q-06: không lemmatize |
 | ~~Buffer cuộn giữ bao nhiêu trang, hết phiên có xoá không~~ | **Chốt 2026-09-18 (Q-10):** 10 phiên gần nhất mỗi collection có tên; kho tạm không lưu; phiên thứ 11 trôi |
 | Ai sinh `word_relations` ở R2, và bao lâu một lần | AI đề xuất là chắc, nhưng trigger và chi phí chưa tính. Chưa vào PRD vì thuộc R2 |

@@ -10,6 +10,14 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
+- vocab-identity-r1 (ADR-066, `docs/plans/vocab-identity-r1.md`): đảo Q-09 cho FR-10
+  (so khớp "đã có trong kho" **toàn app**, không còn theo collection) + ngân sách chọn
+  sẵn mỗi ngày (FR-09) + `encounters` ghi câu/nguồn (FR-22). D1-D4 fen đã chốt
+  2026-10-05 (D4 = không làm spike PDF). **T0 xong** (docs + ADR-066, không code) —
+  `prd.md` v0.16, `db.md`, `journeys.md`, `vocabulary.md` §6.3, `CLAUDE.md` §5 đồng bộ.
+  **Nợ của T0:** baseline đo trước/sau (3 query SQL ở plan mục T0) cần dữ liệu thật —
+  chờ fen export JSON (FR-16) hoặc tự chạy query rồi báo 3 con số. Task tiếp: **T1**
+  (ngân sách chọn sẵn, độc lập, không đổi schema).
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
   ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem
@@ -68,6 +76,11 @@
     (cần quyền thư viện ảnh), để người dùng tự chọn tay, hay để hẳn R2. Không làm cho
     tới khi D3 có câu trả lời. `plan_ocr_quality_r1.md` (gốc repo) mục D3/T6,
     `docs/journal/2026-10-05.md`.
+13. vocab-identity-r1 T0: baseline trước/sau cần dữ liệu thật trên máy fen — 3 query SQL
+    (khoá `term_normalized+pos` trùng, thẻ `new` tồn, từ mới/14 ngày) ở mục T0 của
+    `docs/plans/vocab-identity-r1.md`. Agent không truy cập được DB thật trên máy fen —
+    fen export JSON (Settings → Dữ liệu → Xuất dữ liệu, FR-16) đưa file, hoặc tự chạy
+    3 query rồi báo 3 con số.
 
 ## 3. Bẫy máy này
 

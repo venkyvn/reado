@@ -1455,3 +1455,53 @@
 - **Hệ quả:** `scripts/test.sh` 525/528 xanh (3 skip cũ, mất 26 test của nhánh đã gỡ, giữ lại 2 test
   `TimeoutRunner`). Không đổi schema/migration — OCR-fix chưa bao giờ có bảng DB riêng, chỉ
   `UserDefaults`.
+
+## ADR-066 — Đảo Q-09 cho FR-10: so khớp "đã thuộc" toàn app thay vì theo collection — vocab-identity-r1 T0
+
+- **Ngày:** 2026-10-05
+- **Bối cảnh:** Fen đọc 3-4 trang/ngày (PDF là chính), thu ~20 từ/ngày — vượt xa
+  `daily_new_limit` mặc định 10, tồn đọng tăng ~10 từ/ngày (~300/tháng). Ba nguyên nhân
+  trong code: (1) chọn sẵn cố định 5 từ/trang không liên hệ hạn mức ngày (FR-09); (2)
+  `daily_new_limit` mặc định 10; (3) FR-10 chỉ gập từ *đã thuộc* trong **cùng collection**
+  (Q-09, ADR-032, 2026-09-22) — từ đang học hoặc đã có ở collection khác vẫn qua
+  `saveCapture` bình thường, sinh `vocab_items`+`cards` mới mỗi lần gặp lại. Lý do gốc của
+  Q-09 ("mỗi collection ≈ một cuốn sách, nghĩa mới của từ cũ vẫn phải thêm khi sang sách
+  khác") vẫn đúng, nhưng lúc chốt (2026-09-22) **chưa có FR-22** — cách duy nhất để "gặp
+  lại" được ghi nhận là tạo thêm một dòng `vocab_items`. FR-22 (reencounter-r1, 2026-10-02)
+  đã lấp đúng chỗ đó: bảng `encounters` ghi lại lần gặp (`seen`/`recognized`) **xuyên mọi
+  collection** mà không cần thẻ mới. Giữ Q-09 cũ cho FR-10 giờ chỉ còn cái giá (thẻ trùng),
+  không còn cái lợi (ghi nhận gặp lại) — cái lợi đó FR-22 đã làm tốt hơn.
+- **Quyết định:** Đảo Q-09 — bộ lọc FR-10 so khớp `term+pos` (Q-06 không lemmatize, Q-08
+  `stability >= 21` giữ nguyên) trên **toàn app**, không còn giới hạn theo collection đang
+  chụp. Thống nhất với phạm vi FR-22 vốn đã toàn app từ đầu. Nhóm gập (Q-13, ADR-056) đổi
+  tên "Đã thuộc" → **"Đã có trong kho"**, mở rộng gồm **mọi** từ đã có (đang học + đã thuộc,
+  mọi collection) — không chỉ từ đã thuộc (D2). Item khớp khoá mặc định **không tạo thẻ**,
+  chỉ ghi `encounters.kind='seen'` kèm câu gốc (cột mới, xem Hệ quả) + collection nguồn;
+  "Nghĩa khác — lưu" vẫn tạo dòng + thẻ mới như cũ nếu người dùng xác nhận đây là nghĩa
+  khác (đồng âm).
+  - **D1 — ngân sách chọn sẵn mỗi ngày:** bám thẳng `daily_new_limit` (không thêm setting
+    riêng) — `preselectBudget = max(0, daily_new_limit - newSavedToday)` thay cho hằng
+    `preselectLimit = 5` cố định.
+  - **D2 — phạm vi nhóm "Đã có trong kho":** mọi từ đã có (đang học + đã thuộc, mọi
+    collection) — không chỉ từ đã thuộc trong cùng collection như FR-10 cũ.
+  - **D3 — ôn theo bộ (FR-18):** từ gặp lại ở collection khác **không** kéo vào khi ôn
+    theo phạm vi một bộ; thẻ ở lại collection gốc. Để R2.
+  - **D4 — gạch chân từ cũ ngay trong màn đọc PDF:** để sau, không làm trong
+    vocab-identity-r1 (không có task spike PDF ở plan này).
+- **Lý do:** Trùng lặp là câu hỏi sư phạm (vocabulary.md §6.3), không phải toàn vẹn dữ
+  liệu — gặp lại từ chưa thuộc vẫn là tín hiệu tốt, chỉ khác là giờ tín hiệu đó được ghi
+  bằng `encounters` thay vì bằng một dòng `vocab_items`+`cards` mới. Giữ cơ chế chống trùng
+  duy nhất (không `unique`) hiệu quả hơn mà không đổi bản chất "một dòng = một nghĩa".
+- **Hệ quả:**
+  - FR-09 GWT 1 đổi "preselect tối đa 5" → "preselect theo ngân sách ngày".
+  - FR-10 GWT 1/3 đổi phạm vi so khớp + tên nhóm gập.
+  - FR-22 thêm GWT: `encounters` ghi kèm câu (`sentence`) + collection nguồn
+    (`collection_id`) — migration v7, hai cột mới cho phép NULL (dòng cũ giữ NULL).
+  - **N4** — Ôn theo bộ (FR-18) không thấy từ gặp lại ở bộ khác (hệ quả D3, chấp nhận R1).
+  - **N5** — Thẻ trùng **cũ** (sinh trước plan này) vẫn còn nguyên; plan chỉ chặn trùng
+    mới từ nay về sau. Công cụ gộp thẻ trùng cũ + gộp lịch FSRS để Later (rủi ro hỏng dữ
+    liệu nếu làm tự động).
+  - `CLAUDE.md` §5, `prd.md` FR-09/FR-10/FR-22, `journeys.md` J1/J2b, `vocabulary.md` §6.3
+    sửa theo ADR này (vocab-identity-r1 T0).
+  - Không đụng FSRS/`cards`/`review_logs`, `Prompt.version` (giữ v6), `PDFPageText`/OCR.
+  - Plan đầy đủ: `docs/plans/vocab-identity-r1.md`.

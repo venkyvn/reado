@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Product | Reado |
-| Version | 0.14 |
+| Version | 0.16 |
 | Status | Draft |
 | Owner | fen |
 | Created | 2026-09-07 |
@@ -85,7 +85,8 @@ song.
 > ghi lại, lúc họ gặp lại một từ đã có trong kho. M-06 là thước đo trực tiếp. FR-22 thêm
 > bảng `encounters` **ngoài FSRS** (schema v4, ADR-048): "thấy" tự ghi khi lưu trang,
 > "nhận ra" do người dùng chạm — cả hai **không đổi lịch ôn**. Q-06 (không lemmatize)
-> giữ nguyên; Q-09 chỉ cho FR-10, FR-22 so khớp **xuyên collection**.
+> giữ nguyên; Q-09 chỉ cho FR-10, FR-22 so khớp **xuyên collection** (đảo 2026-10-05 —
+> xem v0.16/ADR-066: FR-10 giờ cũng so khớp toàn app, cùng phạm vi FR-22).
 
 > **v0.9 — Q-03 hybrid BYOK.** Chốt 2026-09-17 *“app không gọi Gemini thẳng”*
 > **không bị xoá** — bia mộ tại chỗ ở mục 12. Thay bằng: proxy Reado (key `.env`
@@ -323,6 +324,26 @@ thứ tự số trong tài liệu không còn liên tục.
 | FR-02 | Sửa — engine OCR mặc định `liveText` (ADR-064); **bỏ GWT soát OCR bằng LLM của v0.14** — gỡ hẳn (ADR-065), xem callout ngay dưới |
 | Còn lại | Không đổi |
 
+| FR | Trạng thái ở v0.16 |
+|---|---|
+| FR-09 | Sửa — chọn sẵn theo ngân sách ngày còn lại (`daily_new_limit` trừ số đã lưu hôm nay), không còn cố định 5/trang (vocab-identity-r1, ADR-066) |
+| FR-10 | Sửa — so khớp "đã thuộc" đổi phạm vi **toàn app**, không còn theo collection (đảo Q-09/ADR-032 → ADR-066); nhóm gập đổi tên "Đã thuộc" → "Đã có trong kho", mở rộng gồm mọi từ đã có (đang học + đã thuộc) |
+| FR-22 | Sửa — `encounters` ghi kèm câu gốc + collection nguồn khi `seen`; popover + mặt sau thẻ hiện ngữ cảnh gặp lại (ADR-066) |
+| Còn lại | Không đổi |
+
+> **v0.16 — đảo Q-09 cho FR-10, thống nhất phạm vi so khớp với FR-22 (vocab-identity-r1).**
+> Chốt 2026-10-05 (ADR-066). Q-09 (ADR-032, 2026-09-22) giới hạn bộ lọc "đã thuộc" trong
+> cùng collection vì lúc đó "gặp lại từ chưa thuộc" chỉ ghi nhận được bằng cách tạo thêm
+> một dòng `vocab_items`. FR-22 (v0.10) đã lấp đúng chỗ đó bằng bảng `encounters` xuyên
+> mọi collection — giữ Q-09 cũ cho FR-10 giờ chỉ còn cái giá (thẻ trùng sinh ra mỗi lần
+> gặp lại một từ ở collection khác), không còn cái lợi. FR-10 đổi sang so khớp **toàn
+> app**, cùng phạm vi FR-22. Nhóm gập (Q-13/ADR-056) đổi tên và mở rộng: "Đã có trong kho"
+> gồm mọi từ đã có (không chỉ từ đã thuộc) — mặc định không tạo thẻ, chỉ ghi `seen` kèm
+> câu; "Nghĩa khác" vẫn lưu thẻ mới nếu người dùng xác nhận. Đi kèm: FR-09 đổi chọn sẵn
+> cố định 5/trang sang ngân sách bám `daily_new_limit`, và `encounters` thêm cột
+> `sentence`/`collection_id` (migration v7) để FR-22 hiện được ngữ cảnh gặp lại. Chi tiết:
+> [decisions-log.md ADR-066](docs/decisions-log.md), [plans/vocab-identity-r1.md](docs/plans/vocab-identity-r1.md).
+
 ### Epic E1 — Capture & Analyze
 
 #### FR-01 — Page Capture
@@ -518,17 +539,26 @@ thước đo trực tiếp **M-06**.
   chữ nguyên (biên từ), không phân biệt hoa/thường, **không lemmatize** (Q-06), cụm nhiều
   chữ phải liền nhau (dấu câu cắt cụm), chồng nhau thì cụm dài thắng.
 - **Given** một từ đang gạch chân, **when** người dùng chạm, **then** popover hiện nghĩa,
-  IPA và "đã gặp ở ‹collection›"; một term có nhiều dòng (nhiều nghĩa/collection) thì liệt
-  kê đủ.
+  IPA, "đã gặp ở ‹collection›" **và "Gặp ở N chỗ" kèm 1-2 câu gần nhất** (vocab-identity-r1,
+  ADR-066 — câu lấy từ `encounters.sentence`, dòng cũ không có câu thì chỉ đếm); một term
+  có nhiều dòng (nhiều nghĩa/collection) thì liệt kê đủ.
 - **Given** popover đang mở, **when** người dùng chạm "Nhận ra ✓", **then** hệ thống ghi
   **một** lần `recognized` cho từ đó — tối đa một lần mỗi từ mỗi **ngày học** (giờ chuyển
   ngày FR-11) — và **không** đổi `cards` hay `review_logs` (lần nhận ra khi đọc không đổi
   lịch ôn).
 - **Given** người dùng lưu một trang có từ đã có trong kho, **when** lưu, **then** mỗi từ
-  đó nhận một lần `seen` **trong cùng transaction** với lưu vocab + phiên đọc; lưu lỗi thì
+  đó nhận một lần `seen` **trong cùng transaction** với lưu vocab + phiên đọc, kèm **câu
+  chứa từ** (`sentence`) và **collection nguồn** (`collection_id`, migration v7,
+  vocab-identity-r1) — hai cột cho phép NULL (dòng cũ trước migration giữ NULL); lưu lỗi thì
   không có `seen` nào.
 - **Given** một từ đã có lần gặp lại, **when** nó được chuyển sang collection khác, **then**
-  lịch sử gặp lại giữ nguyên; **when** từ bị xoá, **then** lịch sử đi theo.
+  lịch sử gặp lại giữ nguyên (`sentence` giữ nguyên, `collection_id` **không** đổi theo —
+  ghi lại đúng nơi lúc gặp); **when** từ bị xoá, **then** lịch sử đi theo; **when** chính
+  collection nguồn của một lần gặp bị xoá, **then** `collection_id` của lần gặp đó về NULL,
+  dòng `encounters` vẫn còn.
+- **Given** mặt sau thẻ ôn tập, **when** thẻ có ≥ 1 lần gặp lại kèm câu, **then** hiện mục
+  "Gặp lại" tối đa **3 câu gần nhất** (mới nhất trước) kèm tên collection; dòng không có câu
+  (ghi trước migration v7) thì không hiện mục này.
 - **Given** một từ đạt "Đã nhớ" (Q-08) **và** có ≥ 1 lần `recognized`, **when** xem tiến độ,
   **then** nó ở mức **Đã thấm**; nếu `stability` tụt dưới ngưỡng Q-08 thì tự về Đang học
   (mức tính lúc đọc, không lưu cột).
@@ -537,7 +567,10 @@ thước đo trực tiếp **M-06**.
 
 Triển khai theo ba task: T1 dữ liệu (migration v4, `EncounterRepository`, `EncounterMatcher`,
 export) · T2 màn đọc (gạch chân, popover, ghi `seen`) · T3 thang tiến độ + Home.
-Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md).
+Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md). Mở rộng ở
+vocab-identity-r1 (ADR-066, v0.16): `sentence`/`collection_id` thêm vào `encounters`
+(migration v7), hiện ở popover + mặt sau thẻ. Plan:
+[plans/vocab-identity-r1.md](docs/plans/vocab-identity-r1.md).
 
 #### FR-07 — Book & Page Organization — BỎ ở v0.3
 
@@ -566,42 +599,58 @@ Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md).
 
 - **Given** vocabulary vừa được trích xuất, **when** người dùng chọn, **then** họ
   quyết định item nào trở thành review card. AI (prompt v6) trả `vocabulary` theo
-  thứ tự giá trị học giảm dần; màn duyệt **chọn sẵn tối đa 5 item đủ điều kiện
-  đầu tiên** (`ReviewDraftBuilder.preselectLimit`) theo thứ tự đó — không còn
-  "mặc định tất cả" (đảo 2026-10-02, prompt-v6 T2b). Phần còn lại vẫn hiện, người
-  dùng tự chọn thêm nếu muốn; AI chỉ đề xuất thứ tự, không quyết định giữ/bỏ.
+  thứ tự giá trị học giảm dần; màn duyệt **chọn sẵn theo ngân sách ngày còn lại**
+  (`daily_new_limit` trừ số từ đã lưu trong ngày học hiện tại, `preselectBudget` —
+  đảo 2026-10-05, vocab-identity-r1 ADR-066, thay cho hằng số cố định 5 item/trang
+  của prompt-v6 T2b) theo thứ tự đó — không còn "mặc định tất cả". Ngân sách = 0 thì
+  hiện dòng nhắc "Hôm nay đã đủ N từ mới — phần còn lại tuỳ bạn chọn", không tự chọn
+  sẵn từ nào. Phần còn lại vẫn hiện, người dùng tự chọn thêm nếu muốn; AI chỉ đề
+  xuất thứ tự, không quyết định giữ/bỏ.
 - **Given** một item được chọn, **when** nó được lưu, **then** nó vào SRS queue với
   trạng thái `new` và đến hạn ngay trong ngày.
 
-#### FR-10 — Lọc từ đã thuộc lúc trích xuất
+#### FR-10 — Lọc từ đã có trong kho lúc trích xuất
 
 Viết lại hoàn toàn ở v0.3. Chống trùng không còn nằm ở tầng dữ liệu mà ở tầng trích
 xuất, vì **trùng lặp là câu hỏi sư phạm chứ không phải câu hỏi toàn vẹn dữ liệu**:
-gặp lại một từ chưa thuộc là chuyện *tốt*, chỉ từ đã thuộc mới đáng bỏ qua.
+gặp lại một từ chưa thuộc là chuyện *tốt*, chỉ từ **đã có trong kho** (bất kể trạng
+thái ôn) mới đáng gập lại để hỏi người dùng trước khi tạo thẻ mới.
 
 - **Given** AI trả về danh sách vocabulary cho một trang, **when** hệ thống lọc
-  trước khi đưa ra cho người dùng chọn, **then** những từ người dùng **đã thuộc** —
-  đo bằng FSRS stability vượt một ngưỡng cấu hình được — gập xuống một nhóm riêng,
-  **khỏi danh sách chính** nhưng không xoá khỏi màn duyệt, kèm nghĩa trong kho để
-  người dùng tự so (Q-13 phương án B, ADR-056).
+  trước khi đưa ra cho người dùng chọn, **then** những từ khớp `term+pos` với một
+  dòng **đã có trong kho** — **toàn app**, không giới hạn theo collection đang chụp
+  (đảo Q-09/ADR-032 → **ADR-066**, vocab-identity-r1 2026-10-05; gồm cả từ đang học
+  lẫn đã thuộc, không chỉ `stability` vượt ngưỡng) — gập xuống nhóm **"Đã có trong
+  kho"**, **khỏi danh sách chính** nhưng không xoá khỏi màn duyệt, kèm nghĩa trong
+  kho để người dùng tự so (Q-13 phương án B, ADR-056). Mặc định (không chạm vào
+  dòng nào trong nhóm) thì **không tạo thẻ mới** — chỉ ghi một lần `encounters.seen`
+  kèm câu `example` của AI (FR-22) cho từ đó, coi như "gặp lại".
 - **Given** việc so khớp, **when** hệ thống chuẩn hoá `term` thành `term_normalized`,
   **then** khác biệt về hoa/thường và khoảng trắng đầu cuối không làm sót.
-- **Given** một từ đã có trong kho nhưng **chưa** thuộc, **when** nó xuất hiện lại ở
-  trang khác, **then** nó vẫn được đề xuất bình thường trên danh sách chính — trừ
-  khi cùng khoá `term+pos` đã có ít nhất một dòng khác **đã thuộc** (vd đồng âm):
-  khi đó cả khoá vào nhóm gập, liệt kê **đủ** nghĩa trong kho của mọi dòng (không
-  chỉ dòng đã thuộc) vì hệ thống không biết trang đang dùng nghĩa nào (Q-13 quyết
-  định (i)); người dùng bỏ qua, hoặc lưu thành một dòng mới nếu lần này nó mang
-  nghĩa khác.
+- **Given** một từ **chưa** có trong kho (term+pos chưa khớp khoá nào, ở bất kỳ
+  collection), **when** nó được trích xuất, **then** nó được đề xuất bình thường
+  trên danh sách chính — trừ khi cùng khoá `term+pos` đã có ít nhất một dòng khác
+  trong kho (vd đồng âm): khi đó cả khoá vào nhóm gập, liệt kê **đủ** nghĩa trong
+  kho của mọi dòng cùng khoá (không chỉ dòng đã thuộc) vì hệ thống không biết trang
+  đang dùng nghĩa nào (Q-13 quyết định (i)); người dùng để nguyên trong nhóm gập
+  (ghi `seen`, không tạo thẻ), hoặc chạm "Nghĩa khác — lưu" để lưu thành một dòng +
+  thẻ mới nếu lần này nó mang nghĩa khác.
+- **Given** đích lưu (collection) bị đổi ngay trên màn duyệt (ADR-053), **when**
+  người dùng đổi, **then** nhóm gập **không** tính lại theo đích mới (khoá so khớp
+  đã là toàn app từ ADR-066, không còn phụ thuộc collection đang chụp — khác hành
+  vi trước fr10-close-r1).
 - **Given** hệ thống lưu một `term` đã tồn tại, **when** ghi vào kho, **then**
   **không** ràng buộc `unique` nào chặn lại. Một dòng là một nghĩa.
 
 Bộ lọc này là **cơ chế chống trùng duy nhất còn lại** sau khi ràng buộc `unique` bị
 bỏ, nên chất lượng của nó quan trọng hơn vẻ ngoài. Ngưỡng "đã thuộc" và lemmatize
-đã chốt ở mục 12 (Q-08 `stability >= 21`, Q-06 không lemmatize). Bộ lọc đã bật
-trong code (Task 3.8, fr10-close-r1) — đổi đích lưu ngay trên màn duyệt (ADR-053)
-tính lại nhóm gập theo bộ mới (`ReviewDraftBuilder.regroup`), giữ sửa tay +
-lựa chọn người dùng. Lý lẽ đầy đủ ở
+đã chốt ở mục 12 (Q-08 `stability >= 21`, Q-06 không lemmatize) — vẫn dùng để phân
+biệt "đã thuộc" trong hiển thị (`isMature`/`isLeech` ở nhóm gập), dù phạm vi so
+khớp giờ không còn phân biệt trạng thái (D2, ADR-066). Bộ lọc đã bật trong code từ
+Task 3.8 (fr10-close-r1); vocab-identity-r1 (ADR-066) đổi phạm vi so khớp sang
+toàn app nên `regroup` khi đổi đích lưu (ADR-053, `ReviewDraftBuilder.regroup`)
+không còn cần thiết — hàm giữ lại (test cũ còn dùng) nhưng `AnalysisView` không
+gọi khi đích đổi nữa. Lý lẽ đầy đủ ở
 [research/vocabulary.md mục 6.3](docs/research/vocabulary.md#63-vì-sao-không-có-ràng-buộc-unique).
 
 #### FR-17 — Collection Management
@@ -1099,7 +1148,7 @@ Chốt số riêng, đừng gộp nhầm với Q-08 (Q-08 = stability "đã thu�
 | Q-10 | Buffer cuộn giữ bao nhiêu trang, hết phiên có xoá không? | **10 phiên đọc gần nhất mỗi collection CÓ TÊN được lưu bền** (text + dịch + summary, không ảnh) để đọc lại — mục đích dễ đọc sách. Kho tạm **không** lưu phiên; phiên thứ 11 trôi. Chốt 2026-09-18 (ADR-029) |
 | Q-06 | Bộ lọc FR-10 có lemmatize hay không? | **Không lemmatize** — mỗi word form là một dòng (`running` ≠ `run`, `took` ≠ `take`). Chốt 2026-09-22; khớp `term_normalized` giữ nguyên form lúc import (FR-20) |
 | Q-08 | Ngưỡng "đã thuộc" ở FR-10? | **FSRS `stability ≥ 21 ngày`** = tương đương Anki "mature" (interval ≥ 21 ngày). Chốt 2026-09-22; không đo bằng số lần gặp |
-| Q-09 | Bộ lọc "đã thuộc" so khớp trong một collection hay toàn cục? | **Theo collection** (không toàn cục). Từ trùng giữa các collection vẫn thêm lại — mỗi từ có learning curve riêng; user thấy dễ thì bấm Easy. Chốt 2026-09-22 |
+| Q-09 | Bộ lọc "đã có trong kho" so khớp trong một collection hay toàn cục? | **Toàn app** (đảo 2026-10-05, ADR-066 — bản cũ "theo collection", chốt 2026-09-22, là bia mộ). Lý do đảo: FR-22 đã ghi được "gặp lại" bằng `encounters` xuyên collection, nên giữ Q-09 cũ cho FR-10 chỉ còn cái giá (thẻ trùng) mà mất cái lợi (ghi nhận gặp lại) — hai FR giờ dùng chung phạm vi |
 
 ---
 

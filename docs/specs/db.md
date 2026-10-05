@@ -171,6 +171,7 @@ CREATE TABLE encounters (
   vocab_item_id TEXT NOT NULL REFERENCES vocab_items(id) ON DELETE CASCADE,
   kind          TEXT NOT NULL CHECK (kind IN ('seen', 'recognized')),
   created_at    TEXT NOT NULL
+  -- sentence/collection_id them o migration v7, xem duoi.
 );
 
 CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
@@ -178,6 +179,13 @@ CREATE INDEX idx_encounters_item ON encounters (vocab_item_id, kind);
 --       phien doc; moi vocab mot dong moi lan luu.
 -- recognized: nguoi dung cham "Nhan ra"; toi da 1 dong / vocab / ngay hoc (gio chuyen
 --       ngay FR-11) — app-rule, khong CHECK SQL.
+
+-- Migration v7 (FR-22 mo rong, vocab-identity-r1, ADR-066): them cau + nguon cho moi lan
+-- "gap lai". Hai cot deu cho phep NULL — dong cu truoc migration giu NULL, khong rebuild
+-- bang. ALTER TABLE ADD COLUMN cua SQLite cho phep REFERENCES khi default NULL.
+ALTER TABLE encounters ADD COLUMN sentence TEXT;        -- cau chua tu, lay tu segment luc luu
+ALTER TABLE encounters ADD COLUMN collection_id TEXT
+  REFERENCES collections(id) ON DELETE SET NULL;        -- collection dang luu luc gap, KHONG doi theo neu tu chuyen bo sau
 
 CREATE TABLE settings (
   id                 INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -227,7 +235,7 @@ CREATE TABLE pdf_sources (
 chỉ dùng được trên đúng máy đã tạo ra nó, mang sang máy khác là vô nghĩa. Gắn PDF mới
 cho một collection đã có PDF là `UPSERT` ghi đè nguyên dòng, `page_index` về 0.
 
-Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi. `encounters` khoá theo `vocab_item_id` (`ON DELETE CASCADE`): chuyển collection giữ nguyên, xoá vocab thì lần gặp lại đi theo. `pdf_sources` cũng `ON DELETE CASCADE` theo `collection_id` — xoá bộ thì liên kết PDF mất theo, **file gốc trong Files không bị ảnh hưởng** (Reado chưa từng chép nó).
+Xoá collection: `ON DELETE RESTRICT` — phải chuyển hoặc xoá `vocab_items` trước (FR-17). Xoá item thì cards + logs cascade. Shortcut Home trỏ vào collection bị xoá thành `NULL` (`ON DELETE SET NULL`). Phiên đọc `reading_sessions` chết theo collection (`ON DELETE CASCADE`) — collection rỗng vocab xoá được thì phiên của nó cũng đi. `encounters` khoá theo `vocab_item_id` (`ON DELETE CASCADE`): chuyển collection giữ nguyên, xoá vocab thì lần gặp lại đi theo. `collection_id` của `encounters` (v7, vocab-identity-r1) là `ON DELETE SET NULL` — khác `vocab_item_id`: xoá collection thì dòng `encounters` **vẫn còn**, chỉ mất nhãn nguồn. `pdf_sources` cũng `ON DELETE CASCADE` theo `collection_id` — xoá bộ thì liên kết PDF mất theo, **file gốc trong Files không bị ảnh hưởng** (Reado chưa từng chép nó).
 
 `review_logs`: R1 chỉ ghi `mode = 'srs'`. Ba giá trị kia giữ đường R2, không đụng FSRS state.
 

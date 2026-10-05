@@ -71,7 +71,7 @@
 
 Danh sách này là nguồn duy nhất. Agent và command không chép lại số Q.
 
-- **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 BYOK-only (ADR-049 2026-10-01 — "proxy hybrid" cũ là bia mộ) · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp theo collection · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
+- **Chốt, không hỏi lại:** Q-01 iOS native · Q-02 local SQLite · Q-03 BYOK-only (ADR-049 2026-10-01 — "proxy hybrid" cũ là bia mộ) · Q-06 không lemmatize · Q-08 "đã thuộc" = `stability >= 21` · Q-09 so khớp **toàn app** cho FR-10 (đảo 2026-10-05, ADR-066 — bản cũ "theo collection" là bia mộ; FR-22 vốn đã toàn app từ đầu) · Q-10 10 phiên đọc mỗi collection có tên · Q-12 tắt steps.
 - **Chốt thêm 2026-09-24:** ngưỡng leech FR-19 = **6** lần Again. Không gộp với Q-08.
 - **Chốt thêm 2026-10-01:** bỏ proxy Reado — ADR-049.
 - **Chốt thêm 2026-10-02:** Q-13 (khoá so khớp FR-10 `term_normalized+pos` không phân biệt nghĩa) — phương án **B**: item khớp khoá đã thuộc gập xuống nhóm riêng thay vì xoá khỏi màn duyệt; khoá có cả dòng đã thuộc lẫn dòng mới/chưa thuộc vẫn vào nhóm gập, liệt kê đủ nghĩa kèm mức thuộc (ADR-056).
@@ -86,6 +86,11 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
   Sau khi `liveText` xác nhận tốt qua xem tay máy thật, **gỡ hẳn** nhánh sửa OCR bằng LLM
   (`CorrectingTextRecognizer`/`FoundationModelsOCRCorrector`/`OCRFixApplier` + toggle
   Settings) — ADR-065, cùng ngày.
+- **Chốt thêm 2026-10-05 (vocab-identity-r1, ADR-066):** đảo Q-09 cho FR-10 (so khớp toàn
+  app) — xem dòng Q-09 ở trên. D1 ngân sách chọn sẵn mỗi ngày = `daily_new_limit`, không
+  thêm setting riêng. D2 nhóm "Đã có trong kho" gồm mọi từ đã có (đang học + đã thuộc, mọi
+  collection). D3 ôn theo bộ không kéo từ gặp ở bộ khác vào — để R2. D4 gạch chân từ cũ
+  trong màn đọc PDF — để sau, không làm trong plan này.
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ

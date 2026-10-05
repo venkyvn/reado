@@ -5,7 +5,7 @@
 | Product | Reado |
 | Status | Draft |
 | Created | 2026-09-14 |
-| Last updated | 2026-10-04 (pdf-nav-r1 — J2b thêm điều hướng trang + Mục lục, ADR-059) |
+| Last updated | 2026-10-05 (vocab-identity-r1 — J1/J2 bước duyệt: nhóm "Đã có trong kho" toàn app, ngân sách chọn sẵn, ADR-066) |
 | Related | [prd.md](docs/specs/prd.md), [vision.md](docs/specs/vision.md), [db.md](docs/specs/db.md), [research/vocabulary.md](docs/research/vocabulary.md), [research/review.md](docs/research/review.md), [prompt-spec.md](docs/agent/prompt-spec.md), [design-system/reado/MASTER.md](design-system/reado/MASTER.md) |
 | Phạm vi | Flow spec trước UI: ai làm gì, màn nào, state nào. **Không** chốt màu, font, hay Design system |
 
@@ -110,8 +110,8 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
 | Input **hai cửa**: ảnh (camera/thư viện, FR-01) hoặc trang PDF đọc tại chỗ trong collection (FR-23) — PDF không bao giờ được chép vào app | NG-07, ADR-058 |
 | Song ngữ + summary **persist** cho **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch, **không ảnh**) — đọc lại được để dễ đọc sách; **kho tạm không lưu session**; session thứ 11 trôi; vocab đã confirm không bao giờ trôi | Q-10 chốt 2026-09-18 (ADR-029); NFR-04; FR-05/FR-06 qua hình dạng J2 (một capture = một session) |
 | `example` phải trích nguyên văn; unverified **không** chọn sẵn; không loại trong im lặng | FR-02, prompt-spec |
-| Item verified: AI xếp theo giá trị học giảm dần, màn duyệt **chọn sẵn tối đa 5 đầu** (`preselectLimit`), còn lại user tự chọn thêm | FR-09, prompt-v6 T2b |
-| Lọc từ **đã thuộc** lúc trích xuất (FR-10); không `unique` trên `term` | structure §6.3 |
+| Item verified: AI xếp theo giá trị học giảm dần, màn duyệt **chọn sẵn theo ngân sách ngày còn lại** (`preselectBudget` = `daily_new_limit` trừ số đã lưu hôm nay), còn lại user tự chọn thêm | FR-09, ADR-066 |
+| Lọc từ **đã có trong kho** (toàn app, mọi trạng thái) lúc trích xuất (FR-10, đảo Q-09/ADR-066); không `unique` trên `term` | structure §6.3 |
 | Hai nhánh queue: new bị `daily_new_limit`, due thì không | FR-11 |
 | Home hiện số **sẽ ôn hôm nay** (sau hạn mức), backlog là số **riêng** | FR-14 |
 | Phạm vi hẹp vẫn cập nhật FSRS; hiện số due **ngoài** phạm vi | FR-18, structure §4.2 |
@@ -138,15 +138,17 @@ Không tranh luận lại ở file này. Lý do nằm ở doc gốc.
    mở thẳng form thêm agent (`AgentFormSheet`) thay vì chụp rồi báo lỗi sau (ADR-053, phòng lỗi trước).
 2. Không bước collection picker. Đích ngầm = kho tạm.
 3. Processing (FR-02): OCR + dịch + vocab **một lần gọi**, dùng `settings.active_agent_id` (FR-21). ~~Mặc định = proxy Reado~~ — bỏ, ADR-049: chưa thêm agent BYOK thì lỗi, không chạy được bước này. Segments có thể có trong payload nhưng J1 **không** bắt user ở lại đọc song ngữ, và **kho tạm không lưu session đọc** (Q-10).
-4. Màn **Duyệt & lưu**: FR-10 gập từ đã thuộc xuống nhóm riêng "Đã thuộc · N" cuối danh sách (gập sẵn, không
-   xoá — Q-13 phương án B, ADR-056), mở ra thấy nghĩa AI gán cho trang này cạnh mọi nghĩa đã có trong kho cùng
-   khoá `term+pos`; chọn một dòng trong đó vẫn tăng số ở nút Lưu như item thường. Verified (danh sách chính)
-   chọn sẵn **tối đa 5 đầu** theo thứ tự AI xếp hạng giá trị học (FR-09, prompt-v6 T2b). Unverified badge,
-   không preselect (FR-02). User sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn —
-   **đổi được đích ngay đây** (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không
-   còn phải quay lại màn chụp để sửa (ADR-053, giải ngõ cụt cũ). Đổi đích → nhóm gập "Đã thuộc"
-   tính lại theo bộ mới (Q-09 so khớp theo collection), giữ nguyên sửa tay + lựa chọn người dùng
-   (fr10-close-r1, `ReviewDraftBuilder.regroup`).
+4. Màn **Duyệt & lưu**: FR-10 gập từ **đã có trong kho** (toàn app, mọi trạng thái — đảo Q-09, ADR-066)
+   xuống nhóm riêng "Đã có trong kho · N" cuối danh sách (gập sẵn, không xoá — Q-13 phương án B, ADR-056),
+   mở ra thấy nghĩa AI gán cho trang này cạnh mọi nghĩa đã có trong kho cùng khoá `term+pos`; mặc định
+   (không chạm) không tạo thẻ mới, chỉ ghi một lần "gặp lại" (FR-22); chạm "Nghĩa khác — lưu" mới tạo
+   dòng + thẻ mới như item thường. Verified (danh sách chính) chọn sẵn **theo ngân sách ngày còn lại**
+   (FR-09, `daily_new_limit` trừ số đã lưu hôm nay, ADR-066 — thay cho hằng số 5/trang của prompt-v6 T2b);
+   hết ngân sách thì hiện dòng nhắc, không tự chọn thêm. Unverified badge, không preselect (FR-02). User
+   sửa field / bỏ chọn / chọn thêm (FR-03). Dòng "Lưu vào: X ⏷" ở đầu màn — **đổi được đích ngay đây**
+   (`CollectionDestinationPicker`, Menu: Kho tạm · các bộ · "Tạo bộ mới…"), không còn phải quay lại màn
+   chụp để sửa (ADR-053, giải ngõ cụt cũ). Đổi đích **không** làm đổi nhóm "Đã có trong kho" — khoá so
+   khớp đã là toàn app, không còn phụ thuộc bộ đang chụp (khác hành vi cũ của fr10-close-r1 trước ADR-066).
 5. Nút đáy "Lưu N từ vào X" (prominent, ghim đáy) → lưu card `new`, `due_at` hôm nay (FR-09). Từ **ôn được ngay** (structure §3.2). Thao tác **không chặn** — không alert xác nhận.
 6. Sau Lưu: ở lại đúng chỗ đang đứng (không tự đổi tab, không bị đẩy sang Hub) + `ShellBanner` không chặn "Đã lưu N từ vào X · Xem" (ADR-053). Bấm "Xem" mới mở Hub của X; để banner tự tắt (4s, hoặc giữ khi VoiceOver đang chạy) thì ở nguyên màn cũ. Số new trên Hôm nay đã áp `daily_new_limit` (FR-14).
 
@@ -164,7 +166,7 @@ Capture · Processing · Duyệt & lưu (đổi đích + chọn từ) · banner 
 | BYOK 401 / timeout / JSON lệch schema | Lỗi rõ + CTA Settings; không lưu vocab dở | FR-21 |
 | Submit trùng do mạng | Không lưu hai bộ vocab trùng | FR-02 |
 | Chưa thêm agent, bấm nút chụp | Mở form thêm agent trước, không mở camera (ADR-053) | FR-21 |
-| Vocab rỗng sau FR-10 | "Không còn từ đáng học trên trang này" + [Chụp lại] [Đóng] — vẫn cho đọc tab Trang (T9). Còn item trong nhóm gập "Đã thuộc" (Q-13) thì KHÔNG rơi vào state này — vẫn hiện danh sách với nhóm gập đó, còn chọn/lưu được | FR-10 |
+| Vocab rỗng sau FR-10 | "Không còn từ đáng học trên trang này" + [Chụp lại] [Đóng] — vẫn cho đọc tab Trang (T9). Còn item trong nhóm gập "Đã có trong kho" (Q-13) thì KHÔNG rơi vào state này — vẫn hiện danh sách với nhóm gập đó, còn chọn/lưu được | FR-10 |
 | Thoát picker chưa confirm | Cảnh báo mất kết quả analysis | FR-03 |
 | Lưu thất bại (không phải thành công) | Vẫn alert chặn — chỉ đường **thành công** đổi sang banner (ADR-053) | FR-02 |
 | Analysis cần mạng | Fail rõ, không giả offline. Ôn (J3–J5) **chạy được offline** (NFR-03, Q-02 local-first) — không cần journey ôn-khi-mất-mạng riêng nếu hàng đợi đã trên máy | NFR-03 |
