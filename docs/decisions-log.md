@@ -1522,4 +1522,10 @@
       `regroup` + test giữ nguyên, `AnalysisView` không còn gọi (bỏ `.onChange` đích + `regroupMatureIfNeeded`).
     - **Q7** - trang chỉ có từ cũ (context-only) vẫn lưu phiên đọc theo luật cũ (bộ có tên + có nội dung).
     - **Q8** - từ leech nằm trong nhóm, nhãn "đang ở Từ hay quên", KHÔNG ghi `seen`, ẩn nút chọn khi mọi nghĩa là leech.
-  - Plan đầy đủ: `docs/plans/vocab-identity-r1.md`.
+  - **T4 (2026-10-05, hiện ngữ cảnh) - tự quyết của plan:**
+    - **Q9** - popover ghi **"Gặp lại N lần"** (N = số dòng `seen`, mỗi lần lưu trang = 1), không phải "Gặp ở N chỗ".
+      Kèm tối đa 2 câu gần nhất + tên bộ ("bộ đã xoá" khi `collection_id` NULL). Mặt sau thẻ: mục "Gặp lại",
+      tối đa 3 câu (`lineLimit(2)`), bỏ câu trùng `example` của thẻ (trim, không phân biệt hoa thường).
+    - Dữ liệu demo DEBUG: 2 dòng `seen` có câu "Demo: ..." gắn vào "routine" (fallback vocab đầu tiên) vì fixture
+      `analysis-demo.json` mở popover của match đầu tiên còn trong từ điển là "routine".
+  - Plan đầy đủ: `docs/plans/done/vocab-identity-r1.md`.

@@ -82,6 +82,45 @@ public enum EncounterRepository {
             [.text(vocabItemID), .text(kind.rawValue)]) ?? 0)
     }
 
+    /// Một lần gặp lại có câu (vocab-identity-r1 T4).
+    public struct EncounterContextRow: Equatable, Sendable {
+        public let sentence: String
+        /// nil = bộ đã xoá (`collection_id` SET NULL) hoặc dòng cũ không ghi bộ.
+        public let collectionName: String?
+        public let createdAt: Date
+
+        public init(sentence: String, collectionName: String?, createdAt: Date) {
+            self.sentence = sentence
+            self.collectionName = collectionName
+            self.createdAt = createdAt
+        }
+    }
+
+    /// Các lần `seen` có câu của một vocab, mới nhất trước.
+    public static func recentContexts(
+        on db: SQLiteDatabase, vocabItemID: String, limit: Int
+    ) throws -> [EncounterContextRow] {
+        guard limit > 0 else { return [] }
+        let rows = try db.rows(
+            """
+            SELECT e.sentence AS sentence, col.name AS collection_name, e.created_at AS created_at
+            FROM encounters e
+            LEFT JOIN collections col ON col.id = e.collection_id
+            WHERE e.vocab_item_id = ? AND e.kind = 'seen' AND e.sentence IS NOT NULL
+            ORDER BY e.created_at DESC, e.id DESC
+            LIMIT ?;
+            """,
+            [.text(vocabItemID), .int(Int64(limit))])
+        return rows.compactMap { row in
+            guard let sentence = row["sentence"].textValue,
+                  let iso = row["created_at"].textValue,
+                  let date = ISOTimestamp.date(from: iso) else { return nil }
+            return EncounterContextRow(
+                sentence: sentence, collectionName: row["collection_name"].textValue,
+                createdAt: date)
+        }
+    }
+
     /// Số TỪ (vocab, không phải số lần) có ít nhất một lần gặp lại từ `since` —
     /// dòng "Gặp lại N từ tuần này" ở Home.
     public static func distinctWordsEncountered(

@@ -91,6 +91,10 @@ struct EncounterSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var recognized: Set<String> = []
+    @State private var summaries: [String: EncounterSummary] = [:]
+
+    private typealias EncounterSummary =
+        (seenCount: Int, recent: [EncounterRepository.EncounterContextRow])
 
     var body: some View {
         NavigationStack {
@@ -116,6 +120,9 @@ struct EncounterSheet: View {
             recognized = Set(selection.entries.map(\.vocabItemID).filter {
                 model.hasRecognizedToday($0)
             })
+            for entry in selection.entries {
+                summaries[entry.vocabItemID] = model.encounterSummary(entry.vocabItemID)
+            }
         }
     }
 
@@ -138,11 +145,33 @@ struct EncounterSheet: View {
             Label("Đã gặp ở \(entry.collectionName)", systemImage: "books.vertical")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            if let summary = summaries[entry.vocabItemID], summary.seenCount > 0 {
+                contextBlock(summary)
+            }
             recognizeButton(entry)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .card()
+    }
+
+    /// "Gặp lại N lần" + tối đa 2 câu gần nhất kèm tên bộ (Q9).
+    private func contextBlock(_ summary: EncounterSummary) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Gặp lại \(summary.seenCount) lần")
+                .font(Typo.meta)
+                .foregroundStyle(.secondary)
+            ForEach(Array(summary.recent.enumerated()), id: \.offset) { _, row in
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(row.sentence)
+                        .font(.subheadline.italic())
+                        .lineLimit(3)
+                    Text(row.collectionName ?? "bộ đã xoá")
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     @ViewBuilder

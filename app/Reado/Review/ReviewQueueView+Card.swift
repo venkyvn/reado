@@ -266,7 +266,26 @@ extension ReviewQueueView {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection.
+    /// Các lần gặp lại từ này ở trang khác (vocab-identity-r1 T4) — dưới tên collection.
+    private func contextsBlock(_ contexts: [EncounterRepository.EncounterContextRow]) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Divider()
+            Text("Gặp lại")
+                .font(Typo.meta)
+            ForEach(Array(contexts.enumerated()), id: \.offset) { _, row in
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(row.sentence)
+                        .font(.subheadline.italic())
+                        .lineLimit(2)
+                    Text(row.collectionName ?? "bộ đã xoá")
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// FR-12: mặt sau = meaning_vi, IPA, câu gốc, tên collection, các lần gặp lại.
     private func backFaceContent(_ item: ReviewQueue.ReviewItem) -> some View {
         VStack(alignment: .leading, spacing: Spacing.row) {
             // Nhắc lại từ: đáp án (nghĩa) là dòng to nhất, từ chỉ là ngữ cảnh.
@@ -288,6 +307,9 @@ extension ReviewQueueView {
             Text(item.collectionName)
                 .font(Typo.meta)
                 .foregroundStyle(.secondary)
+            if !item.contexts.isEmpty {
+                contextsBlock(item.contexts)
+            }
         }
         .padding(Spacing.lg)
         // Cùng khung với mặt trước, neo trên-trái thay vì trôi giữa thẻ.

@@ -342,7 +342,7 @@ thứ tự số trong tài liệu không còn liên tục.
 > câu; "Nghĩa khác" vẫn lưu thẻ mới nếu người dùng xác nhận. Đi kèm: FR-09 đổi chọn sẵn
 > cố định 5/trang sang ngân sách bám `daily_new_limit`, và `encounters` thêm cột
 > `sentence`/`collection_id` (migration v7) để FR-22 hiện được ngữ cảnh gặp lại. Chi tiết:
-> [decisions-log.md ADR-066](docs/decisions-log.md), [plans/vocab-identity-r1.md](docs/plans/vocab-identity-r1.md).
+> [decisions-log.md ADR-066](docs/decisions-log.md), [plans/vocab-identity-r1.md](docs/plans/done/vocab-identity-r1.md).
 
 ### Epic E1 — Capture & Analyze
 
@@ -539,8 +539,9 @@ thước đo trực tiếp **M-06**.
   chữ nguyên (biên từ), không phân biệt hoa/thường, **không lemmatize** (Q-06), cụm nhiều
   chữ phải liền nhau (dấu câu cắt cụm), chồng nhau thì cụm dài thắng.
 - **Given** một từ đang gạch chân, **when** người dùng chạm, **then** popover hiện nghĩa,
-  IPA, "đã gặp ở ‹collection›" **và "Gặp ở N chỗ" kèm 1-2 câu gần nhất** (vocab-identity-r1,
-  ADR-066 — câu lấy từ `encounters.sentence`, dòng cũ không có câu thì chỉ đếm); một term
+  IPA, "đã gặp ở ‹collection›" **và "Gặp lại N lần" kèm 1-2 câu gần nhất** (vocab-identity-r1,
+  ADR-066 Q9 — N = số dòng `seen`, mỗi lần lưu trang = 1; câu lấy từ `encounters.sentence` kèm
+  tên collection, bộ đã xoá hiện "bộ đã xoá"; dòng cũ không có câu thì chỉ đếm); một term
   có nhiều dòng (nhiều nghĩa/collection) thì liệt kê đủ.
 - **Given** popover đang mở, **when** người dùng chạm "Nhận ra ✓", **then** hệ thống ghi
   **một** lần `recognized` cho từ đó — tối đa một lần mỗi từ mỗi **ngày học** (giờ chuyển
@@ -557,8 +558,9 @@ thước đo trực tiếp **M-06**.
   collection nguồn của một lần gặp bị xoá, **then** `collection_id` của lần gặp đó về NULL,
   dòng `encounters` vẫn còn.
 - **Given** mặt sau thẻ ôn tập, **when** thẻ có ≥ 1 lần gặp lại kèm câu, **then** hiện mục
-  "Gặp lại" tối đa **3 câu gần nhất** (mới nhất trước) kèm tên collection; dòng không có câu
-  (ghi trước migration v7) thì không hiện mục này.
+  "Gặp lại" tối đa **3 câu gần nhất** (mới nhất trước) kèm tên collection, bỏ câu trùng câu
+  gốc của thẻ (so không phân biệt hoa thường); dòng không có câu (ghi trước migration v7)
+  thì không hiện mục này.
 - **Given** một từ đạt "Đã nhớ" (Q-08) **và** có ≥ 1 lần `recognized`, **when** xem tiến độ,
   **then** nó ở mức **Đã thấm**; nếu `stability` tụt dưới ngưỡng Q-08 thì tự về Đang học
   (mức tính lúc đọc, không lưu cột).
@@ -570,7 +572,7 @@ export) · T2 màn đọc (gạch chân, popover, ghi `seen`) · T3 thang tiến
 Plan: [plans/done/reencounter-r1.md](docs/plans/done/reencounter-r1.md). Mở rộng ở
 vocab-identity-r1 (ADR-066, v0.16): `sentence`/`collection_id` thêm vào `encounters`
 (migration v7), hiện ở popover + mặt sau thẻ. Plan:
-[plans/vocab-identity-r1.md](docs/plans/vocab-identity-r1.md).
+[plans/vocab-identity-r1.md](docs/plans/done/vocab-identity-r1.md).
 
 #### FR-07 — Book & Page Organization — BỎ ở v0.3
 

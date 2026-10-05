@@ -282,6 +282,10 @@ public enum ReviewQueue {
         public let ipa: String?
         public let example: String
         public let collectionName: String
+        /// Id vocab của thẻ (vocab-identity-r1 T4) — rỗng khi chỗ dựng không cần.
+        public let vocabItemID: String
+        /// Tối đa 3 câu gặp lại gần nhất (không trùng `example`), mới nhất trước.
+        public let contexts: [EncounterRepository.EncounterContextRow]
 
         public init(
             cardID: String,
@@ -290,7 +294,9 @@ public enum ReviewQueue {
             meaningVI: String,
             ipa: String?,
             example: String,
-            collectionName: String
+            collectionName: String,
+            vocabItemID: String = "",
+            contexts: [EncounterRepository.EncounterContextRow] = []
         ) {
             self.cardID = cardID
             self.term = term
@@ -299,8 +305,13 @@ public enum ReviewQueue {
             self.ipa = ipa
             self.example = example
             self.collectionName = collectionName
+            self.vocabItemID = vocabItemID
+            self.contexts = contexts
         }
     }
+
+    /// Số câu gặp lại tối đa trên mặt sau thẻ.
+    static let maxCardContexts = 3
 
     /// Đọc toàn bộ hàng đợi hiện tại (hai nhánh gộp) kèm chi tiết vocab
     /// + collection cho UI + map cardID→snapshot TRƯỚC (FR-12 undo cần).
@@ -354,7 +365,7 @@ public enum ReviewQueue {
         let orderClause = preserveOrder ? "" : "ORDER BY c.due_at, c.id"
         let rows = try db.rows(
             """
-            SELECT c.id AS card_id,
+            SELECT c.id AS card_id, v.id AS vocab_item_id,
                    v.term AS term, v.pos AS pos, v.ipa AS ipa,
                    v.meaning_vi AS meaning_vi, v.example AS example,
                    col.name AS collection_name
@@ -368,14 +379,18 @@ public enum ReviewQueue {
         var byID: [String: ReviewItem] = [:]
         var dueOrder: [ReviewItem] = []
         for row in rows {
+            let vocabItemID = row["vocab_item_id"].textValue ?? ""
+            let example = row["example"].textValue ?? ""
             let item = ReviewItem(
                 cardID: row["card_id"].textValue ?? "",
                 term: row["term"].textValue ?? "",
                 pos: row["pos"].textValue ?? "other",
                 meaningVI: row["meaning_vi"].textValue ?? "",
                 ipa: row["ipa"].textValue,
-                example: row["example"].textValue ?? "",
-                collectionName: row["collection_name"].textValue ?? "")
+                example: example,
+                collectionName: row["collection_name"].textValue ?? "",
+                vocabItemID: vocabItemID,
+                contexts: try cardContexts(on: db, vocabItemID: vocabItemID, example: example))
             byID[item.cardID] = item
             dueOrder.append(item)
         }
@@ -383,5 +398,19 @@ public enum ReviewQueue {
         // 1 query thêm cho snapshot cả lô — tránh N+1 (trước: 1 fetchSnapshot/card).
         let snapshots = try ReviewService.fetchSnapshots(on: db, cardIDs: cardIDs)
         return (items, snapshots)
+    }
+
+    /// Câu gặp lại cho mặt sau thẻ: bỏ câu trùng `example` (trim, không phân biệt
+    /// hoa thường) — câu gốc đã hiện ngay phía trên. Lấy dư để vẫn đủ 3 sau khi lọc.
+    private static func cardContexts(
+        on db: SQLiteDatabase, vocabItemID: String, example: String
+    ) throws -> [EncounterRepository.EncounterContextRow] {
+        let key = example.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rows = try EncounterRepository.recentContexts(
+            on: db, vocabItemID: vocabItemID, limit: maxCardContexts + 1)
+        return Array(
+            rows.filter {
+                $0.sentence.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != key
+            }.prefix(maxCardContexts))
     }
 }

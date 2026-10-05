@@ -29,6 +29,24 @@ final class DevSeedTests: XCTestCase {
         XCTAssertGreaterThan(extra, 0)
     }
 
+    func testGradeHistorySeedsDemoContextsForFirstVocab() throws {
+        // vocab-identity-r1 T4: 2 lần `seen` có câu "Demo:" cho vocab đầu tiên.
+        let db = try Fixtures.seededDB()
+        try seedNewCards(db)
+
+        try DevSeed.gradeHistory(on: db, now: now, days: 20)
+
+        let first = try XCTUnwrap(db.scalarString(
+            "SELECT vocab_item_id FROM cards ORDER BY rowid LIMIT 1;"))
+        let rows = try EncounterRepository.recentContexts(on: db, vocabItemID: first, limit: 5)
+        XCTAssertEqual(rows.count, 2)
+        XCTAssertTrue(rows.allSatisfy { $0.sentence.hasPrefix("Demo:") })
+        XCTAssertEqual(rows.first?.collectionName, "Demo")
+        XCTAssertEqual(
+            try EncounterRepository.count(on: db, vocabItemID: first, kind: .seen), 3,
+            "1 seen không câu (cũ) + 2 seen demo có câu")
+    }
+
     func testGradeHistorySpreadsAcrossManyDistinctDays() throws {
         let db = try Fixtures.seededDB()
         try seedNewCards(db, count: 20)

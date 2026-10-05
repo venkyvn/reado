@@ -547,6 +547,40 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(items.map(\.term), ["d-only"], "quota 0 không chặn nhánh due")
     }
 
+    func testLoadFullQueueItemsCarryVocabIDAndRecentContextsWithoutExampleDuplicate() throws {
+        // vocab-identity-r1 T4: item mang vocabItemID + ≤ 3 ngữ cảnh mới nhất, bỏ câu
+        // trùng `example` ("câu ví dụ giả" của Fixtures — trim + không phân biệt hoa thường).
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+        let vocab = try Fixtures.insertVocab(in: db, collectionID: collectionID, term: "ctx")
+        _ = try Fixtures.insertCard(in: db, vocabItemID: vocab)
+        let plain = try Fixtures.insertVocab(in: db, collectionID: collectionID, term: "plain")
+        _ = try Fixtures.insertCard(in: db, vocabItemID: plain, dueIso: "2026-09-18T00:00:09Z")
+
+        let sentences = [
+            "Câu một.", "  CÂU VÍ DỤ GIẢ  ", "Câu hai.", "Câu ba.", "Câu bốn.",
+        ]
+        for (index, sentence) in sentences.enumerated() {
+            try EncounterRepository.insertSeen(
+                on: db, contexts: [EncounterContext(vocabItemID: vocab, sentence: sentence)],
+                collectionID: collectionID,
+                now: Fixtures.fixedNow.addingTimeInterval(-Double(sentences.count - index) * 60))
+        }
+
+        let (items, _) = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+
+        let withCtx = try XCTUnwrap(items.first { $0.term == "ctx" })
+        XCTAssertEqual(withCtx.vocabItemID, vocab)
+        XCTAssertEqual(
+            withCtx.contexts.map(\.sentence), ["Câu bốn.", "Câu ba.", "Câu hai."],
+            "tối đa 3, mới nhất trước, câu trùng example đã bị bỏ")
+        XCTAssertEqual(withCtx.contexts.first?.collectionName, "Kho tạm")
+        let none = try XCTUnwrap(items.first { $0.term == "plain" })
+        XCTAssertEqual(none.vocabItemID, plain)
+        XCTAssertTrue(none.contexts.isEmpty)
+    }
+
     // MARK: — 2.4 is_default: saveCapture rơi vào kho tạm (FR-17)
 
     func testSaveCaptureWithoutCollectionGoesToDefaultInbox() throws {

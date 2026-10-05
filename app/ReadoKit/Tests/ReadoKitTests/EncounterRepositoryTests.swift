@@ -407,4 +407,64 @@ final class EncounterRepositoryTests: XCTestCase {
         XCTAssertEqual(saved, 0)
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 0)
     }
+
+    // MARK: vocab-identity-r1 T4 — recentContexts
+
+    private func seen(
+        _ db: SQLiteDatabase, _ id: String, _ sentence: String?, in collection: String?,
+        minutesAgo: Double
+    ) throws {
+        try EncounterRepository.insertSeen(
+            on: db, contexts: [EncounterContext(vocabItemID: id, sentence: sentence)],
+            collectionID: collection,
+            now: Fixtures.fixedNow.addingTimeInterval(-minutesAgo * 60))
+    }
+
+    func testRecentContextsNewestFirstWithLimitAndCollectionName() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let a = try vocab(db, "alpha")
+        try seen(db, a, "Cũ nhất.", in: book, minutesAgo: 30)
+        try seen(db, a, "Giữa.", in: book, minutesAgo: 20)
+        try seen(db, a, "Mới nhất.", in: book, minutesAgo: 10)
+
+        let all = try EncounterRepository.recentContexts(on: db, vocabItemID: a, limit: 10)
+        XCTAssertEqual(all.map(\.sentence), ["Mới nhất.", "Giữa.", "Cũ nhất."])
+        XCTAssertEqual(all.first?.collectionName, "Sách A")
+        XCTAssertEqual(
+            all.first?.createdAt, Fixtures.fixedNow.addingTimeInterval(-600))
+
+        let limited = try EncounterRepository.recentContexts(on: db, vocabItemID: a, limit: 2)
+        XCTAssertEqual(limited.map(\.sentence), ["Mới nhất.", "Giữa."])
+        XCTAssertEqual(
+            try EncounterRepository.recentContexts(on: db, vocabItemID: a, limit: 0), [])
+    }
+
+    func testRecentContextsSkipsRecognizedNullSentenceAndOtherVocab() throws {
+        let db = try Fixtures.seededDB()
+        let a = try vocab(db, "alpha")
+        let b = try vocab(db, "beta")
+        try seen(db, a, nil, in: nil, minutesAgo: 5)           // seen không câu
+        try seen(db, a, "Có câu.", in: nil, minutesAgo: 6)
+        try seen(db, b, "Của beta.", in: nil, minutesAgo: 1)
+        XCTAssertTrue(try EncounterRepository.recordRecognized(
+            on: db, vocabItemID: a, now: Fixtures.fixedNow))   // recognized
+
+        let rows = try EncounterRepository.recentContexts(on: db, vocabItemID: a, limit: 10)
+        XCTAssertEqual(rows.map(\.sentence), ["Có câu."])
+        XCTAssertNil(rows.first?.collectionName, "dòng không ghi bộ → nil")
+    }
+
+    func testRecentContextsCollectionNameNilAfterCollectionDeleted() throws {
+        let db = try Fixtures.seededDB()
+        let bookX = try Fixtures.insertCollection(in: db, name: "Sách X")
+        let a = try vocab(db, "alpha")
+        try seen(db, a, "Câu.", in: bookX, minutesAgo: 1)
+
+        _ = try VocabRepository.deleteCollection(on: db, id: bookX)
+
+        let rows = try EncounterRepository.recentContexts(on: db, vocabItemID: a, limit: 5)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertNil(rows[0].collectionName)
+    }
 }

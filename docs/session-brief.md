@@ -10,23 +10,6 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- vocab-identity-r1 (ADR-066, `docs/plans/vocab-identity-r1.md`): đảo Q-09 cho FR-10
-  (so khớp "đã có trong kho" **toàn app**, không còn theo collection) + ngân sách chọn
-  sẵn mỗi ngày (FR-09) + `encounters` ghi câu/nguồn (FR-22). D1-D4 fen đã chốt
-  2026-10-05 (D4 = không làm spike PDF). **T0 xong** (docs + ADR-066, không code) —
-  `prd.md` v0.16, `db.md`, `journeys.md`, `vocabulary.md` §6.3, `CLAUDE.md` §5 đồng bộ.
-  **Nợ của T0:** baseline đo trước/sau (3 query SQL ở plan mục T0) cần dữ liệu thật —
-  chờ fen export JSON (FR-16) hoặc tự chạy query rồi báo 3 con số.
-  **T1 xong** (2026-10-05): `VocabRepository.newSavedToday` + `drafts(preselectBudget:)`, suất
-  chọn sẵn = `min(5, daily_new_limit − đã lưu hôm nay)`, dòng "Hôm nay đã đủ N từ mới" khi hết.
-  Nợ xem tay: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy dòng đó (ảnh tĩnh
-  không dựng được ca budget = 0). Plan đã chi tiết hoá T1–T4. **T2 xong**: migration v7 (`encounters.sentence` + `collection_id`), `EncounterMatcher.contexts`
-  (NLTokenizer, cắt câu dài ±120 ký tự), `saveCapture` ghi câu + bộ vào `seen`, export thêm 2 field.
-  Chưa có UI (hiện ở T4). **T3 xong**: `VocabRepository.knownSenses` (toàn app, mọi trạng thái) + nhóm "Đã có trong kho",
-  nút đáy "Ghi gặp lại N từ" (context-only, không tạo thẻ), bỏ regroup theo đích. Đo N6 ở 3000 từ:
-  `knownSenses` ~14ms, `saveCapture` ~82ms — chưa cần cache. **Nợ xem tay**: bỏ chọn hết → "Ghi gặp lại"
-  → banner; lưu trang PDF có từ cũ rồi chạy query T0 (khoá trùng không tăng); nhóm ở Dynamic Type
-  lớn + accent Nâu giấy. Task tiếp: **T4** (hiện ngữ cảnh ở popover + mặt sau thẻ).
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
   ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem
@@ -36,6 +19,7 @@
   Nợ xem tay T3/T4 (DebugLaunch không giả lập chạm được) — chi tiết
   `docs/plans/pdf-reader-r1.md`.
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
+- 2026-10-05 → `docs/journal/2026-10-05.md`: vocab-identity-r1 khép (ADR-066, đảo Q-09 cho FR-10 — một từ, một thẻ, nhiều ngữ cảnh): T0 docs · T1 ngân sách chọn sẵn `min(5, daily_new_limit − đã lưu hôm nay)` · T2 migration v7 (`encounters.sentence`/`collection_id`) + `EncounterMatcher.contexts` · T3 so khớp toàn app (`knownSenses`), nhóm "Đã có trong kho", nút "Ghi gặp lại N từ" · T4 popover "Gặp lại N lần" + mục "Gặp lại" ở mặt sau thẻ. `scripts/test.sh` 562/566 xanh (4 skip cũ). → `docs/plans/done/vocab-identity-r1.md`
 - 2026-10-05 → `docs/journal/2026-10-05.md`: ocr-quality-r1 (branch `ocr-quality-r1` từ `main`,
   ADR-064/065 — plan nháp `plan_ocr_quality_r1.md` gốc repo, chưa vào `docs/plans/`) — T0 OCR-fix
   mặc định TẮT · T4 nhãn "kiểm tra lại" · T1 rút gọn (6 ảnh thật, thiếu nhóm PDF-scan/label — fen
@@ -87,9 +71,10 @@
     `docs/journal/2026-10-05.md`.
 13. vocab-identity-r1 T0: baseline trước/sau cần dữ liệu thật trên máy fen — 3 query SQL
     (khoá `term_normalized+pos` trùng, thẻ `new` tồn, từ mới/14 ngày) ở mục T0 của
-    `docs/plans/vocab-identity-r1.md`. Agent không truy cập được DB thật trên máy fen —
+    `docs/plans/done/vocab-identity-r1.md`. Agent không truy cập được DB thật trên máy fen —
     fen export JSON (Settings → Dữ liệu → Xuất dữ liệu, FR-16) đưa file, hoặc tự chạy
     3 query rồi báo 3 con số.
+14. vocab-identity-r1 (đã khép): xem tay những chỗ ảnh tĩnh không dựng được — (a) ngân sách ngày: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy "Hôm nay đã đủ 1 từ mới…"; (b) bỏ chọn hết từ mới → nút "Ghi gặp lại N từ" → banner "Đã ghi gặp lại M từ"; (c) lưu một trang PDF có từ cũ ở bộ khác rồi chạy 3 query T0 (khoá trùng không tăng); (d) lật một thẻ có ≥ 2 ngữ cảnh, đặc biệt ở Dynamic Type lớn — agent thấy mặt sau thẻ trắng ở `accessibility-extra-large` kể cả khi bỏ khối ngữ cảnh mới, nên có thể là lỗi có sẵn (ScrollView trong `.drawingGroup()`); nếu thẻ trắng thật thì mở bug riêng.
 
 ## 3. Bẫy máy này
 

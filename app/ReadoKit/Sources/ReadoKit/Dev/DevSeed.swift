@@ -61,6 +61,38 @@ public enum DevSeed {
         if !vocabIDs.isEmpty {
             _ = try EncounterRepository.insertSeen(
                 on: db, vocabItemIDs: vocabIDs, now: now.addingTimeInterval(-3 * 3_600))
+            // Fixture `analysis-demo.json` mở popover của "routine" (match đầu tiên
+            // còn trong từ điển), không phải vocab đầu tiên → ưu tiên "routine".
+            let demoID = try db.scalarString(
+                "SELECT id FROM vocab_items WHERE term_normalized = 'routine' LIMIT 1;")
+            try seedDemoContexts(on: db, vocabItemID: demoID ?? vocabIDs[0], now: now)
+        }
+    }
+
+    /// vocab-identity-r1 T4 — 2 lần `seen` CÓ CÂU cho một vocab (thêm vào lần `seen`
+    /// không câu ở trên) để chụp ảnh popover FR-22 + mặt sau thẻ. Câu ghi rõ
+    /// "Demo:" — dữ liệu giả, không phải sách thật.
+    private static func seedDemoContexts(
+        on db: SQLiteDatabase, vocabItemID: String, now: Date
+    ) throws {
+        guard let row = try db.rows(
+            """
+            SELECT v.term AS term, v.collection_id AS collection_id
+            FROM vocab_items v WHERE v.id = ?;
+            """, [.text(vocabItemID)]).first,
+            let term = row["term"].textValue
+        else { return }
+        let collectionID = row["collection_id"].textValue
+        let samples = [
+            (days: 2.0, sentence: "Demo: \(term) appears again in another chapter."),
+            (days: 1.0, sentence: "Demo: the second time we meet \(term), it is in a longer sentence about building habits that last."),
+        ]
+        for sample in samples {
+            _ = try EncounterRepository.insertSeen(
+                on: db,
+                contexts: [EncounterContext(vocabItemID: vocabItemID, sentence: sample.sentence)],
+                collectionID: collectionID,
+                now: now.addingTimeInterval(-sample.days * 86_400))
         }
     }
 

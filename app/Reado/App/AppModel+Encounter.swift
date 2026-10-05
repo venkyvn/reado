@@ -25,6 +25,22 @@ extension AppModel {
         }
     }
 
+    /// Số lần gặp lại (`seen`) + tối đa 2 câu gần nhất của một từ — popover FR-22
+    /// (vocab-identity-r1 T4, Q9 "Gặp lại N lần").
+    func encounterSummary(
+        _ vocabItemID: String
+    ) -> (seenCount: Int, recent: [EncounterRepository.EncounterContextRow]) {
+        guard let database else { return (0, []) }
+        return readQuietly("ngữ cảnh gặp lại", fallback: (0, [])) {
+            (
+                try EncounterRepository.count(
+                    on: database, vocabItemID: vocabItemID, kind: .seen),
+                try EncounterRepository.recentContexts(
+                    on: database, vocabItemID: vocabItemID, limit: 2)
+            )
+        }
+    }
+
     /// Ghi một lần "nhận ra" khi đọc. `true` = vừa ghi; `false` = hôm nay đã ghi
     /// rồi hoặc lỗi. Không đụng lịch ôn (FR-22).
     @discardableResult
