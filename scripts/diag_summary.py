@@ -70,6 +70,17 @@ def summarize_analysis(folder: Path, full: bool) -> None:
             preview = l.get("text", "")[:60]
             print(f"  [{reason}] {preview!r}")
 
+        # apple-ai-r1 T4 (ADR-061) — chỉ có khi soát OCR bật; log cũ không có
+        # khoá này thì im lặng bỏ qua (không in gì thêm).
+        fixes = ocr.get("fixes")
+        if fixes is not None:
+            rejected = ocr.get("fixRejected", 0)
+            ms = ocr.get("fixMs")
+            err = ocr.get("fixError")
+            print(f"OCR fix: {len(fixes)} áp / {rejected} loại / {ms} ms" + (f" lỗi={err!r}" if err else ""))
+            for f in fixes:
+                print(f"  {f.get('wrong')!r} → {f.get('right')!r}")
+
     analysis_path = folder / "analysis.json"
     if analysis_path.exists():
         analysis = load_json(analysis_path)

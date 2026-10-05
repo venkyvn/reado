@@ -12,6 +12,11 @@ public struct AnalysisAgent: Equatable, Sendable, Identifiable {
     /// ADR-049: hàng seed "chưa chọn agent" — `AnalysisAgentStore.list()` lọc
     /// khỏi danh sách hiển thị; giữ property để store tự nhận diện hàng này.
     public var isPlaceholder: Bool { kind == "reado_proxy" }
+
+    /// apple-ai-r1 T5 (ADR-061) — hàng builtin Apple Intelligence (ngược với
+    /// `isPlaceholder`: hàng này CÓ hiện trong `list()`, chỉ không xoá/sửa
+    /// được và không cần key).
+    public var isAppleIntelligence: Bool { kind == AnalysisAgentStore.appleKind }
 }
 
 /// Save/xoá secret. Production = Keychain. Test truyền bản nhớ để không đụng Keychain máy.
@@ -47,13 +52,19 @@ public enum AnalysisAgentStore {
     /// đưa `deepseek-v4.1-flash` từ 63s xuống 15–18s cho một trang OCR.
     public static let aiboxBaseURL = "https://api.ai-box.vn/v1"
     public static let aiboxModel = "deepseek-v4.1-flash"
+    /// apple-ai-r1 T5 (ADR-061).
+    public static let appleKind = "apple_intelligence"
 
-    public enum StoreError: Error, LocalizedError {
+    public enum StoreError: Error, LocalizedError, Equatable {
         case missingField(String)
         case insecureURL
         case cannotDeletePlaceholder
         case missingKey
         case notFound
+        /// apple-ai-r1 T5 — hàng Apple Intelligence: không xoá/sửa được,
+        /// không có key (khác `.cannotDeletePlaceholder` — đó là hàng ẨN,
+        /// hàng này vẫn HIỆN trong `list()` nhưng chặn update/delete).
+        case builtinAgent
 
         public var errorDescription: String? {
             switch self {
@@ -62,11 +73,14 @@ public enum AnalysisAgentStore {
             case .cannotDeletePlaceholder: "Không xoá được agent mặc định"
             case .missingKey: "Agent này chưa có API key"
             case .notFound: "Không tìm thấy agent"
+            case .builtinAgent: "Không sửa hay xoá được Apple Intelligence"
             }
         }
     }
 
-    /// `agents` bỏ hàng placeholder (ADR-049) — UI chỉ thấy agent BYOK thật.
+    /// `agents` bỏ hàng placeholder (ADR-049) — UI chỉ thấy agent BYOK thật +
+    /// hàng Apple Intelligence (builtin, apple-ai-r1 T5). Apple LUÔN đứng đầu
+    /// (không theo `created_at`) — Settings luôn thấy nó ở vị trí cố định.
     /// `activeID` KHÔNG lọc: lúc cài mới/vừa xoá agent, nó trỏ về placeholder
     /// — caller (AppModel.activeAgentReady, SettingsView) tự suy "chưa có agent"
     /// khi không tìm thấy activeID trong `agents`.
@@ -80,21 +94,38 @@ public enum AnalysisAgentStore {
             """
             SELECT id, kind, name, base_url, model
             FROM analysis_agents
-            ORDER BY created_at;
+            ORDER BY (kind = 'apple_intelligence') DESC, created_at;
             """)
         let agents = rows.compactMap { row -> AnalysisAgent? in
             let id = row["id"].textValue ?? ""
             let kind = row["kind"].textValue ?? ""
             guard kind != "reado_proxy" else { return nil }
+            // Hàng Apple không có key (local, không BYOK) — bỏ qua Keychain,
+            // tránh gọi secrets.contains cho một id không bao giờ có trong đó.
+            let hasKey = kind == appleKind ? false : secrets.contains(agentID: id)
             return AnalysisAgent(
                 id: id,
                 kind: kind,
                 name: row["name"].textValue ?? "",
                 baseURL: row["base_url"].textValue,
                 model: row["model"].textValue,
-                hasKey: secrets.contains(agentID: id))
+                hasKey: hasKey)
         }
         return (agents, activeID)
+    }
+
+    /// ADR-061 — Apple là mặc định CHỈ KHI chưa chọn agent nào (active đang là
+    /// placeholder). Đã chọn BYOK (hoặc đã từng chọn Apple) thì giữ nguyên —
+    /// Apple không "giành lại" một lựa chọn chủ động. Trả `true` nếu vừa đổi.
+    @discardableResult
+    public static func applyDefault(on db: SQLiteDatabase, appleAvailable: Bool) throws -> Bool {
+        guard appleAvailable else { return false }
+        let activeID = try db.scalarString("SELECT active_agent_id FROM settings WHERE id = 1;")
+        guard activeID == Seeder.placeholderAgentID else { return false }
+        try db.run(
+            "UPDATE settings SET active_agent_id = ? WHERE id = 1;",
+            [.text(Seeder.appleAgentID)])
+        return true
     }
 
     /// Thêm agent user và (mặc định) đặt nó làm active cho lần chụp kế tiếp.
@@ -153,6 +184,7 @@ public enum AnalysisAgentStore {
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws {
         guard id != Seeder.placeholderAgentID else { throw StoreError.notFound }
+        guard id != Seeder.appleAgentID else { throw StoreError.builtinAgent }
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         let replacementKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -213,6 +245,7 @@ public enum AnalysisAgentStore {
         secrets: AgentSecretStore = KeychainAgentSecrets()
     ) throws {
         guard id != Seeder.placeholderAgentID else { throw StoreError.cannotDeletePlaceholder }
+        guard id != Seeder.appleAgentID else { throw StoreError.builtinAgent }
         let rows = try db.rows(
             "SELECT id FROM analysis_agents WHERE id = ? LIMIT 1;",
             [.text(id)])

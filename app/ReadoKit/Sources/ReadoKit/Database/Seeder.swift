@@ -12,6 +12,12 @@ public enum Seeder {
     /// lọc/ẩn hàng này khỏi UI và báo lỗi rõ nếu lọt vào `analyze()`.
     public static let placeholderAgentID = "00000000-0000-4000-a000-000000000001"
     public static let placeholderAgentName = "Chưa chọn agent"
+    /// apple-ai-r1 T5 (ADR-061) — hàng builtin Apple Intelligence, id cố định,
+    /// không xoá/sửa được (`AnalysisAgentStore`). Migration v6 tạo hàng này
+    /// (cả DB cũ nâng cấp lẫn cài mới — cài mới chạy hết migration trước khi
+    /// `Seeder.seed` chạy, xem `Migration.v6Statements`), không phải ở đây.
+    public static let appleAgentID = "00000000-0000-4000-a000-000000000002"
+    public static let appleAgentName = "Apple Intelligence"
     /// PRD FR-17 gọi collection mặc định là "kho tạm" — chọn tên hiển thị đơn giản.
     public static let defaultCollectionName = "Kho tạm"
     /// db.md A.2.1: ghi 'fsrs-6' kể cả khi fsrs_params null (default = defaultWv6 lúc gọi FSRS).

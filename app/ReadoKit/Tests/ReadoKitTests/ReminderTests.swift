@@ -93,6 +93,20 @@ final class ReminderTests: XCTestCase {
             );
             """)
         try db.exec("INSERT INTO settings (id) VALUES (1);")
+        // apple-ai-r1 T5: v6 rebuild `analysis_agents` (SELECT từ bảng cũ) —
+        // DB giả lập tối giản này cần bảng rỗng để Migration.run đi hết tới
+        // currentVersion, dù test không quan tâm tới agent.
+        try db.exec(
+            """
+            CREATE TABLE analysis_agents (
+              id TEXT NOT NULL PRIMARY KEY,
+              kind TEXT NOT NULL,
+              name TEXT NOT NULL,
+              base_url TEXT,
+              model TEXT,
+              created_at TEXT NOT NULL
+            );
+            """)
         try db.exec("PRAGMA user_version = 1;")
 
         try Migration.run(on: db)

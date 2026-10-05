@@ -20,6 +20,9 @@ struct SettingsView: View {
     /// toolbar reader theo fen: "đem mấy config đó ra ngoài setting luôn đi".
     @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
     @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
+    /// apple-ai-r1 T4 (ADR-061) — cùng key `AppleIntelligence.ocrFixDefaultsKey`
+    /// mà `AppModel+Capture.runAnalysis` đọc. Mặc định BẬT (fen chốt 2026-10-05).
+    @AppStorage(AppleIntelligence.ocrFixDefaultsKey) private var ocrFixEnabled = true
 
     @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10
@@ -302,6 +305,9 @@ struct SettingsView: View {
                 }
             }
             Button("Thêm key") { showAddAgent = true }
+            if model.ocrFixAvailable {
+                Toggle("Sửa lỗi OCR bằng Apple Intelligence", isOn: $ocrFixEnabled)
+            }
             if let agentError {
                 Text(agentError)
                     .font(.footnote)
@@ -311,7 +317,13 @@ struct SettingsView: View {
         } header: {
             Label("Agent phân tích", systemImage: "sparkles")
         } footer: {
-            Text("Lần chụp kế tiếp dùng agent đang chọn. OCR trên máy, agent dịch và lấy từ. Key nằm trên máy, không vào file xuất.")
+            // apple-ai-r1 T4 (ADR-061) — câu soát OCR chỉ hiện khi máy có Apple
+            // Intelligence (ocrFixAvailable), nối sau câu gốc.
+            Text(
+                "Lần chụp kế tiếp dùng agent đang chọn. OCR trên máy, agent dịch và lấy từ. Key nằm trên máy, không vào file xuất."
+                    + (model.ocrFixAvailable
+                        ? " Apple Intelligence soát lỗi chữ OCR trên máy trước khi gửi agent."
+                        : ""))
         }
     }
 

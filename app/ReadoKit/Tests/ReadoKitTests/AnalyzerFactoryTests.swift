@@ -2,9 +2,40 @@ import Foundation
 import XCTest
 import ReadoKit
 
+private struct FakeOCRCorrector: OCRCorrector {
+    func proposeFixes(for text: String) async throws -> [OCRFix] { [] }
+}
+
 /// FR-21 — agent OpenAI-compat BYOK (list/add/edit/delete/setActive). ADR-049:
 /// bỏ proxy mặc định — cài mới chưa thêm agent thì analyzer báo lỗi rõ.
 final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
+
+    // MARK: - apple-ai-r1 T4 — textRecognizer (ADR-061)
+
+    func testTextRecognizerDisabledReturnsBase() {
+        let recognizer = AnalyzerFactory.textRecognizer(
+            ocrFixEnabled: false, status: .available, makeCorrector: { FakeOCRCorrector() })
+        XCTAssertFalse(recognizer is CorrectingTextRecognizer)
+    }
+
+    func testTextRecognizerUnavailableReturnsBase() {
+        let recognizer = AnalyzerFactory.textRecognizer(
+            ocrFixEnabled: true, status: .unavailable(.notEnabled),
+            makeCorrector: { FakeOCRCorrector() })
+        XCTAssertFalse(recognizer is CorrectingTextRecognizer)
+    }
+
+    func testTextRecognizerEnabledAndAvailableWraps() {
+        let recognizer = AnalyzerFactory.textRecognizer(
+            ocrFixEnabled: true, status: .available, makeCorrector: { FakeOCRCorrector() })
+        XCTAssertTrue(recognizer is CorrectingTextRecognizer)
+    }
+
+    func testTextRecognizerNoCorrectorReturnsBase() {
+        let recognizer = AnalyzerFactory.textRecognizer(
+            ocrFixEnabled: true, status: .available, makeCorrector: { nil })
+        XCTAssertFalse(recognizer is CorrectingTextRecognizer)
+    }
 
     // MARK: - AnalyzerFactory (ADR-049 — chưa chọn agent)
 
@@ -91,8 +122,11 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
     func testAgentStoreAddEditDeleteFallsBackToPlaceholder() throws {
         let db = try Fixtures.seededDB()
         let secrets = MemorySecrets()
-        // Cài mới chưa thêm agent nào — placeholder bị lọc khỏi `agents`.
-        XCTAssertTrue(try AnalysisAgentStore.list(on: db, secrets: secrets).agents.isEmpty)
+        // Cài mới chưa thêm agent nào — placeholder bị lọc khỏi `agents`;
+        // apple-ai-r1 T5: hàng Apple Intelligence (builtin) vẫn hiện, lọc riêng.
+        let freshAgents = try AnalysisAgentStore.list(on: db, secrets: secrets).agents
+        XCTAssertTrue(freshAgents.filter { !$0.isAppleIntelligence }.isEmpty)
+        XCTAssertTrue(freshAgents.contains { $0.isAppleIntelligence })
         let id = try AnalysisAgentStore.add(
             on: db,
             name: "Gemini",
@@ -102,7 +136,7 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
             secrets: secrets)
         let listed = try AnalysisAgentStore.list(on: db, secrets: secrets)
         XCTAssertEqual(listed.activeID, id)
-        XCTAssertEqual(listed.agents.count, 1)
+        XCTAssertEqual(listed.agents.filter { !$0.isAppleIntelligence }.count, 1)
         let added = try XCTUnwrap(listed.agents.first { $0.id == id })
         XCTAssertEqual(added.baseURL, "https://generativelanguage.googleapis.com/v1beta/openai")
         XCTAssertTrue(added.hasKey)
@@ -144,7 +178,7 @@ final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
         try AnalysisAgentStore.delete(on: db, id: id, secrets: secrets)
         let after = try AnalysisAgentStore.list(on: db, secrets: secrets)
         XCTAssertEqual(after.activeID, Seeder.placeholderAgentID)
-        XCTAssertTrue(after.agents.isEmpty)
+        XCTAssertTrue(after.agents.filter { !$0.isAppleIntelligence }.isEmpty)
         XCTAssertFalse(secrets.contains(agentID: id))
         XCTAssertThrowsError(
             try AnalysisAgentStore.delete(on: db, id: Seeder.placeholderAgentID, secrets: secrets))

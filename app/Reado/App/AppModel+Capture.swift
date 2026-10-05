@@ -71,8 +71,13 @@ extension AppModel {
         do {
             // FR-02/ADR-049: agent active đọc từ settings — placeholder (chưa
             // chọn agent) rơi vào NoAgentAnalyzer, báo lỗi rõ ở catch dưới.
+            // apple-ai-r1 T4 (ADR-061): toggle "Sửa lỗi OCR" — mặc định BẬT
+            // (fen chốt 2026-10-05, ưu tiên giữ nguyên câu, im lặng sửa).
+            let ocrFixEnabled = UserDefaults.standard.object(
+                forKey: AppleIntelligence.ocrFixDefaultsKey) as? Bool ?? true
             let (analyzer, cefrLevel) = try AnalyzerFactory.active(
                 db: database,
+                ocrFixEnabled: ocrFixEnabled,
                 onProgress: { [weak self] progress in
                     Task { @MainActor in self?.capture.analysisProgress = progress }
                 })

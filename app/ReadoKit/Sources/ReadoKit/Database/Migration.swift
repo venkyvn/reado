@@ -2,10 +2,12 @@ import Foundation
 
 /// Migration DDL — dialect SQLite R1 đúng từng dòng của docs/db.md tầng A.
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
-/// Bảy bảng v1 + `encounters` (v4) + `pdf_sources` (v5) + index; seed nằm ở Seeder
-/// chứ không phải migration.
+/// Bảy bảng v1 + `encounters` (v4) + `pdf_sources` (v5) + index +
+/// kind `apple_intelligence` + hàng builtin (v6, apple-ai-r1 T5/ADR-061); seed
+/// nằm ở Seeder chứ không phải migration (NGOẠI LỆ: hàng Apple Intelligence —
+/// id cố định nên tạo ở v6Statements, không ở Seeder, để DB cũ nâng cấp cũng có).
 public enum Migration {
-    public static let currentVersion: Int64 = 5
+    public static let currentVersion: Int64 = 6
 
     public enum MigrationError: Error, Equatable {
         /// user_version lớn hơn bản app hỗ trợ (DB từ phiên bản tương lai).
@@ -64,6 +66,36 @@ public enum Migration {
         );
         """,
     ]
+
+    /// apple-ai-r1 T5 (ADR-061) — kind `apple_intelligence` + hàng builtin. Đổi
+    /// CHECK trên `analysis_agents` → SQLite không có `ALTER TABLE … DROP/ALTER
+    /// CONSTRAINT`, phải rebuild bảng (12-step thủ tục chính thức của SQLite,
+    /// rút gọn): tạo bảng mới CHECK mới → copy dữ liệu → drop bảng cũ → rename.
+    /// `PRAGMA foreign_keys` phải tắt NGOÀI transaction này (`run(on:)` case 5) —
+    /// đổi pragma giữa transaction đang mở là no-op theo SQLite.
+    static let v6Statements: [String] = [
+        """
+        CREATE TABLE analysis_agents_new (
+          id          TEXT NOT NULL PRIMARY KEY,
+          kind        TEXT NOT NULL CHECK (kind IN ('reado_proxy', 'openai_compat', 'apple_intelligence')),
+          name        TEXT NOT NULL,
+          base_url    TEXT,
+          model       TEXT,
+          created_at  TEXT NOT NULL
+        );
+        """,
+        """
+        INSERT INTO analysis_agents_new (id, kind, name, base_url, model, created_at)
+          SELECT id, kind, name, base_url, model, created_at FROM analysis_agents;
+        """,
+        "DROP TABLE analysis_agents;",
+        "ALTER TABLE analysis_agents_new RENAME TO analysis_agents;",
+    ]
+
+    /// `model` builtin = "on_device" (R1 chốt 2026-10-05 sau spike T1:
+    /// on-device duy nhất — PCC construct crash vì thiếu entitlement
+    /// `com.apple.developer.private-cloud-compute`, để R2 khi fen bật được).
+    static let appleAgentModel = "on_device"
 
     /// v2 → v3: chuyển 2 slot ghim cũ (`home_shortcut_1/2`) sang JSON `home_pin_ids`,
     /// rồi xoá 2 cột cũ (NULL) để `HomePinService.ids` không bao giờ đọc lại slot
@@ -206,12 +238,15 @@ public enum Migration {
         """,
     ]
 
-    public static func run(on db: SQLiteDatabase) throws {
+    /// `upTo`: apple-ai-r1 T5 — chỉ test dùng để dựng DB dừng ở một version cụ
+    /// thể (v5→v6 phải thấy dữ liệu v5 THẬT trước khi migrate tiếp); production
+    /// luôn gọi không truyền, chạy hết tới `currentVersion`.
+    public static func run(on db: SQLiteDatabase, upTo target: Int64 = currentVersion) throws {
         var version = try db.scalarInt64("PRAGMA user_version;") ?? 0
         guard version <= currentVersion else {
             throw MigrationError.unsupportedUserVersion(version)
         }
-        while version < currentVersion {
+        while version < target {
             switch version {
             case 0:
                 try db.inTransaction {
@@ -248,6 +283,34 @@ public enum Migration {
                         try db.exec(statement)
                     }
                     try db.exec("PRAGMA user_version = 5;")
+                }
+            case 5:
+                // SQLite: đổi `foreign_keys` giữa transaction đang mở là no-op —
+                // phải tắt NGOÀI `inTransaction`, bật lại khi xong (dù lỗi).
+                try db.exec("PRAGMA foreign_keys = OFF;")
+                defer { try? db.exec("PRAGMA foreign_keys = ON;") }
+                try db.inTransaction {
+                    for statement in v6Statements {
+                        try db.exec(statement)
+                    }
+                    try db.run(
+                        """
+                        INSERT INTO analysis_agents (id, kind, name, base_url, model, created_at)
+                        VALUES (?, 'apple_intelligence', ?, NULL, ?, ?);
+                        """,
+                        [
+                            .text(Seeder.appleAgentID),
+                            .text(Seeder.appleAgentName),
+                            .text(appleAgentModel),
+                            .text(ISOTimestamp.string(from: Date())),
+                        ])
+                    let violations = try db.rows("PRAGMA foreign_key_check;")
+                    guard violations.isEmpty else {
+                        throw DatabaseError.failed(
+                            "v6: foreign_key_check còn \(violations.count) dòng",
+                            statement: "PRAGMA foreign_key_check;")
+                    }
+                    try db.exec("PRAGMA user_version = 6;")
                 }
             default:
                 throw MigrationError.unsupportedUserVersion(version)

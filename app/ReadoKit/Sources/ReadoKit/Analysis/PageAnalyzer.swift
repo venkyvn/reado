@@ -24,15 +24,30 @@ public protocol PageAnalyzer: Sendable {
 
 /// Nhà máy chọn analyzer theo agent đang active (FR-21).
 public enum AnalyzerFactory {
+    /// apple-ai-r1 T4 (ADR-061) — chọn OCR cho lối ảnh. `ocrFixEnabled` tắt
+    /// hoặc Apple Intelligence không sẵn sàng → OCR gốc không đổi (test cũ,
+    /// đa số thiết bị không hỗ trợ, vẫn đúng hành vi trước T4). Public để test.
+    public static func textRecognizer(
+        ocrFixEnabled: Bool,
+        status: AppleIntelligenceStatus,
+        base: PageTextRecognizer = PageOCR.live,
+        makeCorrector: () -> OCRCorrector? = AppleIntelligence.liveOCRCorrector
+    ) -> PageTextRecognizer {
+        guard ocrFixEnabled, status.isAvailable, let corrector = makeCorrector() else { return base }
+        return CorrectingTextRecognizer(base: base, corrector: corrector)
+    }
+
     /// Tạo analyzer cho agent. `openai_compat` thiếu id/url/model thì mock (cấu hình hỏng).
     /// `session` injectable cho test (default URLSession.shared ở production).
     /// `onProgress`: chỉ `openai_compat` (stream) phát ra `.thinking`/`.writing`.
+    /// `ocr`: apple-ai-r1 T4 — OCR đã quyết sẵn (có soát hay không) từ `active()`.
     public static func analyzer(
         for kind: String,
         baseURL: String?,
         model: String?,
         agentID: String? = nil,
         session: URLSession = .shared,
+        ocr: PageTextRecognizer = PageOCR.live,
         onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
     ) -> PageAnalyzer {
         switch kind {
@@ -45,10 +60,15 @@ public enum AnalyzerFactory {
                 baseURL: baseURL,
                 model: model,
                 agentID: agentID,
+                ocr: ocr,
                 onProgress: onProgress)
         case "reado_proxy":
             // ADR-049: kind này giờ chỉ là hàng placeholder "chưa chọn agent"
             // (Seeder) — không còn client thật nào gọi được, báo lỗi rõ.
+            return NoAgentAnalyzer()
+        case AnalysisAgentStore.appleKind:
+            // apple-ai-r1 T5 — tạm thời, T6 thay bằng AppleIntelligenceAnalyzer
+            // thật. KHÔNG rơi vào `default` (MockAnalyzer trả dữ liệu giả).
             return NoAgentAnalyzer()
         default:
             return MockAnalyzer()
@@ -58,15 +78,21 @@ public enum AnalyzerFactory {
     /// Helper: đọc settings (cefr_levels, active_agent) rồi tạo analyzer đúng agent.
     /// Trả về (analyzer, cefrLevel) với cefrLevel = các level chọn ghép ", " cho
     /// prompt FR-02 (cài cũ chỉ có `cefr_level` đơn → fallback).
+    /// `ocrFixEnabled`: apple-ai-r1 T4 — mặc định `false` để test cũ không đổi
+    /// hành vi; tầng app (`AppModel+Capture`) đọc UserDefaults rồi truyền vào.
     public static func active(
         db: SQLiteDatabase,
         session: URLSession = .shared,
+        ocrFixEnabled: Bool = false,
         onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
     ) throws -> (analyzer: PageAnalyzer, cefrLevel: String) {
         let rows = try db.rows(
             "SELECT cefr_levels, cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
         let cefrLevel = Self.cefrLevelString(from: rows.first)
         let activeAgentID = rows.first?["active_agent_id"].textValue
+        let ocr = textRecognizer(
+            ocrFixEnabled: ocrFixEnabled,
+            status: AppleIntelligence.status(needsVietnamese: false))
         if let activeAgentID {
             let agentRows = try db.rows(
                 "SELECT id, kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
@@ -79,6 +105,7 @@ public enum AnalyzerFactory {
                         model: row["model"].textValue,
                         agentID: row["id"].textValue,
                         session: session,
+                        ocr: ocr,
                         onProgress: onProgress),
                     cefrLevel)
             }

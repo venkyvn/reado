@@ -50,11 +50,14 @@ final class MigrationAndSeedTests: XCTestCase {
         try db.exec("DROP TABLE pdf_sources;")
         try db.exec("DROP INDEX idx_encounters_item;")
         try db.exec("DROP TABLE encounters;")
+        // apple-ai-r1 T5: seededDB() đã chạy hết tới v6 (hàng Apple Intelligence
+        // có sẵn) — xoá trước khi "giả" DB v3 cũ, không thì v6 re-insert trùng id.
+        try db.run("DELETE FROM analysis_agents WHERE id = ?;", [.text(Seeder.appleAgentID)])
         try db.exec("PRAGMA user_version = 3;")
 
         try Migration.run(on: db)
 
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 5)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
         XCTAssertEqual(
             try db.scalarInt64(
                 "SELECT COUNT(*) FROM sqlite_master WHERE name = 'encounters';"), 1)
@@ -78,11 +81,13 @@ final class MigrationAndSeedTests: XCTestCase {
         let vocabID = try Fixtures.insertVocab(
             in: db, collectionID: collectionID, term: "keep")
         try db.exec("DROP TABLE pdf_sources;")
+        // apple-ai-r1 T5: như trên — xoá hàng Apple trước khi "giả" DB v4 cũ.
+        try db.run("DELETE FROM analysis_agents WHERE id = ?;", [.text(Seeder.appleAgentID)])
         try db.exec("PRAGMA user_version = 4;")
 
         try Migration.run(on: db)
 
-        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), 5)
+        XCTAssertEqual(try db.scalarInt64("PRAGMA user_version;"), Migration.currentVersion)
         XCTAssertEqual(
             try db.scalarInt64(
                 "SELECT COUNT(*) FROM sqlite_master WHERE name = 'pdf_sources';"), 1)
@@ -196,8 +201,10 @@ final class MigrationAndSeedTests: XCTestCase {
         try Seeder.seed(on: db, timezone: Fixtures.timezoneID, now: Fixtures.fixedNow)
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM collections;"), 1)
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM settings;"), 1)
+        // apple-ai-r1 T5 (ADR-061) — placeholder (Seeder) + Apple Intelligence
+        // builtin (Migration v6) = 2.
         XCTAssertEqual(
-            try db.scalarInt64("SELECT COUNT(*) FROM analysis_agents;"), 1)
+            try db.scalarInt64("SELECT COUNT(*) FROM analysis_agents;"), 2)
     }
 
     func testSeedSettingsDefaultsMatchChốt() throws {
