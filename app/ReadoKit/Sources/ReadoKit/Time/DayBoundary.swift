@@ -58,4 +58,21 @@ public enum DayBoundary {
         calendar.timeZone = timezone
         return max(0, calendar.dateComponents([.day], from: from, to: to).day ?? 0)
     }
+
+    /// Đầu cửa sổ ngày học (ISO) của **thứ Hai** tuần chứa ngày học hiện tại — mốc "tuần" của thẻ
+    /// "Tuần qua" (engagement-r1 T8). Thứ Hai 03:30 sáng (trước giờ chuyển ngày) vẫn thuộc Chủ nhật,
+    /// tức tuần trước (FR-11).
+    public static func weekStart(
+        now: Date, timezone: TimeZone, dayCutoffHour: Int = 4
+    ) -> String {
+        let dayStartIso = window(now: now, timezone: timezone, dayCutoffHour: dayCutoffHour).start
+        guard let dayStart = ISOTimestamp.date(from: dayStartIso) else { return dayStartIso }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timezone
+        // `dayStart` rơi đúng giờ chuyển ngày của ngày học → `weekday` là thứ của ngày học (1 = CN … 7 = T7).
+        let weekday = calendar.component(.weekday, from: dayStart)
+        let daysBack = (weekday + 5) % 7  // T2 → 0, T3 → 1, …, CN → 6
+        let monday = calendar.date(byAdding: .day, value: -daysBack, to: dayStart) ?? dayStart
+        return window(now: monday, timezone: timezone, dayCutoffHour: dayCutoffHour).start
+    }
 }

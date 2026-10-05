@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ + T7 cụm đáng nhớ xong; T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ + T7 cụm đáng nhớ + T8 Tuần qua xong. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -661,7 +661,7 @@ hoa thường; không khớp → cụm dài nhất; hoà → cụm đứng trư�
 - **Ảnh:** `open save-banner` (light/dark, `accessibility-extra-large` — banner chuyển VStack, chữ không bị cắt).
 - **DoD:** full xanh; không đổi prompt (`Prompt.version` giữ nguyên).
 
-### T8 — Ý 5: câu chuyện tuần "Tuần qua" (FR-14)
+### T8 — Ý 5: câu chuyện tuần "Tuần qua" (FR-14) ✅ 2026-10-05 (full 611/615)
 
 **ReadoKit**
 1. `Time/DayBoundary.swift`: thêm

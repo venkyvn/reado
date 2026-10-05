@@ -60,6 +60,8 @@ final class AppModel {
     /// FR-22 / Home: số TỪ khác nhau được gặp lại (`seen` hoặc `recognized`) trong 7
     /// ngày gần nhất — dòng "Gặp lại N từ tuần này" (ẩn khi 0).
     private(set) var reencounteredThisWeek = 0
+    /// Thẻ "Tuần qua" (engagement-r1 T8): số đo của tuần trước (thứ Hai → Chủ nhật, ngày học FR-11).
+    private(set) var weekStory: WeekStory?
     /// FR-19: danh sách từ bị suspend vì quên quá ngưỡng — "Từ hay quên" ở Home.
     private(set) var leeches: [LeechCard] = []
     /// ADR-041/ADR-049: chỉ agent BYOK có key mới tính "sẵn sàng" — hàng
@@ -224,6 +226,9 @@ final class AppModel {
         reencounteredThisWeek = read("số từ gặp lại", fallback: 0) {
             try EncounterRepository.distinctWordsEncountered(
                 on: database, since: now.addingTimeInterval(-7 * 86_400))
+        }
+        weekStory = read("câu chuyện tuần", fallback: nil) { () throws -> WeekStory? in
+            try WeekStoryService.load(on: database, now: now)
         }
         leeches = read("từ hay quên", fallback: []) {
             try LeechService.fetchLeeches(on: database)

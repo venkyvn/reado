@@ -15,6 +15,8 @@ struct HomeTabView: View {
     /// không còn đổi sang tab Ôn.
     @Environment(\.startReview) private var startReview
     @AppStorage("reado.onboarding.cefrConfirmed") private var cefrConfirmed = false
+    /// Tuần (thứ Hai, ISO) mà thẻ "Tuần qua" đã được đóng — sang tuần mới thì hiện lại (engagement-r1 T8).
+    @AppStorage("reado.home.weekStoryDismissedWeek") private var dismissedWeek = ""
     let onSettings: () -> Void
     let onCapture: () -> Void
 
@@ -95,6 +97,7 @@ struct HomeTabView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+            weekStoryRow
             leechBannerRow
             homePinRows
         }
@@ -226,6 +229,21 @@ struct HomeTabView: View {
         let masteredTotal = model.collections.reduce(0) { $0 + $1.masteredCount }
         metrics.append(HeroCard.Metric(value: "\(masteredTotal) từ", label: "Đã nhớ"))
         return metrics
+    }
+
+    /// Thẻ "Tuần qua" giữa hero và các hàng phụ — chỉ khi tuần trước có gì để kể và chưa đóng tuần này.
+    @ViewBuilder
+    private var weekStoryRow: some View {
+        if let story = model.weekStory, !story.isEmpty, dismissedWeek != story.weekStart {
+            Section {
+                WeekStoryCard(story: story) {
+                    Motion.run(reduceMotion: reduceMotion) { dismissedWeek = story.weekStart }
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
     }
 
     /// FR-19 (home-eevas-r1 T3): banner "N từ hay quên ›" dưới hero — ẩn khi N=0.
