@@ -6,7 +6,7 @@ Audit repo Reado (read-only trừ khi fen nói "vá"). Cwd = gốc repo (`CLAUDE
 
 1. **Link + anchor sống:** `node scripts/verify/check-doc-links.mjs`  
    Exit 1 = PROBLEMS. Journal/archive không quét (cố ý). File mồ côi = cảnh báo, không fail.
-2. **Slash lệnh:** xác nhận tồn tại `.claude/commands/rstart.md`, `rplan.md`, `rhandoff.md`. Thiếu = PROBLEM.
+2. **Slash lệnh:** xác nhận tồn tại `.claude/commands/rstart.md`, `ridea.md`, `rplan.md`, `rhandoff.md`. Thiếu = PROBLEM.
 3. **Tên lệnh cũ:** `grep -n '/reado-start\|/reado-plan\|/reado-handoff'` trên file sống (`CLAUDE.md`, `README.md`, `ROADMAP.md`, `docs/` trừ `journal/`, `.claude/`). Trúng = PROBLEM (đổi sang `/rstart` `/rplan` `/rhandoff`). Journal giữ nguyên.
 4. **Dấu vết tool cũ:** `grep -rniE 'dsh|deepseek|cursorignore|danger-full-access|smart_glob'` trên cùng tập file sống. Trúng = PROBLEM.
 5. **Kích thước `session-brief.md` §1–2:** `awk '/^## 1\./{p=1} /^## 3\./{p=0} p' docs/session-brief.md | wc -c`. Vượt 8192 byte = PROBLEM (gợi ý: chuyển bullet đã khớp sang `docs/journal/`, chỉ giữ 1 dòng + con trỏ). Cũng kiểm dòng 3 mỗi plan ở `docs/plans/*.md` (không `done/`) đúng dạng `> **Trạng thái:** open | closed (YYYY-MM-DD) - <tóm tắt>` — sai dạng/thiếu = cảnh báo (không PROBLEM); plan đã `closed` mà còn nằm ngoài `docs/plans/done/` = cảnh báo.

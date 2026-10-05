@@ -5,6 +5,12 @@ Chỉ lưu sau khi fen confirm (in ra chat trước). Không viết PRD mới �
 ```markdown
 # Plan: <task-id>
 
+## Vấn đề & bằng chứng
+- Vấn đề gốc (không phải giải pháp) + bằng chứng: (diagnostics, số đo, `file:line`)
+- Đã qua `/ridea`? → tóm 1 dòng kết luận; chưa → ≥ 2 phương án, có "không làm gì"
+- Tiêu chí thành công + tiêu chí dừng, đặt TRƯỚC spike/code:
+- Investigation / ADR liên quan đã đọc:
+
 ## Spec
 - FR / journey: (grep prd.md + journeys.md — GWT giữ nguyên, không viết lại)
 - Nguyên lý: phục vụ #N (vision.md) · đụng mục "Chống lại" / NG nào (không → ghi "không")

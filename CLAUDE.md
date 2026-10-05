@@ -92,9 +92,12 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 3. Vẫn mơ hồ + đụng dữ liệu/lịch ôn → hỏi owner đúng câu còn mở ở mục 5 (Q-11). Ngưỡng leech đã chốt = 6. Thiếu hợp đồng / ranh giới → `/rplan` hoặc hỏi, không tự lấp.
 4. Chỉ là chi tiết hiển thị → chọn cách đơn giản nhất, ghi lại lựa chọn.
 
+**Khi fen đưa idea kỹ thuật:** fen là product owner, không phải chuyên gia kỹ thuật. Fen nhắc một công nghệ / cách làm cụ thể ("dùng X để…") → coi là giả thuyết, không phải quyết định: nêu lại vấn đề gốc, so với ≥ 2 phương án khác (kể cả không làm), rồi mới hỏi chốt. "Chốt, không hỏi lại" ở §5 chỉ áp cho mục đã ghi trong §5, không áp cho idea mới. Idea còn thô → `/ridea`.
+
 ## 7. Cách làm việc
 
 **Workflow**
+- Idea thô / thấy công nghệ trên mạng → `/ridea` (tư vấn, không plan, không code); fen chốt hướng → `/rplan`; không đáng làm → dừng, ghi lý do.
 - Đầu session: `/rstart`. Task nhỏ (bug UI, copy, test bổ sung khi FR/journey đã chốt) → code luôn, nói 1 câu lý do skip plan.
 - Đụng hợp đồng (schema, FR mới, transaction, protocol module, Q mở) → `/rplan` (hoặc plan mode) trước, owner confirm rồi mới code.
 - Xong task → `/rhandoff`. 1 task tầng 2 / session; context dài → `/rhandoff` rồi `/clear`.
