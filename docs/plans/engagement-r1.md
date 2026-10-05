@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra xong; T4-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 xong; T5-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -505,7 +505,7 @@ public enum DuplicateMerge {
   khi bấm Nhận ra → **chưa xem tay** (cần chạm) → brief §2.
 - **DoD:** `scripts/test.sh` full xanh; không đổi schema; `EncounterMatcherTests` cũ không phải sửa.
 
-### T4 — Ý 6 "Gặp lần đầu" + dòng nhắc N/7 (FR-14)
+### T4 — Ý 6 "Gặp lần đầu" + dòng nhắc N/7 (FR-14) ✅ 2026-10-05 (full 591/595)
 
 **ReadoKit**
 1. `Review/ReviewQueue.swift`:

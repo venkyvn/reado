@@ -14,16 +14,24 @@ public struct DailyProgress: Equatable, Sendable {
     public let pagesAnalyzed: Int
     /// Ngày ôn LIÊN TỤC tính theo giờ chuyển ngày (FR-14).
     public let streak: Int
-    /// Có ≥1 lượt ôn `mode = 'srs'` từ đầu cửa sổ ngày hiện tại (FR-11 giờ
-    /// chuyển ngày) — dùng cho dòng nhắc "giữ streak" (ý 7, không tính `cram`).
+    /// Có ≥1 lượt ôn (mọi mode, cùng luật với streak) từ đầu cửa sổ ngày hiện tại (FR-11 giờ
+    /// chuyển ngày) — dùng cho dòng nhắc "Tuần này ôn N/7 ngày" (engagement-r1, ADR-068).
     public let reviewedToday: Bool
     /// Tổng thẻ `state = 'new'` còn tồn trong kho (chưa từng giới thiệu),
     /// KHÔNG áp hạn mức.
     public let totalNewRemaining: Int
+    /// Số ngày học có ôn trong 7 ngày học gần nhất, tính cả hôm nay (M-02: ≥ 5/7).
+    public let weekReviewDays: Int
+
+    /// Dòng nhắc trong hero Home: chỉ khi đang có streak mà hôm nay chưa ôn. Khung tích cực "N/7 ngày"
+    /// thay cho "giữ streak" — lỡ một ngày không thành bỏ hẳn (ADR-068, bổ sung ADR-038).
+    public var weekReminder: String? {
+        streak > 0 && !reviewedToday ? "Tuần này ôn \(weekReviewDays)/7 ngày" : nil
+    }
 
     public init(
         dueToday: Int, backlog: Int, pagesAnalyzed: Int, streak: Int,
-        reviewedToday: Bool, totalNewRemaining: Int
+        reviewedToday: Bool, totalNewRemaining: Int, weekReviewDays: Int = 0
     ) {
         self.dueToday = dueToday
         self.backlog = backlog
@@ -31,6 +39,7 @@ public struct DailyProgress: Equatable, Sendable {
         self.streak = streak
         self.reviewedToday = reviewedToday
         self.totalNewRemaining = totalNewRemaining
+        self.weekReviewDays = weekReviewDays
     }
 }
 
@@ -71,14 +80,19 @@ public enum DailyProgressService {
         let pagesAnalyzed = Int((try db.scalarInt64(
             "SELECT COUNT(*) FROM reading_sessions;")) ?? 0)
 
-        let streak = try self.streak(
-            on: db, now: now, timezone: timezone, cutoffHour: cutoffHour)
+        // MỘT lần đọc `review_logs` cho cả streak lẫn N/7 — cùng nguồn, không lệch nhau.
+        let dayStarts = try StreakCalendarService.reviewedDayStarts(
+            on: db, timezone: timezone, cutoffHour: cutoffHour)
+        let streak = StreakCalendarService.currentStreak(
+            from: dayStarts, now: now, timezone: timezone, cutoffHour: cutoffHour)
+        let weekReviewDays = StreakCalendarService.reviewedDays(
+            inLast: 7, from: dayStarts, now: now, timezone: timezone, cutoffHour: cutoffHour)
 
         // reviewedToday: >= dayStartIso cùng cách so lexicographic mà
         // `newIntroducedCount` đang dùng — chuỗi ISO cùng độ dài nên so sánh
         // chuỗi = so sánh thời gian.
         let reviewedToday = (try db.scalarInt64(
-            "SELECT COUNT(*) FROM review_logs WHERE mode = 'srs' AND reviewed_at >= ?;",
+            "SELECT COUNT(*) FROM review_logs WHERE reviewed_at >= ?;",
             [.text(dayStartIso)]) ?? 0) > 0
 
         return DailyProgress(
@@ -87,22 +101,7 @@ public enum DailyProgressService {
             pagesAnalyzed: pagesAnalyzed,
             streak: streak,
             reviewedToday: reviewedToday,
-            totalNewRemaining: totalNew)
-    }
-
-    /// Streak = số ngày ôn liên tục tính từ hôm nay (nếu hôm nay chưa ôn thì tính
-    /// từ hôm qua) theo giờ chuyển ngày. Một ngày "có ôn" = có ≥1 `review_log`.
-    /// Logic chia sẻ với `StreakCalendarService` (J-R1-P) để hai con số trên cùng
-    /// màn hình không tính kiểu khác nhau.
-    private static func streak(
-        on db: SQLiteDatabase,
-        now: Date,
-        timezone: TimeZone,
-        cutoffHour: Int
-    ) throws -> Int {
-        let dayStarts = try StreakCalendarService.reviewedDayStarts(
-            on: db, timezone: timezone, cutoffHour: cutoffHour)
-        return StreakCalendarService.currentStreak(
-            from: dayStarts, now: now, timezone: timezone, cutoffHour: cutoffHour)
+            totalNewRemaining: totalNew,
+            weekReviewDays: weekReviewDays)
     }
 }

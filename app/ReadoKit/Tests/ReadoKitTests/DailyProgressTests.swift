@@ -156,9 +156,9 @@ final class DailyProgressTests: XCTestCase {
         XCTAssertTrue(p.reviewedToday)
     }
 
-    /// `mode = 'cram'` KHÔNG tính vào `reviewedToday` — chỉ `mode = 'srs'`
-    /// (cram là R2, cột đã tồn tại theo DDL nhưng chưa có luồng UI ghi).
-    func testReviewedTodayIgnoresCramMode() throws {
+    /// ADR-068: `reviewedToday` cùng luật với streak — MỌI mode đều tính (trước đây chỉ `srs`, hai con số
+    /// trên cùng màn hình có thể nói hai điều khác nhau về cùng một ngày).
+    func testReviewedTodayCountsAnyMode() throws {
         let db = try Fixtures.seededDB()
         let col = try Fixtures.insertCollection(in: db, name: "A")
         let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
@@ -168,7 +168,41 @@ final class DailyProgressTests: XCTestCase {
 
         let p = try DailyProgressService.load(
             on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
-        XCTAssertFalse(p.reviewedToday)
+        XCTAssertTrue(p.reviewedToday)
+    }
+
+    /// engagement-r1 T4: N/7 = số ngày học có ôn trong 7 ngày gần nhất (tính cả hôm nay);
+    /// dòng nhắc chỉ hiện khi có streak mà hôm nay chưa ôn.
+    func testWeekReviewDaysAndReminder() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
+        let card = try Fixtures.insertCard(in: db, vocabItemID: v, state: "review")
+        // Hôm nay = ngày học 18/09 (VN). Có ôn: 17 và 16 (chuỗi 2 ngày); 10/09 nằm ngoài 7 ngày.
+        for iso in ["2026-09-17T02:00:00Z", "2026-09-16T02:00:00Z", "2026-09-10T02:00:00Z"] {
+            try Fixtures.insertLog(in: db, cardID: card, reviewedAtIso: iso)
+        }
+
+        let before = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertEqual(before.streak, 2)
+        XCTAssertFalse(before.reviewedToday)
+        XCTAssertEqual(before.weekReviewDays, 2)
+        XCTAssertEqual(before.weekReminder, "Tuần này ôn 2/7 ngày")
+
+        try Fixtures.insertLog(in: db, cardID: card, reviewedAtIso: "2026-09-18T02:00:00Z")
+        let after = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertEqual(after.weekReviewDays, 3, "tính cả hôm nay")
+        XCTAssertNil(after.weekReminder, "đã ôn hôm nay thì không nhắc")
+    }
+
+    func testWeekReminderNeedsAnActiveStreak() throws {
+        let db = try Fixtures.seededDB()
+        let p = try DailyProgressService.load(
+            on: db, dailyNewLimit: 10, now: Fixtures.fixedNow)
+        XCTAssertEqual(p.weekReviewDays, 0)
+        XCTAssertNil(p.weekReminder, "chưa có streak thì không nhắc")
     }
 
     /// FR-14 crit 1: số trang đã phân tích đếm `reading_sessions` (0 khi FR-05/06

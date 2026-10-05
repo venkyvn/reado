@@ -581,6 +581,20 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertTrue(none.contexts.isEmpty)
     }
 
+    func testLoadFullQueueItemsCarryVocabCreatedAt() throws {
+        // engagement-r1 T4: mặt sau thẻ cần `vocab_items.created_at` để hiện "Gặp lần đầu N ngày trước".
+        let db = try Fixtures.seededDB()
+        let collectionID = try defaultCollectionID(db)
+        let vocab = try Fixtures.insertVocab(
+            in: db, collectionID: collectionID, term: "dated", createdAt: "2026-08-20T03:00:00Z")
+        _ = try Fixtures.insertCard(in: db, vocabItemID: vocab)
+
+        let (items, _) = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+
+        XCTAssertEqual(items.first { $0.term == "dated" }?.createdAt, "2026-08-20T03:00:00Z")
+    }
+
     // MARK: — 2.4 is_default: saveCapture rơi vào kho tạm (FR-17)
 
     func testSaveCaptureWithoutCollectionGoesToDefaultInbox() throws {

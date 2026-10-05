@@ -162,7 +162,7 @@ struct HeroCard: View {
         HeroCard(
             title: "thẻ đến hạn",
             value: "10",
-            subtitle: "Hôm nay chưa ôn — 1 thẻ là giữ streak",
+            subtitle: "Tuần này ôn 4/7 ngày",
             metrics: [
                 HeroCard.Metric(value: "3", label: "Gặp lại tuần này"),
                 HeroCard.Metric(value: "42 từ", label: "Đã nhớ"),

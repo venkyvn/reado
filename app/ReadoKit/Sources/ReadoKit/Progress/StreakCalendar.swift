@@ -134,6 +134,25 @@ public enum StreakCalendarService {
         return streak
     }
 
+    /// Số ngày học có ôn trong `days` ngày học gần nhất, TÍNH CẢ hôm nay (M-02: ≥ 5/7) — cùng nguồn
+    /// `dayStarts` và cùng cửa sổ ngày với `currentStreak` (engagement-r1 T4).
+    public static func reviewedDays(
+        inLast days: Int,
+        from dayStarts: Set<String>,
+        now: Date,
+        timezone: TimeZone,
+        cutoffHour: Int
+    ) -> Int {
+        var cursor = DayBoundary.window(
+            now: now, timezone: timezone, dayCutoffHour: cutoffHour).start
+        var count = 0
+        for _ in 0..<max(0, days) {
+            if dayStarts.contains(cursor) { count += 1 }
+            cursor = previousWindowStart(cursor, timezone: timezone, cutoffHour: cutoffHour)
+        }
+        return count
+    }
+
     /// Chuỗi dài nhất trong TOÀN BỘ lịch sử ôn (không gắn 18 tuần của lưới).
     public static func longestStreak(
         from dayStarts: Set<String>, timezone: TimeZone, cutoffHour: Int

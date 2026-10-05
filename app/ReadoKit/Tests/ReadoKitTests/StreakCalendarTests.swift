@@ -150,4 +150,38 @@ final class StreakCalendarTests: XCTestCase {
         XCTAssertEqual(find(heatmap, dayStart: yesterday)?.reviewCount, 1)
         XCTAssertEqual(heatmap.currentStreak, 2, "hai log là hai ngày liên tiếp theo cutoff")
     }
+
+    /// engagement-r1 T4: `reviewedDays(inLast:)` đếm theo NGÀY HỌC (cutoff 4h), 7 ngày gồm cả hôm nay.
+    func testReviewedDaysInLastSevenCountsTodayAndRespectsCutoff() throws {
+        let db = try Fixtures.seededDB()
+        let col = try Fixtures.insertCollection(in: db, name: "A")
+        let v = try Fixtures.insertVocab(in: db, collectionID: col, term: "term")
+        let card = try Fixtures.insertCard(in: db, vocabItemID: v, state: "review")
+        for iso in [
+            "2026-09-18T02:00:00Z",  // ngày học 18 (hôm nay)
+            "2026-09-17T20:30:00Z",  // 03:30 VN ngày 18 → còn thuộc ngày học 17
+            "2026-09-12T00:00:00Z",  // ngày học 12 — ngày thứ 7 tính ngược, VẪN trong
+            "2026-09-11T00:00:00Z",  // ngày học 11 — ngày thứ 8, ngoài
+        ] {
+            try Fixtures.insertLog(in: db, cardID: card, reviewedAtIso: iso)
+        }
+        let dayStarts = try StreakCalendarService.reviewedDayStarts(
+            on: db, timezone: timezone, cutoffHour: cutoffHour)
+
+        XCTAssertEqual(
+            StreakCalendarService.reviewedDays(
+                inLast: 7, from: dayStarts, now: Fixtures.fixedNow,
+                timezone: timezone, cutoffHour: cutoffHour),
+            3)
+        XCTAssertEqual(
+            StreakCalendarService.reviewedDays(
+                inLast: 8, from: dayStarts, now: Fixtures.fixedNow,
+                timezone: timezone, cutoffHour: cutoffHour),
+            4)
+        XCTAssertEqual(
+            StreakCalendarService.reviewedDays(
+                inLast: 0, from: dayStarts, now: Fixtures.fixedNow,
+                timezone: timezone, cutoffHour: cutoffHour),
+            0)
+    }
 }

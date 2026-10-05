@@ -179,11 +179,10 @@ struct HomeTabView: View {
                     title: "Chụp trang", systemImage: "camera.fill", handler: onCapture))
         case let .review(count):
             let progress = model.dailyProgress
-            let keepStreakSubtitle = (progress?.streak ?? 0) > 0 && !(progress?.reviewedToday ?? true)
             return HeroCard(
                 title: "thẻ đến hạn",
                 value: "\(count)",
-                subtitle: keepStreakSubtitle ? "Hôm nay chưa ôn — 1 thẻ là giữ streak" : nil,
+                subtitle: progress?.weekReminder,
                 metrics: heroMetrics,
                 primary: HeroCard.Action(title: "Ôn ngay", handler: { start(.srs) }),
                 secondary: scopeAction,

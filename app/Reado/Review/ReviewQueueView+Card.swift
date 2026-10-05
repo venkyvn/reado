@@ -307,6 +307,12 @@ extension ReviewQueueView {
             Text(item.collectionName)
                 .font(Typo.meta)
                 .foregroundStyle(.secondary)
+            // Từ đã lưu ≥ 7 ngày: nhắc khoảnh khắc đọc đầu tiên (vision #4); từ mới lưu thì ẩn.
+            if let firstSeen = DaysAgo.firstSeenLabel(days: model.daysSince(item.createdAt)) {
+                Text(firstSeen)
+                    .font(Typo.meta)
+                    .foregroundStyle(.secondary)
+            }
             if !item.contexts.isEmpty {
                 contextsBlock(item.contexts)
             }

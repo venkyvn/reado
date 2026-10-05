@@ -286,6 +286,9 @@ public enum ReviewQueue {
         public let vocabItemID: String
         /// Tối đa 3 câu gặp lại gần nhất (không trùng `example`), mới nhất trước.
         public let contexts: [EncounterRepository.EncounterContextRow]
+        /// Lúc lưu từ (`vocab_items.created_at`, ISO `Z`) — "Gặp lần đầu N ngày trước" ở mặt sau thẻ
+        /// (engagement-r1 T4). nil khi chỗ dựng không cần.
+        public let createdAt: String?
 
         public init(
             cardID: String,
@@ -296,7 +299,8 @@ public enum ReviewQueue {
             example: String,
             collectionName: String,
             vocabItemID: String = "",
-            contexts: [EncounterRepository.EncounterContextRow] = []
+            contexts: [EncounterRepository.EncounterContextRow] = [],
+            createdAt: String? = nil
         ) {
             self.cardID = cardID
             self.term = term
@@ -307,6 +311,7 @@ public enum ReviewQueue {
             self.collectionName = collectionName
             self.vocabItemID = vocabItemID
             self.contexts = contexts
+            self.createdAt = createdAt
         }
     }
 
@@ -368,7 +373,7 @@ public enum ReviewQueue {
             SELECT c.id AS card_id, v.id AS vocab_item_id,
                    v.term AS term, v.pos AS pos, v.ipa AS ipa,
                    v.meaning_vi AS meaning_vi, v.example AS example,
-                   col.name AS collection_name
+                   col.name AS collection_name, v.created_at AS vocab_created_at
             FROM cards c
             JOIN vocab_items v ON v.id = c.vocab_item_id
             JOIN collections col ON col.id = v.collection_id
@@ -390,7 +395,8 @@ public enum ReviewQueue {
                 example: example,
                 collectionName: row["collection_name"].textValue ?? "",
                 vocabItemID: vocabItemID,
-                contexts: try cardContexts(on: db, vocabItemID: vocabItemID, example: example))
+                contexts: try cardContexts(on: db, vocabItemID: vocabItemID, example: example),
+                createdAt: row["vocab_created_at"].textValue)
             byID[item.cardID] = item
             dueOrder.append(item)
         }

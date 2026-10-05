@@ -10,4 +10,13 @@ public enum DaysAgo {
         default: "\(days) ngày trước"
         }
     }
+
+    /// Từ đã lưu từ mấy ngày thì mặt sau thẻ mới hiện "Gặp lần đầu" (từ mới lưu thì dòng này vô nghĩa).
+    public static let firstSeenMinDays = 7
+
+    /// "Gặp lần đầu N ngày trước" — nil khi chưa biết số ngày hoặc từ còn mới (< `firstSeenMinDays`).
+    public static func firstSeenLabel(days: Int?) -> String? {
+        guard let days, days >= firstSeenMinDays else { return nil }
+        return "Gặp lần đầu \(days) ngày trước"
+    }
 }
