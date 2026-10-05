@@ -63,6 +63,11 @@
     layout/màu của reader đúng qua ảnh + tiêm `UserDefaults` thẳng (không qua chạm
     Picker/Slider thật); CHƯA chụp được Section "Đọc PDF" ở Cài đặt (nằm dưới cuộn,
     không tự scroll được qua DebugLaunch). `docs/plans/done/pdf-nav-r1.md`.
+12. ocr-quality-r1 T6 (gợi ý loại nguồn cho prompt — `sourceKind` 'page'/'screenshot'/
+    'label', đổi `Prompt.version` 6→7): **D3 chưa chốt** — tự nhận qua metadata Photos
+    (cần quyền thư viện ảnh), để người dùng tự chọn tay, hay để hẳn R2. Không làm cho
+    tới khi D3 có câu trả lời. `plan_ocr_quality_r1.md` (gốc repo) mục D3/T6,
+    `docs/journal/2026-10-05.md`.
 
 ## 3. Bẫy máy này
 
