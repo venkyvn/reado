@@ -2,12 +2,16 @@ import Foundation
 import ReadoKit
 import UIKit
 import Vision
+import VisionKit
 import XCTest
 
 /// Test opt-in, KHÔNG chạy mặc định (skip nếu thiếu env) — công cụ đo cho
-/// ocr-line-drop (`docs/plans/ocr-line-drop.md` T2). Chạy 4 cấu hình OCR trên
-/// mỗi `page.jpg` đã kéo về bằng `scripts/pull_diagnostics.sh`, so với
-/// `groundtruth.txt` (Live Text dán tay) nếu có, để trả lời:
+/// ocr-line-drop (`docs/plans/ocr-line-drop.md` T2) + ocr-quality-r1 T2 (ADR-064,
+/// thêm cấu hình `liveText` + WER/CER thật thay cho chỉ đếm câu thiếu). Chạy
+/// trên mỗi `page.jpg` đã kéo về bằng `scripts/pull_diagnostics.sh`, so với
+/// `groundtruth.txt` (gõ tay hoặc lấy từ nguồn số gốc — KHÔNG dùng Live Text,
+/// tránh đo vòng tròn vì `liveText` chính là một cấu hình đang so) nếu có, để
+/// trả lời:
 ///   (a) hàng OCR app mất là do Vision không thấy hay do lọc confidence sau đó
 ///       (đọc `probe.json` → `legacyFullRes.rawObservationCount` so với
 ///       `kept + droppedLowConfidence`, xem `PageOCR.OCRResult`);
@@ -65,11 +69,23 @@ final class OCRProbeTests: XCTestCase {
             for (label, testImage) in [
                 ("fullRes", cgImage), ("scaled1600", scaledTo1600(cgImage)),
             ] {
+                let clock = ContinuousClock()
+                let legacyStart = clock.now
                 let legacy = try await runLegacy(testImage)
+                let legacyMs = milliseconds(since: legacyStart, clock: clock)
+                let docStart = clock.now
                 let doc = try await runDocuments(testImage)
-                for (engine, result) in [("legacy", legacy), ("documents", doc)] {
+                let docMs = milliseconds(since: docStart, clock: clock)
+                let liveStart = clock.now
+                let live = try await runLiveText(testImage)
+                let liveMs = milliseconds(since: liveStart, clock: clock)
+                for (engine, result, ms) in [
+                    ("legacy", legacy, legacyMs), ("documents", doc, docMs), ("liveText", live, liveMs),
+                ] {
                     let key = "\(label)_\(engine)"
                     let missing = groundtruth.map { missingSentences(text: result.text, groundtruth: $0) } ?? []
+                    let wer = groundtruth.map { wordErrorRate(hypothesis: result.text, reference: $0) }
+                    let cer = groundtruth.map { characterErrorRate(hypothesis: result.text, reference: $0) }
                     report[key] = [
                         "rawObservationCount": result.rawObservationCount,
                         "keptObservationCount": result.observations.count,
@@ -77,30 +93,39 @@ final class OCRProbeTests: XCTestCase {
                         "lineCount": result.lines.count,
                         "missingGroundtruthLineCount": missing.count,
                         "missingSentences": missing,
+                        "wer": wer.map { $0 as Any } ?? NSNull(),
+                        "cer": cer.map { $0 as Any } ?? NSNull(),
+                        "ms": ms,
                         "text": result.text,
                     ]
-                    let missingPreview = missing.prefix(3).map { String($0.prefix(60)) }
+                    let werStr = wer.map { String(format: "%.3f", $0) } ?? "—"
+                    let cerStr = cer.map { String(format: "%.3f", $0) } ?? "—"
                     lines.append(
                         "  \(key): raw=\(result.rawObservationCount) kept=\(result.observations.count) "
-                            + "droppedLowConf=\(result.droppedLowConfidence.count) lines=\(result.lines.count) "
-                            + "missingVsGroundtruth=\(missing.count) \(missingPreview)")
+                            + "lines=\(result.lines.count) missingVsGroundtruth=\(missing.count) "
+                            + "wer=\(werStr) cer=\(cerStr) ms=\(ms)")
                 }
             }
             // Đường app thật (`PageOCR.recognizeDetailed` trên đúng bytes page.jpg) —
             // xác nhận iOS 26 đi engine documents chứ không rơi về legacy.
             let appResult = try await PageOCR.recognizeDetailed(imageData: data)
             let appMissing = groundtruth.map { missingSentences(text: appResult.text, groundtruth: $0) } ?? []
+            let appWER = groundtruth.map { wordErrorRate(hypothesis: appResult.text, reference: $0) }
+            let appCER = groundtruth.map { characterErrorRate(hypothesis: appResult.text, reference: $0) }
             report["app_recognizeDetailed"] = [
                 "engine": appResult.engine,
                 "lineCount": appResult.lines.count,
                 "paragraphCount": appResult.text.components(separatedBy: "\n\n").count,
                 "missingGroundtruthLineCount": appMissing.count,
                 "missingSentences": appMissing,
+                "wer": appWER.map { $0 as Any } ?? NSNull(),
+                "cer": appCER.map { $0 as Any } ?? NSNull(),
                 "text": appResult.text,
             ]
+            let appWERStr = appWER.map { String(format: "%.3f", $0) } ?? "—"
             lines.append(
                 "  app: engine=\(appResult.engine) lines=\(appResult.lines.count) "
-                    + "missingVsGroundtruth=\(appMissing.count)")
+                    + "missingVsGroundtruth=\(appMissing.count) wer=\(appWERStr)")
             try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
                 .write(to: folder.appendingPathComponent("probe.json"))
             summaryLines.append(contentsOf: lines)
@@ -161,6 +186,65 @@ final class OCRProbeTests: XCTestCase {
         return PageOCR.OCRResult(
             text: text, observations: [], lines: [],
             rawObservationCount: paragraphTexts.count)
+    }
+
+    /// ocr-quality-r1 T2 (ADR-064) — Live Text thật (VisionKit `ImageAnalyzer`,
+    /// iOS 16+/macOS 13+). API public CHỈ có `transcript: String` — không có
+    /// dòng/bbox/đoạn như `documents`/`legacy` (đã kiểm swiftinterface SDK),
+    /// nên `observations`/`lines` luôn rỗng ở đây, chỉ `text` dùng để so WER.
+    private func runLiveText(_ image: CGImage) async throws -> PageOCR.OCRResult {
+        guard ImageAnalyzer.isSupported else {
+            return PageOCR.OCRResult(text: "", observations: [], lines: [], engine: "liveText")
+        }
+        let analyzer = ImageAnalyzer()
+        let configuration = ImageAnalyzer.Configuration([.text])
+        let uiImage = UIImage(cgImage: image)
+        let result = try await analyzer.analyze(uiImage, configuration: configuration)
+        return PageOCR.OCRResult(text: result.transcript, observations: [], lines: [], engine: "liveText")
+    }
+
+    private func milliseconds(since start: ContinuousClock.Instant, clock: ContinuousClock) -> Int {
+        let components = (clock.now - start).components
+        return Int(components.seconds * 1000 + components.attoseconds / 1_000_000_000_000_000)
+    }
+
+    /// Thuần — test bằng chuỗi dựng tay, không cần Vision. Generic nên dùng
+    /// chung cho cả WER (mảng từ) và CER (mảng ký tự).
+    private func levenshtein<T: Equatable>(_ a: [T], _ b: [T]) -> Int {
+        if a.isEmpty { return b.count }
+        if b.isEmpty { return a.count }
+        var previous = Array(0...b.count)
+        var current = [Int](repeating: 0, count: b.count + 1)
+        for i in 1...a.count {
+            current[0] = i
+            for j in 1...b.count {
+                if a[i - 1] == b[j - 1] {
+                    current[j] = previous[j - 1]
+                } else {
+                    current[j] = min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1)
+                }
+            }
+            previous = current
+        }
+        return previous[b.count]
+    }
+
+    /// Cùng luật gập dash/quote/gạch nối cuối hàng với `normalize(_:)` — tránh
+    /// WER bị chi phối bởi khác biệt ký tự typographic/ngắt dòng, như
+    /// investigation ocr-line-drop §11 đã thấy (WER 0.131 chủ yếu 1 câu thiếu,
+    /// không phải lỗi chữ).
+    private func wordErrorRate(hypothesis: String, reference: String) -> Double {
+        let refWords = normalize(reference).split(separator: " ").map(String.init)
+        guard !refWords.isEmpty else { return 0 }
+        let hypWords = normalize(hypothesis).split(separator: " ").map(String.init)
+        return Double(levenshtein(hypWords, refWords)) / Double(refWords.count)
+    }
+
+    private func characterErrorRate(hypothesis: String, reference: String) -> Double {
+        let refChars = Array(normalize(reference))
+        guard !refChars.isEmpty else { return 0 }
+        let hypChars = Array(normalize(hypothesis))
+        return Double(levenshtein(hypChars, refChars)) / Double(refChars.count)
     }
 
     private func scaledTo1600(_ image: CGImage) -> CGImage {
