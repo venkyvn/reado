@@ -66,14 +66,9 @@ final class AppModel {
     /// placeholder bị `AnalysisAgentStore.list()` lọc khỏi `agents`, nên
     /// activeID trỏ vào nó (chưa chọn agent) tự rơi về false ở `.first` dưới.
     private(set) var activeAgentReady = false
-    /// apple-ai-r1 T4 (ADR-063) — Apple Intelligence sẵn sàng trên máy này
-    /// (dùng để hiện/ẩn toggle "Sửa lỗi OCR" ở Settings). Không phụ thuộc
-    /// agent đang active — toggle OCR-fix áp cho MỌI agent (T2/A-01).
-    private(set) var ocrFixAvailable = false
-    /// apple-ai-r1 T7 (ADR-063) — trạng thái agent Apple Intelligence (khác
-    /// `ocrFixAvailable`: cần hỗ trợ tiếng Việt vì agent TRẢ VỀ tiếng Việt,
-    /// OCR-fix chỉ sửa chữ Anh nên không cần). Dùng cho hàng Apple ở Settings
-    /// + `activeAgentReady`.
+    /// apple-ai-r1 T7 (ADR-063) — trạng thái agent Apple Intelligence (cần hỗ
+    /// trợ tiếng Việt vì agent TRẢ VỀ tiếng Việt). Dùng cho hàng Apple ở
+    /// Settings + `activeAgentReady`.
     private(set) var appleAgentStatus: AppleIntelligenceStatus = .unavailable(.osTooOld)
 
     // Chia theo chức năng — xem `AppState.swift`.
@@ -259,7 +254,6 @@ final class AppModel {
             }
             return active.isAppleIntelligence ? appleAgentStatus.isAvailable : active.hasKey
         } ?? false
-        ocrFixAvailable = AppleIntelligence.status(needsVietnamese: false).isAvailable
         dataRevision &+= 1
     }
 

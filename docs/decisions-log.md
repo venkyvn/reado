@@ -1410,3 +1410,48 @@
     từ/ký tự) thay chỉ đếm câu thiếu. `scripts/test.sh` đầy đủ 549/552 xanh (3 skip cũ không đổi).
   - Chi tiết task breakdown + bảng số đo đầy đủ: `plan_ocr_quality_r1.md` (gốc repo, chưa vào
     `docs/plans/`), `docs/journal/2026-10-05.md`.
+
+## ADR-065 — Gỡ hẳn OCR-fix bằng LLM — ocr-quality-r1 T7
+
+- **Bối cảnh:** ADR-064 (T3a) đổi engine OCR mặc định sang `liveText`, đo WER thấp hơn rõ rệt so
+  với `documents` trên dữ liệu thật — đúng loại lỗi (nhận dạng ký tự) mà `CorrectingTextRecognizer`
+  (ADR-063) từng nhắm tới, nhưng không có rủi ro "sửa im lặng sai chỗ" của hướng LLM-đề-xuất-rồi-lọc
+  (xem Context ADR-064). Fen tự dùng tính năng Apple Intelligence trên máy thật (2026-10-05, sau khi
+  T3a đã xem tay xong — `diag_summary` ra đúng `engine=liveText`), thấy ổn, chủ động hỏi gỡ code
+  không còn dùng.
+- **Trước khi gỡ — code review phát hiện 1 lỗi thật cần sửa trước (không liên quan T7):**
+  `mergeParagraphBoundaries` (T3a) làm tròn ĐỘC LẬP từng đoạn, sai số dồn vào cuối trang trên trang
+  nhiều đoạn ngắn (hội thoại) — T2 chỉ đo 3 trang ít đoạn dài nên không lộ ra. Sửa bằng biên tích luỹ
+  trước khi gỡ OCR-fix, kèm 3 phát hiện phụ (log chẩn đoán gây hiểu lầm khi `engine=liveText`,
+  `UITextChecker` không an toàn luồng, 2 bản Levenshtein trùng) — xem `docs/journal/2026-10-05.md`.
+- **Quyết định:** gỡ toàn bộ nhánh sửa OCR bằng LLM:
+  - Xoá file nguồn: `CorrectingTextRecognizer.swift` (tách riêng `TimeoutRunner` — dùng chung cho
+    `AppleIntelligenceAnalyzer` giới hạn thời gian gọi model AI, không phải riêng OCR-fix, giữ lại
+    trong file mới `TimeoutRunner.swift`), `FoundationModelsOCRCorrector.swift`, `OCRCorrector.swift`,
+    `OCRFix.swift` (`OCRFix` struct + `OCRFixApplier`).
+  - Xoá test: `CorrectingTextRecognizerTests.swift`, `OCRFixApplierTests.swift` (tách
+    `TimeoutRunnerTests` ra file riêng — `TimeoutRunner` còn dùng); 5 test trong `AnalyzerFactoryTests`
+    (4 case `textRecognizer` cũ + `testOCRFixDefaultIsOff`, hằng đã xoá).
+  - `OCRResult` (`PageOCR.swift`): bỏ field `rawText`/`fixes`/`fixRejectedCount`/`fixMs`/`fixError` +
+    method `corrected(...)` — không ai còn tạo ra các giá trị này.
+  - `AnalyzerFactory`: bỏ hẳn `textRecognizer(...)` + tham số `ocrFixEnabled` của `active(...)` —
+    `analyzer(...)` dùng thẳng `PageOCR.live` (mặc định sẵn có).
+  - `AppleIntelligence` (`AppleIntelligenceStatus.swift`): bỏ `ocrFixDefaultsKey`/`ocrFixDefault`/
+    `liveOCRCorrector()`.
+  - App: `AppModel+Capture.swift` bỏ đọc `UserDefaults` cho `ocrFixEnabled`; `SettingsView.swift` bỏ
+    hẳn Toggle "Sửa lỗi OCR bằng Apple Intelligence" + câu footer nhắc soát OCR; `AppModel.swift` bỏ
+    `ocrFixAvailable` (computed mỗi `reloadOverview()`, không ai đọc nữa).
+  - Log chẩn đoán: `OpenAICompatClient.ocrDebugJSON`/`AppleIntelligenceAnalyzer` bỏ key
+    `rawText`/`fixes`/`fixRejected`/`fixMs`/`fixError`/`ocrFixes`; `diag_summary.py` bỏ nhánh in
+    "OCR fix: … áp / … loại / … ms".
+  - Docs: `CLAUDE.md` §1/§5, `prd.md` FR-02 (thêm bảng v0.15, giữ nguyên bảng v0.14 cũ làm lịch sử),
+    `ROADMAP.md` 3.18/3.19 (ghi chú đảo, không xoá dòng lịch sử).
+- **Không gỡ:** agent kind `apple_intelligence` (`AnalysisAgentStore`, `AppleIntelligenceAnalyzer`,
+  `OnDeviceAnalysisModel`, migration v6) — đó là tính năng khác (dịch + trích từ vựng bằng Apple
+  Intelligence), không phải bước soát OCR. `TimeoutRunner` cũng giữ (dùng chung).
+- **Đã cân nhắc:** giữ code nằm im (toggle đã TẮT mặc định từ T0, không hại gì) — fen chọn gỡ hẳn vì
+  code không dùng + không ai định bật lại (khác tinh thần T7 gốc "viết plan riêng nếu vẫn cần sửa
+  OCR theo hướng khác" — hướng khác đó, nếu cần, sẽ là một thiết kế mới, không phải bật lại cái này).
+- **Hệ quả:** `scripts/test.sh` 525/528 xanh (3 skip cũ, mất 26 test của nhánh đã gỡ, giữ lại 2 test
+  `TimeoutRunner`). Không đổi schema/migration — OCR-fix chưa bao giờ có bảng DB riêng, chỉ
+  `UserDefaults`.

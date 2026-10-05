@@ -318,6 +318,11 @@ thứ tự số trong tài liệu không còn liên tục.
 | FR-21 | Sửa — thêm kind `apple_intelligence` (agent builtin, mặc định khi chưa chọn agent nào) (ADR-063) |
 | Còn lại | Không đổi |
 
+| FR | Trạng thái ở v0.15 |
+|---|---|
+| FR-02 | Sửa — engine OCR mặc định `liveText` (ADR-064); **bỏ GWT soát OCR bằng LLM của v0.14** — gỡ hẳn (ADR-065), xem callout ngay dưới |
+| Còn lại | Không đổi |
+
 ### Epic E1 — Capture & Analyze
 
 #### FR-01 — Page Capture
@@ -366,19 +371,13 @@ Hệ thống gửi ảnh tới AI và nhận về **structured output**, không 
 - **Given** cùng một ảnh được submit hai lần liên tiếp do lỗi mạng, **when** cả hai
   lần đều thành công, **then** hệ thống không lưu hai bộ vocabulary trùng nhau.
 
-> **ADR-063 (2026-10-05):** soát OCR trên máy bằng Apple Intelligence khi máy hỗ
-> trợ — bước TIỀN XỬ LÝ chạy với MỌI agent (không phải OCR riêng, A-01 giữ
-> nguyên), không phải chuyện riêng của agent Apple ở FR-21.
-- **Given** máy có Apple Intelligence sẵn sàng và bật "Sửa lỗi OCR" (Cài đặt,
-  **mặc định TẮT** — đảo 2026-10-05, ADR-064, `ocr-quality-r1` T0: luật lọc
-  không chặn hết lỗi ra từ thật, và áp cho mọi chỗ khớp trên trang), **when**
-  chụp trang, **then** OCR được soát và chỉ sửa lỗi nhận dạng ký tự (vd
-  `tbe`→`the`, `rnodern`→`modern`), không đổi từ, văn phong hay thứ tự chữ.
-  Câu trên màn duyệt là chữ đã sửa; không hiện thông báo gì.
-- **Given** Apple Intelligence không sẵn sàng, lỗi, hoặc soát quá 8 giây,
-  **then** dùng OCR gốc, phân tích chạy như cũ, không có lỗi mới cho người dùng.
-- **Given** trang PDF có lớp chữ tốt (FR-23, không qua OCR), **then** không soát
-  — lớp chữ vốn đã đúng.
+> **ADR-063 (2026-10-05) → GỠ HẲN bởi ADR-065 (cùng ngày):** từng thêm bước soát
+> OCR trên máy bằng Apple Intelligence (tiền xử lý, mọi agent). `ocr-quality-r1`
+> T0 đảo mặc định sang TẮT (ADR-064: luật lọc không chặn hết lỗi ra từ thật),
+> rồi T7 gỡ hẳn nhánh này sau khi engine `liveText` (ADR-064, xem FR-02 dưới)
+> xác nhận tốt hơn qua xem tay máy thật — không còn bước "soát OCR bằng LLM"
+> trong app. Dòng GWT cũ (mô tả hành vi "sửa lỗi OCR" không còn tồn tại) đã bỏ
+> khỏi đây — chi tiết ở `docs/decisions-log.md` ADR-063/064/065.
 
 `segments[]` và `summary_vi` vẫn được yêu cầu từ AI dù không lưu, vì chúng là toàn
 bộ JTBD-01 — người dùng cần hiểu trang ngay lúc đọc. Thứ bị bỏ là **lưu trữ**, không

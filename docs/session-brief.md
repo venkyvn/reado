@@ -10,21 +10,19 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- ocr-quality-r1 (branch `ocr-quality-r1` từ `main`, ADR-064 — plan nháp
-  `plan_ocr_quality_r1.md` ở gốc repo, chưa vào `docs/plans/`): T0 OCR-fix mặc định
-  TẮT (đã merge vào `main`) · T4 nhãn "kiểm tra lại" từ nghi ngờ OCR · T1 rút gọn (6
-  ảnh thật fen đưa, thiếu nhóm PDF-scan thật + label — fen chốt bỏ qua) · T2 probe
-  `liveText` (VisionKit) — WER thấp hơn `documents` rõ rệt nhưng không giữ `\n\n` ·
-  T3a engine mặc định đổi sang `liveText` ghép khung đoạn `documents`
-  (`mergeParagraphBoundaries`), **đã xem tay máy thật xong** (`diag_summary` ra
-  đúng `engine=liveText`). `scripts/test.sh` 549/552 xanh (3 skip cũ).
-  **Còn mở:** T5 (cảnh báo ảnh mờ/loá) chặn vì thiếu ảnh mờ/loá cố ý để tính
-  ngưỡng · T7 (gỡ OCR-fix bằng LLM) fen chốt CHƯA làm, chờ thêm ảnh chụp sách có
-  groundtruth. → `docs/journal/2026-10-05.md`
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật** (cần fen + file thật). Nợ xem tay T3/T4
   (DebugLaunch không giả lập chạm được) — chi tiết `docs/plans/pdf-reader-r1.md`.
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
+- 2026-10-05 → `docs/journal/2026-10-05.md`: ocr-quality-r1 (branch `ocr-quality-r1` từ `main`,
+  ADR-064/065 — plan nháp `plan_ocr_quality_r1.md` gốc repo, chưa vào `docs/plans/`) — T0 OCR-fix
+  mặc định TẮT · T4 nhãn "kiểm tra lại" · T1 rút gọn (6 ảnh thật, thiếu nhóm PDF-scan/label — fen
+  chốt bỏ qua) · T2 probe `liveText` (WER thấp hơn `documents` rõ rệt, không giữ `\n\n`) · T3a engine
+  mặc định `liveText` ghép khung đoạn `documents`, xem tay máy thật xong · code review sau T3a sửa 4
+  phát hiện thật (quan trọng nhất: `mergeParagraphBoundaries` làm tròn dồn sai số trên trang nhiều
+  đoạn ngắn) · T7 gỡ hẳn nhánh OCR-fix bằng LLM sau khi fen tự thử thấy ổn (xoá
+  `CorrectingTextRecognizer`/`FoundationModelsOCRCorrector`/`OCRFixApplier` + toggle Settings, tách
+  riêng `TimeoutRunner` còn dùng). T5 fen chốt bỏ qua. `scripts/test.sh` 525/528 xanh (3 skip cũ).
 - 2026-10-04 → `docs/journal/2026-10-04.md`: pdf-nav-r1 (ADR-059/060/061/062, gõ số
   trang + Mục lục + ẩn chrome khi đọc) → `docs/plans/done/pdf-nav-r1.md` · home-eevas-r1
   (header nút tròn, "Từ hay quên" FR-19, tìm từ FR-08) → `docs/plans/done/home-eevas-r1.md`.

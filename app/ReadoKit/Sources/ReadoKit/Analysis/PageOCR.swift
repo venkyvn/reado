@@ -76,24 +76,11 @@ public enum PageOCR {
         /// — `ocrDebugJSON`/`diag_summary.py` — đọc `lines[].text` mà tưởng đó
         /// là bản đã phân tích thì bị sai).
         public let engine: String
-        /// apple-ai-r1 T3 (ADR-063) — OCR TRƯỚC khi Apple Intelligence soát;
-        /// nil = chưa soát (toggle tắt / Apple không sẵn sàng). `text` ở trên
-        /// luôn là bản ĐÃ soát khi có soát — prompt/hiển thị dùng `text` như cũ.
-        public let rawText: String?
-        /// Các fix đã ÁP (không phải đề xuất thô — xem `OCRFixApplier`).
-        public let fixes: [OCRFix]
-        public let fixRejectedCount: Int
-        public let fixMs: Int?
-        /// Lỗi soát (timeout/model) — soát luôn rơi về OCR gốc khi có lỗi, đây
-        /// chỉ để ghi log chẩn đoán, không làm hỏng luồng phân tích.
-        public let fixError: String?
 
         public init(
             text: String, observations: [Observation], lines: [Line],
             rawObservationCount: Int = 0, droppedLowConfidence: [Observation] = [],
-            engine: String = "legacy",
-            rawText: String? = nil, fixes: [OCRFix] = [], fixRejectedCount: Int = 0,
-            fixMs: Int? = nil, fixError: String? = nil
+            engine: String = "legacy"
         ) {
             self.text = text
             self.observations = observations
@@ -101,23 +88,6 @@ public enum PageOCR {
             self.rawObservationCount = rawObservationCount
             self.droppedLowConfidence = droppedLowConfidence
             self.engine = engine
-            self.rawText = rawText
-            self.fixes = fixes
-            self.fixRejectedCount = fixRejectedCount
-            self.fixMs = fixMs
-            self.fixError = fixError
-        }
-
-        /// apple-ai-r1 T3 — bản sao với kết quả soát OCR gắn vào; mọi field Vision
-        /// khác (observations/lines/engine…) giữ nguyên từ `self` (bản OCR gốc).
-        public func corrected(
-            text: String, fixes: [OCRFix], rejectedCount: Int, ms: Int, error: String? = nil
-        ) -> OCRResult {
-            OCRResult(
-                text: text, observations: observations, lines: lines,
-                rawObservationCount: rawObservationCount, droppedLowConfidence: droppedLowConfidence,
-                engine: engine, rawText: self.text, fixes: fixes, fixRejectedCount: rejectedCount,
-                fixMs: ms, fixError: error)
         }
     }
 

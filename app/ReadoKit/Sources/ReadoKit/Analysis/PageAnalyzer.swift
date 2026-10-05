@@ -24,23 +24,10 @@ public protocol PageAnalyzer: Sendable {
 
 /// Nhà máy chọn analyzer theo agent đang active (FR-21).
 public enum AnalyzerFactory {
-    /// apple-ai-r1 T4 (ADR-063) — chọn OCR cho lối ảnh. `ocrFixEnabled` tắt
-    /// hoặc Apple Intelligence không sẵn sàng → OCR gốc không đổi (test cũ,
-    /// đa số thiết bị không hỗ trợ, vẫn đúng hành vi trước T4). Public để test.
-    public static func textRecognizer(
-        ocrFixEnabled: Bool,
-        status: AppleIntelligenceStatus,
-        base: PageTextRecognizer = PageOCR.live,
-        makeCorrector: () -> OCRCorrector? = AppleIntelligence.liveOCRCorrector
-    ) -> PageTextRecognizer {
-        guard ocrFixEnabled, status.isAvailable, let corrector = makeCorrector() else { return base }
-        return CorrectingTextRecognizer(base: base, corrector: corrector)
-    }
-
     /// Tạo analyzer cho agent. `openai_compat` thiếu id/url/model thì mock (cấu hình hỏng).
     /// `session` injectable cho test (default URLSession.shared ở production).
     /// `onProgress`: chỉ `openai_compat` (stream) phát ra `.thinking`/`.writing`.
-    /// `ocr`: apple-ai-r1 T4 — OCR đã quyết sẵn (có soát hay không) từ `active()`.
+    /// `ocr`: mặc định `PageOCR.live` — tham số chỉ để test tiêm fake.
     public static func analyzer(
         for kind: String,
         baseURL: String?,
@@ -76,22 +63,19 @@ public enum AnalyzerFactory {
 
     /// Helper: đọc settings (cefr_levels, active_agent) rồi tạo analyzer đúng agent.
     /// Trả về (analyzer, cefrLevel) với cefrLevel = các level chọn ghép ", " cho
-    /// prompt FR-02 (cài cũ chỉ có `cefr_level` đơn → fallback).
-    /// `ocrFixEnabled`: apple-ai-r1 T4 — mặc định `false` để test cũ không đổi
-    /// hành vi; tầng app (`AppModel+Capture`) đọc UserDefaults rồi truyền vào.
+    /// prompt FR-02 (cài cũ chỉ có `cefr_level` đơn → fallback). OCR luôn
+    /// `PageOCR.live` (mặc định của `analyzer(...)`) — ocr-quality-r1 T7
+    /// (ADR-065): bỏ bước soát OCR bằng LLM (`CorrectingTextRecognizer`),
+    /// `liveText` (T3a, trong `PageOCR` thẳng) đã thay thế phần việc đó.
     public static func active(
         db: SQLiteDatabase,
         session: URLSession = .shared,
-        ocrFixEnabled: Bool = false,
         onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
     ) throws -> (analyzer: PageAnalyzer, cefrLevel: String) {
         let rows = try db.rows(
             "SELECT cefr_levels, cefr_level, active_agent_id FROM settings WHERE id = 1 LIMIT 1;")
         let cefrLevel = Self.cefrLevelString(from: rows.first)
         let activeAgentID = rows.first?["active_agent_id"].textValue
-        let ocr = textRecognizer(
-            ocrFixEnabled: ocrFixEnabled,
-            status: AppleIntelligence.status(needsVietnamese: false))
         if let activeAgentID {
             let agentRows = try db.rows(
                 "SELECT id, kind, base_url, model FROM analysis_agents WHERE id = ? LIMIT 1;",
@@ -104,7 +88,6 @@ public enum AnalyzerFactory {
                         model: row["model"].textValue,
                         agentID: row["id"].textValue,
                         session: session,
-                        ocr: ocr,
                         onProgress: onProgress),
                     cefrLevel)
             }

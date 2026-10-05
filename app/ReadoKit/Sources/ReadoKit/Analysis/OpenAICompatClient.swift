@@ -74,8 +74,6 @@ public struct OpenAICompatClient: PageAnalyzer {
             "ocrMs": Int(Date().timeIntervalSince(ocrStarted) * 1000),
             "ocrChars": pageOCR.count,
             "ocrLines": ocrResult.lines.count,
-            // apple-ai-r1 T4 (ADR-063) — 0 khi soát tắt/Apple không sẵn sàng (ocrResult.fixes rỗng).
-            "ocrFixes": ocrResult.fixes.count,
         ])
         guard !pageOCR.isEmpty else {
             trace.mergeMeta(["error": "imageUnreadable"])
@@ -180,13 +178,12 @@ public struct OpenAICompatClient: PageAnalyzer {
         [
             "engine": result.engine,
             "observationCount": result.observations.count,
-            // apple-ai-r1 T4 (ADR-063) — có giá trị khi đã soát OCR, NSNull khi
-            // chưa soát (toggle tắt / Apple không sẵn sàng).
-            "rawText": result.rawText.map { String($0.prefix(4000)) } ?? NSNull(),
-            "fixes": result.fixes.map { ["wrong": $0.wrong, "right": $0.right] },
-            "fixRejected": result.fixRejectedCount,
-            "fixMs": result.fixMs ?? NSNull(),
-            "fixError": result.fixError ?? NSNull(),
+            // ocr-quality-r1 T3a (ADR-064) — khi engine="liveText", `lines`/
+            // `observations` dưới đây vẫn là lượt `documents` TRƯỚC KHI ghép Live
+            // Text (xem doc-comment `OCRResult.engine`) — không phải bản đã phân
+            // tích thật (đó là `pageOCR`/`ocrChars` ở event cha). Review sau T3a
+            // tìm được: đọc `lines[].text` mà tưởng là bản cuối thì bị sai.
+            "linesSource": result.engine == "liveText" ? "documents (trước khi ghép)" : result.engine,
             // ocr-line-drop: rawObservationCount là tổng Vision trả về TRƯỚC lọc
             // confidence — chênh với observationCount + droppedLowConfidence.count
             // là phần Vision không hề thấy (không phải bị code mình lọc).

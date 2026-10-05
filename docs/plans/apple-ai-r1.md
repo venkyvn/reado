@@ -2,6 +2,12 @@
 
 > Trạng thái: **T1–T7 xong** (2026-10-05). ADR: **ADR-063** (kế hoạch ban đầu ghi
 > ADR-061 — đã trùng với ADR-061 của pdf-nav-r1, đổi số khi viết docs ở T2).
+> **Cập nhật 2026-10-05 (cùng ngày, ocr-quality-r1):** phần "soát lại OCR" (mục 1
+> dưới, `CorrectingTextRecognizer`/`FoundationModelsOCRCorrector`/`OCRFixApplier`)
+> đã **GỠ HẲN** — ADR-064 đổi engine OCR sang `liveText`, ADR-065 gỡ nhánh LLM sau
+> khi fen xác nhận `liveText` đủ tốt. Phần "agent phân tích mặc định" (mục 2) vẫn
+> còn nguyên, không đổi. Xem `docs/decisions-log.md` ADR-064/065,
+> `docs/journal/2026-10-05.md`.
 
 ## Context
 
@@ -137,3 +143,12 @@ AppleIntelligenceAnalyzer.run():
   `'on_device'`, thêm `'pcc'`/`'auto'` là đủ).
 - `phrases` cho agent Apple (cần một lượt gọi thêm mỗi đoạn, hoặc gộp vào
   `translateParagraph`).
+- **Tốc độ response (/ridea 2026-10-05):** `chunkedPipeline` dịch từng đoạn
+  TUẦN TỰ (`AppleIntelligenceAnalyzer.swift:136-162`), mỗi lượt tạo
+  `LanguageModelSession` mới, không prewarm — 17–34s/trang. Hai hướng chưa đo:
+  (B) chạy song song các lượt dịch đoạn độc lập bằng `TaskGroup` — CHƯA BIẾT
+  model on-device có thật sự xử lý song song hay xếp hàng ngầm, cần spike đo
+  trước khi code thật; (C) prewarm session sớm hơn (song song lúc OCR chạy) —
+  rủi ro thấp, chỉ giảm độ trễ cảm nhận chứ không giảm thời gian xử lý thực.
+  Khuyến nghị: spike B riêng trước (đo thời gian, không phải code chính thức);
+  C làm luôn không cần đo. Chưa ai làm, không chặn gì — làm khi fen cần.

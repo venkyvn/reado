@@ -51,7 +51,6 @@ public struct AppleIntelligenceAnalyzer: PageAnalyzer {
             "ocrMs": Int(Date().timeIntervalSince(ocrStarted) * 1000),
             "ocrChars": pageOCR.count,
             "ocrLines": ocrResult.lines.count,
-            "ocrFixes": ocrResult.fixes.count,
         ])
         guard !pageOCR.isEmpty else {
             trace.mergeMeta(["error": "imageUnreadable"])
