@@ -10,6 +10,15 @@ private struct FakeOCRCorrector: OCRCorrector {
 /// bỏ proxy mặc định — cài mới chưa thêm agent thì analyzer báo lỗi rõ.
 final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
 
+    // MARK: - ocr-quality-r1 T0 (ADR-064)
+
+    /// Chống regression: `AppModel+Capture.swift` và `SettingsView.swift` đều
+    /// phải đọc hằng này (không literal riêng) — hai nơi lệch giá trị từng là
+    /// bug (Settings hiện BẬT trong khi capture đã chạy TẮT).
+    func testOCRFixDefaultIsOff() {
+        XCTAssertFalse(AppleIntelligence.ocrFixDefault)
+    }
+
     // MARK: - apple-ai-r1 T4 — textRecognizer (ADR-063)
 
     func testTextRecognizerDisabledReturnsBase() {

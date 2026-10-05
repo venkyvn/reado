@@ -370,9 +370,11 @@ Hệ thống gửi ảnh tới AI và nhận về **structured output**, không 
 > trợ — bước TIỀN XỬ LÝ chạy với MỌI agent (không phải OCR riêng, A-01 giữ
 > nguyên), không phải chuyện riêng của agent Apple ở FR-21.
 - **Given** máy có Apple Intelligence sẵn sàng và bật "Sửa lỗi OCR" (Cài đặt,
-  mặc định BẬT), **when** chụp trang, **then** OCR được soát và chỉ sửa lỗi
-  nhận dạng ký tự (vd `tbe`→`the`, `rnodern`→`modern`), không đổi từ, văn phong
-  hay thứ tự chữ. Câu trên màn duyệt là chữ đã sửa; không hiện thông báo gì.
+  **mặc định TẮT** — đảo 2026-10-05, ADR-064, `ocr-quality-r1` T0: luật lọc
+  không chặn hết lỗi ra từ thật, và áp cho mọi chỗ khớp trên trang), **when**
+  chụp trang, **then** OCR được soát và chỉ sửa lỗi nhận dạng ký tự (vd
+  `tbe`→`the`, `rnodern`→`modern`), không đổi từ, văn phong hay thứ tự chữ.
+  Câu trên màn duyệt là chữ đã sửa; không hiện thông báo gì.
 - **Given** Apple Intelligence không sẵn sàng, lỗi, hoặc soát quá 8 giây,
   **then** dùng OCR gốc, phân tích chạy như cũ, không có lỗi mới cho người dùng.
 - **Given** trang PDF có lớp chữ tốt (FR-23, không qua OCR), **then** không soát

@@ -37,6 +37,13 @@ public enum AppleIntelligenceStatus: Equatable, Sendable {
 /// AnalyzerFactory) — bên trong tự `#available`/`#if canImport`.
 public enum AppleIntelligence {
     public static let ocrFixDefaultsKey = "ocrFixEnabled"
+    /// ocr-quality-r1 T0 (ADR-064) — đổi từ BẬT sang TẮT: `OCRFixApplier` áp fix
+    /// cho MỌI chỗ khớp nguyên từ trên trang (không chỉ chỗ model định sửa),
+    /// và spike đo được một fix lọt qua làm WER xấu đi (0.131→0.134, ADR-063).
+    /// Một hằng duy nhất — `AppModel+Capture.swift` (hành vi thật) và
+    /// `SettingsView.swift` (toggle hiển thị) PHẢI cùng đọc hằng này, không
+    /// literal riêng mỗi nơi (bug đã gặp: hai nơi lệch nhau).
+    public static let ocrFixDefault = false
 
     /// Test/DebugLaunch ghi đè (giống `DebugTrace.documentsDirectoryOverride`).
     /// `nonisolated(unsafe)`: test set 1 lần trong setUp/tearDown, launch set 1

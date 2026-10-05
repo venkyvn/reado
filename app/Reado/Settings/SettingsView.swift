@@ -21,8 +21,11 @@ struct SettingsView: View {
     @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
     @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
     /// apple-ai-r1 T4 (ADR-063) — cùng key `AppleIntelligence.ocrFixDefaultsKey`
-    /// mà `AppModel+Capture.runAnalysis` đọc. Mặc định BẬT (fen chốt 2026-10-05).
-    @AppStorage(AppleIntelligence.ocrFixDefaultsKey) private var ocrFixEnabled = true
+    /// mà `AppModel+Capture.runAnalysis` đọc. ocr-quality-r1 T0 (ADR-064): đổi
+    /// mặc định sang TẮT, cùng hằng `AppleIntelligence.ocrFixDefault` với nơi
+    /// đọc kia — seed `@AppStorage` lệch hằng ở `AppModel+Capture` từng là bug
+    /// (Settings hiện BẬT trong khi capture đã chạy TẮT).
+    @AppStorage(AppleIntelligence.ocrFixDefaultsKey) private var ocrFixEnabled = AppleIntelligence.ocrFixDefault
 
     @State private var cefrLevels: [CEFRLevel] = [.b2]
     @State private var dailyNewLimit = 10

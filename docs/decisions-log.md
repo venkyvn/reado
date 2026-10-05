@@ -1289,9 +1289,14 @@
      timeout/rỗng → rơi về OCR gốc). `OCRFixApplier` thi hành luật bảo thủ: khớp
      NGUYÊN TỪ, tối đa 3 từ, chênh số từ ≤ 1, Levenshtein ≤
      `max(1, min(3, len(wrong)/3))`, tổng số từ bị đụng ≤ 15% trang, > 30 đề xuất
-     thì loại hết. Mặc định **BẬT** (fen: "ưu tiên nguyên vẹn nhất câu" — giữ
-     tinh thần dù số đo cho thấy rủi ro không phải zero), toggle tắt được ở
-     Settings (`ocrFixEnabled`, `UserDefaults`).
+     thì loại hết. Mặc định **TẮT** (đảo 2026-10-05 cùng ngày, sau khi review
+     `ocr-quality-r1` T0, ADR-064: luật "khớp nguyên từ" ở trên áp cho MỌI chỗ
+     khớp trên trang chứ không chỉ chỗ model định sửa, và spike tự đo được một
+     fix lọt qua làm WER xấu đi — rủi ro "sửa im lặng" không phải zero. Giữ
+     nguyên tinh thần "ưu tiên nguyên vẹn nhất câu" của fen bằng cách để người
+     dùng tự bật khi muốn, thay vì mặc định sửa cho mọi người), toggle bật được
+     ở Settings (`ocrFixEnabled`, `UserDefaults`, hằng seed `AppleIntelligence.
+     ocrFixDefault`).
   4. **Luật mặc định (FR-21 mở rộng):** Apple trở thành agent active CHỈ KHI
      **chưa chọn agent nào** (active đang là hàng placeholder — cài mới, hoặc
      vừa xoá agent BYOK đang dùng) VÀ Apple sẵn sàng (`AnalysisAgentStore.applyDefault`,
