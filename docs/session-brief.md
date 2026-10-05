@@ -11,9 +11,9 @@
 
 **Đang mở / hàng đợi**
 - **engagement-r1** (branch `engagement-r1`, FR-24 gộp từ trùng + ý 1–6 của `idea/tang_gang_bo.md`, ADR-067/068,
-  `docs/plans/engagement-r1.md`): **T0 docs xong 2026-10-05** (docs-only, không chạy test). Kế tiếp **T1**
-  `DuplicateMerge` (ReadoKit, lane `kit`). **Trước T1 cần fen chạy query đếm khoá `term+pos` trùng** (§2.13) hoặc đưa
-  JSON FR-16 — 0 nhóm trùng thì bỏ T1/T2. T3–T8 chi tiết hoá ở đầu mỗi session.
+  `docs/plans/engagement-r1.md`): **T0 docs + T1 `DuplicateMerge` (ReadoKit) xong 2026-10-05** (577/581 xanh).
+  Kế tiếp **T2** màn "Gộp từ trùng" (UI, ExportView + `DuplicateMergeView`). **Fen chưa chạy baseline đếm khoá `term+pos`
+  trùng** (§2.13) — hỏi lại trước T2: 0 nhóm trên dữ liệu thật thì bỏ T2. T3–T8 chi tiết hoá ở đầu mỗi session.
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
   (`PDFPageTextProbeTests` xác nhận extract tốt; thiếu `prompt_eval.py --swift-func` + chạy eval + chỉnh ngưỡng).
   Nợ xem tay T3/T4 — `docs/plans/pdf-reader-r1.md`.

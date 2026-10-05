@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs xong; T1-T8 chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge xong; T2-T8 chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -203,7 +203,7 @@ cho khớp giọng file.
 - **DoD:** chạy `/raudit` không báo link/anchor hỏng; dòng bia mộ FR-07/FR-13 còn nguyên;
   `grep -n 'FR-24' docs/specs/prd.md` có ≥ 3 chỗ (ghi chú, bảng, section).
 
-### T1 — gộp trùng, ReadoKit
+### T1 — gộp trùng, ReadoKit ✅ 2026-10-05 (kit 551/552, full 577/581)
 
 **File mới** `app/ReadoKit/Sources/ReadoKit/Vocab/DuplicateMerge.swift`:
 

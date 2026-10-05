@@ -174,7 +174,8 @@ public enum EncounterRepository {
         return count > 0
     }
 
-    private static func insert(
+    /// Internal: `DuplicateMerge` (FR-24) ghi `seen` với `createdAt`/câu/bộ của dòng bị gộp.
+    static func insert(
         on db: SQLiteDatabase, vocabItemID: String, kind: EncounterKind, createdAt: String,
         sentence: String? = nil, collectionID: String? = nil
     ) throws {
