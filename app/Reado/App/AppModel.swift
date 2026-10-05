@@ -66,10 +66,15 @@ final class AppModel {
     /// placeholder bị `AnalysisAgentStore.list()` lọc khỏi `agents`, nên
     /// activeID trỏ vào nó (chưa chọn agent) tự rơi về false ở `.first` dưới.
     private(set) var activeAgentReady = false
-    /// apple-ai-r1 T4 (ADR-061) — Apple Intelligence sẵn sàng trên máy này
+    /// apple-ai-r1 T4 (ADR-063) — Apple Intelligence sẵn sàng trên máy này
     /// (dùng để hiện/ẩn toggle "Sửa lỗi OCR" ở Settings). Không phụ thuộc
     /// agent đang active — toggle OCR-fix áp cho MỌI agent (T2/A-01).
     private(set) var ocrFixAvailable = false
+    /// apple-ai-r1 T7 (ADR-063) — trạng thái agent Apple Intelligence (khác
+    /// `ocrFixAvailable`: cần hỗ trợ tiếng Việt vì agent TRẢ VỀ tiếng Việt,
+    /// OCR-fix chỉ sửa chữ Anh nên không cần). Dùng cho hàng Apple ở Settings
+    /// + `activeAgentReady`.
+    private(set) var appleAgentStatus: AppleIntelligenceStatus = .unavailable(.osTooOld)
 
     // Chia theo chức năng — xem `AppState.swift`.
     let review = ReviewState()
@@ -122,6 +127,7 @@ final class AppModel {
             #if DEBUG
             Self.seedDevAIBoxAgentIfNeeded(on: database)
             Self.seedDevIfNeeded(on: database)
+            Self.applyDevAppleAIOverrideIfNeeded()
             #endif
             reloadOverview()
         } catch {
@@ -131,6 +137,20 @@ final class AppModel {
     }
 
     #if DEBUG
+    /// apple-ai-r1 T7 — chỉ debug: `READO_DEV_APPLE_AI=available|off|nodevice`
+    /// (`scripts/sim_screens.sh`) ghi đè `AppleIntelligence.statusOverride` để
+    /// chụp màn Settings cả hai trạng thái trên simulator, không cần máy đang
+    /// bật/tắt Apple Intelligence thật.
+    private static func applyDevAppleAIOverrideIfNeeded() {
+        guard let raw = ProcessInfo.processInfo.environment["READO_DEV_APPLE_AI"] else { return }
+        switch raw {
+        case "available": AppleIntelligence.statusOverride = .available
+        case "off": AppleIntelligence.statusOverride = .unavailable(.notEnabled)
+        case "nodevice": AppleIntelligence.statusOverride = .unavailable(.deviceNotEligible)
+        default: break
+        }
+    }
+
     /// Chỉ debug: máy dev launch với `READO_DEV_AIBOX_KEY` (`scripts/sim_aibox.sh`)
     /// để test luồng OCR→AI-Box trên simulator mà không phải gõ tay key mỗi lần
     /// cài lại. Key không bao giờ nằm trong repo/scheme — chỉ qua env lúc launch;
@@ -216,15 +236,28 @@ final class AppModel {
         reviewScopeDefault = read("phạm vi ôn", fallback: .empty) {
             try ReviewScopeService.load(on: database)
         }
-        // ADR-041/ADR-049: chưa chọn agent BYOK → chưa "sẵn sàng" cho checklist
-        // onboarding. `list().agents` đã lọc placeholder (ADR-049) nên activeID
-        // trỏ vào nó không khớp `.first` nào → `?? false`.
+        // apple-ai-r1 T7 (ADR-063) — TRƯỚC khi đọc agents: Apple là mặc định
+        // khi chưa chọn agent nào (active = placeholder) + Apple sẵn sàng.
+        // Âm thầm, không alert — chạy lại mỗi `reloadOverview` nên bỏ lỡ một
+        // lần (lỗi DB hiếm) cũng tự sửa ở lần sau.
+        appleAgentStatus = AppleIntelligence.status(needsVietnamese: true)
+        readQuietly("agent mặc định", fallback: false) {
+            try AnalysisAgentStore.applyDefault(on: database, appleAvailable: appleAgentStatus.isAvailable)
+        }
+        // ADR-041/ADR-049/ADR-063: chưa chọn agent BYOK → chưa "sẵn sàng" cho
+        // checklist onboarding. `list().agents` đã lọc placeholder (ADR-049)
+        // nên activeID trỏ vào nó không khớp `.first` nào → `?? false`. Hàng
+        // Apple không có key (`hasKey == false`) — dùng `appleAgentStatus`
+        // thay cho `hasKey` khi agent active chính là Apple.
         let agents: (agents: [AnalysisAgent], activeID: String)? =
             read("danh sách agent", fallback: nil) {
                 try AnalysisAgentStore.list(on: database)
             }
         activeAgentReady = agents.flatMap { list in
-            list.agents.first { $0.id == list.activeID }?.hasKey
+            guard let active = list.agents.first(where: { $0.id == list.activeID }) else {
+                return nil
+            }
+            return active.isAppleIntelligence ? appleAgentStatus.isAvailable : active.hasKey
         } ?? false
         ocrFixAvailable = AppleIntelligence.status(needsVietnamese: false).isAvailable
         dataRevision &+= 1

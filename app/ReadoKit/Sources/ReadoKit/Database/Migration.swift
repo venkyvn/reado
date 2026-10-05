@@ -3,7 +3,7 @@ import Foundation
 /// Migration DDL — dialect SQLite R1 đúng từng dòng của docs/db.md tầng A.
 /// KHÔNG unique trên vocab_items(collection_id, term_normalized) (AGENTS mục 3.1).
 /// Bảy bảng v1 + `encounters` (v4) + `pdf_sources` (v5) + index +
-/// kind `apple_intelligence` + hàng builtin (v6, apple-ai-r1 T5/ADR-061); seed
+/// kind `apple_intelligence` + hàng builtin (v6, apple-ai-r1 T5/ADR-063); seed
 /// nằm ở Seeder chứ không phải migration (NGOẠI LỆ: hàng Apple Intelligence —
 /// id cố định nên tạo ở v6Statements, không ở Seeder, để DB cũ nâng cấp cũng có).
 public enum Migration {
@@ -67,7 +67,7 @@ public enum Migration {
         """,
     ]
 
-    /// apple-ai-r1 T5 (ADR-061) — kind `apple_intelligence` + hàng builtin. Đổi
+    /// apple-ai-r1 T5 (ADR-063) — kind `apple_intelligence` + hàng builtin. Đổi
     /// CHECK trên `analysis_agents` → SQLite không có `ALTER TABLE … DROP/ALTER
     /// CONSTRAINT`, phải rebuild bảng (12-step thủ tục chính thức của SQLite,
     /// rút gọn): tạo bảng mới CHECK mới → copy dữ liệu → drop bảng cũ → rename.

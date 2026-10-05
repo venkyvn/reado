@@ -1,7 +1,7 @@
 import ReadoKit
 import XCTest
 
-/// apple-ai-r1 T3 (ADR-061) — luật bảo thủ của `OCRFixApplier`: chỉ khôi phục
+/// apple-ai-r1 T3 (ADR-063) — luật bảo thủ của `OCRFixApplier`: chỉ khôi phục
 /// chữ in, không viết lại câu. Mọi ca ở đây test THUẦN (không gọi model).
 final class OCRFixApplierTests: XCTestCase {
     func testAppliesAtEveryWholeWordOccurrence() {

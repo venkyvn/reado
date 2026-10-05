@@ -13,7 +13,7 @@ public struct AnalysisAgent: Equatable, Sendable, Identifiable {
     /// khỏi danh sách hiển thị; giữ property để store tự nhận diện hàng này.
     public var isPlaceholder: Bool { kind == "reado_proxy" }
 
-    /// apple-ai-r1 T5 (ADR-061) — hàng builtin Apple Intelligence (ngược với
+    /// apple-ai-r1 T5 (ADR-063) — hàng builtin Apple Intelligence (ngược với
     /// `isPlaceholder`: hàng này CÓ hiện trong `list()`, chỉ không xoá/sửa
     /// được và không cần key).
     public var isAppleIntelligence: Bool { kind == AnalysisAgentStore.appleKind }
@@ -52,7 +52,7 @@ public enum AnalysisAgentStore {
     /// đưa `deepseek-v4.1-flash` từ 63s xuống 15–18s cho một trang OCR.
     public static let aiboxBaseURL = "https://api.ai-box.vn/v1"
     public static let aiboxModel = "deepseek-v4.1-flash"
-    /// apple-ai-r1 T5 (ADR-061).
+    /// apple-ai-r1 T5 (ADR-063).
     public static let appleKind = "apple_intelligence"
 
     public enum StoreError: Error, LocalizedError, Equatable {
@@ -114,7 +114,7 @@ public enum AnalysisAgentStore {
         return (agents, activeID)
     }
 
-    /// ADR-061 — Apple là mặc định CHỈ KHI chưa chọn agent nào (active đang là
+    /// ADR-063 — Apple là mặc định CHỈ KHI chưa chọn agent nào (active đang là
     /// placeholder). Đã chọn BYOK (hoặc đã từng chọn Apple) thì giữ nguyên —
     /// Apple không "giành lại" một lựa chọn chủ động. Trả `true` nếu vừa đổi.
     @discardableResult

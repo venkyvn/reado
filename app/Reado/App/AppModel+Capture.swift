@@ -71,7 +71,7 @@ extension AppModel {
         do {
             // FR-02/ADR-049: agent active đọc từ settings — placeholder (chưa
             // chọn agent) rơi vào NoAgentAnalyzer, báo lỗi rõ ở catch dưới.
-            // apple-ai-r1 T4 (ADR-061): toggle "Sửa lỗi OCR" — mặc định BẬT
+            // apple-ai-r1 T4 (ADR-063): toggle "Sửa lỗi OCR" — mặc định BẬT
             // (fen chốt 2026-10-05, ưu tiên giữ nguyên câu, im lặng sửa).
             let ocrFixEnabled = UserDefaults.standard.object(
                 forKey: AppleIntelligence.ocrFixDefaultsKey) as? Bool ?? true

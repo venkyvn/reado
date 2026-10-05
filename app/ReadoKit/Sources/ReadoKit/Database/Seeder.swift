@@ -12,7 +12,7 @@ public enum Seeder {
     /// lọc/ẩn hàng này khỏi UI và báo lỗi rõ nếu lọt vào `analyze()`.
     public static let placeholderAgentID = "00000000-0000-4000-a000-000000000001"
     public static let placeholderAgentName = "Chưa chọn agent"
-    /// apple-ai-r1 T5 (ADR-061) — hàng builtin Apple Intelligence, id cố định,
+    /// apple-ai-r1 T5 (ADR-063) — hàng builtin Apple Intelligence, id cố định,
     /// không xoá/sửa được (`AnalysisAgentStore`). Migration v6 tạo hàng này
     /// (cả DB cũ nâng cấp lẫn cài mới — cài mới chạy hết migration trước khi
     /// `Seeder.seed` chạy, xem `Migration.v6Statements`), không phải ở đây.

@@ -74,7 +74,7 @@ public struct OpenAICompatClient: PageAnalyzer {
             "ocrMs": Int(Date().timeIntervalSince(ocrStarted) * 1000),
             "ocrChars": pageOCR.count,
             "ocrLines": ocrResult.lines.count,
-            // apple-ai-r1 T4 (ADR-061) — 0 khi soát tắt/Apple không sẵn sàng (ocrResult.fixes rỗng).
+            // apple-ai-r1 T4 (ADR-063) — 0 khi soát tắt/Apple không sẵn sàng (ocrResult.fixes rỗng).
             "ocrFixes": ocrResult.fixes.count,
         ])
         guard !pageOCR.isEmpty else {
@@ -180,7 +180,7 @@ public struct OpenAICompatClient: PageAnalyzer {
         [
             "engine": result.engine,
             "observationCount": result.observations.count,
-            // apple-ai-r1 T4 (ADR-061) — có giá trị khi đã soát OCR, NSNull khi
+            // apple-ai-r1 T4 (ADR-063) — có giá trị khi đã soát OCR, NSNull khi
             // chưa soát (toggle tắt / Apple không sẵn sàng).
             "rawText": result.rawText.map { String($0.prefix(4000)) } ?? NSNull(),
             "fixes": result.fixes.map { ["wrong": $0.wrong, "right": $0.right] },

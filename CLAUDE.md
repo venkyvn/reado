@@ -7,7 +7,10 @@
 
 - iOS native (SwiftUI), app **học từ vựng từ sách thật**: chụp trang → trích xuất từ mới theo ngữ cảnh → ôn tập bằng FSRS.
 - Local-first: SQLite on-device (Q-02), một người dùng (NG-05). AI qua **BYOK OpenAI-compat**
-  ở Keychain (Q-03, đảo ADR-049 2026-10-01 — bỏ proxy Reado, không còn "hybrid").
+  ở Keychain (Q-03, đảo ADR-049 2026-10-01 — bỏ proxy Reado, không còn "hybrid") **hoặc
+  Apple Intelligence** trên máy (ADR-063 2026-10-05 — không key, mặc định khi máy hỗ trợ
+  và chưa chọn agent nào). OCR trên máy còn được Apple Intelligence soát lỗi ký tự khi
+  máy hỗ trợ (ADR-063, mọi agent, mặc định bật).
 - Scheduling dùng thư viện `swift-fsrs` pin commit `4fbaf20`, `FSRSDefaults.defaultWv6` (21 trọng số).
 - Owner = fen. R1 là MVP một user; success metric M-07: bỏ luồng chat Gemini thủ công.
 
@@ -72,6 +75,10 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
 - **Chốt thêm 2026-10-01:** bỏ proxy Reado — ADR-049.
 - **Chốt thêm 2026-10-02:** Q-13 (khoá so khớp FR-10 `term_normalized+pos` không phân biệt nghĩa) — phương án **B**: item khớp khoá đã thuộc gập xuống nhóm riêng thay vì xoá khỏi màn duyệt; khoá có cả dòng đã thuộc lẫn dòng mới/chưa thuộc vẫn vào nhóm gập, liệt kê đủ nghĩa kèm mức thuộc (ADR-056).
 - **Chốt thêm 2026-10-04:** đọc PDF trong Reado (FR-23) — đảo một phần NG-07, ADR-058. Không chép file (bookmark + trang trong bảng `pdf_sources`); mỗi bộ có tên gắn tối đa 1 PDF; lớp chữ PDF trước, OCR sau khi rác/scan. EPUB vẫn ngoài (NG-07 giữ phần đó).
+- **Chốt thêm 2026-10-05:** Apple Intelligence — agent kind thứ hai (`apple_intelligence`,
+  builtin, không key) + soát OCR trên máy (tiền xử lý, mọi agent) — ADR-063. R1 chỉ
+  on-device (PCC thiếu entitlement, để R2); agent Apple chia nhỏ theo đoạn thay vì một
+  lượt (context 4096 token không đủ cho một lượt trên trang sách thật — đo thật ở spike).
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ

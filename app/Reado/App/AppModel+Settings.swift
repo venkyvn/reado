@@ -21,6 +21,13 @@ extension AppModel {
     /// quan và Settings reload overview một lần ở `onDisappear`.
     func setActiveAgent(_ agent: AnalysisAgent) throws {
         guard let database else { throw ReviewError.modelUnavailable }
+        // apple-ai-r1 T7 (ADR-063) — hàng Apple bị `.disabled` ở Settings khi
+        // không sẵn sàng (không bấm được); chặn lại ở đây cho chắc, phòng khi
+        // có đường gọi khác bỏ qua disable đó.
+        if agent.isAppleIntelligence, !appleAgentStatus.isAvailable {
+            throw AnalysisError.providerError(
+                appleAgentStatus.reasonVI ?? "Apple Intelligence chưa sẵn sàng")
+        }
         try AnalysisAgentStore.setActive(
             on: database, id: agent.id, knownHasKey: agent.hasKey)
     }

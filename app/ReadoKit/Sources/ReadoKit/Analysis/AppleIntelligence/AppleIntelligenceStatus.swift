@@ -3,7 +3,7 @@ import Foundation
 import FoundationModels
 #endif
 
-/// apple-ai-r1 T3 (ADR-061).
+/// apple-ai-r1 T3 (ADR-063).
 public enum AppleIntelligenceStatus: Equatable, Sendable {
     case available
     case unavailable(Reason)
@@ -73,5 +73,43 @@ public enum AppleIntelligence {
         if #available(iOS 26.0, macOS 26.0, *) { return FoundationModelsOCRCorrector() }
         #endif
         return nil
+    }
+
+    /// apple-ai-r1 T7 (ADR-063) — agent thật cho kind `apple_intelligence`.
+    /// OS < 26 / SDK không có framework → model giả chỉ để `status: {
+    /// .unavailable(.osTooOld) }` báo lỗi rõ; `checkStatus` trong
+    /// `AppleIntelligenceAnalyzer` ném TRƯỚC khi đụng model nên model giả
+    /// không bao giờ thực sự được gọi.
+    public static func makeAnalyzer(
+        ocr: PageTextRecognizer = PageOCR.live,
+        onProgress: (@Sendable (AnalysisProgress) -> Void)? = nil
+    ) -> PageAnalyzer {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            return AppleIntelligenceAnalyzer(
+                model: OnDeviceAnalysisModel(), ocr: ocr, onProgress: onProgress)
+        }
+        #endif
+        return AppleIntelligenceAnalyzer(
+            model: UnavailableAppleModel(), status: { .unavailable(.osTooOld) },
+            ocr: ocr, onProgress: onProgress)
+    }
+}
+
+/// Model giả cho máy không đủ điều kiện (OS < 26) — không bao giờ thực sự
+/// được gọi vì `AppleIntelligenceAnalyzer` kiểm `status()` trước.
+private struct UnavailableAppleModel: AppleAnalysisModel {
+    let modelLabel = "apple-unavailable"
+
+    func translateParagraph(_ paragraph: String, cefr: String) async throws -> String {
+        throw AnalysisError.providerError("Apple Intelligence không khả dụng trên hệ điều hành này")
+    }
+
+    func extractVocabulary(pageText: String, cefr: String) async throws -> String {
+        throw AnalysisError.providerError("Apple Intelligence không khả dụng trên hệ điều hành này")
+    }
+
+    func summarize(pageText: String, cefr: String) async throws -> String {
+        throw AnalysisError.providerError("Apple Intelligence không khả dụng trên hệ điều hành này")
     }
 }

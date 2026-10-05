@@ -201,7 +201,7 @@ final class MigrationAndSeedTests: XCTestCase {
         try Seeder.seed(on: db, timezone: Fixtures.timezoneID, now: Fixtures.fixedNow)
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM collections;"), 1)
         XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM settings;"), 1)
-        // apple-ai-r1 T5 (ADR-061) — placeholder (Seeder) + Apple Intelligence
+        // apple-ai-r1 T5 (ADR-063) — placeholder (Seeder) + Apple Intelligence
         // builtin (Migration v6) = 2.
         XCTAssertEqual(
             try db.scalarInt64("SELECT COUNT(*) FROM analysis_agents;"), 2)

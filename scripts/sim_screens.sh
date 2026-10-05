@@ -12,6 +12,7 @@
 #                                      [--seed demo|demo-reviewed|empty] [--alert dup-name|pin-limit]
 #                                      [--fixture <file.json>] [--agent] [--fresh] [--no-build]
 #                                      [--pdf <file.pdf>] [--pdf-page <N>]
+#                                      [--apple-ai available|off|nodevice]
 #                                           # verify-nav-r1: mở THẲNG một màn qua launch argument
 #                                           # DEBUG-only (`DebugLaunch`, `RootView.applyDebugScreenIfNeeded`)
 #                                           # — không cần chạm tay. Màn hợp lệ: xem `DebugLaunch.Screen`
@@ -31,6 +32,8 @@
 #                                           # `--pdf` (pdf-nav-r1): dùng file PDF THẬT trên máy thay PDF fixture 2
 #                                           # trang cho 3 màn pdf-reader* — KHÔNG commit file đó (xem .gitignore
 #                                           # `/*.pdf`). `--pdf-page N` mở sẵn đúng trang N (1-based).
+#                                           # `--apple-ai` (apple-ai-r1 T7): ghi đè trạng thái Apple Intelligence ở
+#                                           # màn settings — simulator không bật/tắt Apple Intelligence thật được.
 #
 # Bẫy: alert xin quyền camera đã hiện một lần thì kẹt qua cả uninstall/relaunch và che
 # ảnh chụp; cấp quyền sau đó không tắt được. Xử lý: `xcrun simctl shutdown <udid>` rồi
@@ -90,6 +93,7 @@ case "${1:-}" in
     OPEN_BUILD=1
     PDF_FIXTURE=""
     PDF_PAGE=""
+    APPLE_AI=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --theme) THEME="${2:?Thiếu giá trị cho --theme}"; shift 2 ;;
@@ -101,6 +105,8 @@ case "${1:-}" in
         --no-build) OPEN_BUILD=0; shift ;;
         --pdf) PDF_FIXTURE="${2:?Thiếu đường dẫn cho --pdf}"; shift 2 ;;
         --pdf-page) PDF_PAGE="${2:?Thiếu số trang cho --pdf-page}"; shift 2 ;;
+        # apple-ai-r1 T7 — available|off|nodevice, AppModel.applyDevAppleAIOverrideIfNeeded đọc.
+        --apple-ai) APPLE_AI="${2:?Thiếu giá trị cho --apple-ai (available|off|nodevice)}"; shift 2 ;;
         *) echo "Tham số lạ: $1" >&2; exit 2 ;;
       esac
     done
@@ -173,6 +179,13 @@ case "${1:-}" in
     else
       unset SIMCTL_CHILD_READO_DEV_PDF_PAGE
     fi
+    APPLE_AI_NOTE=""
+    if [[ -n "$APPLE_AI" ]]; then
+      APPLE_AI_NOTE=" (apple-ai $APPLE_AI)"
+      export SIMCTL_CHILD_READO_DEV_APPLE_AI="$APPLE_AI"
+    else
+      unset SIMCTL_CHILD_READO_DEV_APPLE_AI
+    fi
     # --terminate-running-process: launch trước đó (nếu còn sống) không đọc argv
     # mới — phải buộc khởi động lại để `-ReadoScreen` mới có hiệu lực.
     SIMCTL_CHILD_READO_DEV_DEMO_CSV="$FIXTURE" \
@@ -180,7 +193,7 @@ case "${1:-}" in
       xcrun simctl launch \
       --terminate-running-process "$UDID" "$BUNDLE_ID" "${LAUNCH_ARGS[@]}" >/dev/null
     sleep 4  # đợi app mở + điều hướng xong trước khi `shot`
-    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)}${AGENT_NOTE}${PDF_NOTE} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
+    echo "Đã mở màn '$SCREEN'${THEME:+ (theme $THEME)}${SEED:+ (seed $SEED)}${ALERT:+ (alert $ALERT)}${AGENT_NOTE}${PDF_NOTE}${APPLE_AI_NOTE} trên $SIM_NAME — chụp: scripts/sim_screens.sh shot after-<tên>"
     exit 0
     ;;
 esac

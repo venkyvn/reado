@@ -2,7 +2,7 @@
 import FoundationModels
 import Foundation
 
-/// apple-ai-r1 T3 (ADR-061) — schema cho đề xuất sửa OCR. Key JSON = tên property
+/// apple-ai-r1 T3 (ADR-063) — schema cho đề xuất sửa OCR. Key JSON = tên property
 /// Swift (bẫy @Generable) nên không cần khớp wire snake_case ở đây — kết quả chỉ
 /// đi qua `OCRFixApplier`, không qua `AnalysisResponseNormalizer`.
 @available(iOS 26.0, macOS 26.0, *)

@@ -10,7 +10,7 @@ private struct FakeOCRCorrector: OCRCorrector {
 /// bỏ proxy mặc định — cài mới chưa thêm agent thì analyzer báo lỗi rõ.
 final class AnalyzerFactoryTests: AnalysisNetworkTestCase {
 
-    // MARK: - apple-ai-r1 T4 — textRecognizer (ADR-061)
+    // MARK: - apple-ai-r1 T4 — textRecognizer (ADR-063)
 
     func testTextRecognizerDisabledReturnsBase() {
         let recognizer = AnalyzerFactory.textRecognizer(

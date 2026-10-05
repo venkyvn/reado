@@ -70,7 +70,7 @@ def summarize_analysis(folder: Path, full: bool) -> None:
             preview = l.get("text", "")[:60]
             print(f"  [{reason}] {preview!r}")
 
-        # apple-ai-r1 T4 (ADR-061) — chỉ có khi soát OCR bật; log cũ không có
+        # apple-ai-r1 T4 (ADR-063) — chỉ có khi soát OCR bật; log cũ không có
         # khoá này thì im lặng bỏ qua (không in gì thêm).
         fixes = ocr.get("fixes")
         if fixes is not None:

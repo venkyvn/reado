@@ -66,7 +66,7 @@ public enum PageOCR {
         /// "documents" (`RecognizeDocumentsRequest`, iOS 26+, ADR-042) | "legacy"
         /// (`VNRecognizeTextRequest` + ngắt đoạn hình học ADR-037).
         public let engine: String
-        /// apple-ai-r1 T3 (ADR-061) — OCR TRƯỚC khi Apple Intelligence soát;
+        /// apple-ai-r1 T3 (ADR-063) — OCR TRƯỚC khi Apple Intelligence soát;
         /// nil = chưa soát (toggle tắt / Apple không sẵn sàng). `text` ở trên
         /// luôn là bản ĐÃ soát khi có soát — prompt/hiển thị dùng `text` như cũ.
         public let rawText: String?

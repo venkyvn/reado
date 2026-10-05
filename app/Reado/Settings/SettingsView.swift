@@ -20,7 +20,7 @@ struct SettingsView: View {
     /// toolbar reader theo fen: "đem mấy config đó ra ngoài setting luôn đi".
     @AppStorage("readoPDFPageTintHue") private var pdfPageTintHueRaw = PDFPageTintHue.sepia.rawValue
     @AppStorage("readoPDFPageTintIntensity") private var pdfPageTintIntensity: Double = 0
-    /// apple-ai-r1 T4 (ADR-061) — cùng key `AppleIntelligence.ocrFixDefaultsKey`
+    /// apple-ai-r1 T4 (ADR-063) — cùng key `AppleIntelligence.ocrFixDefaultsKey`
     /// mà `AppModel+Capture.runAnalysis` đọc. Mặc định BẬT (fen chốt 2026-10-05).
     @AppStorage(AppleIntelligence.ocrFixDefaultsKey) private var ocrFixEnabled = true
 
@@ -269,42 +269,13 @@ struct SettingsView: View {
     private var agentSection: some View {
         Section {
             ForEach(agents) { agent in
-                Button {
-                    select(agent)
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: Spacing.tight) {
-                            Text(agent.name)
-                            Text(agent.model ?? "")
-                                .font(Typo.meta)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if agent.id == activeAgentID {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    // ADR-049: `agents` chỉ chứa agent BYOK thật — hàng placeholder
-                    // đã bị `AnalysisAgentStore.list()` lọc, không cần check ở đây.
-                    Button {
-                        editingAgent = agent
-                    } label: {
-                        Label("Sửa", systemImage: "pencil")
-                    }
-                    .tint(Color.accentColor)
-
-                    Button(role: .destructive) { remove(agent) } label: {
-                        Label("Xoá", systemImage: "trash")
-                    }
-                    .tint(Theme.danger)
+                if agent.isAppleIntelligence {
+                    appleAgentRow(agent)
+                } else {
+                    byokAgentRow(agent)
                 }
             }
-            Button("Thêm key") { showAddAgent = true }
+            Button("Thêm agent bằng key") { showAddAgent = true }
             if model.ocrFixAvailable {
                 Toggle("Sửa lỗi OCR bằng Apple Intelligence", isOn: $ocrFixEnabled)
             }
@@ -317,7 +288,7 @@ struct SettingsView: View {
         } header: {
             Label("Agent phân tích", systemImage: "sparkles")
         } footer: {
-            // apple-ai-r1 T4 (ADR-061) — câu soát OCR chỉ hiện khi máy có Apple
+            // apple-ai-r1 T4 (ADR-063) — câu soát OCR chỉ hiện khi máy có Apple
             // Intelligence (ocrFixAvailable), nối sau câu gốc.
             Text(
                 "Lần chụp kế tiếp dùng agent đang chọn. OCR trên máy, agent dịch và lấy từ. Key nằm trên máy, không vào file xuất."
@@ -325,6 +296,73 @@ struct SettingsView: View {
                         ? " Apple Intelligence soát lỗi chữ OCR trên máy trước khi gửi agent."
                         : ""))
         }
+    }
+
+    /// apple-ai-r1 T7 (ADR-063) — hàng BYOK gốc, KHÔNG đổi hành vi (swipe
+    /// Sửa/Xoá). Tách ra khi thêm hàng Apple riêng (không có swipe).
+    private func byokAgentRow(_ agent: AnalysisAgent) -> some View {
+        Button {
+            select(agent)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text(agent.name)
+                    Text(agent.model ?? "")
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if agent.id == activeAgentID {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            // ADR-049: `agents` chỉ chứa agent BYOK thật — hàng placeholder
+            // đã bị `AnalysisAgentStore.list()` lọc, không cần check ở đây.
+            Button {
+                editingAgent = agent
+            } label: {
+                Label("Sửa", systemImage: "pencil")
+            }
+            .tint(Color.accentColor)
+
+            Button(role: .destructive) { remove(agent) } label: {
+                Label("Xoá", systemImage: "trash")
+            }
+            .tint(Theme.danger)
+        }
+    }
+
+    /// apple-ai-r1 T7 (ADR-063) — hàng builtin: không swipe (không xoá/sửa
+    /// được), mờ + lý do khi không sẵn sàng (FR-21 GWT). R1 chỉ on-device
+    /// (spike T1: PCC thiếu entitlement) nên dòng phụ cố định, không branch
+    /// theo `agent.model`.
+    private func appleAgentRow(_ agent: AnalysisAgent) -> some View {
+        let status = model.appleAgentStatus
+        return Button {
+            select(agent)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text(agent.name)
+                    Text(status.isAvailable ? "Trên máy · không cần key" : (status.reasonVI ?? ""))
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if agent.id == activeAgentID {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!status.isAvailable)
     }
 
     // MARK: — Chủ đề (màu nhấn)

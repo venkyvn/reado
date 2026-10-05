@@ -137,12 +137,14 @@ CREATE TABLE review_logs (
 CREATE INDEX idx_logs_card ON review_logs (card_id, reviewed_at);
 
 -- FR-21. Khong cot key — Keychain theo id.
+-- Migration v6 (apple-ai-r1, ADR-063): them kind 'apple_intelligence' vao CHECK
+-- (rebuild bang — SQLite khong ALTER CHECK truc tiep).
 CREATE TABLE analysis_agents (
   id          TEXT NOT NULL PRIMARY KEY,
-  kind        TEXT NOT NULL CHECK (kind IN ('reado_proxy', 'openai_compat')),
+  kind        TEXT NOT NULL CHECK (kind IN ('reado_proxy', 'openai_compat', 'apple_intelligence')),
   name        TEXT NOT NULL,
-  base_url    TEXT,  -- bat buoc khi openai_compat; NULL khi reado_proxy
-  model       TEXT,  -- bat buoc khi openai_compat; NULL khi reado_proxy
+  base_url    TEXT,  -- bat buoc khi openai_compat; NULL khi reado_proxy/apple_intelligence
+  model       TEXT,  -- bat buoc khi openai_compat; 'on_device' khi apple_intelligence; NULL khi reado_proxy
   created_at  TEXT NOT NULL
 );
 
@@ -239,6 +241,13 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 2. `INSERT` `analysis_agents`: `id = '00000000-0000-4000-a000-000000000001'`, `kind = 'reado_proxy'`, `name = 'Chưa chọn agent'`, `base_url` / `model` null, `created_at` now UTC `Z`. Hàng này **không xoá được** — ADR-049 (2026-10-01): placeholder "chưa chọn agent", không còn nghĩa proxy; `name` trước đó là `'Reado'`.
 3. `INSERT` `settings` (`id = 1`): `timezone` = IANA của device, `fsrs_version = 'fsrs-6'`, `fsrs_params` null (default thư viện + `defaultWv6` lúc gọi FSRS), `home_shortcut_*` null, `known_stability` null, `leech_lapses` = 6 (**owner chốt 2026-09-24** — không phải Q-08), `active_agent_id` = id ở bước 2. Cột v2/v3 lấy DEFAULT của ALTER (`reminder` tắt, `cefr_levels` `["B2"]`, pin và priority rỗng).
 
+Hàng `analysis_agents` thứ hai — `id = '00000000-0000-4000-a000-000000000002'`,
+`kind = 'apple_intelligence'`, `name = 'Apple Intelligence'`, `model = 'on_device'`
+— **không** nằm trong transaction seed trên. Nó do **migration v6** tạo (ADR-063,
+apple-ai-r1), chạy cho cả DB mới lẫn DB nâng cấp (migration luôn chạy trước seed ở
+`AppModel.init`). Builtin, không xoá/sửa được, nhưng (khác hàng `reado_proxy`)
+**hiện** trong `AnalysisAgentStore.list()` và **chọn được** làm `active_agent_id`.
+
 ### A.2.2 App-rule — không CHECK SQL
 
 | Rule | Vì sao |
@@ -250,6 +259,7 @@ Một lần chấm: `UPDATE cards` và `INSERT review_logs` **cùng transaction*
 | Trim `collections.name` trước ghi | Unique `COLLATE NOCASE` không thay trim |
 | Key user (FR-21) chỉ Keychain theo `analysis_agents.id`; không cột SQLite | NFR-07 hybrid |
 | Không `DELETE` hàng `kind = reado_proxy` | FR-21; seed bắt buộc (ADR-049: hàng này là placeholder, không phải proxy) |
+| Không `DELETE`/`UPDATE` hàng `kind = apple_intelligence` | FR-21; builtin, id cố định (ADR-063) |
 | Xoá agent đang `active_agent_id` → gán lại hàng placeholder | FR-21, ADR-049 |
 | `openai_compat`: `base_url` + `model` không null; HTTPS trừ loopback / RFC1918 | Self-host LAN |
 | Client POST `{base_url}/chat/completions` (prefix kiểu `https://openrouter.ai/api/v1`) | Wire OpenAI-compat |

@@ -24,7 +24,7 @@ public protocol PageAnalyzer: Sendable {
 
 /// Nhà máy chọn analyzer theo agent đang active (FR-21).
 public enum AnalyzerFactory {
-    /// apple-ai-r1 T4 (ADR-061) — chọn OCR cho lối ảnh. `ocrFixEnabled` tắt
+    /// apple-ai-r1 T4 (ADR-063) — chọn OCR cho lối ảnh. `ocrFixEnabled` tắt
     /// hoặc Apple Intelligence không sẵn sàng → OCR gốc không đổi (test cũ,
     /// đa số thiết bị không hỗ trợ, vẫn đúng hành vi trước T4). Public để test.
     public static func textRecognizer(
@@ -67,9 +67,8 @@ public enum AnalyzerFactory {
             // (Seeder) — không còn client thật nào gọi được, báo lỗi rõ.
             return NoAgentAnalyzer()
         case AnalysisAgentStore.appleKind:
-            // apple-ai-r1 T5 — tạm thời, T6 thay bằng AppleIntelligenceAnalyzer
-            // thật. KHÔNG rơi vào `default` (MockAnalyzer trả dữ liệu giả).
-            return NoAgentAnalyzer()
+            // apple-ai-r1 T7 (ADR-063) — agent thật, không cần key/baseURL.
+            return AppleIntelligence.makeAnalyzer(ocr: ocr, onProgress: onProgress)
         default:
             return MockAnalyzer()
         }

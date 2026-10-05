@@ -1,6 +1,6 @@
 import Foundation
 
-/// apple-ai-r1 T3 (ADR-061) — một chỗ Apple Intelligence đề nghị sửa trong OCR.
+/// apple-ai-r1 T3 (ADR-063) — một chỗ Apple Intelligence đề nghị sửa trong OCR.
 /// `wrong`/`right` KHÔNG phải key/value tự do: `OCRFixApplier` chỉ chấp nhận khi
 /// chúng thoả mọi luật bảo thủ bên dưới — mục tiêu là khôi phục đúng chữ sách in
 /// (fen: "ưu tiên nguyên vẹn nhất câu"), không phải viết lại câu.

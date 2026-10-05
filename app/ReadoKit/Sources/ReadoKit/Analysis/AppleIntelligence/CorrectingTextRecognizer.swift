@@ -1,6 +1,6 @@
 import Foundation
 
-/// apple-ai-r1 T3 (ADR-061) — bọc OCR gốc, soát bằng Apple Intelligence. KHÔNG
+/// apple-ai-r1 T3 (ADR-063) — bọc OCR gốc, soát bằng Apple Intelligence. KHÔNG
 /// BAO GIỜ ném lỗi mới: corrector lỗi/timeout/text rỗng → trả nguyên kết quả
 /// OCR gốc, lỗi gốc của `base` (ảnh đọc không được) vẫn ném như cũ.
 public struct CorrectingTextRecognizer: PageTextRecognizer {
@@ -53,7 +53,9 @@ public struct CorrectingTextRecognizer: PageTextRecognizer {
 /// apple-ai-r1 T3 — timeout cho một `async throws` closure bất kỳ. KHÔNG dùng
 /// `withThrowingTaskGroup` (group chờ MỌI task con xong — nếu model lờ cancel
 /// thì timeout vô nghĩa). Continuation + "resume đúng một lần" qua actor.
-public struct TimeoutError: Error, Equatable, Sendable {}
+public struct TimeoutError: Error, Equatable, Sendable {
+    public init() {}
+}
 
 public enum TimeoutRunner {
     public static func run<T: Sendable>(

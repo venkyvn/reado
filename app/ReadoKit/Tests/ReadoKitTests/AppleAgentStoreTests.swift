@@ -1,7 +1,7 @@
 import ReadoKit
 import XCTest
 
-/// apple-ai-r1 T5 (ADR-061) — migration v5→v6 (kind `apple_intelligence` + hàng
+/// apple-ai-r1 T5 (ADR-063) — migration v5→v6 (kind `apple_intelligence` + hàng
 /// builtin) và các luật `AnalysisAgentStore` quanh hàng đó.
 final class AppleAgentStoreTests: XCTestCase {
 
@@ -103,7 +103,7 @@ final class AppleAgentStoreTests: XCTestCase {
             Seeder.appleAgentID)
     }
 
-    // MARK: - applyDefault (ADR-061)
+    // MARK: - applyDefault (ADR-063)
 
     func testApplyDefaultPromotesAppleOnlyWhenPlaceholderActive() throws {
         let db = try Fixtures.seededDB()
@@ -157,12 +157,28 @@ final class AppleAgentStoreTests: XCTestCase {
             Seeder.appleAgentID)
     }
 
-    // MARK: - AnalyzerFactory (tạm, T6 thay assert)
+    // MARK: - AnalyzerFactory (apple-ai-r1 T7)
 
-    func testActiveWithAppleAgentReturnsNoAgentAnalyzerForNow() throws {
+    func testActiveWithAppleAgentReturnsAppleIntelligenceAnalyzer() throws {
         let db = try Fixtures.seededDB()
         try AnalysisAgentStore.setActive(on: db, id: Seeder.appleAgentID, secrets: MemorySecrets())
         let (analyzer, _) = try AnalyzerFactory.active(db: db)
-        XCTAssertTrue(analyzer is NoAgentAnalyzer)
+        XCTAssertTrue(analyzer is AppleIntelligenceAnalyzer)
+    }
+
+    func testMakeAnalyzerReportsStatusOverrideUnavailable() async throws {
+        AppleIntelligence.statusOverride = .unavailable(.notEnabled)
+        defer { AppleIntelligence.statusOverride = nil }
+        let analyzer = AppleIntelligence.makeAnalyzer()
+        do {
+            _ = try await analyzer.analyze(
+                image: Data(), imageMime: "image/jpeg", cefr: "B2", imageHash: "h")
+            XCTFail("mong đợi providerError")
+        } catch {
+            guard case let AnalysisError.providerError(message) = error else {
+                return XCTFail("mong đợi providerError, nhận \(error)")
+            }
+            XCTAssertTrue(message.contains("Chưa bật"))
+        }
     }
 }

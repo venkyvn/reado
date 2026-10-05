@@ -1225,3 +1225,116 @@
   `Reado`, `SettingsView` cần dùng). Không đổi key `@AppStorage`, không đổi logic
   phủ `.multiply`/màu viền (ADR-061) — chỉ dọn nơi hiển thị control chọn. Mục lục
   là nút duy nhất còn lại trên toolbar reader (ẩn khi PDF không có outline).
+
+## ADR-063 — Apple Intelligence: agent mặc định + soát OCR trên máy (mở rộng Q-03/ADR-049)
+
+- **Ngày:** 2026-10-05
+- **Bối cảnh:** iOS/macOS 26+ có framework hệ thống `FoundationModels` ("Apple
+  Intelligence") — model ngôn ngữ chạy trên máy, không cần key, không gửi dữ liệu
+  ra ngoài. Fen muốn dùng nó cho hai việc: (1) soát lại OCR trước khi gửi agent
+  phân tích (chữ Vision đọc sai do nhoè/font lạ), (2) thêm Apple Intelligence làm
+  một agent phân tích, **mặc định** khi máy hỗ trợ và đã bật. Trước khi code,
+  spike đo thật trên máy (4 trang diagnostics thật, xem
+  `docs/plans/apple-ai-r1.md` T1) vì các giới hạn runtime (context 4096 token,
+  guardrail, entitlement PCC) không đoán được từ tài liệu — phải đo.
+- **Số đo spike quyết định (2026-10-05, macOS 27.0, model "AFM 3 Core", 4 trang
+  diagnostics thật):**
+  - **Guided generation luôn vỡ context.** `respond(generating:)` cho SCHEMA FR-02
+    đầy đủ (segments lồng phrases + vocabulary + summary) tự nó ăn ~2500 token dù
+    `includeSchemaInPrompt` mặc định `true` — 8/8 lượt `onDevice-G` lỗi
+    "exceeds the maximum allowed context size of 4096" dù prompt gốc chỉ
+    ~1450–1565 token.
+  - **String + `.permissiveContentTransformations` cũng vỡ 2/4 trang** — một
+    lượt DUY NHẤT cho cả trang (dịch + từ vựng + tóm tắt) không đủ chỗ ngay cả
+    không guided, vì OCR một trang sách thật đã chiếm phần lớn ngân sách 4096.
+  - **Chia nhỏ (dịch từng đoạn) chạy được 4/4 trang**, 17–34s/trang — cộng dồn xử
+    lý được nhiều hơn một lượt đơn có thể, và ngang tầm BYOK cloud (~45s đo được ở
+    diagnostics cũ).
+  - **PCC (`PrivateCloudComputeLanguageModel`) crash cứng** ngay khi construct:
+    `Fatal error: Missing entitlement com.apple.developer.private-cloud-compute`
+    — cần fen bật capability này trong Xcode (Apple cấp quyền riêng), chưa làm
+    được trong phiên này.
+  - **Prompt sửa OCR bị model đọc nhầm ví dụ thành lỗi thật.** Bản nháp đầu liệt
+    kê ví dụ dạng "rn/m, cl/d, l/I/1…" trong instructions — model AFM lặp lại
+    CHÍNH các cặp ví dụ đó như thể tìm thấy trên trang, trên CẢ 4 trang test (ví
+    dụ đề xuất `"cl" → "the"` dù "cl" không xuất hiện trong OCR). Viết lại
+    instructions bỏ hẳn ví dụ dạng cặp ký tự, chỉ mô tả bằng lời + yêu cầu model
+    tự kiểm tra `wrong` có thật trong văn bản trước khi báo (`FoundationModelsOCRCorrector.instructions`).
+  - Dù `OCRFixApplier` (luật editDistance/word-count/whole-word) chặn được gần
+    hết đề xuất bậy, **một fix vẫn lọt qua và làm WER xấu đi** (0.131 → 0.134 so
+    groundtruth) trên một trang — "sửa im lặng" có rủi ro thật, không chỉ lý
+    thuyết.
+- **Quyết định:**
+  1. **Agent Apple Intelligence R1 chỉ on-device**, không PCC (entitlement chưa
+     bật — để R2). Kind DB mới `apple_intelligence`, hàng builtin id cố định
+     `00000000-0000-4000-a000-000000000002`, `model = 'on_device'`.
+  2. **Pipeline FR-02 cho Apple LUÔN chia nhỏ theo đoạn** (không thử một lượt rồi
+     mới rơi về chia nhỏ — một lượt đơn không đáng tin trên trang sách thật theo
+     số đo trên). Mỗi đoạn (`\n\n`, cùng luật tách đoạn với `Prompt.text`) dịch
+     riêng (String + permissive, tự nhiên theo cụm); MỘT lượt từ vựng cho cả
+     trang (guided, schema phẳng nhẹ, `includeSchemaInPrompt: false`); MỘT lượt
+     tóm tắt (String). Ráp lại thành đúng wire JSON rồi đi qua
+     `AnalysisResponseNormalizer`/`AnalysisResponseDecoder` CHUNG với BYOK — luật
+     lọc/verify không viết lại. `phrases` để rỗng ở R1 (chưa có đường dịch song
+     song cụm EN↔VI theo đoạn như prompt BYOK) — có thể làm sau, không chặn R1.
+  2b. **A-01 "một lần gọi"** vẫn đúng tinh thần cho BYOK (không đổi); với Apple,
+     "một lần phân tích" của người dùng = nhiều lệnh gọi model NỘI BỘ (ẩn sau
+     `AppleIntelligenceAnalyzer`), không phải nhiều lần OCR hay nhiều lần tính
+     phí — A-01 vốn nói về ranh giới OCR/gọi AI, không phải số round-trip tới
+     model.
+  3. **Sửa OCR là bước tiền xử lý trên máy, chạy với MỌI agent** (không phải
+     agent thứ hai, không đổi FR-21) — `CorrectingTextRecognizer` bọc
+     `PageOCR.live`, soát bằng `FoundationModelsOCRCorrector` (chỉ text, không
+     ảnh — xem số đo trên), timeout 8s, **không bao giờ** ném lỗi mới (lỗi/
+     timeout/rỗng → rơi về OCR gốc). `OCRFixApplier` thi hành luật bảo thủ: khớp
+     NGUYÊN TỪ, tối đa 3 từ, chênh số từ ≤ 1, Levenshtein ≤
+     `max(1, min(3, len(wrong)/3))`, tổng số từ bị đụng ≤ 15% trang, > 30 đề xuất
+     thì loại hết. Mặc định **BẬT** (fen: "ưu tiên nguyên vẹn nhất câu" — giữ
+     tinh thần dù số đo cho thấy rủi ro không phải zero), toggle tắt được ở
+     Settings (`ocrFixEnabled`, `UserDefaults`).
+  4. **Luật mặc định (FR-21 mở rộng):** Apple trở thành agent active CHỈ KHI
+     **chưa chọn agent nào** (active đang là hàng placeholder — cài mới, hoặc
+     vừa xoá agent BYOK đang dùng) VÀ Apple sẵn sàng (`AnalysisAgentStore.applyDefault`,
+     gọi mỗi `AppModel.reloadOverview()`). Đã chủ động chọn BYOK, hoặc đã chọn
+     Apple rồi sau đó Apple tạm thời không sẵn sàng (tắt Apple Intelligence
+     trong Cài đặt iPhone…) → **giữ nguyên lựa chọn**, không tự nhảy — đúng FR-21
+     "dùng đúng agent đã chọn". Khi đó phân tích báo lỗi rõ kèm lý do
+     (`AppleIntelligenceStatus.reasonVI`), hàng Apple ở Settings mờ + lý do,
+     không bấm chọn lại được nhưng vẫn hiện dấu đang chọn.
+- **Đã cân nhắc:**
+  - *Agent dùng PCC (cloud) thay vì on-device* — loại: crash cứng thiếu
+    entitlement, không sửa được qua CLI/pbxproj, cần fen tự bật trong Xcode
+    (Signing & Capabilities) rồi xin Apple duyệt. Để R2.
+  - *Sửa OCR kèm ảnh (vision) thay vì chỉ text* — đo cả hai ở spike: ảnh+text
+    chậm hơn ~3x và KHÔNG tốt hơn (cùng kiểu đề xuất sai do prompt, không phải
+    do thiếu ảnh). Bỏ nhánh ảnh, giữ lại protocol chỗ trống nếu sau này cần.
+  - *Một lượt guided cho cả trang (như BYOK)* — loại hẳn, không phải tối ưu sau:
+    số đo cho thấy vỡ context gần như luôn luôn trên trang sách thật.
+  - *Mặc định Apple BẬT luôn, kể cả khi đã chọn BYOK* — loại: đảo ngược lựa chọn
+    chủ động của người dùng là hành vi bất ngờ, ngược nguyên lý "app không tự ý
+    đổi điều người dùng đã chọn".
+- **Hệ quả:**
+  - **Schema:** migration v6 (`Migration.currentVersion = 6`) — CHECK
+    `analysis_agents.kind` thêm `'apple_intelligence'` (rebuild bảng theo thủ
+    tục SQLite chuẩn: tắt `foreign_keys` NGOÀI transaction, tạo bảng mới, copy
+    dữ liệu, drop, rename, `PRAGMA foreign_key_check`, bật lại `foreign_keys`) +
+    insert hàng builtin. Seeder không đổi (hàng Apple do migration tạo, chạy cho
+    cả cài mới lẫn nâng cấp).
+  - **ReadoKit:** thư mục mới `Analysis/AppleIntelligence/` — `OCRFix`/
+    `OCRFixApplier`, `OCRCorrector`/`FoundationModelsOCRCorrector`,
+    `CorrectingTextRecognizer`/`TimeoutRunner`, `AppleIntelligenceStatus`/
+    `AppleIntelligence` (cổng không mang `@available`), `AppleAnalysisModel`/
+    `OnDeviceAnalysisModel`, `AppleIntelligenceErrorMapper`,
+    `AppleIntelligenceAnalyzer`. `FoundationModels` tự weak-link qua
+    `#if canImport` (xác nhận bằng `otool -L` — `weak` trên load command, không
+    cần `@_weakLinked` thủ công) — an toàn với target min iOS 17.
+  - **AnalysisAgentStore:** `isAppleIntelligence`, `appleKind`, lỗi
+    `.builtinAgent` (không sửa/xoá được), `list()` xếp Apple lên đầu,
+    `applyDefault(appleAvailable:)`.
+  - **Settings:** hàng Apple không có swipe, mờ + lý do khi không sẵn sàng;
+    toggle "Sửa lỗi OCR bằng Apple Intelligence" trong section Agent (chỉ hiện
+    khi máy hỗ trợ).
+  - **A-02 (baseline prompt):** không áp dụng cho Apple — Apple dùng pipeline
+    chia nhỏ riêng (prompt ngắn hơn nhiều, không phải `Prompt.text`), eval
+    riêng nếu cần sau R1.
+  - Chi tiết task breakdown: `docs/plans/apple-ai-r1.md`.
