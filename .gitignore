@@ -39,3 +39,6 @@ proxy/.venv/
 ref/sample/*.png
 ref/sample/*.jpg
 ref/sample/*.jpeg
+
+# ocr-quality-r1 T1 — ảnh mẫu fen chụp để gom groundtruth (bản quyền, NFR-04).
+/sample/
