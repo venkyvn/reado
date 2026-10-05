@@ -22,6 +22,9 @@ struct AnalysisView: View {
     // home-eevas-r1 T2: "AI chọn sẵn N từ" — chụp số preselect NGAY LÚC drafts được dựng lần đầu,
     // không cập nhật lại ở `regroupMatureIfNeeded()` (đổi đích không đổi việc AI đã đề xuất lúc đầu).
     @State private var aiPreselectedCount = 0
+    // ADR-066 D1: hết suất mới hôm nay → không chọn sẵn, header báo lý do.
+    @State private var budgetExhausted = false
+    @State private var dailyNewLimit = 0
     // Q-13 phương án B (ADR-056): item khớp khoá `term|pos` đã thuộc — gập xuống
     // nhóm riêng (không xoá), không preselect, không chiếm suất 5 của `drafts`.
     // Mảng riêng (không lồng trong `drafts`) để binding tới từng ô chọn vẫn hoạt
@@ -342,12 +345,16 @@ struct AnalysisView: View {
         else { return }
         // port UI lab §5.5: preselect = verified && cefr ∈ settings.cefrLevels.
         let levels = model.loadLearningSettings()?.cefrLevels.map(\.rawValue)
+        let quota = model.preselectBudgetForCapture()
         let draftResult = ReviewDraftBuilder.drafts(
             from: result.vocabulary,
             selectedLevels: levels.map(Set.init),
-            matureSenses: model.matureSensesForCapture())
+            matureSenses: model.matureSensesForCapture(),
+            preselectBudget: quota.budget)
         drafts = draftResult.visible
         aiPreselectedCount = drafts.filter(\.isSelected).count
+        budgetExhausted = quota.budget == 0 && drafts.contains { $0.verification == .verified }
+        dailyNewLimit = quota.dailyLimit
         // Q-13 phương án B (ADR-056): tách riêng thành mảng + dict để binding
         // (`$matureHiddenDrafts[index]`) đi được tới từng ô chọn — `knownMeanings`
         // tra theo id draft, hiển thị ở `MatureHiddenRow`.
@@ -653,7 +660,13 @@ struct AnalysisView: View {
                         Text("Đã chọn \(visibleSelectedCount)/\(drafts.count)")
                             .contentTransition(.numericText())
                             .animation(reduceMotion ? nil : Motion.reveal, value: visibleSelectedCount)
-                        if aiPreselectedCount > 0 {
+                        if budgetExhausted {
+                            Label(
+                                "Hôm nay đã đủ \(dailyNewLimit) từ mới — phần còn lại tuỳ bạn chọn",
+                                systemImage: "checkmark.circle")
+                                .font(Typo.meta)
+                                .foregroundStyle(.secondary)
+                        } else if aiPreselectedCount > 0 {
                             Label(
                                 "AI chọn sẵn \(aiPreselectedCount) từ đáng học nhất — bỏ chọn từ bạn đã biết",
                                 systemImage: "sparkles")

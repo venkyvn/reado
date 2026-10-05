@@ -50,6 +50,40 @@ final class ReviewDraftBuilderTests: XCTestCase {
             [true, true, true, true, true, false, false, false])
     }
 
+    // ADR-066 D1 / Q1: ngân sách ngày.
+    func testDraftBuilderBudgetZeroPreselectsNothing() {
+        let items = (1...8).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items, preselectBudget: 0).visible
+        XCTAssertEqual(drafts.filter(\.isSelected).count, 0)
+    }
+
+    func testDraftBuilderBudgetThreePreselectsFirstThreeEligible() {
+        let items = (1...8).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items, preselectBudget: 3).visible
+        XCTAssertEqual(drafts.map(\.term), items.map(\.term))
+        XCTAssertEqual(
+            drafts.map(\.isSelected),
+            [true, true, true, false, false, false, false, false])
+    }
+
+    func testDraftBuilderBudgetAboveLimitStillCapsAtFive() {
+        let items = (1...8).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let drafts = ReviewDraftBuilder.drafts(from: items, preselectBudget: 10).visible
+        XCTAssertEqual(drafts.filter(\.isSelected).count, 5)
+    }
+
+    func testDraftBuilderBudgetUnverifiedDoesNotConsumeSlot() {
+        let items = [
+            vocabIn(term: "u", verification: .unverified),
+            vocabIn(term: "a", verification: .verified),
+            vocabIn(term: "b", verification: .verified),
+            vocabIn(term: "c", verification: .verified),
+        ]
+        let drafts = ReviewDraftBuilder.drafts(from: items, preselectBudget: 2).visible
+        XCTAssertEqual(drafts.map(\.term), ["u", "a", "b", "c"])
+        XCTAssertEqual(drafts.map(\.isSelected), [false, true, true, false])
+    }
+
     /// Dưới ngưỡng `preselectLimit` → chọn sẵn hết, không bị cắt oan.
     func testDraftBuilderPreselectsAllWhenFewerThanLimit() {
         let items = (1...3).map { vocabIn(term: "t\($0)", verification: .verified) }

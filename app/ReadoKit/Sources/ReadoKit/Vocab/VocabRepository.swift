@@ -169,6 +169,16 @@ public enum VocabRepository {
         return result
     }
 
+    /// FR-09 / ADR-066 D1: số từ đã lưu trong NGÀY HỌC hiện tại (giờ chuyển ngày FR-11).
+    /// Tính cả từ nhập CSV (Q3 — không phân biệt được nguồn).
+    public static func newSavedToday(on db: SQLiteDatabase, now: Date) throws -> Int {
+        let window = ReviewQueue.currentDayWindow(on: db, now: now)
+        return Int(
+            try db.scalarInt64(
+                "SELECT COUNT(*) FROM vocab_items WHERE created_at >= ? AND created_at < ?;",
+                [.text(window.start), .text(window.end)]) ?? 0)
+    }
+
     /// Lưu một trang capture — transaction #4 (SD mục 6).
     /// collectionID nil → kho tạm (is_default, 2.4). Một item lỗi → rollback.
     /// `segments`/`summaryVI` (FR-05/06) chỉ ghi thành phiên đọc khi đích là

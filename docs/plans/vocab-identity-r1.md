@@ -1,7 +1,8 @@
 # Plan: vocab-identity-r1 — một từ, một thẻ, nhiều ngữ cảnh
 
 > **Trạng thái:** open (2026-10-05) - T0 xong (ADR-066 + docs đồng bộ, baseline chờ fen export);
-> T1-T4 còn lại.
+> T1 xong (kit 506/507 + full 532/536, 0 fail; ảnh analysis-fixture light+dark ổn, ca budget 0 fen xem tay);
+> T2-T4 còn lại.
 
 > ADR: **ADR-066**. Migration: **v7** (`currentVersion` hiện = 6, không nhánh nào tranh số).
 > Đảo **Q-09** (ADR-032) cho FR-10; mở rộng FR-09, FR-22. D1-D4 đã fen chốt 2026-10-05
@@ -178,6 +179,24 @@ flowchart TD
   (synchronized folders).
 - Migration theo mẫu các bản trước, test `MigrationAndSeedTests`.
 
+## Điểm tự quyết (đã chốt — Sonnet không quyết lại)
+
+| # | Câu hỏi | Chốt | Ai chốt |
+|---|---|---|---|
+| Q1 | Ngân sách ngày có bỏ trần 5/trang? | **Giữ trần 5/trang.** Suất chọn sẵn = `min(preselectLimit (5), budget)` | fen 2026-10-05 |
+| Q2 | Trang toàn từ cũ (0 từ mới được chọn) có ghi ngữ cảnh? | **Có.** Nút đáy đổi thành "Ghi gặp lại N từ" | fen 2026-10-05 |
+| Q3 | `newSavedToday` có tính từ nhập CSV (FR-20) không? | **Có tính** (CSV ghi `created_at` = lúc nhập, không phân biệt được nguồn; nhập CSV hiếm, chỉ ảnh hưởng gợi ý chọn sẵn, không đụng dữ liệu) | plan — ghi ADR-066 |
+| Q4 | Đổi tên `matureHidden`/`MatureHiddenDraft` → `existingHidden`? | **Không đổi tên** (10 test `regroup` + nhiều call site; đổi tên = churn rủi ro). Đổi nghĩa + doc comment | plan |
+| Q5 | Giữ tham số `matureSenses:` cũ của `drafts`/`regroup`? | **Giữ** (test cũ dùng); thêm `knownSenses:` mới, ưu tiên khi không rỗng | plan |
+| Q6 | Câu ngữ cảnh dài (OCR thiếu dấu câu → "câu" = cả đoạn)? | Cắt cửa sổ ±120 ký tự quanh từ khớp, nối "…", tối đa ~300 ký tự | plan |
+| Q7 | Trang context-only có lưu phiên đọc (FR-05/06)? | **Có**, cùng luật cũ (bộ có tên + có nội dung) — trang vẫn được đọc | plan |
+| Q8 | Từ leech trong nhóm "Đã có"? | Vào nhóm, nhãn "đang ở Từ hay quên"; **không** ghi `seen` (giữ `testSaveCaptureSkipsSeenForLeechedWords`); key toàn leech thì ẩn nút chọn | plan (theo plan gốc T3) |
+| Q9 | Popover ghi "Gặp ở N chỗ" hay "Gặp lại N lần"? | **"Gặp lại N lần"** (N = số dòng `seen`; mỗi lần lưu trang = 1) | plan |
+| Q10 | JSON export: `collectionId` hay `collectionID`? | **`collectionID`** (theo `ExportVocabItem` sẵn có; không có CodingKeys) | plan — sửa câu trong HLD cũ |
+| Q11 | Thêm `.linkedFramework("NaturalLanguage")` vào `Package.swift`? | **Không** trước; `import NaturalLanguage` tự link. Nếu link lỗi → dừng, báo fen | plan |
+
+---
+
 ## Tầng 2 — Tasks
 
 Thứ tự: **T0 → T1 (đợt 1, ship riêng được) → T2 → T3 → T4**. T0 làm trước (baseline đo
@@ -215,57 +234,355 @@ Ghi kết quả vào `docs/journal/<ngày>.md`. Đây là thước đo trước/
 - **DoD:** `grep -n "Q-09" docs CLAUDE.md` không còn câu nào mâu thuẫn • baseline đã ghi •
   fen OK ADR-066.
 
-### T1 — ngân sách chọn sẵn mỗi ngày (đợt 1, độc lập, không đổi schema)
+(T1–T4 chi tiết — mỗi task có chữ ký, số dòng, test cụ thể)
 
-- **ReadoKit:**
-  - `ReviewDraftBuilder.drafts(..., preselectBudget:)`: mặc định = `preselectLimit` để test
-    cũ không đổi.
-  - Hàm `VocabRepository.newSavedToday(on:now:)`.
-- **App:** `AnalysisView` tính budget từ `daily_new_limit` (D1). Khi budget = 0 thì hiện
-  dòng "Hôm nay đã đủ N từ mới — phần còn lại tuỳ bạn chọn".
-- **Test:**
-  - budget 0 → không chọn sẵn từ nào;
-  - budget 3 → chọn sẵn 3 từ đủ điều kiện đầu;
-  - unverified/suspect vẫn không chiếm suất;
-  - qua giờ chuyển ngày (FR-11) thì budget hồi lại.
-- **DoD:** test xanh • fen xem tay: phân tích trang 1 thấy chọn sẵn, trang thứ N sau khi
-  đủ ngân sách thấy dòng nhắc • sau 1 tuần dùng, so số từ mới mỗi ngày với baseline T0.
+### T1 — ngân sách chọn sẵn mỗi ngày (không đổi schema)
+
+**ReadoKit**
+
+1. `ReadoKit/Sources/ReadoKit/Vocab/VocabRepository.swift` — thêm (cạnh `saveCapture`):
+   ```swift
+   /// FR-09 / ADR-066 D1: số từ đã lưu trong NGÀY HỌC hiện tại (giờ chuyển ngày FR-11).
+   /// Tính cả từ nhập CSV (Q3 — không phân biệt được nguồn).
+   public static func newSavedToday(on db: SQLiteDatabase, now: Date) throws -> Int {
+       let window = ReviewQueue.currentDayWindow(on: db, now: now)
+       return Int(try db.scalarInt64(
+           "SELECT COUNT(*) FROM vocab_items WHERE created_at >= ? AND created_at < ?;",
+           [.text(window.start), .text(window.end)]) ?? 0)
+   }
+   ```
+   `ReviewQueue.currentDayWindow(on:now:)` ở `Review/ReviewQueue.swift:264` trả
+   `DayBoundary.DayWindow { start: String; end: String }` — **chuỗi ISO, không phải Date**.
+2. `ReadoKit/Sources/ReadoKit/Analysis/ReviewDraft.swift`:
+   - `drafts(from:selectedLevels:matureSenses:)` (L129) thêm tham số cuối
+     `preselectBudget: Int = preselectLimit`.
+   - Trong vòng lặp (L134-169) đổi `preselectedCount < preselectLimit` thành
+     `preselectedCount < min(preselectLimit, max(0, preselectBudget))` (Q1). Giữ nguyên
+     `isEligibleForPreselect` (L176) và việc unverified/suspect không chiếm suất.
+
+**App**
+
+3. `Reado/App/AppModel+Settings.swift` — thêm cạnh `matureSensesForCapture()` (L109), theo
+   đúng pattern `guard let database … read(...)`:
+   ```swift
+   /// FR-09 / ADR-066 D1: suất chọn sẵn còn lại hôm nay = daily_new_limit − đã lưu hôm nay.
+   func preselectBudgetForCapture() -> (budget: Int, dailyLimit: Int) {
+       guard let database else { return (ReviewDraftBuilder.preselectLimit, 0) }
+       let now = clock.now
+       return read("ngân sách chọn sẵn", fallback: (ReviewDraftBuilder.preselectLimit, 0)) {
+           let limit = try SettingsService.load(on: database).dailyNewLimit
+           let saved = try VocabRepository.newSavedToday(on: database, now: now)
+           return (max(0, limit - saved), limit)
+       }
+   }
+   ```
+4. `Reado/Analysis/AnalysisView.swift`:
+   - `@State private var budgetExhausted = false` và `@State private var dailyNewLimit = 0` cạnh
+     `aiPreselectedCount` (L24).
+   - `syncDraftsIfNeeded()` (L340-357): trước khi gọi `drafts(...)` (L344), lấy
+     `let quota = model.preselectBudgetForCapture()`; truyền `preselectBudget: quota.budget`;
+     sau khi gán `drafts`: `budgetExhausted = quota.budget == 0 && drafts.contains { $0.verification == .verified }`,
+     `dailyNewLimit = quota.dailyLimit`. Tính **một lần** (như `aiPreselectedCount`), không tính
+     lại khi đổi đích.
+   - Header Section "Đã chọn X/Y" (L651-663): khi `budgetExhausted` hiện
+     `Label("Hôm nay đã đủ \(dailyNewLimit) từ mới — phần còn lại tuỳ bạn chọn", systemImage: "checkmark.circle")`
+     (`Typo.meta`, `.secondary`) — thay chỗ dòng "AI chọn sẵn" (dòng đó tự ẩn vì
+     `aiPreselectedCount == 0`).
+
+**Test** — `ReadoKit/Tests/ReadoKitTests/ReviewDraftBuilderTests.swift` (helper `vocabIn` L8):
+- `testDraftBuilderBudgetZeroPreselectsNothing` — 8 verified, `preselectBudget: 0` → 0 chọn.
+- `testDraftBuilderBudgetThreePreselectsFirstThreeEligible` — thứ tự AI giữ nguyên.
+- `testDraftBuilderBudgetAboveLimitStillCapsAtFive` — `preselectBudget: 10`, 8 verified → 5 (Q1).
+- `testDraftBuilderBudgetUnverifiedDoesNotConsumeSlot` — budget 2, unverified đứng đầu.
+- Test cũ `...PreselectsTopFiveOfEightVerified` phải còn xanh không sửa (default = 5).
+
+File mới `ReadoKit/Tests/ReadoKitTests/NewSavedTodayTests.swift`:
+- Dùng `Fixtures.seededDB()` (`fixedNow = 2026-09-18T02:00:00Z` = 09:00 giờ VN, cutoff 4h)
+  + `Fixtures.insertVocab(in:collectionID:term:createdAt:)`.
+- Ca: 2 từ hôm nay + 1 từ hôm qua → 2. Từ lúc `2026-09-17T20:59:00Z` (03:59 VN, trước mốc 4h
+  → ngày hôm trước) không tính; `2026-09-17T21:00:00Z` (04:00 VN) có tính. Đổi
+  `day_cutoff_hour` bằng `SettingsService.update(on:cefrLevels:dailyNewLimit:dayCutoffHour:)`
+  (`SettingsTests.swift:30` làm mẫu) → mốc dịch theo.
+
+**DoD**
+- `scripts/test.sh kit` rồi full `scripts/test.sh` xanh.
+- Ảnh: `scripts/sim_screens.sh open analysis-fixture --seed empty --fresh` → còn chọn sẵn như cũ
+  (budget 10, trang có 2 từ). Ca budget = 0: không có seed sẵn — **fen xem tay**: Cài đặt đặt
+  "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy dòng "Hôm nay đã đủ 1 từ mới…".
+- Ghi ADR-066: Q1, Q3.
+
+---
 
 ### T2 — dữ liệu ngữ cảnh (migration v7 + matcher + repository + export)
 
-- Migration v7 (N3 không còn — đã xác nhận `currentVersion=6`, không nhánh nào tranh số);
-  `EncounterMatcher.contexts(in:)`; `insertSeen` nhận ngữ cảnh; `saveCapture` truyền câu +
-  `targetID`; export thêm field.
-- **Test:**
-  - migration từ phiên bản trước lên: dòng cũ có `sentence` NULL;
-  - xoá collection thì `collection_id` thành NULL, encounter vẫn còn;
-  - matcher trả đúng câu chứa từ, kể cả cụm nhiều chữ và dấu `'s`;
-  - lưu lỗi thì không có `seen` (FR-22 GWT 4 giữ nguyên);
-  - export có field mới.
-- **DoD:** kit test xanh • full `scripts/test.sh` xanh.
+**ReadoKit**
 
-### T3 — so khớp toàn app + nhóm "Đã có trong kho"
+1. `ReadoKit/Sources/ReadoKit/Database/Migration.swift`:
+   - `currentVersion` (L10) 6 → **7**; cập nhật comment liệt kê version (L5-8).
+   - Thêm `static let v7Statements: [String]` (một ALTER mỗi câu — comment L18):
+     ```swift
+     "ALTER TABLE encounters ADD COLUMN sentence TEXT;",
+     "ALTER TABLE encounters ADD COLUMN collection_id TEXT REFERENCES collections(id) ON DELETE SET NULL;",
+     ```
+     Cột nullable, không DEFAULT → SQLite cho ADD kèm REFERENCES khi `foreign_keys = ON`.
+   - Trong `run(on:upTo:)` (L244) thêm `case 6:` **chép đúng mẫu `case 3:` (L273-279)** — không
+     theo mẫu v6 (v6 tắt FK để rebuild bảng, v7 không cần).
+2. `ReadoKit/Sources/ReadoKit/Encounter/EncounterMatcher.swift` — `import NaturalLanguage`, thêm:
+   ```swift
+   public struct EncounterContext: Equatable, Sendable {
+       public let vocabItemID: String
+       public let sentence: String?
+       public init(vocabItemID: String, sentence: String?)
+   }
+   /// Mỗi vocab một ngữ cảnh (lần khớp ĐẦU TIÊN), cùng thứ tự `vocabItemIDs(in:)`.
+   public func contexts(in texts: [String]) -> [EncounterContext]
+   static func sentence(containing range: Range<String.Index>, in text: String) -> String
+   ```
+   - `contexts`: với mỗi text, `matches(in:)` (L80); mỗi `EncounterMatch.entries` (một term
+     có thể nhiều dòng — giống `vocabItemIDs` L130) → `vocabItemID` chưa gặp thì ghi
+     `sentence(containing: match.range, in: text)`.
+   - `sentence`: `NLTokenizer(unit: .sentence)`, `tokenizer.string = text`,
+     `tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex)` → lấy câu chứa
+     `range.lowerBound`; trim khoảng trắng. Câu > 300 ký tự (Q6): lấy từ
+     `max(câu.start, match.lower − 120 ký tự)` đến `min(câu.end, match.upper + 120 ký tự)`,
+     nới về ranh giới khoảng trắng gần nhất, thêm "…" ở đầu/cuối bị cắt.
+   - Giữ nguyên `matches(in:)`, `vocabItemIDs(in:)`.
+3. `ReadoKit/Sources/ReadoKit/Encounter/EncounterRepository.swift`:
+   - private `insert(on:vocabItemID:kind:createdAt:)` (L124) thêm `sentence: String? = nil,
+     collectionID: String? = nil`; SQL (L129) thành
+     `INSERT INTO encounters (id, vocab_item_id, kind, created_at, sentence, collection_id) VALUES (?, ?, ?, ?, ?, ?);`
+     (`nil` → `.null`).
+   - Thêm overload chính:
+     ```swift
+     @discardableResult
+     public static func insertSeen(
+         on db: SQLiteDatabase, contexts: [EncounterContext], collectionID: String?, now: Date
+     ) throws -> Int   // KHÔNG tự mở transaction; khử trùng theo vocabItemID trong lần gọi
+     ```
+   - `insertSeen(on:vocabItemIDs:now:)` (L21) giữ chữ ký, thân gọi overload mới với
+     `sentence: nil`, `collectionID: nil` → 15+ test cũ không phải sửa.
+4. `ReadoKit/Sources/ReadoKit/Vocab/VocabRepository.swift` `saveCapture` (L176-272), đoạn cuối
+   (L264-269) đổi thành:
+   ```swift
+   if let seenMatcher {
+       let contexts = seenMatcher.contexts(in: segments.map(\.sourceEN))
+       try EncounterRepository.insertSeen(on: db, contexts: contexts, collectionID: targetID, now: now)
+   }
+   ```
+   (`targetID` đã resolve sẵn L185-201 — kho tạm cũng có id.)
+5. `ReadoKit/Sources/ReadoKit/Export/ExportService.swift`:
+   - `ExportEncounter` (L119-125) thêm `public let sentence: String?`, `public let collectionID: String?`
+     (Optional để bản export cũ vẫn decode — `testExportBundleCodableRoundTrip`).
+   - SQL (L305-306) thêm `sentence, collection_id`; map ở L307-314. `version` giữ **1** (L327).
+6. `ReadoKit/Sources/ReadoKit/Dev/DevSeed.swift` L62 — để nguyên (gọi overload cũ, sentence NULL).
 
-- `knownSenses`, `drafts(knownSenses:)`, `existingHidden`, `saveCapture(contextOnlyItems:)`.
-- UI nhóm gặp mới + "Nghĩa khác → lưu" (N1).
-- Từ dạng leech: vẫn vào nhóm, có nhãn "đang ở Từ hay quên", không có nút lưu lại.
-- **Test (thuần ReadoKit):**
-  - từ có ở collection khác → vào nhóm, không chọn sẵn;
-  - từ đang học cùng collection → vào nhóm;
-  - "Nghĩa khác" → tạo dòng + thẻ mới;
-  - để nguyên trong nhóm → 0 thẻ mới, 1 `seen` có câu (N2);
-  - đổi đích lưu (ADR-053) không làm đổi nhóm.
-- **DoD:** test xanh • fen xem tay một trang PDF có từ cũ: nhóm hiện đủ nghĩa + tên bộ,
-  lưu xong không có thẻ trùng (đếm bằng query T0).
+**Test**
+- `AppleAgentStoreTests.swift:22` đang ghi cứng `user_version == 6` → đổi
+  `Migration.run(on: db)` thành `Migration.run(on: db, upTo: 6)` ở test đó (giữ ý nghĩa
+  "test bước v5→v6"). Grep thêm `user_version;"), 6` cho chắc không còn chỗ khác.
+- `MigrationAndSeedTests.swift` — mới `testMigrationV6ToV7AddsEncounterContextColumns`, chép mẫu
+  `AppleAgentStoreTests.swift:10` (`SQLiteDatabase(inMemory:)` → `run(upTo: 6)` → `Seeder.seed`
+  → insert vocab + 1 encounter cũ → `run(on:)`): `user_version == 7`; dòng cũ `sentence IS NULL`;
+  `PRAGMA foreign_key_check` rỗng; `PRAGMA foreign_keys == 1`.
+- `testDeletingCollectionNullsEncounterCollectionKeepsRow` — encounter có `collection_id` = bộ
+  X, xoá X qua `deleteCollection(... moveWordsTo:)` → dòng còn, `collection_id IS NULL`.
+- `EncounterMatcherTests.swift`: `contexts` trả đúng câu (2 câu, từ ở câu 2); cụm nhiều chữ;
+  `'s` sở hữu; một vocab gặp 2 lần → 1 context (lần đầu); câu 500 ký tự không dấu chấm → ≤ ~300
+  ký tự, chứa từ, có "…".
+- `EncounterRepositoryTests.swift` (helper `segments(_:)` L199): `saveCapture` có segments → dòng
+  `seen` có `sentence` + `collection_id = targetID`; kho tạm → `collection_id` = id kho tạm; giữ
+  nguyên các test seen cũ L203-285 (gồm lưu lỗi → 0 seen, leech → 0 seen).
+- `ExportTests.swift` mở rộng `testJSON_includesEncounters` (L120): field mới có mặt, dòng cũ nil.
+
+**DoD**: kit + full `scripts/test.sh` xanh. Không UI. Ghi ADR-066: Q6, Q10, Q11.
+
+---
+
+### T3 — so khớp toàn app + nhóm "Đã có trong kho" + "Ghi gặp lại"
+
+**ReadoKit**
+
+1. `Vocab/VocabRepository.swift` — thêm (giữ `matureSenses` L143 nguyên vẹn):
+   ```swift
+   public struct KnownSense: Equatable, Sendable {
+       public let vocabItemID: String
+       public let meaningVI: String
+       public let collectionName: String
+       public let isMature: Bool
+       public let isLeech: Bool
+       public init(...)
+   }
+   /// ADR-066: mọi từ đã có, MỌI collection, mọi trạng thái (D2). Một phần tử mỗi vocab_item.
+   public static func knownSenses(on db: SQLiteDatabase) throws -> [String: [KnownSense]]
+   ```
+   SQL (ngưỡng đọc như `matureSenses` L146-148: `known_stability`, fallback
+   `defaultMatureStability`):
+   ```sql
+   SELECT v.id, v.term_normalized, v.pos, v.meaning_vi, col.name AS collection_name,
+     MAX(CASE WHEN c.state = 'review' AND c.stability >= ? AND c.suspended_at IS NULL THEN 1 ELSE 0 END) AS is_mature,
+     MAX(CASE WHEN c.suspended_at IS NOT NULL THEN 1 ELSE 0 END) AS is_leech
+   FROM vocab_items v
+   JOIN collections col ON col.id = v.collection_id
+   LEFT JOIN cards c ON c.vocab_item_id = v.id
+   GROUP BY v.id ORDER BY v.created_at, v.id;
+   ```
+   Khoá: **`matureKey(term: term_normalized, pos: pos)`** (L122) — dùng đúng hàm để khớp tuyệt
+   đối với khoá phía draft.
+2. `Analysis/ReviewDraft.swift`:
+   - `MatureHiddenDraft` (L81-91): thêm `public let knownSenses: [KnownSense]`; `knownMeanings`
+     thành computed `knownSenses.map(\.meaningVI)`; giữ init cũ `init(draft:knownMeanings:)`
+     (bọc mỗi meaning thành `KnownSense(vocabItemID: "", meaningVI: m, collectionName: "", isMature: true, isLeech: false)`)
+     + init mới `init(draft:knownSenses:)`.
+   - `drafts(...)`: thêm `knownSenses: [String: [KnownSense]] = [:]` (trước `preselectBudget`).
+     Logic: `let lookup = knownSenses.isEmpty ? wrap(matureSenses) : knownSenses` rồi khớp như
+     L138-151 hiện tại. `regroup` (L239) thêm tham số tương tự (Q5).
+   - Doc comment `matureHidden`: nay là "đã có trong kho (toàn app)" — tên giữ (Q4).
+3. File mới `Encounter/ContextOnlyItem.swift`:
+   ```swift
+   /// ADR-066: từ để lại trong nhóm "Đã có" — không tạo thẻ, chỉ ghi `seen`.
+   public struct ContextOnlyItem: Equatable, Sendable {
+       public let term: String
+       public let pos: String
+       /// Câu AI đưa — chỉ truyền khi draft `verified` (N2), còn lại nil.
+       public let example: String?
+       public init(term: String, pos: String, example: String?)
+   }
+   ```
+4. `VocabRepository.saveCapture` (L176) thêm `contextOnly: [ContextOnlyItem] = []` (trước `now`):
+   - Guard L184 → `guard !items.isEmpty || !contextOnly.isEmpty else { return 0 }`.
+   - Trong transaction, **trước** vòng chèn item: với mỗi `ContextOnlyItem`, lấy id
+     `SELECT v.id FROM vocab_items v WHERE v.term_normalized = ? AND lower(trim(v.pos)) = ? AND NOT EXISTS (SELECT 1 FROM cards k WHERE k.vocab_item_id = v.id AND k.suspended_at IS NOT NULL)`
+     (tham số `normalizedTerm(term)`, pos lower/trim — cùng cách `matureKey`). Leech bị loại (Q8).
+   - Cuối transaction: `var contexts = seenMatcher?.contexts(...) ?? []`; với mỗi id từ
+     context-only **chưa có** trong `contexts` → thêm `EncounterContext(vocabItemID: id, sentence: item.example)`.
+     Một lần `insertSeen(on:contexts:collectionID: targetID, now:)` (tự khử trùng).
+   - Phiên đọc vẫn ghi theo luật cũ khi `items` rỗng (Q7). Trả về `count` (số từ mới) như cũ.
+
+**App**
+
+5. `Reado/App/AppModel+Settings.swift`: thêm `knownSensesForCapture() -> [String: [KnownSense]]`
+   (mẫu `matureSensesForCapture` L109, **không** đọc `analysisTargetCollectionID`). Không xoá
+   `matureSensesForCapture` (kiểm `grep` — hết call site thì xoá được, ghi vào handoff).
+6. `Reado/App/AppState.swift:88` `SaveConfirmation` thêm `var contextCount: Int = 0`.
+7. `Reado/App/AppModel+Capture.swift` `saveSelection` (L107):
+   - Thêm tham số `contextOnly: [ContextOnlyItem] = []`, truyền xuống `saveCapture`.
+   - Điều kiện thành công `if saved > 0` (L125) → `if saved > 0 || !contextOnly.isEmpty`; đặt
+     `SaveConfirmation(count: saved, …, contextCount: contextOnly.count)`.
+   - Hàm trả `saved` như cũ.
+8. `Reado/App/RootView.swift:172-179` banner: `count > 0` → giữ "Đã lưu N từ vào X"; `count == 0`
+   → "Đã ghi gặp lại M từ ở X". Vẫn "Xem".
+9. `Reado/Analysis/AnalysisView.swift`:
+   - `syncDraftsIfNeeded` (L344): `knownSenses: model.knownSensesForCapture()` thay
+     `matureSenses:`; `matureMeaningsByID` đổi thành `knownSensesByID: [String: [KnownSense]]`
+     (L29-32).
+   - **Bỏ** `.onChange(of: model.capture.analysisTargetCollectionID) { regroupMatureIfNeeded() }`
+     (L199) và xoá `regroupMatureIfNeeded()` (L363-376) — khoá toàn app không đổi theo đích.
+     `ReviewDraftBuilder.regroup` + test giữ nguyên.
+   - Section (L675-688): nhãn `"Đã có trong kho · \(matureHiddenDrafts.count)"`; dưới nhãn (trong
+     DisclosureGroup, dòng đầu) `Text("Không tạo thẻ mới — chỉ ghi lần gặp lại. Chọn nếu trang này dùng nghĩa khác.")`
+     `Typo.meta` `.secondary`.
+   - `contextOnlyDrafts` = `matureHiddenDrafts.filter { !$0.isSelected && !allLeech($0) }`.
+   - `saveBar` (L402-416): `selectedCount > 0` → "Lưu N từ vào X" (cũ); `selectedCount == 0 &&
+     !contextOnlyDrafts.isEmpty` → "Ghi gặp lại \(contextOnlyDrafts.count) từ"; disabled khi cả hai 0.
+   - `save()` (L442-471): truyền `contextOnly: contextOnlyDrafts.map { ContextOnlyItem(term: $0.term, pos: $0.pos, example: $0.verification == .verified ? $0.example : nil) }`;
+     guard `saved > 0` (L452) → `saved > 0 || !contextOnly.isEmpty`.
+10. `Reado/Analysis/ReviewCardRow.swift:171-215` `MatureHiddenRow`: nhận `knownSenses: [KnownSense]`
+    thay `knownMeanings`. Hiện "Trang này: …" (giữ) + mỗi sense một dòng
+    `"\(meaningVI) — \(collectionName) · \(status)"`, status: leech → "đang ở Từ hay quên",
+    mature → "đã thuộc", còn lại → "đang học". Nút tròn 44pt giữ, `accessibilityLabel("Nghĩa khác — lưu thẻ mới")`;
+    **ẩn nút** khi mọi sense `isLeech` (Q8).
+
+**Fixture ảnh** — file mới `scripts/fixtures/analysis-known.json` (cùng schema `analysis-demo.json`):
+segments chứa "keystone", "setback", "quitting"; vocabulary: `setback` (noun — `markMature` sẵn ở
+Kho tạm → "đã thuộc"), `keystone` (noun, meaning **"viên đá đỉnh vòm"** — khác nghĩa trong CSV
+"nền tảng then chốt" ở bộ Demo Habits → "đang học"), `quitting` (verb, mới → danh sách chính).
+
+**Test**
+- File mới `KnownSensesTests.swift` (mẫu DB `MatureSensesTests.swift`): khớp xuyên 2 collection;
+  trạng thái new/learning/review đều có; `isMature` theo `known_stability`; leech → `isLeech`
+  true; một vocab 2 card → 1 phần tử; collectionName đúng.
+- `ReviewDraftBuilderTests`: từ có ở bộ khác → vào `matureHidden`, không chọn sẵn, không chiếm
+  suất; `knownSenses` ưu tiên hơn `matureSenses`; 10 test `regroup` cũ xanh không sửa.
+- `EncounterRepositoryTests` (`saveCapture`): `items` rỗng + 1 contextOnly → 0 thẻ mới, 1 `seen`
+  có `sentence` = câu trang (khi segments chứa từ) hoặc = example (khi không chứa — N2);
+  contextOnly + matcher cùng vocab → **1** dòng; contextOnly leech → 0 dòng; contextOnly
+  `example: nil` và không khớp segment → 1 dòng `sentence` NULL; items + contextOnly cùng lúc.
+- Đo N6: `testKnownSensesAndSaveCaptureTimingAt3000Words` dùng `measure {}`, **không assert** —
+  ghi số vào journal.
+
+**DoD**
+- kit + full xanh.
+- Ảnh: `scripts/sim_screens.sh open analysis-fixture-mature --fixture scripts/fixtures/analysis-known.json --seed demo --fresh`
+  → `shot after-known-group` light+dark: nhóm "Đã có trong kho · 2", keystone hiện 2 nghĩa +
+  tên bộ + "đang học". (Debug flag mở nhóm và tự chọn dòng đầu — `AnalysisView.swift:222-227`.)
+- **Fen xem tay:** (a) trang PDF có từ cũ ở bộ khác → lưu xong, chạy query T0 đếm khoá trùng
+  không tăng; (b) bỏ chọn hết từ mới → nút "Ghi gặp lại N từ" → banner đúng.
+- Cập nhật `journeys.md` J1 bước 4 nếu còn câu "đổi đích tính lại nhóm gập" (T0 có thể đã sửa —
+  grep `tính lại`). ADR-066: Q4, Q5, Q7, Q8.
+
+---
 
 ### T4 — hiện ngữ cảnh: popover + mặt sau thẻ
 
-- Popover FR-22: "Gặp ở N chỗ" + 1-2 câu.
-- Mặt sau thẻ: mục "Gặp lại", tối đa 3 câu, mới nhất trước, kèm tên bộ. Dòng cũ không có
-  câu thì chỉ đếm, không hiện câu.
-- **Test:** model thẻ nạp đúng ngữ cảnh, thứ tự đúng, giới hạn 3, không lấy dòng
-  `recognized` không có câu.
-- **DoD:** test xanh • fen xem tay một thẻ có ≥ 2 ngữ cảnh trên máy thật.
+**ReadoKit**
+
+1. `Encounter/EncounterRepository.swift` — thêm:
+   ```swift
+   public struct EncounterContextRow: Equatable, Sendable {
+       public let sentence: String
+       public let collectionName: String?   // nil = bộ đã xoá (SET NULL)
+       public let createdAt: Date
+   }
+   /// Mới nhất trước; chỉ `seen` có câu.
+   public static func recentContexts(on db: SQLiteDatabase, vocabItemID: String, limit: Int) throws -> [EncounterContextRow]
+   ```
+   SQL: `SELECT e.sentence, col.name, e.created_at FROM encounters e LEFT JOIN collections col ON col.id = e.collection_id WHERE e.vocab_item_id = ? AND e.kind = 'seen' AND e.sentence IS NOT NULL ORDER BY e.created_at DESC, e.id DESC LIMIT ?;`
+   Số lần: dùng `count(on:vocabItemID:kind: .seen)` có sẵn (L63).
+2. `Review/ReviewQueue.swift` `ReviewItem` (L276-303): thêm `public let vocabItemID: String` và
+   `public let contexts: [EncounterRepository.EncounterContextRow]`; init thêm 2 tham số **có
+   default** (`""`, `[]`). Chỗ dựng duy nhất `hydrate` (L349-387, item L371): SQL thêm
+   `v.id AS vocab_item_id`; mỗi item gọi `recentContexts(limit: 3)` rồi lọc bỏ câu trùng
+   `example` (trim, so không phân biệt hoa thường).
+
+**App**
+
+3. `Reado/App/AppModel+Encounter.swift` — cạnh `hasRecognizedToday` (L19), cùng pattern
+   `readQuietly`:
+   `func encounterSummary(_ vocabItemID: String) -> (seenCount: Int, recent: [EncounterRepository.EncounterContextRow])`
+   (`recent` limit 2).
+4. `Reado/Shared/EncounterText.swift` `EncounterSheet.entryCard` (L122-146): dưới
+   `Label("Đã gặp ở …")` — nếu `seenCount > 0`: `Text("Gặp lại \(seenCount) lần")` (Q9,
+   `Typo.meta` `.secondary`) + tối đa 2 câu `Text(sentence).font(.subheadline).italic().lineLimit(3)`
+   kèm tên bộ (`collectionName ?? "bộ đã xoá"`). Nạp trong `.onAppear` (L115) vào
+   `@State [String: (Int, [Row])]` theo `vocabItemID`.
+5. `Reado/Review/ReviewQueueView+Card.swift` mặt sau (L269-295): sau
+   `Text(item.collectionName)` — nếu `!item.contexts.isEmpty`: `Divider()`, tiêu đề
+   `Text("Gặp lại").font(Typo.meta)`, mỗi context `Text(sentence).font(.subheadline).italic().lineLimit(2)`
+   + dòng tên bộ `Typo.meta` `.secondary`. **Cần xác minh bằng ảnh:** thẻ có chiều cao cố định?
+   nội dung có bị cắt? card có `.drawingGroup()` (L65) — nếu cắt thì giữ `lineLimit(2)` và tối đa
+   2 context thay vì 3, ghi lại.
+
+**Dữ liệu ảnh (DEBUG)** — `Dev/DevSeed.swift` `gradeHistory` (gần L57-63): sau `insertSeen` cũ,
+thêm 2 dòng `seen` có câu cho vocab đầu tiên qua `insertSeen(on:contexts:collectionID:now:)`
+với câu cố định ghi rõ là demo (vd `"Demo: \(term) appears again in another chapter."`) và
+`collectionID` = bộ của vocab. Cập nhật `DevSeedTests` nếu có assert số dòng encounters.
+
+**Test**
+- `EncounterRepositoryTests`: `recentContexts` thứ tự mới nhất trước, `limit`, bỏ `recognized`,
+  bỏ `sentence` NULL, `collectionName` nil khi bộ bị xoá.
+- `ReviewQueueAndServiceTests`: `loadFullQueue` → item có `vocabItemID` đúng, `contexts` ≤ 3,
+  không chứa câu trùng `example`.
+
+**DoD**
+- kit + full xanh.
+- Ảnh: `scripts/sim_screens.sh open encounter-sheet --seed demo-reviewed --fresh` → popover có
+  "Gặp lại N lần" + câu (light+dark).
+- **Fen xem tay:** lật một thẻ có ≥ 2 ngữ cảnh trên máy thật (DebugLaunch không lật thẻ được) —
+  câu không bị cắt, đọc được ở Dynamic Type lớn.
+- Khép plan: dòng 3 → `closed (YYYY-MM-DD) - …`, `git mv` sang `docs/plans/done/`, sửa con trỏ
+  ở `docs/session-brief.md`/`ROADMAP.md`, `node scripts/verify/check-doc-links.mjs`.
+
+---
 
 ## Verification
 

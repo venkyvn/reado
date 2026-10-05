@@ -16,8 +16,11 @@
   2026-10-05 (D4 = không làm spike PDF). **T0 xong** (docs + ADR-066, không code) —
   `prd.md` v0.16, `db.md`, `journeys.md`, `vocabulary.md` §6.3, `CLAUDE.md` §5 đồng bộ.
   **Nợ của T0:** baseline đo trước/sau (3 query SQL ở plan mục T0) cần dữ liệu thật —
-  chờ fen export JSON (FR-16) hoặc tự chạy query rồi báo 3 con số. Task tiếp: **T1**
-  (ngân sách chọn sẵn, độc lập, không đổi schema).
+  chờ fen export JSON (FR-16) hoặc tự chạy query rồi báo 3 con số.
+  **T1 xong** (2026-10-05): `VocabRepository.newSavedToday` + `drafts(preselectBudget:)`, suất
+  chọn sẵn = `min(5, daily_new_limit − đã lưu hôm nay)`, dòng "Hôm nay đã đủ N từ mới" khi hết.
+  Nợ xem tay: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy dòng đó (ảnh tĩnh
+  không dựng được ca budget = 0). Plan đã chi tiết hoá T1–T4. Task tiếp: **T2** (migration v7).
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
   ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem

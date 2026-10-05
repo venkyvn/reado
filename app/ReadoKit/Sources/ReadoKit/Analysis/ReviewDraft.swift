@@ -129,8 +129,11 @@ public enum ReviewDraftBuilder {
     public static func drafts(
         from items: [PageAnalysis.VocabularyItemIn],
         selectedLevels: Set<String>? = nil,
-        matureSenses: [String: [String]] = [:]
+        matureSenses: [String: [String]] = [:],
+        preselectBudget: Int = preselectLimit
     ) -> ReviewDraftResult {
+        // ADR-066 D1/Q1: suất chọn sẵn = min(trần 5/trang, ngân sách ngày còn lại).
+        let slots = min(preselectLimit, max(0, preselectBudget))
         var preselectedCount = 0
         var visible: [ReviewDraft] = []
         var matureHidden: [MatureHiddenDraft] = []
@@ -151,7 +154,7 @@ public enum ReviewDraftBuilder {
                 continue
             }
             let eligible = isEligibleForPreselect(item, selectedLevels: selectedLevels)
-            let isSelected = eligible && preselectedCount < preselectLimit
+            let isSelected = eligible && preselectedCount < slots
             if isSelected { preselectedCount += 1 }
             visible.append(
                 ReviewDraft(

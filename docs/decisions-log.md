@@ -1482,6 +1482,10 @@
   - **D1 — ngân sách chọn sẵn mỗi ngày:** bám thẳng `daily_new_limit` (không thêm setting
     riêng) — `preselectBudget = max(0, daily_new_limit - newSavedToday)` thay cho hằng
     `preselectLimit = 5` cố định.
+    - **Q1 (fen, T1):** giữ trần 5/trang — suất chọn sẵn = `min(5, preselectBudget)`; ngân
+      sách ngày không nâng trần theo trang.
+    - **Q3 (plan, T1):** `newSavedToday` tính cả từ nhập CSV (FR-20) — CSV ghi `created_at` =
+      lúc nhập, không phân biệt được nguồn; chỉ ảnh hưởng gợi ý chọn sẵn, không đụng dữ liệu.
   - **D2 — phạm vi nhóm "Đã có trong kho":** mọi từ đã có (đang học + đã thuộc, mọi
     collection) — không chỉ từ đã thuộc trong cùng collection như FR-10 cũ.
   - **D3 — ôn theo bộ (FR-18):** từ gặp lại ở collection khác **không** kéo vào khi ôn

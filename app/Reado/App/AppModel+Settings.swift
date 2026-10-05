@@ -102,6 +102,17 @@ extension AppModel {
         }
     }
 
+    /// FR-09 / ADR-066 D1: suất chọn sẵn còn lại hôm nay = daily_new_limit − đã lưu hôm nay.
+    func preselectBudgetForCapture() -> (budget: Int, dailyLimit: Int) {
+        guard let database else { return (ReviewDraftBuilder.preselectLimit, 0) }
+        let now = clock.now
+        return read("ngân sách chọn sẵn", fallback: (ReviewDraftBuilder.preselectLimit, 0)) {
+            let limit = try SettingsService.load(on: database).dailyNewLimit
+            let saved = try VocabRepository.newSavedToday(on: database, now: now)
+            return (max(0, limit - saved), limit)
+        }
+    }
+
     /// FR-10 / Q-13 phương án B: nghĩa trong kho (`meaning_vi`) của mọi term+pos
     /// đã thuộc (stability >= 21, state review) trong collection đang chụp —
     /// khoá `term|pos` → danh sách nghĩa. Chưa chọn bộ → kho tạm. Lỗi DB → rỗng,
