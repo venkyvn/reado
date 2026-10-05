@@ -11,8 +11,13 @@
 
 **Đang mở / hàng đợi**
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
-  **T5 eval prompt PDF trên PDF thật** (cần fen + file thật). Nợ xem tay T3/T4
-  (DebugLaunch không giả lập chạm được) — chi tiết `docs/plans/pdf-reader-r1.md`.
+  **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
+  ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem
+  `docs/journal/2026-10-05.md`) xác nhận `PDFPageText.extract()` chạy tốt trên PDF
+  này (10/12 trang mẫu dùng được, không lỗi tách khoảng trắng). Còn thiếu để làm T5
+  đầy đủ: `prompt_eval.py --swift-func` (chưa viết) + chạy eval thật + chỉnh ngưỡng.
+  Nợ xem tay T3/T4 (DebugLaunch không giả lập chạm được) — chi tiết
+  `docs/plans/pdf-reader-r1.md`.
 **Đã khép gần đây** (một dòng mỗi task; chi tiết ở journal ngày tương ứng)
 - 2026-10-05 → `docs/journal/2026-10-05.md`: ocr-quality-r1 (branch `ocr-quality-r1` từ `main`,
   ADR-064/065 — plan nháp `plan_ocr_quality_r1.md` gốc repo, chưa vào `docs/plans/`) — T0 OCR-fix
