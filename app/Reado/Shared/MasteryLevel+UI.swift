@@ -21,4 +21,14 @@ extension Mastery.Level {
         case .absorbed: .ok
         }
     }
+
+    /// Màu của mức — dùng chung lưới chấm, legend và thanh tiến độ ở Hub để không lệch nhau.
+    var color: Color {
+        switch self {
+        case .new: Theme.surfaceStrong
+        case .learning: Theme.due
+        case .remembered: Color.accentColor.opacity(0.6)
+        case .absorbed: Theme.ok
+        }
+    }
 }

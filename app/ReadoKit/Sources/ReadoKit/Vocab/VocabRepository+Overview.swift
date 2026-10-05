@@ -138,4 +138,66 @@ extension VocabRepository {
              .text(window.end)]) ?? 0
         return NextDue(date: minDate, count: Int(count))
     }
+
+    // MARK: — Bản đồ trí nhớ (engagement-r1 T6)
+
+    /// Một chấm của bản đồ trí nhớ — một TỪ của collection, màu theo 4 mức (vision #6).
+    public struct MasteryDot: Equatable, Sendable, Identifiable {
+        public let id: String          // vocab_item_id
+        public let term: String
+        public let meaningVI: String
+        public let example: String
+        public let level: Mastery.Level
+    }
+
+    /// Mỗi từ của một collection một chấm, theo `created_at, id`. Luật mức KHỚP `allCollectionSummaries`
+    /// (cùng ngưỡng `Mastery.stabilityThreshold`, MAX trên các thẻ không suspend của từ): đã nhớ
+    /// (`review` + ngưỡng) → Đã thấm nếu có lần "nhận ra" khi đọc, không thì Đã nhớ; còn thẻ
+    /// learning/relearning/review dưới ngưỡng → Đang học; chỉ thẻ `new` hoặc chưa có thẻ → Mới. Từ chỉ còn
+    /// thẻ suspend (leech) không có chấm — giống header.
+    public static func masteryDots(
+        on db: SQLiteDatabase, collectionID: String
+    ) throws -> [MasteryDot] {
+        let rows = try db.rows(
+            """
+            SELECT v.id AS id, v.term AS term, v.meaning_vi AS meaning_vi, v.example AS example,
+                   MAX(CASE WHEN ca.suspended_at IS NULL AND ca.state = 'review'
+                             AND ca.stability >= ? THEN 1 ELSE 0 END) AS m,
+                   MAX(CASE WHEN ca.suspended_at IS NULL
+                             AND ca.state IN ('learning', 'relearning') THEN 1 ELSE 0 END) AS l,
+                   MAX(CASE WHEN ca.suspended_at IS NULL AND ca.state = 'review'
+                        THEN 1 ELSE 0 END) AS r,
+                   MAX(CASE WHEN ca.id IS NULL OR ca.suspended_at IS NULL
+                        THEN 1 ELSE 0 END) AS active,
+                   EXISTS (SELECT 1 FROM encounters e
+                           WHERE e.vocab_item_id = v.id AND e.kind = 'recognized') AS rec
+            FROM vocab_items v
+            LEFT JOIN cards ca ON ca.vocab_item_id = v.id
+            WHERE v.collection_id = ?
+            GROUP BY v.id
+            ORDER BY v.created_at, v.id;
+            """,
+            [.double(Mastery.stabilityThreshold), .text(collectionID)])
+        return rows.compactMap { row in
+            guard let id = row["id"].textValue else { return nil }
+            let mastered = (row["m"].intValue ?? 0) != 0
+            let learning = (row["l"].intValue ?? 0) != 0 || (row["r"].intValue ?? 0) != 0
+            let active = (row["active"].intValue ?? 0) != 0
+            let recognized = (row["rec"].intValue ?? 0) != 0
+            let level: Mastery.Level
+            if mastered {
+                level = recognized ? .absorbed : .remembered
+            } else if learning {
+                level = .learning
+            } else if active {
+                level = .new
+            } else {
+                return nil
+            }
+            return MasteryDot(
+                id: id, term: row["term"].textValue ?? "",
+                meaningVI: row["meaning_vi"].textValue ?? "",
+                example: row["example"].textValue ?? "", level: level)
+        }
+    }
 }

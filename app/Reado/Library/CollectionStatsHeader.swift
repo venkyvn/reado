@@ -7,6 +7,8 @@ import SwiftUI
 struct CollectionStatsHeader: View {
     let overview: AppModel.CollectionOverview
     let nextDue: VocabRepository.NextDue?
+    /// Bản đồ trí nhớ (engagement-r1 T6) — rỗng (đang nạp/lỗi đọc) thì giữ thanh 4 màu cũ.
+    var dots: [VocabRepository.MasteryDot] = []
     /// Mốc "bây giờ" cho chữ tương đối (từ `AppModel.clock`) — view thuần, không tự gọi `Date()`.
     let now: Date
     let onReview: () -> Void
@@ -39,17 +41,19 @@ struct CollectionStatsHeader: View {
     private var segments: (items: [Segment], total: Int) {
         let remembered = max(0, overview.masteredCount - overview.absorbedCount)
         let items = [
-            Segment(label: "Đã thấm", count: overview.absorbedCount, color: Theme.ok),
             Segment(
-                label: "Đã nhớ", count: remembered,
-                color: Color.accentColor.opacity(0.6)),
+                label: Mastery.Level.absorbed.title, count: overview.absorbedCount,
+                color: Mastery.Level.absorbed.color),
             Segment(
-                label: "Đang học",
+                label: Mastery.Level.remembered.title, count: remembered,
+                color: Mastery.Level.remembered.color),
+            Segment(
+                label: Mastery.Level.learning.title,
                 count: overview.learningCount + overview.reviewingCount,
-                color: Theme.due),
+                color: Mastery.Level.learning.color),
             Segment(
-                label: "Mới", count: overview.notStartedCount,
-                color: Theme.surfaceStrong),
+                label: Mastery.Level.new.title, count: overview.notStartedCount,
+                color: Mastery.Level.new.color),
         ]
         return (items, items.reduce(0) { $0 + $1.count })
     }
@@ -60,21 +64,25 @@ struct CollectionStatsHeader: View {
             Text("Đã nhớ \(overview.masteredCount)/\(overview.totalItems)")
                 .font(Typo.rowTitle)
                 .monospacedDigit()
-            GeometryReader { proxy in
-                HStack(spacing: 1) {
-                    ForEach(items.filter { $0.count > 0 }) { segment in
-                        segment.color
-                            .frame(
-                                width: max(
-                                    2,
-                                    proxy.size.width * CGFloat(segment.count)
-                                        / CGFloat(total)))
+            if dots.isEmpty {
+                GeometryReader { proxy in
+                    HStack(spacing: 1) {
+                        ForEach(items.filter { $0.count > 0 }) { segment in
+                            segment.color
+                                .frame(
+                                    width: max(
+                                        2,
+                                        proxy.size.width * CGFloat(segment.count)
+                                            / CGFloat(total)))
+                        }
                     }
+                    .frame(width: proxy.size.width, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
                 }
-                .frame(width: proxy.size.width, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
+                .frame(height: 8)
+            } else {
+                MasteryDotGrid(dots: dots)
             }
-            .frame(height: 8)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Spacing.md) {
                     ForEach(items) { legendItem($0) }

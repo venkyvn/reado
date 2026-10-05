@@ -51,6 +51,17 @@ extension AppModel {
         }
     }
 
+    /// Nạp bản đồ trí nhớ (mỗi từ một chấm) của một collection cho header hub (engagement-r1 T6).
+    func loadMasteryDots(collectionID: String) {
+        guard let database else {
+            library.masteryDots = []
+            return
+        }
+        library.masteryDots = read("bản đồ trí nhớ", fallback: []) {
+            try VocabRepository.masteryDots(on: database, collectionID: collectionID)
+        }
+    }
+
     /// Nạp lần ôn kế tiếp của một collection cho ô "Lần ôn tiếp" ở header hub.
     func loadNextDue(collectionID: String) {
         guard let database else {

@@ -43,6 +43,7 @@ struct CollectionDetailView: View {
                     CollectionStatsHeader(
                         overview: overview,
                         nextDue: model.library.collectionNextDue,
+                        dots: model.library.masteryDots,
                         now: model.clock.now,
                         onReview: {
                             startReview(ReviewRequest(scope: [collectionID], mode: .srs))
@@ -340,6 +341,7 @@ struct CollectionDetailView: View {
             order: isInbox ? .byDateAdded : .byTerm)
         model.loadSessions(collectionID: collectionID)
         model.loadNextDue(collectionID: collectionID)
+        model.loadMasteryDots(collectionID: collectionID)
         // FR-23: kho tạm không gắn PDF — không đọc, tránh hiện nhầm hàng cũ
         // của Hub trước đó (LibraryState còn lại giữa hai lần mở Hub khác nhau).
         if isInbox {

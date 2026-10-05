@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh xong; T6-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ xong; T7-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -586,7 +586,7 @@ public static func loadQuickQueue(on db: SQLiteDatabase, dailyNewLimit: Int, now
   3 thẻ bằng tay → chưa xem tay → brief §2.
 - **DoD:** full xanh; không đổi `ReviewService`.
 
-### T6 — Ý 3: bản đồ trí nhớ theo bộ (journey J2 header Hub)
+### T6 — Ý 3: bản đồ trí nhớ theo bộ (journey J2 header Hub) ✅ 2026-10-05 (full 597/601)
 
 **ReadoKit** — `Vocab/VocabRepository+Overview.swift`:
 ```swift
