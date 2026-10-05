@@ -133,7 +133,11 @@ extension AppModel {
             {
                 shell.saveConfirmation = SaveConfirmation(
                     count: saved, collectionID: target, collectionName: name,
-                    contextCount: contextOnly.count)
+                    contextCount: contextOnly.count,
+                    // Chỉ khi thật sự lưu từ mới — trang chỉ "ghi gặp lại" thì không có cụm nào đáng nhắc.
+                    phrase: saved > 0
+                        ? MemorablePhrase.pick(from: segments, savedTerms: items.map(\.term))
+                        : nil)
             }
             capture.lastCapturedImage = nil
             capture.pdfText = nil

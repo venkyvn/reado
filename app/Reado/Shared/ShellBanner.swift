@@ -9,6 +9,8 @@ struct ShellBannerItem: Identifiable, Equatable {
     var systemImage = "checkmark.circle.fill"
     /// nil = không có nút hành động (chỉ ✕).
     var actionTitle: String?
+    /// Dòng phụ (engagement-r1 T7) — vd cụm EN–VI đáng nhớ của trang vừa lưu. Banner có dòng phụ ở lâu hơn.
+    var detail: String?
     /// false = đứng yên tới khi đóng tay — dùng cho màn debug `save-banner` (chụp ảnh không kịp 4s).
     var autoHides = true
 }
@@ -18,8 +20,10 @@ struct ShellBannerItem: Identifiable, Equatable {
 /// Nơi gắn đặt nó trong overlay đáy, bọc `Motion.run` khi đổi `item` và gắn `.revealTransition()`
 /// ở cuối chuỗi modifier (transition phải nằm trên view nhánh `if`).
 struct ShellBanner: View {
-    /// Thời gian tự ẩn khi không bật VoiceOver.
-    private static let autoHideSeconds = 4
+    /// Thời gian tự ẩn khi không bật VoiceOver — có dòng phụ (cụm để đọc) thì lâu hơn.
+    private static func autoHideSeconds(for item: ShellBannerItem) -> Int {
+        item.detail == nil ? 4 : 7
+    }
 
     let item: ShellBannerItem
     let onAction: () -> Void
@@ -57,9 +61,10 @@ struct ShellBanner: View {
         // bằng ✕): người dùng cần thời gian nghe/chạm, WCAG 2.2.1. Task đổi theo `item.id` nên
         // banner mới thay banner cũ thì đếm lại từ đầu.
         .task(id: item.id) {
-            AccessibilityNotification.Announcement(item.message).post()
+            AccessibilityNotification.Announcement(
+                [item.message, item.detail].compactMap { $0 }.joined(separator: ". ")).post()
             guard item.autoHides, !UIAccessibility.isVoiceOverRunning else { return }
-            try? await Task.sleep(for: .seconds(Self.autoHideSeconds))
+            try? await Task.sleep(for: .seconds(Self.autoHideSeconds(for: item)))
             guard !Task.isCancelled, !UIAccessibility.isVoiceOverRunning else { return }
             dismiss()
         }
@@ -70,10 +75,20 @@ struct ShellBanner: View {
             Image(systemName: item.systemImage)
                 .foregroundStyle(Theme.ok)
                 .accessibilityHidden(true)
-            Text(item.message)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: Spacing.tight) {
+                Text(item.message)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail = item.detail {
+                    Text(detail)
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                        // Cỡ chữ accessibility: nới trần dòng để không cắt cụm (chữ đã to gấp đôi).
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 8 : 3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 

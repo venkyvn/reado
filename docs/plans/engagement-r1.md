@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ xong; T7-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh + T6 bản đồ trí nhớ + T7 cụm đáng nhớ xong; T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -631,7 +631,7 @@ new = notStarted); từ chỉ có thẻ suspend không có chấm; từ không t
   không có seed → ghi nợ xem tay. Scrub chọn chấm → chưa xem tay.
 - **DoD:** full xanh; `VocabularyListTests` không đổi.
 
-### T7 — Ý 4: cụm đáng nhớ trong banner "Đã lưu" (FR-02)
+### T7 — Ý 4: cụm đáng nhớ trong banner "Đã lưu" (FR-02) ✅ 2026-10-05 (full 604/608)
 
 **ReadoKit** — `Analysis/MemorablePhrase.swift` (mới):
 ```swift

@@ -177,7 +177,8 @@ struct RootView: View {
                         message: saved.count > 0
                             ? "Đã lưu \(saved.count) từ vào \(saved.collectionName)"
                             : "Đã ghi gặp lại \(saved.contextCount) từ ở \(saved.collectionName)",
-                        actionTitle: "Xem")
+                        actionTitle: "Xem",
+                        detail: saved.phrase.map { "“\($0.en)” — \($0.vi)" })
                 }
             }
             // FR-04: ảnh mờ / không phải tiếng Anh → mở lại CaptureView.
@@ -384,7 +385,9 @@ struct RootView: View {
             bannerHubID = model.collections.first(where: { $0.isDefault })?.id
             Motion.run(reduceMotion: reduceMotion) {
                 banner = ShellBannerItem(
-                    message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem", autoHides: false)
+                    message: "Đã lưu 8 từ vào Kho tạm", actionTitle: "Xem",
+                    detail: "“Small gains compound over the years.” — Lợi nhỏ cộng dồn qua năm tháng.",
+                    autoHides: false)
             }
         case .pdfReader:
             openDebugPDFReader()
