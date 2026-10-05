@@ -54,6 +54,12 @@ def summarize_analysis(folder: Path, full: bool) -> None:
             if ocr.get("engine") == "documents":
                 # documents: raw = số đoạn, kept = số hàng — khác đơn vị, không có "unseen".
                 print(f"OCR documents: paragraphs={raw} lines={kept}")
+            elif ocr.get("engine") == "liveText":
+                # ocr-quality-r1 T3a (ADR-064): chữ từ Live Text, nhưng observations/
+                # lines/rawObservationCount kế thừa nguyên từ `documents` (khung đoạn
+                # dùng để ghép) — không phải số liệu riêng của Live Text, "unseen"
+                # không áp dụng ở đây.
+                print(f"OCR liveText (ghép khung đoạn documents): paragraphs={raw} lines={kept}")
             else:
                 # ocr-line-drop: raw > kept + len(dropped) nghĩa Vision không hề thấy
                 # phần chênh lệch đó — không phải do code mình lọc confidence.

@@ -10,7 +10,8 @@
   ở Keychain (Q-03, đảo ADR-049 2026-10-01 — bỏ proxy Reado, không còn "hybrid") **hoặc
   Apple Intelligence** trên máy (ADR-063 2026-10-05 — không key, mặc định khi máy hỗ trợ
   và chưa chọn agent nào). OCR trên máy còn được Apple Intelligence soát lỗi ký tự khi
-  máy hỗ trợ (ADR-063, mọi agent, mặc định bật).
+  máy hỗ trợ (ADR-063, mọi agent), **mặc định TẮT** (đảo ADR-064 2026-10-05 — luật lọc
+  không chặn hết lỗi ra từ thật, người dùng tự bật ở Settings).
 - Scheduling dùng thư viện `swift-fsrs` pin commit `4fbaf20`, `FSRSDefaults.defaultWv6` (21 trọng số).
 - Owner = fen. R1 là MVP một user; success metric M-07: bỏ luồng chat Gemini thủ công.
 
@@ -79,6 +80,9 @@ Danh sách này là nguồn duy nhất. Agent và command không chép lại s�
   builtin, không key) + soát OCR trên máy (tiền xử lý, mọi agent) — ADR-063. R1 chỉ
   on-device (PCC thiếu entitlement, để R2); agent Apple chia nhỏ theo đoạn thay vì một
   lượt (context 4096 token không đủ cho một lượt trên trang sách thật — đo thật ở spike).
+- **Chốt thêm 2026-10-05 (ocr-quality-r1):** soát OCR đảo mặc định sang TẮT; engine OCR
+  mặc định đổi sang `liveText` (Live Text ghép khung đoạn `documents`, đo WER thấp hơn rõ
+  rệt trên dữ liệu thật) — ADR-064.
 - **Mở — phải HỎI owner:** Q-11 (jitter hai chế độ R2, chốt trước Phase 4).
 
 ## 6. Xử lý mơ hồ

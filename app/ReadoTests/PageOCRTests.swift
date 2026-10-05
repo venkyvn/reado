@@ -176,6 +176,41 @@ final class PageOCRTests: XCTestCase {
         XCTAssertEqual(result.lines[0].yTop, 0.08, accuracy: 0.0001)
     }
 
+    // MARK: - mergeParagraphBoundaries (ocr-quality-r1 T3a, ADR-064)
+
+    func testMergeParagraphBoundariesSplitsByWordCountProportion() {
+        let documents = "one two three\n\nfour five"
+        // 5 từ liveText, 2 đoạn (3 từ : 2 từ) — chia theo đúng tỉ lệ.
+        let live = "ONE TWO THREE FOUR FIVE"
+        let merged = PageOCR.mergeParagraphBoundaries(liveText: live, documents: documents)
+        XCTAssertEqual(merged, "ONE TWO THREE\n\nFOUR FIVE")
+    }
+
+    func testMergeParagraphBoundariesHandlesWordCountMismatchOffByOne() {
+        // documents 2+2=4 từ, liveText chỉ có 3 — đúng tình huống đo thật T2
+        // (lệch ≤ 1 từ giữa hai engine trên cùng ảnh).
+        let documents = "aa bb\n\ncc dd"
+        let live = "AA BB CC"
+        let merged = PageOCR.mergeParagraphBoundaries(liveText: live, documents: documents)
+        // Đoạn cuối luôn nhận hết phần còn lại — không rớt từ.
+        XCTAssertEqual(merged, "AA BB\n\nCC")
+    }
+
+    func testMergeParagraphBoundariesEmptyLiveTextFallsBackToDocuments() {
+        let documents = "one two\n\nthree four"
+        XCTAssertEqual(PageOCR.mergeParagraphBoundaries(liveText: "", documents: documents), documents)
+    }
+
+    func testMergeParagraphBoundariesEmptyDocumentsFallsBackToDocuments() {
+        XCTAssertEqual(PageOCR.mergeParagraphBoundaries(liveText: "one two", documents: ""), "")
+    }
+
+    func testMergeParagraphBoundariesSingleParagraphKeepsAllWords() {
+        let documents = "a b c"
+        let merged = PageOCR.mergeParagraphBoundaries(liveText: "X Y Z", documents: documents)
+        XCTAssertEqual(merged, "X Y Z")
+    }
+
     func testGarbageBytesYieldEmpty() async throws {
         let text = try await PageOCR.recognize(imageData: Data([0x00, 0x01, 0x02]))
         XCTAssertEqual(text, "")

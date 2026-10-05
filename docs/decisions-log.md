@@ -1343,3 +1343,70 @@
     chia nhỏ riêng (prompt ngắn hơn nhiều, không phải `Prompt.text`), eval
     riêng nếu cần sau R1.
   - Chi tiết task breakdown: `docs/plans/apple-ai-r1.md`.
+
+## ADR-064 — Đổi OCR-fix mặc định TẮT; engine mặc định `liveText` (ghép Live Text + `documents`) — ocr-quality-r1 T0/T2/T3a
+
+- **Bối cảnh:** Review `apple-ai-r1` (2026-10-05) thấy `OCRFixApplier` áp fix cho MỌI chỗ khớp
+  nguyên từ trên trang (không chỉ chỗ model định sửa) và "đề xuất rồi lọc" không chặn được lỗi ra
+  từ thật (`"cat"` → `"car"` qua hết luật). Đồng thời Live Text (VisionKit `ImageAnalyzer`) — thứ
+  fen vẫn dùng làm groundtruth thủ công — chưa từng được đo như một engine OCR thật trong app.
+  Plan nháp fen đưa đã được phân tích kỹ trước khi code (`plan_ocr_quality_r1.md`).
+- **Số đo (2026-10-05, fen đưa 6 ảnh thật: 3 ảnh chụp sách "The Psychology of Money" p.47–49, 3 ảnh
+  chụp màn hình "The Courage to be Disliked" p.12/13/17 — groundtruth 3 trang sau lấy từ lớp chữ
+  PDF gốc, không qua Live Text/OCR, tránh đo vòng tròn; xem `docs/journal/2026-10-05.md`):**
+  - `OCRFixApplier`: spike trước đó đã đo một fix lọt qua làm WER xấu đi (0.131→0.134, n=1) — rủi ro
+    "sửa im lặng" là thật dù số đo mỏng; lý do chính vẫn là luật áp "mọi chỗ khớp" (cấu trúc, không
+    phải riêng con số WER đó).
+  - `liveText` (VisionKit `ImageAnalyzer`) có WER/CER **thấp hơn rõ rệt** `documents` trên cả 3 trang
+    có groundtruth, cả full-res lẫn ảnh nén 1600px — vd trang 1 full-res: WER 0.106→0.034, CER
+    0.019→0.007; trang 3 gần hoàn hảo: WER 0.009→0.000. `legacy` luôn tệ nhất (WER 0.3–0.7).
+  - **`ImageAnalysis.transcript` (API public) KHÔNG giữ ranh giới đoạn** — đo trên cả 3 trang:
+    `documents` có 9–13 lần `\n\n` (đúng số lượt thoại), `liveText` có **0 lần**, chỉ `\n` đơn giữa
+    mọi dòng. Xác nhận bằng swiftinterface SDK: `ImageAnalysis` public chỉ có `transcript: String`,
+    không dòng/bbox/đoạn — không có cách lấy đoạn trực tiếp từ Live Text.
+  - Độ trễ `liveText` phần lớn ngang `documents` (800–2000ms); một lần ngoại lệ 7905ms ở lượt gọi
+    `ImageAnalyzer` đầu tiên trong phiên (nghi cold-start tải model — lượt sau cùng ảnh chỉ 1246ms).
+  - Số từ mỗi đoạn giữa `documents` và `liveText` gần như bằng nhau trên cả 3 trang thật (lệch ≤ 1
+    từ trên tổng ~120–260 từ/trang) — hai engine đọc cùng ảnh nên tỉ lệ từ mỗi đoạn ổn định.
+  - Corpus còn nhỏ (6/12 trang theo kế hoạch T1, thiếu nhóm "PDF scan" thật — PDF fen đưa hoá ra có
+    lớp chữ gần hết, không đại diện — và nhóm "chụp label"); fen đã chốt chấp nhận quy mô này cho
+    vòng đầu, bổ sung sau nếu cần.
+- **Quyết định:**
+  1. **OCR-fix (Apple Intelligence soát OCR) đổi mặc định sang TẮT** (đảo ADR-063 mục 3, cùng ngày).
+     `AppleIntelligence.ocrFixDefault = false` (ReadoKit, hằng duy nhất) — `AppModel+Capture.swift`
+     và `SettingsView.swift` cùng đọc hằng này (trước đó là 2 literal `true` riêng, lệch nhau thì
+     Settings hiện BẬT trong khi capture chạy TẮT — bug tiềm ẩn đã phát hiện khi code T0). Người
+     dùng tự bật khi muốn qua Settings — giữ tinh thần "ưu tiên nguyên vẹn nhất câu" của fen, chỉ
+     đổi ai là người quyết định bật.
+  2. **Engine OCR mặc định đổi sang `liveText`** (chuỗi fallback: `liveText` → `documents` →
+     `legacy`, không đổi với PDF chữ/`PDFPageText` — không đụng). Vì `transcript` không có đoạn,
+     `liveText` KHÔNG đứng độc lập: `PageOCR.recognizeLiveTextMerged` (iOS 26+) luôn chạy CẢ HAI
+     engine — lấy khung đoạn (`\n\n`) từ `documents`, ghép chữ từ `liveText` vào theo tỉ lệ số từ
+     mỗi đoạn (`PageOCR.mergeParagraphBoundaries`, hàm thuần, test bằng chuỗi dựng tay — không cần
+     thuật toán căn chữ kiểu Needleman-Wunsch vì số từ hai engine lệch tối thiểu). `OCRResult.engine
+     = "liveText"` khi ghép thành công; rơi về `documents` nếu Live Text lỗi/rỗng/không hỗ trợ, rồi
+     `legacy` nếu `documents` cũng lỗi/rỗng hoặc OS < 26 (không đổi hành vi cũ trên OS cũ — chưa có
+     số đo `liveText` so `legacy` trên iOS 17–25, để ngỏ, xem T2 câu (e) chưa trả lời).
+  3. **Không thực hiện T3b** (đồng thuận `documents`+`legacy`) — `documents` đã thắng rõ `legacy` ở
+     mọi số đo kể cả trước ADR này; đồng thuận hai engine tương quan lỗi không mang lại gì ngoài rủi
+     ro mới, và T2 đã trả lời đủ để chọn hướng (ii) thay vì cần T3b.
+- **Đã cân nhắc:**
+  - *Live Text đứng đầu chuỗi fallback, dùng thẳng `transcript`* (hướng (i) trong plan nháp) — loại:
+    đo thật xác nhận không có `\n\n`, sẽ phá hợp đồng "`\n\n` = ranh giới đoạn" của prompt v6.
+  - *Giữ nguyên `documents`, không đổi engine* — cân nhắc nghiêm túc (WER của `documents` trên
+    screenshot đã khá tốt: 0.01–0.12), nhưng số đo cho thấy `liveText` tốt hơn rõ rệt và chi phí
+    thêm (chạy 2 engine) chấp nhận được trên dữ liệu đo được — fen chọn hướng ghép thay vì giữ
+    nguyên (AskUserQuestion, 2026-10-05).
+- **Hệ quả:**
+  - **ReadoKit** (`Analysis/PageOCR.swift`): thêm `import VisionKit`, `recognizeLiveTextMerged`
+    (`@available(iOS 26.0, macOS 26.0, *)`, private), `mergeParagraphBoundaries` (public, testable).
+    `AnalysisAgentStore`, `OpenAICompatClient`, `AppleIntelligenceAnalyzer` không đổi (đọc
+    `PageTextRecognizer`/`OCRResult` qua protocol, không biết engine nào chạy bên dưới).
+  - **`AppleIntelligenceStatus.swift`**: thêm hằng `AppleIntelligence.ocrFixDefault`.
+  - **`scripts/diag_summary.py`**: nhánh riêng cho `engine == "liveText"` (observations/lines kế
+    thừa từ `documents`, không phải số liệu riêng của Live Text — "unseen" không áp dụng).
+  - **Test:** `AnalyzerFactoryTests.testOCRFixDefaultIsOff`, `PageOCRTests` 5 case
+    `mergeParagraphBoundaries`, `OCRProbeTests` thêm cấu hình `liveText` + WER/CER thật (Levenshtein
+    từ/ký tự) thay chỉ đếm câu thiếu. `scripts/test.sh` đầy đủ 549/552 xanh (3 skip cũ không đổi).
+  - Chi tiết task breakdown + bảng số đo đầy đủ: `plan_ocr_quality_r1.md` (gốc repo, chưa vào
+    `docs/plans/`), `docs/journal/2026-10-05.md`.
