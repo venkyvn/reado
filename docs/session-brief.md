@@ -17,7 +17,7 @@
 - Plan mở khác ở `docs/plans/`: `structure-review-r1`, `visual-polish-r1`, `apple-ai-r1` (T1–T7 xong).
 
 **Đã khép gần đây** (chi tiết ở journal)
-- 2026-10-05 → `docs/journal/2026-10-05.md`: engagement-r1 khép (T0–T8, branch `engagement-r1` chưa merge vào `main`; ADR-067/068, prd v0.17):
+- 2026-10-05 → `docs/journal/2026-10-05.md`: engagement-r1 khép (T0–T8, đã merge `main` + push `63d38e7`; ADR-067/068, prd v0.17):
   gộp từ trùng cũ (FR-24) · nhận ra khi đọc · "Gặp lần đầu" + dòng nhắc N/7 · ôn nhanh 3 thẻ · bản đồ trí nhớ Hub · cụm đáng nhớ · thẻ "Tuần qua";
   611/615 xanh; nợ xem tay §2.15–2.16 → `docs/plans/done/engagement-r1.md`.
 - 2026-10-05 → `docs/journal/2026-10-05.md`: vocab-identity-r1 (ADR-066, FR-10 toàn app, migration v7; 562/566 xanh) →
