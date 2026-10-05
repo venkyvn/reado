@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng xong; T3-T8 chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng xong; T3-T8 đã chi tiết hoá (2026-10-05), chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -409,64 +409,303 @@ public enum DuplicateMerge {
   - Nợ xem tay trên dữ liệu thật (gộp xong, mở thẻ giữ thấy "Gặp lại" có câu của dòng gộp;
     3 query baseline) ghi vào brief §2.
 
-> **T3–T8 mới ở mức HLD.** Đầu mỗi session, bước đầu tiên là "chi tiết hoá T<n>" trên
-> code mới nhất (chữ ký, SQL, số dòng, câu chữ UI, bảng test), như T1/T2 ở trên. Fen OK
-> rồi mới code. Chỗ còn phải chốt khi chi tiết hoá:
-> - T3: câu đang đọc lấy từ đâu (`EncounterSelection` có sẵn câu không); animation gì.
-> - T5: cách truyền chế độ "nhanh" qua `ReviewQueueView`.
-> - T6: kích thước chấm, cách xử lý bộ lớn, dùng popover hay sheet.
-> - T8: khoá `UserDefaults` để nhớ đã đóng thẻ.
+> **T3–T8 chi tiết hoá 2026-10-05** trên code ở `c867c79` (đọc trực tiếp + 3 agent dò).
+> Số dòng là mốc tham khảo — code đổi sau mỗi task, nên Grep tên hàm trước khi sửa.
+> Thứ tự bắt buộc: **T3 trước T4** (T4 dùng `DayBoundary.daysBetween` + `DaysAgo` + `AppModel.daysSince`
+> của T3). T5–T8 độc lập nhau. Mọi task UI dùng skill `reado-ui` (ảnh light/dark, Nâu giấy,
+> `accessibility-extra-large`, không bị `ShellTabBar` che).
+>
+> **Lựa chọn chi tiết hiển thị chốt khi chi tiết hoá** (CLAUDE.md §6.4 — fen bác thì sửa trước khi code):
+> - T3: câu đang đọc lấy từ đoạn văn chứa từ (`EncounterMatcher.sentence`), hiện **một lần** đầu sheet; câu gốc
+>   lần đầu (`example`) hiện trong thẻ từng nghĩa. "Lên Đã thấm" = chip đổi mức + một dòng `revealTransition`,
+>   **không** hiệu ứng ăn mừng (MASTER "Bố cục").
+> - T5: chế độ thứ ba `ReviewMode.quick`; nút chỉ hiện khi số đến hạn > 3.
+> - T6: app chưa có `.popover` nào → chạm chấm hiện **dòng chi tiết ngay dưới lưới** (cùng tiền lệ
+>   `StreakCalendarView`). Chấm nhỏ hơn 44pt nên lưới nhận **kéo/chạm trên cả vùng lưới** (scrub), không
+>   phải từng chấm một; VoiceOver đọc tổng theo mức, chi tiết từng từ vẫn ở danh sách từ bên dưới.
+> - T8: "Tuần qua" = tuần lịch thứ Hai → Chủ nhật trước (theo ngày học FR-11); khoá
+>   `@AppStorage("reado.home.weekStoryDismissedWeek")` (cùng kiểu khoá chấm của Home).
 
-### T3 — Ý 1: khoảnh khắc nhận ra
-- **Files:** `EncounterMatcher.swift`, `EncounterRepository.swift`, `Mastery.swift`,
-  `EncounterText.swift` (sheet), `AnalysisView.swift`, `AppModel+Encounter.swift`.
-- **Nội dung:**
-  - Sheet: khối "Lần đầu · N ngày trước · ‹bộ›" chứa câu gốc, đặt cạnh câu đang đọc.
-  - Chip mức thuộc.
-  - Nhận ra đưa từ lên Đã thấm → `Haptics.success` + animation chuyển mức; tôn trọng
-    `accessibilityReduceMotion`.
-  - Màn phân tích: "Trang này có N từ bạn đã gặp" (N = số từ khác nhau được gạch chân).
-- **Test:** ReadoKit: lexicon có `example`/`createdAt`, `promotedToAbsorbed`, đếm từ khác
-  nhau trên trang. Ảnh sheet.
-- **DoD:** `scripts/test.sh` xanh.
+### T3 — Ý 1: khoảnh khắc nhận ra (FR-22)
 
-### T4 — Ý 6 + dòng nhắc N/7
-- **Files:** `ReviewQueue.swift` (`createdAt`), `ReviewQueueView+Card.swift`,
-  `DailyProgress.swift` (đếm `weekReviewDays`), `HomeTabView.swift`/`HeroCard.swift`.
-- **Nội dung:**
-  - Mặt sau thẻ: "Gặp lần đầu N ngày trước" khi từ đã lưu ≥ 7 ngày.
-  - Hero: "Tuần này ôn N/7 ngày" thay cho dòng nhắc streak.
-- **Test:** N/7 qua giờ chuyển ngày (FR-11); ngưỡng 7 ngày của ý 6.
-- **DoD:** xanh, kèm ảnh mặt sau thẻ và ảnh hero.
+**ReadoKit**
+1. `Encounter/EncounterMatcher.swift`:
+   - `EncounterLexiconEntry` thêm `public let example: String` và `public let createdAt: String?`. Init thêm
+     **cuối danh sách, có mặc định** `example: String = "", createdAt: String? = nil` — `EncounterMatcherTests`
+     (L8) đang dựng entry không có hai trường này.
+   - `static func sentence(containing:in:)` (~L170) → `public static`. Không đổi thân hàm.
+   - Thêm `public func matchedTermCount(in texts: [String]) -> Int`: duyệt `matches(in:)` từng đoạn, gom
+     `VocabRepository.normalizedTerm(match.entries.first?.term ?? "")` vào `Set`, bỏ chuỗi rỗng, trả `count`.
+     Một term nhiều nghĩa/nhiều bộ = 1; cùng term xuất hiện 2 lần = 1.
+2. `Encounter/EncounterRepository.swift`:
+   - `loadLexicon` (~L137): SELECT thêm `v.example AS example, v.created_at AS created_at`, truyền vào init.
+   - Thêm:
+     ```swift
+     /// Mức hiện tại của một từ (vision #6) — thẻ receptive + số lần nhận ra. nil khi từ không còn thẻ.
+     public static func masteryLevel(on db: SQLiteDatabase, vocabItemID: String) throws -> Mastery.Level?
+     ```
+     SQL: `SELECT c.state, c.stability, (SELECT COUNT(*) FROM encounters e WHERE e.vocab_item_id = ? AND
+     e.kind = 'recognized') AS rec FROM cards c WHERE c.vocab_item_id = ? AND c.direction = 'receptive' LIMIT 1;`
+     rồi `Mastery.level(state:stability:recognizedCount:)`. `stability` đọc cả `.double` lẫn `.int`.
+3. `Review/Mastery.swift`: thêm `public static func reachedAbsorbed(before: Level?, after: Level?) -> Bool`
+   = `after == .absorbed && before != .absorbed`.
+4. `Time/DayBoundary.swift`: thêm
+   ```swift
+   /// Số NGÀY HỌC (FR-11) từ `earlier` tới `later` — cùng ngày học = 0. later < earlier → 0.
+   public static func daysBetween(_ earlier: Date, _ later: Date, timezone: TimeZone, dayCutoffHour: Int = 4) -> Int
+   ```
+   Lấy `window(now:).start` của hai mốc → `Date` (ISOTimestamp) → `Calendar(gregorian, timeZone).dateComponents([.day])`.
+5. `Time/DaysAgo.swift` (mới): `public enum DaysAgo { public static func text(_ days: Int) -> String }` —
+   0 → "hôm nay", 1 → "hôm qua", n → "\(n) ngày trước". (T4 thêm `firstSeenLabel` vào đây.)
 
-### T5 — Ý 2: phiên ôn ngắn
-- **Files:** `ReviewQueue.swift` (lấy N thẻ đầu, giữ thứ tự ưu tiên), `ReviewQueueView.swift`,
-  `SessionDoneView.swift`, `HeroCard.swift`.
-- **Nội dung:** xong 3 thẻ → màn xong có "Ôn tiếp (còn N)" và "Xong".
-- **Test:** cắt hàng đợi; streak vẫn tính; lịch FSRS không đổi so với phiên thường.
-- **DoD:** xanh.
+**App**
+6. `Reado/App/AppModel+Encounter.swift`:
+   - `func masteryLevel(_ vocabItemID: String) -> Mastery.Level?` (`readQuietly`).
+   - `func daysSince(_ iso: String?) -> Int?`: parse `ISOTimestamp.date(from:)`, `DayContext.read(on: database)`,
+     `DayBoundary.daysBetween(date, clock.now, ...)`. nil khi không parse được.
+   - Đổi `recognizeWord(_:) -> Bool` thành trả
+     `struct RecognizeResult { let recorded: Bool; let reachedAbsorbed: Bool }` (khai báo cạnh hàm). Lấy
+     `masteryLevel` trước + sau khi ghi; `reachedAbsorbed = recorded && Mastery.reachedAbsorbed(before:after:)`.
+     Caller duy nhất: `EncounterText.swift` ~L185.
+7. `Reado/Shared/MasteryLevel+UI.swift`: thêm `var pillTone: Pill.Tone` — absorbed `.ok`, remembered `.accent`,
+   learning `.due`, new `.neutral` (cùng nghĩa màu với thanh Hub).
+8. `Reado/Shared/EncounterText.swift`:
+   - `EncounterSelection` thêm `var sentence: String? = nil`.
+   - Trong `openURL` handler (~L48): truyền `sentence: EncounterMatcher.sentence(containing: match.range, in: text)`.
+   - `EncounterSheet`:
+     - State mới: `@State private var levels: [String: Mastery.Level] = [:]`, `@State private var leveledUp: Set<String> = []`,
+       `@Environment(\.accessibilityReduceMotion) private var reduceMotion`. Nạp `levels` trong `onAppear` cùng chỗ nạp `summaries`.
+     - Đầu `VStack` (trước `ForEach`): nếu `selection.sentence` không rỗng → khối "Câu đang đọc" (`Typo.meta`
+       `.secondary`) + câu (`.subheadline.italic()`, `lineLimit(4)`).
+     - `entryCard`: header `HStack` thêm `Pill(text: level.title, tone: level.pillTone)` sau pill pos khi có level,
+       `.contentTransition(.opacity)`. Sau dòng "Đã gặp ở …" thêm khối **"Lần đầu · \(DaysAgo.text(n)) · \(entry.collectionName)"**
+       (`Typo.meta` `.secondary`) + `entry.example` (`.subheadline.italic()`, `lineLimit(3)`) — **ẩn** khi example rỗng
+       hoặc trùng câu đang đọc (so `trimmingCharacters` + `lowercased()`).
+     - `recognizeButton`: dùng `RecognizeResult`. `recorded` → như cũ (`recognized.insert`, `Haptics.success()`).
+       `reachedAbsorbed` → `Motion.run(reduceMotion:) { levels[id] = .absorbed; leveledUp.insert(id) }`; dưới nút hiện
+       `Label("Lên mức Đã thấm", systemImage: "arrow.up.circle.fill").foregroundStyle(Theme.ok).revealTransition()`.
+       Không thêm haptic thứ hai.
+9. Dòng "Trang này có N từ bạn đã gặp" (ẩn khi N = 0), `Label(..., systemImage: "eye")`, `Typo.meta`, `.secondary`:
+   - `Reado/Analysis/AnalysisView.swift` `pageView` (~L716): phần tử đầu `VStack`, N =
+     `encounterMatcher.matchedTermCount(in: result.segments.map(\.sourceEN))`.
+   - `Reado/Library/ReadingSessionView.swift` `segmentsSection` (~L89): phần tử đầu, N từ `session.segments.map(\.sourceEN)`.
+   - Debug task `encounter-sheet` trong `AnalysisView` (~L252) truyền thêm `sentence:` cho ảnh chụp.
 
-### T6 — Ý 3: bản đồ trí nhớ theo bộ
-- **Files:** `VocabRepository+Overview.swift` (`masteryDots`), `CollectionStatsHeader.swift`
-  (thay thanh màu).
-- **Nội dung:** chạm chấm → popover với từ, nghĩa, câu gốc. Màu dùng token sẵn có của
-  thanh cũ.
-- **Test:** số chấm mỗi mức khớp bộ đếm overview cũ. Ảnh Hub ở bộ nhỏ và bộ ~300 từ.
-- **DoD:** xanh.
+**Test** (lane `kit`)
+| File | Test |
+|---|---|
+| `EncounterMatcherTests` | `testMatchedTermCountCountsDistinctTerms` (cùng term 2 lần = 1; 2 nghĩa cùng term = 1; 2 term = 2; không khớp = 0) · `testSentenceContainingIsPublic` (gọi từ test) |
+| `EncounterRepositoryTests` | `testLoadLexiconCarriesExampleAndCreatedAt` · `testMasteryLevelPerVocab` (new / learning / remembered / absorbed sau `recordRecognized`; không thẻ → nil) |
+| `MasteryLevelTests` | `testReachedAbsorbed` (remembered→absorbed true; absorbed→absorbed false; nil→absorbed true; remembered→remembered false) |
+| `FoundationPrimitivesTests` (cạnh test DayBoundary cũ) | `testDaysBetweenUsesLearningDay` (03:59 và 04:01 giờ VN cùng ngày lịch → 1 ngày học; cùng ngày học → 0; ngược chiều → 0) |
+| `DaysAgoTests` (mới) | 0/1/12 |
 
-### T7 — Ý 4: cụm đáng nhớ
-- **Files:** `Analysis/MemorablePhrase.swift` + test, `AppModel+Capture.swift`
-  (`SaveConfirmation`), `RootView.swift` (banner).
-- **Test:** chọn cụm chứa từ vừa lưu; không có thì lấy cụm dài nhất; không có cụm → không
-  hiện dòng.
-- **DoD:** xanh.
+- **Ảnh:** `scripts/sim_screens.sh open encounter-sheet --seed demo-reviewed --fresh` (sheet có câu đang đọc + "Lần
+  đầu · hôm nay" vì seed lưu từ hôm nay); `open analysis-fixture-page` (dòng "Trang này có N từ…"). Haptic + chuyển mức
+  khi bấm Nhận ra → **chưa xem tay** (cần chạm) → brief §2.
+- **DoD:** `scripts/test.sh` full xanh; không đổi schema; `EncounterMatcherTests` cũ không phải sửa.
 
-### T8 — Ý 5: câu chuyện tuần
-- **Files:** `Progress/WeekSummary.swift` + test, `HomeTabView.swift` (thẻ "Tuần qua",
-  đóng được).
-- **Test:** biên tuần theo giờ chuyển ngày; mọi số = 0 → ẩn; từ gặp nhiều nhất (hoà → từ
-  lưu trước).
-- **DoD:** xanh. Xem tay vào thứ Hai trên máy thật → ghi vào brief §2.
+### T4 — Ý 6 "Gặp lần đầu" + dòng nhắc N/7 (FR-14)
+
+**ReadoKit**
+1. `Review/ReviewQueue.swift`:
+   - `ReviewItem` thêm `public let createdAt: String?`, init thêm **cuối** `createdAt: String? = nil`.
+   - `hydrate` (~L365): SELECT thêm `v.created_at AS vocab_created_at`, truyền vào `ReviewItem(... createdAt:)`.
+     Một chỗ phủ cả `loadFullQueue` lẫn `loadExtraQueue`.
+2. `Time/DaysAgo.swift`: thêm `public static let firstSeenMinDays = 7` và
+   `public static func firstSeenLabel(days: Int?) -> String?` → nil khi `days == nil || days < 7`, ngược lại
+   "Gặp lần đầu \(days) ngày trước".
+3. `Progress/StreakCalendar.swift`: thêm (cùng file nên gọi được `previousWindowStart` private)
+   ```swift
+   /// Số ngày học có ôn trong `days` ngày học gần nhất, TÍNH CẢ hôm nay (M-02: ≥ 5/7).
+   public static func reviewedDays(inLast days: Int, from dayStarts: Set<String>, now: Date,
+                                   timezone: TimeZone, cutoffHour: Int) -> Int
+   ```
+4. `Progress/DailyProgress.swift`:
+   - `DailyProgress` thêm `public let weekReviewDays: Int`, init thêm cuối `weekReviewDays: Int = 0`.
+   - `load`: tính `dayStarts = StreakCalendarService.reviewedDayStarts(...)` **một lần**, dùng cho cả `streak`
+     (gọi thẳng `currentStreak(from:)`, bỏ helper private `streak(on:)`) và `weekReviewDays = reviewedDays(inLast: 7, ...)`.
+   - `reviewedToday`: bỏ `mode = 'srs'` (ADR-068 — cùng luật với streak). **Sửa test**
+     `DailyProgressTests` L159-170 (đang khẳng định `cram` không tính) thành khẳng định `cram` **có** tính, kèm comment ADR-068.
+   - Thêm `public var weekReminder: String?` → `streak > 0 && !reviewedToday ? "Tuần này ôn \(weekReviewDays)/7 ngày" : nil`.
+
+**App**
+5. `Reado/Home/HomeTabView.swift` `.review(count)` (~L180-190): bỏ `keepStreakSubtitle`, `subtitle: progress?.weekReminder`.
+6. `Reado/Shared/HeroCard.swift` preview (~L165): đổi chuỗi mẫu sang "Tuần này ôn 4/7 ngày".
+7. `Reado/Review/ReviewQueueView+Card.swift` `backFaceContent` (~L307): sau `Text(item.collectionName)` thêm
+   `if let label = DaysAgo.firstSeenLabel(days: model.daysSince(item.createdAt)) { Text(label).font(Typo.meta).foregroundStyle(.secondary) }`.
+
+**Test**
+| File | Test |
+|---|---|
+| `ReviewQueueAndServiceTests` | `testLoadFullQueueItemsCarryVocabCreatedAt` |
+| `StreakCalendarTests` | `testReviewedDaysInLastSevenCountsTodayAndRespectsCutoff` (log lúc 03:30 VN tính cho hôm trước; ngày thứ 8 không tính) |
+| `DailyProgressTests` | `testWeekReviewDaysAndReminder` (streak > 0, chưa ôn hôm nay → "Tuần này ôn N/7 ngày"; đã ôn → nil) · sửa test `cram` như trên |
+| `DaysAgoTests` | `testFirstSeenLabelThreshold` (nil / 6 → nil; 7 → có chữ) |
+
+- **Ảnh:** `open home --seed demo-reviewed --fresh` (hero có dòng N/7 khi chưa ôn hôm nay). Mặt sau thẻ: seed lưu từ
+  hôm nay nên chưa đủ 7 ngày → ảnh không có dòng mới; logic phủ bằng test → ghi "chưa xem tay trên dữ liệu ≥ 7 ngày".
+- **DoD:** full xanh; `HomeHeroTests` không đổi.
+
+### T5 — Ý 2: phiên ôn nhanh 3 thẻ (FR-11)
+
+**ReadoKit** — `Review/ReviewQueue.swift`:
+```swift
+public static let quickSessionSize = 3
+/// Phiên ôn nhanh (engagement-r1 T5): N thẻ ĐẦU của `loadFullQueue` (giữ thứ tự), cùng snapshot.
+public static func loadQuickQueue(on db: SQLiteDatabase, dailyNewLimit: Int, now: Date,
+                                  scope: Set<String>? = nil, size: Int = quickSessionSize)
+    throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot], remaining: Int)
+```
+`remaining = max(0, full.count - items.count)`; snapshots lọc theo id đã lấy.
+
+**App**
+1. `Reado/Review/ReviewQueueView.swift` L11: `enum ReviewMode { case srs, extra, quick }`.
+2. `Reado/App/AppModel+Review.swift`: thêm `func loadQuickQueue(scope:) async throws` (mẫu `loadReviewQueue` L13),
+   gán `review.items/snapshots/currentSnapshot` như cũ + `review.quickRemaining = remaining`. Thêm
+   `var quickRemaining = 0` vào kiểu state `review` (`AppState.swift`).
+3. `ReviewQueueView.loadQueue()` (~L323): nhánh `mode == .quick` → `model.loadQuickQueue(scope:)`.
+4. Nhánh xong (~L86): khi `mode == .quick && tally.reviewed > 0` →
+   `SessionDoneView(tally:, streak:, extraAvailable: 0, title: "Xong phiên nhanh", continueCount: model.review.quickRemaining,
+   onContinue: { mode = .srs; Task { await loadQueue() } }, onExtra: {}) { dismiss() }`.
+5. `Reado/Review/SessionDoneView.swift`: thêm **giữa `extraAvailable` và `onExtra`** (để trailing closure vẫn
+   khớp `onDone`): `var title = "Xong hôm nay"`, `var continueCount = 0`, `var onContinue: (() -> Void)? = nil`.
+   Header dùng `title`. Nếu `onContinue != nil && continueCount > 0` → nút `.bordered` "Ôn tiếp (còn \(continueCount))"
+   **thay** nút "Ôn thêm"; "Xong" giữ nguyên.
+6. `Reado/Shared/HeroCard.swift`: thêm `var quick: Action?` sau `secondary`; render dưới hàng nút: `Button(quick.title)`
+   `.buttonStyle(.borderless)` `.font(.subheadline)`, vùng chạm `minHeight: 44`.
+7. `HomeTabView.swift` `.review(count)`: `quick: count > ReviewQueue.quickSessionSize ? HeroCard.Action(title: "Ôn nhanh 3 thẻ · ~2 phút", handler: { start(.quick) }) : nil`.
+
+**Test**
+| File | Test |
+|---|---|
+| `ReviewQueueAndServiceTests` | `testLoadQuickQueueTakesPrefixOfFullQueue` (5 thẻ đến hạn → 3 thẻ đầu đúng thứ tự full, remaining 2, snapshots đủ 3) · `testLoadQuickQueueWithFewerCards` (2 → 2, remaining 0) |
+| (có sẵn) | Chấm vẫn qua `model.grade` → `ReviewService.record`, nên streak/FSRS không cần test mới; ghi rõ trong DoD |
+
+- **Ảnh:** `open home --seed demo` (hero có nút "Ôn nhanh…" khi > 3 thẻ đến hạn). Màn "Xong phiên nhanh" cần chấm
+  3 thẻ bằng tay → chưa xem tay → brief §2.
+- **DoD:** full xanh; không đổi `ReviewService`.
+
+### T6 — Ý 3: bản đồ trí nhớ theo bộ (journey J2 header Hub)
+
+**ReadoKit** — `Vocab/VocabRepository+Overview.swift`:
+```swift
+public struct MasteryDot: Equatable, Sendable, Identifiable {
+    public let id: String          // vocab_item_id
+    public let term: String
+    public let meaningVI: String
+    public let example: String
+    public let level: Mastery.Level
+}
+/// Mỗi từ của một bộ một chấm, theo `created_at, id`. Luật mức KHỚP `allCollectionSummaries`:
+/// MAX trên các thẻ không suspend của từ (m > l/r > active); từ chỉ có thẻ suspend bị bỏ (như header).
+public static func masteryDots(on db: SQLiteDatabase, collectionID: String) throws -> [MasteryDot]
+```
+SQL: mẫu subquery `b` (~L59-81) nhưng GROUP BY `v.id` cho một bộ, thêm `EXISTS(recognized)`; ngưỡng
+`Mastery.stabilityThreshold` (giống header — **không** dùng `known_stability`, ghi nhận đã có ở HLD). Map:
+`m && rec → absorbed`, `m → remembered`, `l || r → learning`, `active → new`, còn lại bỏ.
+
+**App**
+1. `AppState.swift` `LibraryState` (~L157): thêm `var masteryDots: [VocabRepository.MasteryDot] = []`.
+2. `AppModel+Collections.swift`: `func loadMasteryDots(collectionID:)` (`read("bản đồ trí nhớ", fallback: [])`).
+   Gọi trong `CollectionDetailView.reloadList()` (~L337).
+3. `Reado/Shared/MasteryLevel+UI.swift`: thêm `var color: Color` — absorbed `Theme.ok`, remembered
+   `Color.accentColor.opacity(0.6)`, learning `Theme.due`, new `Theme.surfaceStrong`. Đổi `segments` của
+   `CollectionStatsHeader` (L39-56) sang dùng `.color`/`.title` để hai nơi không lệch màu.
+4. `Reado/Library/MasteryDotGrid.swift` (mới): `LazyVGrid(columns: [GridItem(.adaptive(minimum: Spacing.row, maximum: Spacing.row), spacing: Spacing.xs)], spacing: Spacing.xs)`,
+   mỗi chấm `Circle().fill(dot.level.color)` cỡ `Spacing.row`; chấm đang chọn có viền `Color.primary`.
+   - Chọn: `DragGesture(minimumDistance: 0)` trên cả lưới, đổi toạ độ → chỉ số (số cột = `floor((width + xs) / (row + xs))`),
+     `Haptics.selection()` khi đổi chấm. Đọc width bằng `onGeometryChange` (iOS 17 dùng `GeometryReader` nền).
+   - Dòng chi tiết dưới lưới (`revealTransition`): "\(term) · \(level.title)", `meaningVI`, `example` italic `lineLimit(2)`.
+     Chạm lại chấm đang chọn → ẩn.
+   - Accessibility: lưới `.accessibilityElement(children: .ignore)`, label "Bản đồ trí nhớ", value = tổng theo mức
+     (giữ chuỗi value hiện có của `progressCard`).
+5. `CollectionStatsHeader`: thêm prop `dots: [VocabRepository.MasteryDot]`; trong `progressCard` thay
+   `GeometryReader { HStack … }.frame(height: 8)` (~L63-73) bằng `MasteryDotGrid(dots:)`; giữ tiêu đề "Đã nhớ X/Y" và
+   legend. `dots` rỗng → giữ thanh cũ (lúc đang nạp / lỗi đọc). `CollectionDetailView` (~L43) truyền `model.library.masteryDots`.
+
+**Test** — `MasteryDotsTests.swift` (mới): dùng lại bộ specs của `VocabularyListTests.testSummaryAbsorbedCountMatchesMasteryLevel`
+(L369-423): đếm chấm theo mức == `allCollectionSummaries` (remembered = mastered − absorbed; learning = learning + reviewing;
+new = notStarted); từ chỉ có thẻ suspend không có chấm; từ không thẻ = new; thứ tự theo `created_at`.
+- **Ảnh:** `open collection:<tên bộ demo> --seed demo-reviewed --fresh` (≈ 12 từ, đủ 3–4 mức). Bộ ~300 từ: tạm thời
+  không có seed → ghi nợ xem tay. Scrub chọn chấm → chưa xem tay.
+- **DoD:** full xanh; `VocabularyListTests` không đổi.
+
+### T7 — Ý 4: cụm đáng nhớ trong banner "Đã lưu" (FR-02)
+
+**ReadoKit** — `Analysis/MemorablePhrase.swift` (mới):
+```swift
+public enum MemorablePhrase {
+    /// Cụm EN–VI đáng nhớ nhất của trang: cụm ĐẦU TIÊN (theo thứ tự trang) có EN chứa một từ vừa lưu
+    /// (so theo chữ, không phân biệt hoa thường, không lemmatize); không có → cụm EN nhiều chữ nhất (hoà → đứng trước).
+    public static func pick(from segments: [PageAnalysis.Segment], savedTerms: [String]) -> PageAnalysis.Phrase?
+}
+```
+So khớp: chuẩn hoá cả EN lẫn term về chữ thường, thay ký tự không phải chữ/số bằng khoảng trắng, so `" " + en + " "`
+chứa `" " + term + " "` (cụm nhiều chữ vẫn khớp). Bỏ cụm có `en` hoặc `vi` rỗng.
+
+**App**
+1. `AppState.swift` `SaveConfirmation`: thêm `var phrase: PageAnalysis.Phrase? = nil`.
+2. `AppModel+Capture.swift` `saveSelection` (~L134): `phrase: MemorablePhrase.pick(from: segments, savedTerms: items.map(\.term))`.
+3. `Reado/Shared/ShellBanner.swift`:
+   - `ShellBannerItem` thêm `var detail: String? = nil`.
+   - `message` (~L68): `Text(item.message)` bọc trong `VStack(alignment: .leading, spacing: Spacing.tight)`, thêm
+     `Text(detail).font(Typo.meta).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)` khi có.
+   - Thời gian tự ẩn: `item.detail == nil ? 4 : 7` giây (đổi `autoHideSeconds` thành hàm theo item). Announcement
+     VoiceOver đọc `message` + `detail`.
+4. `RootView.swift` (~L172): `detail: saved.phrase.map { "“\($0.en)” — \($0.vi)" }`. Banner debug `save-banner`
+   (~L384) thêm `detail` mẫu để chụp ảnh.
+
+**Test** — `MemorablePhraseTests.swift`: cụm chứa từ vừa lưu thắng cụm dài hơn; term nhiều chữ khớp; không phân biệt
+hoa thường; không khớp → cụm dài nhất; hoà → cụm đứng trước; không có cụm → nil; cụm rỗng bị bỏ.
+- **Ảnh:** `open save-banner` (light/dark, `accessibility-extra-large` — banner chuyển VStack, chữ không bị cắt).
+- **DoD:** full xanh; không đổi prompt (`Prompt.version` giữ nguyên).
+
+### T8 — Ý 5: câu chuyện tuần "Tuần qua" (FR-14)
+
+**ReadoKit**
+1. `Time/DayBoundary.swift`: thêm
+   `public static func weekStart(now: Date, timezone: TimeZone, dayCutoffHour: Int = 4) -> String` — đầu cửa sổ ngày
+   học của **thứ Hai** tuần chứa ngày học hiện tại (ISO). Tính trên `window(now:).start`, `Calendar` gregorian
+   `firstWeekday = 2`, lùi `(weekday + 5) % 7` ngày rồi lấy lại `window(...).start`.
+2. `Progress/WeekStory.swift` (mới):
+   ```swift
+   public struct WeekStory: Equatable, Sendable {
+       public let weekStart: String     // thứ Hai của tuần HIỆN TẠI — khoá "đã đóng"
+       public let wordsSaved: Int       // vocab_items.created_at trong [tuần trước, tuần này)
+       public let wordsReencountered: Int // COUNT(DISTINCT vocab_item_id) encounters kind='seen'
+       public let recognizedCount: Int  // encounters kind='recognized'
+       public let reviewDays: Int       // ngày học có review_log (0…7)
+       public let topTerm: String?      // từ có nhiều encounters nhất (≥ 2), hoà → vocab created_at cũ hơn
+       public var isEmpty: Bool         // mọi số = 0 và topTerm nil
+       public var lines: [String]       // câu kể chuyện, bỏ câu có số 0
+   }
+   public enum WeekStoryService {
+       public static func load(on db: SQLiteDatabase, now: Date) throws -> WeekStory
+   }
+   ```
+   Khoảng = `[weekStart − 7 ngày, weekStart)` (lùi 7 cửa sổ ngày học). `reviewDays` lọc
+   `StreakCalendarService.reviewedDayStarts` trong khoảng (so chuỗi ISO). **Không** đếm trang (ADR-068).
+   `lines` (theo thứ tự, bỏ dòng có số 0): "Giữ lại \(n) từ mới." · "Gặp lại \(n) từ cũ khi đọc." ·
+   "Nhận ra \(n) lần." · "Ôn \(n)/7 ngày." · "Gặp nhiều nhất: \(term)."
+
+**App**
+3. `AppModel.swift`: `private(set) var weekStory: WeekStory?`; trong `reloadOverview()` (~L224, cạnh
+   `reencounteredThisWeek`): `weekStory = read("câu chuyện tuần", fallback: nil) { try WeekStoryService.load(on: database, now: now) }`.
+4. `Reado/Home/WeekStoryCard.swift` (mới): `.card()`; hàng đầu "Tuần qua" (`Typo.rowTitle`) + nút `xmark` 44×44 theo mẫu
+   `ShellBanner.dismissButton` (L91-106, `accessibilityLabel("Đóng câu chuyện tuần")`); dưới là `ForEach(story.lines)`
+   `Text` `.subheadline`.
+5. `HomeTabView.swift`: `@AppStorage("reado.home.weekStoryDismissedWeek") private var dismissedWeek = ""`; thêm
+   `@ViewBuilder private var weekStoryRow` (mẫu `leechBannerRow` L229-243) đặt **giữa** hero `Section` và
+   `leechBannerRow` (L97-98); hiện khi `story` khác nil, `!story.isEmpty`, `dismissedWeek != story.weekStart`; ba
+   modifier row giống hero; đóng → `Motion.run(reduceMotion:) { dismissedWeek = story.weekStart }`.
+
+**Test** — `WeekStoryTests.swift`: `weekStart` (thứ Hai 03:30 VN còn thuộc tuần trước; Chủ nhật 23:00 thuộc tuần
+đang chạy); đếm đúng trong khoảng, bỏ ngoài khoảng (biên đầu tính, biên cuối không); `reviewDays` ≤ 7 qua giờ chuyển ngày;
+`topTerm` cần ≥ 2 lần, hoà → từ lưu trước; không có gì → `isEmpty`; `lines` bỏ câu có số 0.
+- **Ảnh:** `open home --seed demo-reviewed --fresh` (seed rải log 20 ngày + `seen` trong 7 ngày → tuần trước thường có
+  số liệu). Nếu tuần trước trống thì ghi nợ; không bịa ảnh. Đóng thẻ / mở lại tuần sau → chưa xem tay.
+- **DoD:** full xanh. Xem tay vào thứ Hai trên máy thật → brief §2.
 
 ## Verification (chung)
 
