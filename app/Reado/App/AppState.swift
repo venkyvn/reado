@@ -27,6 +27,8 @@ final class ReviewState {
     /// Số thẻ Ôn thêm lấy được trong phạm vi hiện tại (mới + ôn sớm, không bị
     /// `extraBatchSize` của MỘT lượt) — quyết định CTA "Ôn thêm N thẻ".
     var extraAvailableCount = 0
+    /// Phiên ôn nhanh (engagement-r1 T5): số thẻ đến hạn còn lại sau 3 thẻ đầu — CTA "Ôn tiếp (còn N)".
+    var quickRemaining = 0
 }
 
 /// FR-23/ADR-058 (pdf-reader-r1 T4) — trang vào từ đâu: ảnh chụp (OCR) hay

@@ -11,8 +11,8 @@
 
 **Đang mở / hàng đợi**
 - **engagement-r1** (branch `engagement-r1`, FR-24 gộp từ trùng + ý 1–6 của `idea/tang_gang_bo.md`, ADR-067/068,
-  `docs/plans/engagement-r1.md`): **T0–T4 xong 2026-10-05** (591/595 xanh). Kế tiếp **T5** (ý 2: ôn nhanh 3 thẻ); T6–T8 đã chi tiết
-  hoá sẵn trong plan. Fen bỏ qua tiêu chí dừng baseline (§2.13) khi làm T2; nợ xem tay ở §2.15–2.16.
+  `docs/plans/engagement-r1.md`): **T0–T5 xong** (594/598 xanh). Kế tiếp **T6** (ý 3: bản đồ trí nhớ Hub); T7–T8 đã chi tiết hoá
+  sẵn trong plan. Fen bỏ qua tiêu chí dừng baseline (§2.13) khi làm T2; nợ xem tay ở §2.15–2.16.
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
   (`PDFPageTextProbeTests` xác nhận extract tốt; thiếu `prompt_eval.py --swift-func` + chạy eval + chỉnh ngưỡng).
   Nợ xem tay T3/T4 — `docs/plans/pdf-reader-r1.md`.
@@ -70,7 +70,8 @@
     `docs/plans/engagement-r1.md`.
 16. engagement-r1 T3–T8 (xem tay phần ảnh tĩnh không dựng được): T3 bấm "Nhận ra ✓" thật (chip → "Đã thấm" + "Lên mức Đã thấm" +
     haptic) và "Lần đầu · N ngày trước" với N ≥ 1; T4 hero có dòng "Tuần này ôn N/7 ngày" (cần còn thẻ đến hạn + có streak + chưa ôn hôm
-    nay — seed chưa dựng) và mặt sau thẻ "Gặp lần đầu N ngày trước" với từ ≥ 7 ngày. `docs/plans/engagement-r1.md`.
+    nay — seed chưa dựng) và mặt sau thẻ "Gặp lần đầu N ngày trước" với từ ≥ 7 ngày; T5 chấm 3 thẻ thật → màn "Xong phiên nhanh" +
+    nút "Ôn tiếp (còn N)". `docs/plans/engagement-r1.md`.
 
 ## 3. Bẫy máy này
 

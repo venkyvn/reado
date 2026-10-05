@@ -15,6 +15,10 @@ struct SessionDoneView: View {
     /// (`ReviewQueue.extraAvailableCount`, CHƯA kẹp — view tự kẹp ở
     /// `ReviewQueue.extraBatchSize` khi hiện số). 0 → ẩn CTA.
     let extraAvailable: Int
+    /// engagement-r1 T5: tiêu đề + CTA "Ôn tiếp (còn N)" của phiên ôn nhanh. Mặc định = màn cũ.
+    var title = "Xong hôm nay"
+    var continueCount = 0
+    var onContinue: (() -> Void)? = nil
     let onExtra: () -> Void
     /// Đóng cover phiên ôn — về đúng chỗ đã mở nó, không phải "Về Home".
     let onDone: () -> Void
@@ -35,7 +39,14 @@ struct SessionDoneView: View {
                     .opacity(appeared ? 1 : 0)
                     .animation(reduceMotion ? nil : Motion.reveal.delay(0.16), value: appeared)
                 Spacer(minLength: Spacing.row)
-                if extraAvailable > 0 {
+                if let onContinue, continueCount > 0 {
+                    Button(action: onContinue) {
+                        Text("Ôn tiếp (còn \(continueCount))")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                } else if extraAvailable > 0 {
                     Button(action: onExtra) {
                         Text("Ôn thêm \(min(extraAvailable, ReviewQueue.extraBatchSize)) thẻ")
                             .frame(maxWidth: .infinity)
@@ -83,7 +94,7 @@ struct SessionDoneView: View {
                 .font(Typo.heroSymbol)
                 .foregroundStyle(Theme.ok)
                 .symbolEffect(.bounce, value: reduceMotion ? false : appeared)
-            Text("Xong hôm nay")
+            Text(title)
                 .font(.title2.bold())
         }
         .padding(.top, Spacing.lg)

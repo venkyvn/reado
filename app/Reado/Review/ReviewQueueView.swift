@@ -8,7 +8,7 @@ typealias ReviewItem = ReviewQueue.ReviewItem
 /// `.srs` = hàng đợi đến hạn (new quota + due). `.extra` = Ôn thêm
 /// (extra-review-r1, đảo ADR-011/043) — trộn thẻ mới + ôn sớm, MỌI lượt chấm
 /// vẫn ghi lịch thật qua `AppModel.grade`/`undoReview`, chỉ khác nguồn hàng đợi.
-enum ReviewMode { case srs, extra }
+enum ReviewMode { case srs, extra, quick }
 
 struct ReviewQueueView: View {
     @Environment(AppModel.self) var model
@@ -92,6 +92,13 @@ struct ReviewQueueView: View {
                     tally: tally,
                     streak: model.dailyProgress?.streak ?? 0,
                     extraAvailable: model.review.extraAvailableCount,
+                    title: mode == .quick ? "Xong phiên nhanh" : "Xong hôm nay",
+                    // Phiên nhanh: còn thẻ đến hạn thì mời ôn tiếp (không ép) — "Xong" là dừng hẳn.
+                    continueCount: mode == .quick ? model.review.quickRemaining : 0,
+                    onContinue: mode == .quick ? {
+                        mode = .srs
+                        Task { await loadQueue() }
+                    } : nil,
                     onExtra: {
                         // Lượt Ôn thêm kế tiếp — cùng scope, không đóng cover.
                         mode = .extra
@@ -109,7 +116,7 @@ struct ReviewQueueView: View {
             }
         }
         .animation(reduceMotion ? nil : Motion.reveal, value: isLoading)
-        .navigationTitle(mode == .extra ? "Ôn thêm" : "Ôn tập")
+        .navigationTitle(mode == .extra ? "Ôn thêm" : mode == .quick ? "Ôn nhanh" : "Ôn tập")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -320,10 +327,10 @@ struct ReviewQueueView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            if mode == .extra {
-                try await model.loadExtraQueue(scope: scope)
-            } else {
-                try await model.loadReviewQueue(scope: scope)
+            switch mode {
+            case .extra: try await model.loadExtraQueue(scope: scope)
+            case .quick: try await model.loadQuickQueue(scope: scope)
+            case .srs: try await model.loadReviewQueue(scope: scope)
             }
             self.items = model.review.items
             // Đổi phạm vi giữa phiên → reset con trỏ thẻ đang ôn.

@@ -36,6 +36,8 @@ struct HeroCard: View {
     /// nil = không có nút chính (trạng thái xong chỉ còn link phụ).
     var primary: Action?
     var secondary: Action?
+    /// Nút phụ "Ôn nhanh" (engagement-r1 T5) — nằm giữa nút chính và link phạm vi.
+    var quick: Action?
     var warning: Warning?
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -58,6 +60,15 @@ struct HeroCard: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+            }
+            if let quick {
+                Button(action: quick.handler) {
+                    label(for: quick)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.leading)
+                        .frame(minHeight: 44, alignment: .leading)
+                }
+                .buttonStyle(.borderless)
             }
             if let secondary {
                 Button(action: secondary.handler) {

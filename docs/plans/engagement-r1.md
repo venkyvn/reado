@@ -1,6 +1,6 @@
 # Plan: engagement-r1 — tăng gắn bó (idea/tang_gang_bo.md) + dọn từ trùng cũ
 
-> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 xong; T5-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
+> **Trạng thái:** open (2026-10-05) - T0 docs + T1 DuplicateMerge + T2 màn Gộp từ trùng + T3 khoảnh khắc nhận ra + T4 N/7 + T5 ôn nhanh xong; T6-T8 đã chi tiết hoá, chưa làm. T1/T2 chi tiết tới chữ ký + test; T3-T8 chi tiết hoá đầu mỗi session.
 
 ## Context
 
@@ -547,7 +547,7 @@ public enum DuplicateMerge {
   hôm nay nên chưa đủ 7 ngày → ảnh không có dòng mới; logic phủ bằng test → ghi "chưa xem tay trên dữ liệu ≥ 7 ngày".
 - **DoD:** full xanh; `HomeHeroTests` không đổi.
 
-### T5 — Ý 2: phiên ôn nhanh 3 thẻ (FR-11)
+### T5 — Ý 2: phiên ôn nhanh 3 thẻ (FR-11) ✅ 2026-10-05 (full 594/598)
 
 **ReadoKit** — `Review/ReviewQueue.swift`:
 ```swift

@@ -186,6 +186,12 @@ struct HomeTabView: View {
                 metrics: heroMetrics,
                 primary: HeroCard.Action(title: "Ôn ngay", handler: { start(.srs) }),
                 secondary: scopeAction,
+                // Chỉ khi còn nhiều hơn một phiên nhanh — ít hơn thì "Ôn ngay" đã là phiên nhanh.
+                quick: count > ReviewQueue.quickSessionSize
+                    ? HeroCard.Action(
+                        title: "Ôn nhanh \(ReviewQueue.quickSessionSize) thẻ · ~2 phút",
+                        handler: { start(.quick) })
+                    : nil,
                 warning: warning)
         case let .extra(count):
             return HeroCard(

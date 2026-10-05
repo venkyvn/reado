@@ -595,6 +595,56 @@ final class ReviewQueueAndServiceTests: XCTestCase {
         XCTAssertEqual(items.first { $0.term == "dated" }?.createdAt, "2026-08-20T03:00:00Z")
     }
 
+    // MARK: — engagement-r1 T5: phiên ôn nhanh
+
+    private func dueCards(_ db: SQLiteDatabase, count: Int) throws -> [String] {
+        let collectionID = try defaultCollectionID(db)
+        return try (0..<count).map { index in
+            let vocab = try Fixtures.insertVocab(
+                in: db, collectionID: collectionID, term: "quick\(index)")
+            return try Fixtures.insertCard(
+                in: db, vocabItemID: vocab, state: "review",
+                dueIso: "2026-09-18T00:00:0\(index)Z", stability: 5)
+        }
+    }
+
+    func testLoadQuickQueueTakesPrefixOfFullQueue() throws {
+        let db = try Fixtures.seededDB()
+        _ = try dueCards(db, count: 5)
+        let full = try ReviewQueue.loadFullQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+
+        let quick = try ReviewQueue.loadQuickQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+
+        XCTAssertEqual(ReviewQueue.quickSessionSize, 3)
+        XCTAssertEqual(quick.items.map(\.cardID), Array(full.items.prefix(3)).map(\.cardID),
+                       "3 thẻ đầu, đúng thứ tự hàng đợi đầy đủ")
+        XCTAssertEqual(quick.remaining, 2)
+        XCTAssertEqual(Set(quick.snapshots.keys), Set(quick.items.map(\.cardID)),
+                       "snapshot đúng 3 thẻ, đủ cho undo")
+    }
+
+    func testLoadQuickQueueWithFewerCardsThanSize() throws {
+        let db = try Fixtures.seededDB()
+        _ = try dueCards(db, count: 2)
+
+        let quick = try ReviewQueue.loadQuickQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+
+        XCTAssertEqual(quick.items.count, 2)
+        XCTAssertEqual(quick.remaining, 0)
+        XCTAssertEqual(quick.snapshots.count, 2)
+    }
+
+    func testLoadQuickQueueEmptyWhenNothingDue() throws {
+        let db = try Fixtures.seededDB()
+        let quick = try ReviewQueue.loadQuickQueue(
+            on: db, dailyNewLimit: 5, now: Fixtures.fixedNow)
+        XCTAssertTrue(quick.items.isEmpty)
+        XCTAssertEqual(quick.remaining, 0)
+    }
+
     // MARK: — 2.4 is_default: saveCapture rơi vào kho tạm (FR-17)
 
     func testSaveCaptureWithoutCollectionGoesToDefaultInbox() throws {

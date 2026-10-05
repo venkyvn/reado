@@ -343,6 +343,27 @@ public enum ReviewQueue {
         return try hydrate(on: db, cardIDs: allCardIDs)
     }
 
+    /// Số thẻ của một phiên ôn nhanh (engagement-r1 T5, ADR-068) — "xong 3 thẻ là được dừng".
+    public static let quickSessionSize = 3
+
+    /// Phiên ôn nhanh: `size` thẻ ĐẦU của `loadFullQueue` (giữ đúng thứ tự ưu tiên) + snapshot của
+    /// chúng + số thẻ còn lại của hàng đợi hôm nay. Chấm vẫn qua `ReviewService.record` như phiên
+    /// thường nên lịch FSRS và streak không khác.
+    public static func loadQuickQueue(
+        on db: SQLiteDatabase,
+        dailyNewLimit: Int,
+        now: Date,
+        scope: Set<String>? = nil,
+        size: Int = quickSessionSize
+    ) throws -> (items: [ReviewItem], snapshots: [String: CardSnapshot], remaining: Int) {
+        let full = try loadFullQueue(
+            on: db, dailyNewLimit: dailyNewLimit, now: now, scope: scope)
+        let items = Array(full.items.prefix(max(0, size)))
+        var snapshots: [String: CardSnapshot] = [:]
+        for item in items { snapshots[item.cardID] = full.snapshots[item.cardID] }
+        return (items, snapshots, max(0, full.items.count - items.count))
+    }
+
     /// Ôn thêm (extra-review-r1): hàng đợi trộn mới + ôn sớm — cùng shape với
     /// `loadFullQueue`. Giữ đúng thứ tự xen kẽ của `extraCardIDs` (KHÔNG sắp lại
     /// theo `due_at` — thẻ mới và thẻ ôn sớm có `due_at` khác hẳn nhau, sắp lại

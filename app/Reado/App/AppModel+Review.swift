@@ -42,6 +42,37 @@ extension AppModel {
         }
     }
 
+    /// Phiên ôn nhanh (engagement-r1 T5): chỉ `ReviewQueue.quickSessionSize` thẻ đầu của hàng đợi hôm
+    /// nay. Ghi đè `review.items`/`snapshots` như `loadReviewQueue`; `quickRemaining` = số thẻ còn lại.
+    func loadQuickQueue(scope: Set<String>? = nil) async throws {
+        guard let database else { throw ReviewError.modelUnavailable }
+        review.scope = scope
+        review.isLoading = true
+        review.error = nil
+        defer { review.isLoading = false }
+        do {
+            let dailyNewLimit = try SettingsService.load(on: database).dailyNewLimit
+            let now = clock.now
+            let windowEnd = ReviewQueue.currentDayWindow(on: database, now: now).end
+            let (items, snapshots, remaining) = try ReviewQueue.loadQuickQueue(
+                on: database, dailyNewLimit: dailyNewLimit, now: now, scope: scope)
+            review.items = items
+            review.snapshots = snapshots
+            review.currentSnapshot = items.first.flatMap { snapshots[$0.cardID] }
+            review.quickRemaining = remaining
+            review.dueOutsideScope = try Int(
+                ReviewQueue.dueOutsideScopeCount(
+                    on: database, dueBeforeIso: windowEnd, scope: scope))
+            review.extraAvailableCount = try Int(
+                ReviewQueue.extraAvailableCount(on: database, now: now, scope: scope))
+        } catch {
+            review.error = (error as? LocalizedError)?.errorDescription
+                ?? String(describing: error)
+            DebugTrace.event("review", "loadQuickQueueFailed", ["error": String(describing: error)])
+            throw error
+        }
+    }
+
     /// Chấm thẻ hiện tại (FR-11, và Ôn thêm — extra-review-r1 đảo ADR-011: MỌI
     /// lượt chấm đều ghi lịch thật, không còn đường `mode='cram'` chỉ-log):
     /// snapshot TRƯỚC + strict rating → outcome; UPDATE cards + INSERT
