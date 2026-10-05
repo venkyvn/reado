@@ -1516,4 +1516,10 @@
     - **Q11** — dùng `NLTokenizer` qua `import NaturalLanguage`, không sửa `Package.swift`
       (link tự động; đã build kit macOS + iOS OK).
     - Migration v7 = hai `ALTER TABLE encounters ADD COLUMN` riêng, nullable không DEFAULT.
+  - **T3 (2026-10-05, so khớp toàn app + "Ghi gặp lại") - tự quyết của plan:**
+    - **Q4** - giữ tên `matureHidden`/`MatureHiddenDraft` (đổi nghĩa + doc comment, không đổi tên).
+    - **Q5** - giữ tham số `matureSenses:` của `drafts`; thêm `knownSenses:` ưu tiên khi không rỗng.
+      `regroup` + test giữ nguyên, `AnalysisView` không còn gọi (bỏ `.onChange` đích + `regroupMatureIfNeeded`).
+    - **Q7** - trang chỉ có từ cũ (context-only) vẫn lưu phiên đọc theo luật cũ (bộ có tên + có nội dung).
+    - **Q8** - từ leech nằm trong nhóm, nhãn "đang ở Từ hay quên", KHÔNG ghi `seen`, ẩn nút chọn khi mọi nghĩa là leech.
   - Plan đầy đủ: `docs/plans/vocab-identity-r1.md`.

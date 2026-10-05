@@ -174,7 +174,9 @@ struct RootView: View {
                 Motion.run(reduceMotion: reduceMotion) {
                     bannerHubID = saved.collectionID
                     banner = ShellBannerItem(
-                        message: "Đã lưu \(saved.count) từ vào \(saved.collectionName)",
+                        message: saved.count > 0
+                            ? "Đã lưu \(saved.count) từ vào \(saved.collectionName)"
+                            : "Đã ghi gặp lại \(saved.contextCount) từ ở \(saved.collectionName)",
                         actionTitle: "Xem")
                 }
             }

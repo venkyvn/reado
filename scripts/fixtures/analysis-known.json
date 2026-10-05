@@ -1,0 +1,77 @@
+{
+  "segments": [
+    {
+      "source_en": "Sleep is the keystone of every good routine.",
+      "translation_vi": "Giấc ngủ là nền tảng của mọi thói quen tốt.",
+      "phrases": [
+        {
+          "en": "Sleep is",
+          "vi": "Giấc ngủ là"
+        },
+        {
+          "en": "keystone of every good routine",
+          "vi": "nền tảng của mọi thói quen tốt"
+        }
+      ]
+    },
+    {
+      "source_en": "A resilient mind recovers quickly from setbacks.",
+      "translation_vi": "Một tâm trí kiên cường hồi phục nhanh sau những vấp ngã.",
+      "phrases": [
+        {
+          "en": "resilient mind",
+          "vi": "tâm trí kiên cường"
+        },
+        {
+          "en": "recovers quickly",
+          "vi": "hồi phục nhanh"
+        },
+        {
+          "en": "from setbacks",
+          "vi": "sau những vấp ngã"
+        }
+      ]
+    },
+    {
+      "source_en": "Discipline matters most on the days you feel like quitting.",
+      "translation_vi": "Kỷ luật quan trọng nhất vào những ngày bạn muốn bỏ cuộc.",
+      "phrases": [
+        {
+          "en": "Discipline matters most",
+          "vi": "Kỷ luật quan trọng nhất"
+        },
+        {
+          "en": "feel like quitting",
+          "vi": "muốn bỏ cuộc"
+        }
+      ]
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "setback",
+      "pos": "noun",
+      "ipa": "ˈsetbæk",
+      "meaning_vi": "sự vấp ngã, trở ngại",
+      "cefr": "B2",
+      "example": "A resilient mind recovers quickly from setbacks."
+    },
+    {
+      "term": "keystone",
+      "pos": "noun",
+      "ipa": "ˈkiːstoʊn",
+      "meaning_vi": "viên đá đỉnh vòm",
+      "cefr": "C1",
+      "example": "Sleep is the keystone of every good routine."
+    },
+    {
+      "term": "quitting",
+      "pos": "verb",
+      "ipa": "ˈkwɪtɪŋ",
+      "meaning_vi": "việc từ bỏ, bỏ cuộc",
+      "cefr": "B1",
+      "example": "Discipline matters most on the days you feel like quitting."
+    }
+  ],
+  "summary_vi": "Fixture vocab-identity-r1 T3: setback (đã thuộc) + keystone (khác nghĩa CSV, đang học) vào nhóm 'Đã có trong kho', quitting là từ mới. Không phải nội dung thật."
+}

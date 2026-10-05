@@ -109,7 +109,8 @@ extension AppModel {
         _ drafts: [ReviewDraft],
         collectionID: String?,
         segments: [PageAnalysis.Segment] = [],
-        summaryVI: String = ""
+        summaryVI: String = "",
+        contextOnly: [ContextOnlyItem] = []
     ) throws -> Int {
         guard let database else { return 0 }
         let items = try ReviewDraftBuilder.selected(drafts)
@@ -119,18 +120,20 @@ extension AppModel {
             collectionID: collectionID,
             segments: segments,
             summaryVI: summaryVI,
+            contextOnly: contextOnly,
             now: clock.now)
         DebugTrace.event("save", "selection", [
             "saved": saved, "collectionID": collectionID ?? "kho_tam", "segments": segments.count,
         ])
-        if saved > 0 {
+        if saved > 0 || !contextOnly.isEmpty {
             reloadOverview()
             // ADR-053: RootView hiện banner "Đã lưu N từ vào X · Xem" (kho tạm cũng có id/tên).
             if let target = collectionID ?? collections.first(where: { $0.isDefault })?.id,
                let name = collections.first(where: { $0.id == target })?.name
             {
                 shell.saveConfirmation = SaveConfirmation(
-                    count: saved, collectionID: target, collectionName: name)
+                    count: saved, collectionID: target, collectionName: name,
+                    contextCount: contextOnly.count)
             }
             capture.lastCapturedImage = nil
             capture.pdfText = nil

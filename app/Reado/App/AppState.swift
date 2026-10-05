@@ -90,6 +90,8 @@ struct SaveConfirmation: Equatable {
     /// Bộ đã lưu vào (kho tạm cũng có id) — nút "Xem" đẩy Hub này.
     let collectionID: String
     let collectionName: String
+    /// ADR-066: số từ cũ chỉ "ghi gặp lại" (không tạo thẻ). `count == 0` -> banner "Đã ghi gặp lại M từ".
+    var contextCount: Int = 0
 }
 
 /// Tín hiệu điều hướng/chrome giữa các màn (RootView tiêu thụ rồi dọn sạch).

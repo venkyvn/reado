@@ -170,7 +170,7 @@ struct ReviewCardRow: View {
 /// mọi draft khác qua `ReviewDraftBuilder.selected(_:)`).
 struct MatureHiddenRow: View {
     @Binding var draft: ReviewDraft
-    let knownMeanings: [String]
+    let knownSenses: [KnownSense]
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.row) {
@@ -187,16 +187,39 @@ struct MatureHiddenRow: View {
                 }
                 Text("Trang này: \(draft.meaningVI)")
                     .font(.subheadline)
-                Text("Trong kho: \(knownMeanings.joined(separator: "; "))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                ForEach(Array(knownSenses.enumerated()), id: \.offset) { _, sense in
+                    Text(senseLine(sense))
+                        .font(Typo.meta)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.vertical, Spacing.xs)
         .accessibilityElement(children: .combine)
     }
 
+    /// ADR-066: "nghĩa — tên bộ · trạng thái".
+    private func senseLine(_ sense: KnownSense) -> String {
+        let status = sense.isLeech ? "đang ở Từ hay quên" : (sense.isMature ? "đã thuộc" : "đang học")
+        let place = sense.collectionName.isEmpty ? status : "\(sense.collectionName) · \(status)"
+        return "\(sense.meaningVI) — \(place)"
+    }
+
+    /// Q8: mọi nghĩa trong kho đều đang ở Từ hay quên -> không cho chọn lưu thẻ mới.
+    private var allLeech: Bool {
+        !knownSenses.isEmpty && knownSenses.allSatisfy(\.isLeech)
+    }
+
+    @ViewBuilder
     private var selectButton: some View {
+        if allLeech {
+            Color.clear.frame(width: 44, height: 44)
+        } else {
+            selectToggle
+        }
+    }
+
+    private var selectToggle: some View {
         Button {
             draft.isSelected.toggle()
             Haptics.selection()
@@ -211,7 +234,7 @@ struct MatureHiddenRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            draft.isSelected ? "Bỏ chọn \(draft.term)" : "Chọn \(draft.term) để ôn tập")
+            draft.isSelected ? "Bỏ chọn \(draft.term)" : "Nghĩa khác — lưu thẻ mới cho \(draft.term)")
         .accessibilityValue(draft.isSelected ? "Đã chọn" : "Chưa chọn")
         .accessibilityAddTraits(draft.isSelected ? .isSelected : [])
     }

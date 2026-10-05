@@ -22,7 +22,11 @@
   Nợ xem tay: đặt "Từ mới mỗi ngày" = 1, phân tích 2 trang → trang 2 thấy dòng đó (ảnh tĩnh
   không dựng được ca budget = 0). Plan đã chi tiết hoá T1–T4. **T2 xong**: migration v7 (`encounters.sentence` + `collection_id`), `EncounterMatcher.contexts`
   (NLTokenizer, cắt câu dài ±120 ký tự), `saveCapture` ghi câu + bộ vào `seen`, export thêm 2 field.
-  Chưa có UI (hiện ở T4). Task tiếp: **T3** (so khớp toàn app + nhóm "Đã có trong kho").
+  Chưa có UI (hiện ở T4). **T3 xong**: `VocabRepository.knownSenses` (toàn app, mọi trạng thái) + nhóm "Đã có trong kho",
+  nút đáy "Ghi gặp lại N từ" (context-only, không tạo thẻ), bỏ regroup theo đích. Đo N6 ở 3000 từ:
+  `knownSenses` ~14ms, `saveCapture` ~82ms — chưa cần cache. **Nợ xem tay**: bỏ chọn hết → "Ghi gặp lại"
+  → banner; lưu trang PDF có từ cũ rồi chạy query T0 (khoá trùng không tăng); nhóm ở Dynamic Type
+  lớn + accent Nâu giấy. Task tiếp: **T4** (hiện ngữ cảnh ở popover + mặt sau thẻ).
 - pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, chỉ còn
   **T5 eval prompt PDF trên PDF thật**. 2026-10-05: fen đưa PDF thật (dùng chung với
   ocr-quality-r1 T1) — `PDFPageTextProbeTests.swift` (mới, opt-in lane `kit`, xem

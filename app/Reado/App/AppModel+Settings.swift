@@ -113,6 +113,16 @@ extension AppModel {
         }
     }
 
+    /// FR-10 / ADR-066: mọi nghĩa đã có trong kho (toàn app, mọi trạng thái) theo khoá
+    /// `term|pos`. Không phụ thuộc đích lưu. Lỗi DB -> rỗng, không giấu từ.
+    func knownSensesForCapture() -> [String: [KnownSense]] {
+        guard let database else { return [:] }
+        return read("nghĩa đã có trong kho", fallback: [:]) {
+            try VocabRepository.knownSenses(on: database)
+        }
+    }
+
+    /// (Cũ - ADR-066 đã thay bằng `knownSensesForCapture`, không còn call site.)
     /// FR-10 / Q-13 phương án B: nghĩa trong kho (`meaning_vi`) của mọi term+pos
     /// đã thuộc (stability >= 21, state review) trong collection đang chụp —
     /// khoá `term|pos` → danh sách nghĩa. Chưa chọn bộ → kho tạm. Lỗi DB → rỗng,

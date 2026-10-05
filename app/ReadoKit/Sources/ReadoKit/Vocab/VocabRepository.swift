@@ -22,6 +22,26 @@ public enum CollectionError: Error, LocalizedError, Equatable {
     }
 }
 
+/// ADR-066: một nghĩa đã có trong kho (bất kể collection, bất kể trạng thái thẻ).
+public struct KnownSense: Equatable, Sendable {
+    public let vocabItemID: String
+    public let meaningVI: String
+    public let collectionName: String
+    public let isMature: Bool
+    public let isLeech: Bool
+
+    public init(
+        vocabItemID: String, meaningVI: String, collectionName: String,
+        isMature: Bool, isLeech: Bool
+    ) {
+        self.vocabItemID = vocabItemID
+        self.meaningVI = meaningVI
+        self.collectionName = collectionName
+        self.isMature = isMature
+        self.isLeech = isLeech
+    }
+}
+
 public enum VocabRepository {
 
     public struct Collection: Equatable, Sendable, Identifiable {
@@ -169,6 +189,43 @@ public enum VocabRepository {
         return result
     }
 
+    /// ADR-066 (đảo Q-09 cho FR-10): khoá `matureKey` -> mọi nghĩa đã có, MỌI collection,
+    /// mọi trạng thái (D2). Một phần tử mỗi vocab_item. Ngưỡng "đã thuộc" như `matureSenses`.
+    public static func knownSenses(on db: SQLiteDatabase) throws -> [String: [KnownSense]] {
+        let setting = try db.rows(
+            "SELECT known_stability FROM settings WHERE id = 1 LIMIT 1;")
+        let threshold = setting.first?.first?.doubleValue ?? defaultMatureStability
+        let rows = try db.rows(
+            """
+            SELECT v.id AS id, v.term_normalized AS term_normalized, v.pos AS pos,
+                   v.meaning_vi AS meaning_vi, col.name AS collection_name,
+                   MAX(CASE WHEN c.state = 'review' AND c.stability >= ?
+                            AND c.suspended_at IS NULL THEN 1 ELSE 0 END) AS is_mature,
+                   MAX(CASE WHEN c.suspended_at IS NOT NULL THEN 1 ELSE 0 END) AS is_leech
+            FROM vocab_items v
+            JOIN collections col ON col.id = v.collection_id
+            LEFT JOIN cards c ON c.vocab_item_id = v.id
+            GROUP BY v.id
+            ORDER BY v.created_at, v.id;
+            """,
+            [.double(threshold)])
+        var result: [String: [KnownSense]] = [:]
+        for row in rows {
+            guard let term = row["term_normalized"].textValue,
+                  let pos = row["pos"].textValue
+            else { continue }
+            let key = matureKey(term: term, pos: pos)
+            result[key, default: []].append(
+                KnownSense(
+                    vocabItemID: row["id"].textValue ?? "",
+                    meaningVI: row["meaning_vi"].textValue ?? "",
+                    collectionName: row["collection_name"].textValue ?? "",
+                    isMature: (row["is_mature"].intValue ?? 0) != 0,
+                    isLeech: (row["is_leech"].intValue ?? 0) != 0))
+        }
+        return result
+    }
+
     /// FR-09 / ADR-066 D1: số từ đã lưu trong NGÀY HỌC hiện tại (giờ chuyển ngày FR-11).
     /// Tính cả từ nhập CSV (Q3 — không phân biệt được nguồn).
     public static func newSavedToday(on db: SQLiteDatabase, now: Date) throws -> Int {
@@ -189,9 +246,10 @@ public enum VocabRepository {
         collectionID: String?,
         segments: [PageAnalysis.Segment] = [],
         summaryVI: String = "",
+        contextOnly: [ContextOnlyItem] = [],
         now: Date
     ) throws -> Int {
-        guard !items.isEmpty else { return 0 }
+        guard !items.isEmpty || !contextOnly.isEmpty else { return 0 }
         let targetID: String
         if let collectionID {
             // Validate còn tồn tại.
@@ -223,6 +281,27 @@ public enum VocabRepository {
             if !segments.isEmpty {
                 seenMatcher = EncounterMatcher(
                     lexicon: try EncounterRepository.loadLexicon(on: db))
+            }
+            // ADR-066 Q8: từ để lại trong nhóm "Đã có" — tra id TRƯỚC khi chèn item mới
+            // (khỏi nhầm với dòng vừa lưu); leech bị loại (không ghi `seen`).
+            var contextOnlyIDs: [(id: String, example: String?)] = []
+            for item in contextOnly {
+                let posKey = item.pos.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let rows = try db.rows(
+                    """
+                    SELECT v.id AS id FROM vocab_items v
+                    WHERE v.term_normalized = ? AND lower(trim(v.pos)) = ?
+                      AND NOT EXISTS (
+                        SELECT 1 FROM cards k
+                        WHERE k.vocab_item_id = v.id AND k.suspended_at IS NOT NULL)
+                    ORDER BY v.created_at, v.id;
+                    """,
+                    [.text(normalizedTerm(item.term)), .text(posKey)])
+                for row in rows {
+                    if let id = row["id"].textValue {
+                        contextOnlyIDs.append((id, item.example))
+                    }
+                }
             }
             for item in items {
                 let vocabID = Identifier.uuid()
@@ -273,8 +352,12 @@ public enum VocabRepository {
             }
             // FR-22 / SD §6 khối #8 — `seen` CÙNG transaction (kể cả kho tạm: trang vẫn
             // được đọc dù không lưu phiên).
-            if let seenMatcher {
-                let contexts = seenMatcher.contexts(in: segments.map(\.sourceEN))
+            if seenMatcher != nil || !contextOnlyIDs.isEmpty {
+                var contexts = seenMatcher?.contexts(in: segments.map(\.sourceEN)) ?? []
+                let have = Set(contexts.map(\.vocabItemID))
+                for entry in contextOnlyIDs where !have.contains(entry.id) {
+                    contexts.append(EncounterContext(vocabItemID: entry.id, sentence: entry.example))
+                }
                 try EncounterRepository.insertSeen(
                     on: db, contexts: contexts, collectionID: targetID, now: now)
             }

@@ -81,12 +81,24 @@ public struct ReviewDraftError: Error, LocalizedError, Equatable, Sendable {
 public struct MatureHiddenDraft: Equatable, Sendable, Identifiable {
     public var id: String { draft.id }
     public let draft: ReviewDraft
-    /// `meaning_vi` của mọi dòng cùng khoá đã thuộc — ít nhất 1 phần tử.
-    public let knownMeanings: [String]
+    /// Mọi dòng đã có trong kho cùng khoá `term|pos` (ADR-066: toàn app, mọi trạng thái;
+    /// tên `MatureHidden` giữ vì Q4). Ít nhất 1 phần tử.
+    public let knownSenses: [KnownSense]
+    /// `meaning_vi` của từng dòng đã có.
+    public var knownMeanings: [String] { knownSenses.map(\.meaningVI) }
 
     public init(draft: ReviewDraft, knownMeanings: [String]) {
         self.draft = draft
-        self.knownMeanings = knownMeanings
+        self.knownSenses = knownMeanings.map {
+            KnownSense(
+                vocabItemID: "", meaningVI: $0, collectionName: "",
+                isMature: true, isLeech: false)
+        }
+    }
+
+    public init(draft: ReviewDraft, knownSenses: [KnownSense]) {
+        self.draft = draft
+        self.knownSenses = knownSenses
     }
 }
 
@@ -130,8 +142,19 @@ public enum ReviewDraftBuilder {
         from items: [PageAnalysis.VocabularyItemIn],
         selectedLevels: Set<String>? = nil,
         matureSenses: [String: [String]] = [:],
+        knownSenses: [String: [KnownSense]] = [:],
         preselectBudget: Int = preselectLimit
     ) -> ReviewDraftResult {
+        // ADR-066/Q5: `knownSenses` (toàn app) ưu tiên khi không rỗng; không thì bọc `matureSenses` cũ.
+        let lookup: [String: [KnownSense]] = knownSenses.isEmpty
+            ? matureSenses.mapValues { meanings in
+                meanings.map {
+                    KnownSense(
+                        vocabItemID: "", meaningVI: $0, collectionName: "",
+                        isMature: true, isLeech: false)
+                }
+            }
+            : knownSenses
         // ADR-066 D1/Q1: suất chọn sẵn = min(trần 5/trang, ngân sách ngày còn lại).
         let slots = min(preselectLimit, max(0, preselectBudget))
         var preselectedCount = 0
@@ -139,7 +162,7 @@ public enum ReviewDraftBuilder {
         var matureHidden: [MatureHiddenDraft] = []
         for item in items {
             let key = VocabRepository.matureKey(term: item.term, pos: item.pos)
-            if let knownMeanings = matureSenses[key] {
+            if let senses = lookup[key] {
                 let draft = ReviewDraft(
                     term: item.term,
                     pos: item.pos,
@@ -150,7 +173,7 @@ public enum ReviewDraftBuilder {
                     verification: item.verification,
                     isSelected: false)
                 matureHidden.append(
-                    MatureHiddenDraft(draft: draft, knownMeanings: knownMeanings))
+                    MatureHiddenDraft(draft: draft, knownSenses: senses))
                 continue
             }
             let eligible = isEligibleForPreselect(item, selectedLevels: selectedLevels)

@@ -319,4 +319,92 @@ final class EncounterRepositoryTests: XCTestCase {
 
         XCTAssertEqual(try EncounterRepository.count(on: db, vocabItemID: leech, kind: .seen), 0)
     }
+
+    // MARK: vocab-identity-r1 T3 — contextOnly
+
+    private func seenRows(_ db: SQLiteDatabase, _ id: String) throws -> [SQLRow] {
+        try db.rows(
+            "SELECT sentence, collection_id FROM encounters WHERE vocab_item_id = ? AND kind = 'seen';",
+            [.text(id)])
+    }
+
+    func testContextOnlyAloneWritesNoCardAndOneSeenWithPageSentence() throws {
+        let db = try Fixtures.seededDB()
+        let bookA = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let bookB = try Fixtures.insertCollection(in: db, name: "Sách B")
+        let old = try vocab(db, "serendipity", in: bookA)
+        let before = try db.scalarInt64("SELECT COUNT(*) FROM vocab_items;")
+
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [], collectionID: bookB,
+            segments: segments("Pure serendipity struck him."),
+            contextOnly: [ContextOnlyItem(term: "serendipity", pos: "noun", example: "AI câu")],
+            now: Fixtures.fixedNow)
+
+        XCTAssertEqual(saved, 0)
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM vocab_items;"), before)
+        let rows = try seenRows(db, old)
+        XCTAssertEqual(rows.count, 1, "matcher + contextOnly cùng vocab -> 1 dòng")
+        XCTAssertEqual(rows[0]["sentence"].textValue, "Pure serendipity struck him.")
+        XCTAssertEqual(rows[0]["collection_id"].textValue, bookB)
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM reading_sessions;"), 1, "Q7")
+    }
+
+    func testContextOnlyFallsBackToExampleWhenSegmentsLackTheWord() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let old = try vocab(db, "serendipity", in: book)
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [], collectionID: book,
+            segments: segments("Nothing relevant here."),
+            contextOnly: [ContextOnlyItem(term: "Serendipity", pos: "Noun", example: "AI câu")],
+            now: Fixtures.fixedNow)
+        XCTAssertEqual(try seenRows(db, old).first?["sentence"].textValue, "AI câu")
+    }
+
+    func testContextOnlyWithNilExampleAndNoSegmentMatchWritesNullSentence() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let old = try vocab(db, "serendipity", in: book)
+        _ = try VocabRepository.saveCapture(
+            on: db, items: [], collectionID: book, segments: [],
+            contextOnly: [ContextOnlyItem(term: "serendipity", pos: "noun", example: nil)],
+            now: Fixtures.fixedNow)
+        let rows = try seenRows(db, old)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertNil(rows[0]["sentence"].textValue)
+    }
+
+    func testContextOnlySkipsLeech() throws {
+        let db = try Fixtures.seededDB()
+        let leech = try vocab(db, "stubborn")
+        _ = try Fixtures.insertCard(
+            in: db, vocabItemID: leech, state: "review", suspendedIso: "2026-09-17T00:00:00Z")
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [], collectionID: nil, segments: segments("A stubborn page."),
+            contextOnly: [ContextOnlyItem(term: "stubborn", pos: "noun", example: "x")],
+            now: Fixtures.fixedNow)
+        XCTAssertEqual(saved, 0)
+        XCTAssertEqual(try seenRows(db, leech).count, 0)
+    }
+
+    func testItemsAndContextOnlyTogether() throws {
+        let db = try Fixtures.seededDB()
+        let book = try Fixtures.insertCollection(in: db, name: "Sách A")
+        let old = try vocab(db, "serendipity", in: book)
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [item("novel")], collectionID: book, segments: [],
+            contextOnly: [ContextOnlyItem(term: "serendipity", pos: "noun", example: "AI câu")],
+            now: Fixtures.fixedNow)
+        XCTAssertEqual(saved, 1)
+        XCTAssertEqual(try seenRows(db, old).count, 1)
+    }
+
+    func testEmptyItemsAndEmptyContextOnlyStillReturnsZeroWithoutWriting() throws {
+        let db = try Fixtures.seededDB()
+        let saved = try VocabRepository.saveCapture(
+            on: db, items: [], collectionID: nil, segments: segments("x"), now: Fixtures.fixedNow)
+        XCTAssertEqual(saved, 0)
+        XCTAssertEqual(try db.scalarInt64("SELECT COUNT(*) FROM encounters;"), 0)
+    }
 }

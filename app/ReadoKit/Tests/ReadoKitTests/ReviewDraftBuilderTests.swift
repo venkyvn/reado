@@ -436,4 +436,43 @@ final class ReviewDraftBuilderTests: XCTestCase {
             visible: [verified, unverified], matureHidden: [], matureSenses: [:])
         XCTAssertEqual(result.visible.map(\.term), ["u", "v"])
     }
+
+    // MARK: — vocab-identity-r1 T3 (ADR-066)
+
+    /// Từ có ở bộ khác (knownSenses toàn app) -> nhóm gập, không chọn sẵn, không chiếm suất.
+    func testKnownSensesFoldIntoHiddenAndDoNotTakePreselectSlots() {
+        let items = (1...6).map { vocabIn(term: "t\($0)", verification: .verified) }
+        let key = VocabRepository.matureKey(term: "t1", pos: "noun")
+        let sense = KnownSense(
+            vocabItemID: "x", meaningVI: "nghĩa cũ", collectionName: "Bộ khác",
+            isMature: false, isLeech: false)
+        let result = ReviewDraftBuilder.drafts(from: items, knownSenses: [key: [sense]])
+        XCTAssertEqual(result.matureHidden.map(\.draft.term), ["t1"])
+        XCTAssertEqual(result.matureHidden.first?.knownSenses, [sense])
+        XCTAssertEqual(result.matureHidden.first?.draft.isSelected, false)
+        XCTAssertEqual(result.visible.map(\.term), ["t2", "t3", "t4", "t5", "t6"])
+        XCTAssertEqual(result.visible.filter(\.isSelected).count, 5, "t1 không chiếm suất")
+    }
+
+    /// `knownSenses` ưu tiên hơn `matureSenses` khi không rỗng.
+    func testKnownSensesTakePrecedenceOverMatureSenses() {
+        let items = [vocabIn(term: "a", verification: .verified),
+                     vocabIn(term: "b", verification: .verified)]
+        let keyA = VocabRepository.matureKey(term: "a", pos: "noun")
+        let keyB = VocabRepository.matureKey(term: "b", pos: "noun")
+        let sense = KnownSense(
+            vocabItemID: "x", meaningVI: "m", collectionName: "C", isMature: true, isLeech: false)
+        let result = ReviewDraftBuilder.drafts(
+            from: items, matureSenses: [keyB: ["cũ"]], knownSenses: [keyA: [sense]])
+        XCTAssertEqual(result.matureHidden.map(\.draft.term), ["a"])
+        XCTAssertEqual(result.visible.map(\.term), ["b"])
+    }
+
+    /// `matureSenses` cũ vẫn chạy khi `knownSenses` rỗng (Q5).
+    func testMatureSensesStillWorkWhenKnownSensesEmpty() {
+        let key = VocabRepository.matureKey(term: "a", pos: "noun")
+        let result = ReviewDraftBuilder.drafts(
+            from: [vocabIn(term: "a", verification: .verified)], matureSenses: [key: ["cũ"]])
+        XCTAssertEqual(result.matureHidden.first?.knownMeanings, ["cũ"])
+    }
 }

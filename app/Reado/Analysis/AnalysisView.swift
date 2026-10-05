@@ -20,7 +20,7 @@ struct AnalysisView: View {
 
     @State private var drafts: [ReviewDraft] = []
     // home-eevas-r1 T2: "AI chọn sẵn N từ" — chụp số preselect NGAY LÚC drafts được dựng lần đầu,
-    // không cập nhật lại ở `regroupMatureIfNeeded()` (đổi đích không đổi việc AI đã đề xuất lúc đầu).
+    // không cập nhật lại ở việc đổi đích (ADR-066: khoá toàn app, đổi đích không đổi nhóm).
     @State private var aiPreselectedCount = 0
     // ADR-066 D1: hết suất mới hôm nay → không chọn sẵn, header báo lý do.
     @State private var budgetExhausted = false
@@ -30,7 +30,7 @@ struct AnalysisView: View {
     // Mảng riêng (không lồng trong `drafts`) để binding tới từng ô chọn vẫn hoạt
     // động — `MatureHiddenDraft.draft` là `let`, không mutate được qua index.
     @State private var matureHiddenDrafts: [ReviewDraft] = []
-    @State private var matureMeaningsByID: [String: [String]] = [:]
+    @State private var knownSensesByID: [String: [KnownSense]] = [:]
     // Gập sẵn theo mặc định (T2 DoD) — mở ra mới thấy danh sách nghĩa trong kho.
     @State private var matureHiddenExpanded = false
     @State private var expandedIDs: Set<String> = []
@@ -62,6 +62,17 @@ struct AnalysisView: View {
     /// nút "Lưu (N)" giống mọi item khác (T2 DoD).
     private var selectedCount: Int {
         drafts.filter(\.isSelected).count + matureHiddenDrafts.filter(\.isSelected).count
+    }
+
+    /// ADR-066 Q8: mọi nghĩa trong kho của draft này đều là leech -> không ghi gặp lại, không có nút chọn.
+    private func allLeech(_ draft: ReviewDraft) -> Bool {
+        let senses = knownSensesByID[draft.id] ?? []
+        return !senses.isEmpty && senses.allSatisfy(\.isLeech)
+    }
+
+    /// ADR-066 Q2: từ cũ để nguyên trong nhóm "Đã có trong kho" (không chọn) -> chỉ ghi lần gặp lại.
+    private var contextOnlyDrafts: [ReviewDraft] {
+        matureHiddenDrafts.filter { !$0.isSelected && !allLeech($0) }
     }
 
     /// pdf-reader-r1 T4 (FR-23/ADR-058) — trang PDF scan/lớp chữ rác đã được
@@ -197,9 +208,6 @@ struct AnalysisView: View {
             syncDraftsIfNeeded()
         }
         .onChange(of: model.capture.analysisResult) { _, _ in syncDraftsIfNeeded() }
-        // fr10-close-r1: ADR-053 cho đổi đích ngay trên màn duyệt — Q-09 so khớp
-        // "đã thuộc" theo collection nên đổi đích phải tính lại nhóm gập theo bộ mới.
-        .onChange(of: model.capture.analysisTargetCollectionID) { _, _ in regroupMatureIfNeeded() }
         .task {
             // 2.2 lấp lỗ hổng flow: CaptureView chỉ hand-off ảnh (bẫy sheet chồng
             // sheet), phân tích được kích hoạt khi màn hình này xuất hiện.
@@ -349,37 +357,18 @@ struct AnalysisView: View {
         let draftResult = ReviewDraftBuilder.drafts(
             from: result.vocabulary,
             selectedLevels: levels.map(Set.init),
-            matureSenses: model.matureSensesForCapture(),
+            knownSenses: model.knownSensesForCapture(),
             preselectBudget: quota.budget)
         drafts = draftResult.visible
         aiPreselectedCount = drafts.filter(\.isSelected).count
         budgetExhausted = quota.budget == 0 && drafts.contains { $0.verification == .verified }
         dailyNewLimit = quota.dailyLimit
         // Q-13 phương án B (ADR-056): tách riêng thành mảng + dict để binding
-        // (`$matureHiddenDrafts[index]`) đi được tới từng ô chọn — `knownMeanings`
+        // (`$matureHiddenDrafts[index]`) đi được tới từng ô chọn — `knownSenses`
         // tra theo id draft, hiển thị ở `MatureHiddenRow`.
         matureHiddenDrafts = draftResult.matureHidden.map(\.draft)
-        matureMeaningsByID = Dictionary(
-            uniqueKeysWithValues: draftResult.matureHidden.map { ($0.id, $0.knownMeanings) })
-    }
-
-    /// fr10-close-r1: đích đổi trên màn duyệt (ADR-053) → tính lại nhóm "Đã thuộc"
-    /// theo bộ mới mà KHÔNG dựng lại từ AI — giữ sửa tay + lựa chọn của người dùng
-    /// (`ReviewDraftBuilder.regroup`). Không chạy khi chưa có gì để tính (chưa phân
-    /// tích xong, hoặc cả hai danh sách rỗng).
-    private func regroupMatureIfNeeded() {
-        guard model.capture.analysisResult != nil,
-              !drafts.isEmpty || !matureHiddenDrafts.isEmpty
-        else { return }
-        let hidden = matureHiddenDrafts.map { draft in
-            MatureHiddenDraft(draft: draft, knownMeanings: matureMeaningsByID[draft.id] ?? [])
-        }
-        let result = ReviewDraftBuilder.regroup(
-            visible: drafts, matureHidden: hidden, matureSenses: model.matureSensesForCapture())
-        drafts = result.visible
-        matureHiddenDrafts = result.matureHidden.map(\.draft)
-        matureMeaningsByID = Dictionary(
-            uniqueKeysWithValues: result.matureHidden.map { ($0.id, $0.knownMeanings) })
+        knownSensesByID = Dictionary(
+            uniqueKeysWithValues: draftResult.matureHidden.map { ($0.id, $0.knownSenses) })
     }
 
     /// Còn từ để duyệt mà chưa lưu/bỏ → chặn vuốt đóng và hỏi trước khi thoát. Không còn từ nào
@@ -410,12 +399,16 @@ struct AnalysisView: View {
         Button {
             save()
         } label: {
-            Text("Lưu \(selectedCount) từ vào \(destinationName)")
-                .frame(maxWidth: .infinity)
+            Text(
+                selectedCount == 0 && !contextOnlyDrafts.isEmpty
+                    ? "Ghi gặp lại \(contextOnlyDrafts.count) từ"
+                    : "Lưu \(selectedCount) từ vào \(destinationName)"
+            )
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(selectedCount == 0)
+        .disabled(selectedCount == 0 && contextOnlyDrafts.isEmpty)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .background(.background)
@@ -455,12 +448,20 @@ struct AnalysisView: View {
             let result = model.capture.analysisResult
             // Q-13: item chọn trong nhóm gập "Đã thuộc" lưu như mọi draft khác —
             // qua đúng `ReviewDraftBuilder.selected(_:)` (model.saveSelection).
+            // ADR-066 Q2/N2: từ cũ còn lại trong nhóm "Đã có trong kho" chỉ ghi lần gặp lại;
+            // `example` AI chỉ đi theo khi verified.
+            let contextOnly = contextOnlyDrafts.map {
+                ContextOnlyItem(
+                    term: $0.term, pos: $0.pos,
+                    example: $0.verification == .verified ? $0.example : nil)
+            }
             let saved = try model.saveSelection(
                 drafts + matureHiddenDrafts,
                 collectionID: model.capture.analysisTargetCollectionID,
                 segments: result?.segments ?? [],
-                summaryVI: result?.summaryVI ?? "")
-            guard saved > 0 else {
+                summaryVI: result?.summaryVI ?? "",
+                contextOnly: contextOnly)
+            guard saved > 0 || !contextOnly.isEmpty else {
                 // Không ghi được từ nào (kho chưa mở) — đừng đóng phiên duyệt như thể đã lưu.
                 model.alertMessage = "Không lưu được từ nào. Hãy thử lại."
                 Haptics.error()
@@ -682,19 +683,22 @@ struct AnalysisView: View {
         }
     }
 
-    /// Q-13 phương án B (ADR-056) — nhóm gập cuối tab Từ vựng: item khớp khoá
-    /// `term|pos` đã thuộc, KHÔNG bị xoá khỏi màn duyệt. Gập sẵn (T2 DoD); mở ra
+    /// Q-13 phương án B (ADR-056) + ADR-066 — nhóm gập cuối tab Từ vựng: item khớp khoá
+    /// `term|pos` đã có trong kho (toàn app), KHÔNG bị xoá khỏi màn duyệt. Gập sẵn (T2 DoD); mở ra
     /// liệt kê đủ nghĩa trong kho kèm nghĩa AI gán cho trang này (`MatureHiddenRow`).
     private var matureHiddenSection: some View {
         Section {
             DisclosureGroup(isExpanded: $matureHiddenExpanded) {
+                Text("Không tạo thẻ mới — chỉ ghi lần gặp lại. Chọn nếu trang này dùng nghĩa khác.")
+                    .font(Typo.meta)
+                    .foregroundStyle(.secondary)
                 ForEach(Array(matureHiddenDrafts.enumerated()), id: \.element.id) { index, draft in
                     MatureHiddenRow(
                         draft: $matureHiddenDrafts[index],
-                        knownMeanings: matureMeaningsByID[draft.id] ?? [])
+                        knownSenses: knownSensesByID[draft.id] ?? [])
                 }
             } label: {
-                Text("Đã thuộc · \(matureHiddenDrafts.count)")
+                Text("Đã có trong kho · \(matureHiddenDrafts.count)")
                     .font(Typo.rowTitle)
             }
         }
