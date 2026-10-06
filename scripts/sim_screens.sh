@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # sim_screens.sh — cài + mở Reado trên simulator kèm dữ liệu mẫu (DEBUG only, xem
 # AppModel.seedDevDemoCSVIfNeeded) và chụp màn hình light + dark để so trước/sau
-# (docs/plans/visual-polish-r1.md). Không cần key nào. Ảnh ra .tmp/screens/ (ngoài git).
+# (docs/plans/done/visual-polish-r1.md). Không cần key nào. Ảnh ra .tmp/screens/ (ngoài git).
 #
 #   scripts/sim_screens.sh                 # build rồi cài + mở (giữ dữ liệu cũ)
 #   scripts/sim_screens.sh --fresh         # gỡ app trước → DB mới → seed lại CSV mẫu

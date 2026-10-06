@@ -1,5 +1,7 @@
 # Plan: apple-ai-r1 — Apple Intelligence: sửa lỗi OCR + agent phân tích mặc định
 
+> **Trạng thái:** closed (2026-10-05) - T1–T7 xong; phần soát OCR gỡ ở ADR-065
+
 > Trạng thái: **T1–T7 xong** (2026-10-05). ADR: **ADR-063** (kế hoạch ban đầu ghi
 > ADR-061 — đã trùng với ADR-061 của pdf-nav-r1, đổi số khi viết docs ở T2).
 > **Cập nhật 2026-10-05 (cùng ngày, ocr-quality-r1):** phần "soát lại OCR" (mục 1

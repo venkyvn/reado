@@ -113,7 +113,7 @@ for (const abs of files) {
         continue;
       }
       if (fs.statSync(resolved).isDirectory()) continue;
-      if (frag) {
+      if (frag && resolved.toLowerCase().endsWith('.md')) {
         const anchors = headingAnchors(resolved);
         if (!anchors.has(frag)) {
           const near = [...anchors].filter((a) => a.includes(frag.slice(0, 12))).slice(0, 3);

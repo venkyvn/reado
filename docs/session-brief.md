@@ -10,11 +10,11 @@
 > Số test chính thức: hook `session-context.sh` tự nạp `.tmp/results/{last,kit}-summary.txt` — không ghi tay.
 
 **Đang mở / hàng đợi**
-- pdf-reader-r1 (FR-23, ADR-058, branch `pdf-reader-r1`): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
+- pdf-reader-r1 (FR-23, ADR-058): T0–T4 xong, còn **T5 eval prompt PDF trên PDF thật**
   (`PDFPageTextProbeTests` xác nhận extract tốt; thiếu `prompt_eval.py --swift-func` + chạy eval + chỉnh ngưỡng).
   Nợ xem tay T3/T4 — `docs/plans/pdf-reader-r1.md`.
-- ocr-quality-r1 (branch `ocr-quality-r1`, nháp `plan_ocr_quality_r1.md` ở gốc repo): D3/T6 chưa chốt (§2.12).
-- Plan mở khác ở `docs/plans/`: `structure-review-r1`, `visual-polish-r1`, `apple-ai-r1` (T1–T7 xong).
+- ocr-quality-r1 (`docs/plans/ocr-quality-r1.md`): T0–T4 + T7 xong; D3/T6 chưa chốt (§2.12).
+- Đã khép 2026-10-06 → `docs/plans/done/`: `structure-review-r1`, `visual-polish-r1` (nợ xem tay → `docs/qa/pending.md`), `apple-ai-r1`.
 
 **Đã khép gần đây** (chi tiết ở journal)
 - 2026-10-05 → `docs/journal/2026-10-05.md`: engagement-r1 khép (T0–T8, đã merge `main` + push `63d38e7`; ADR-067/068, prd v0.17):
@@ -52,7 +52,7 @@
 12. ocr-quality-r1 T6 (gợi ý loại nguồn cho prompt — `sourceKind` 'page'/'screenshot'/
     'label', đổi `Prompt.version` 6→7): **D3 chưa chốt** — tự nhận qua metadata Photos
     (cần quyền thư viện ảnh), để người dùng tự chọn tay, hay để hẳn R2. Không làm cho
-    tới khi D3 có câu trả lời. `plan_ocr_quality_r1.md` (gốc repo) mục D3/T6,
+    tới khi D3 có câu trả lời. `docs/plans/ocr-quality-r1.md` mục D3/T6,
     `docs/journal/2026-10-05.md`.
 13. vocab-identity-r1 T0: baseline trước/sau cần dữ liệu thật trên máy fen — 3 query SQL
     (khoá `term_normalized+pos` trùng, thẻ `new` tồn, từ mới/14 ngày) ở mục T0 của

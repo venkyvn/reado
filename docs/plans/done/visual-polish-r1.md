@@ -1,6 +1,6 @@
 # Plan: visual-polish-r1 — nâng cấp visual theo hướng "Native iOS tinh chỉnh"
 
-> **Trạng thái:** open (2026-09-28) - "Native iOS tinh chỉnh": T0–T5 code+commit xong (ADR-045), còn chờ fen xem tay nhiều màn
+> **Trạng thái:** closed (2026-10-06) - T0–T5 code+commit xong (ADR-045); nợ xem tay dời sang docs/qa/pending.md (workflow-docs-r1 D2)
 
 > Chi tiết: build xanh, full suite 263/265
 > (2 skip opt-in; gồm 7 test của luồng `cram-collection-r1` chạy song song). **Plan còn mở** cho tới khi fen xem tay các màn chưa kiểm. Đã xem thực
@@ -27,7 +27,7 @@
 >   phải `git add -N` trước khi `scripts/test.sh` qua cổng.
 
 
-> Lưu thành `docs/plans/visual-polish-r1.md` ở bước đầu T0 (fen đã OK plan).
+> Lưu thành `docs/plans/done/visual-polish-r1.md` ở bước đầu T0 (fen đã OK plan).
 > Người implement: Sonnet, mỗi task 1 session, đóng bằng `/rhandoff`.
 
 ## Context
@@ -147,7 +147,7 @@ Mỗi task = 1 session = 1 commit (T1 commit riêng vì là nền). Trước com
 
 ### T0 ✅ (code xong, chưa xem tay hết) — Dev-seed + ảnh hiện trạng
 - **Files:**
-  - `docs/plans/visual-polish-r1.md`: bản plan này.
+  - `docs/plans/done/visual-polish-r1.md`: bản plan này.
   - `app/Reado/AppModel.swift`: thêm `#if DEBUG seedDevDemoCSVIfNeeded(on:)` cạnh `seedDevAIBoxAgentIfNeeded` (`AppModel.swift:158`), gọi ngay sau nó (`:144`). Đọc env `READO_DEV_DEMO_CSV` (đường dẫn file trên máy host; simulator đọc được FS host). Chỉ import khi `CSVImport.existingTermNormalizedSet(on:)` rỗng: `parse` → `importRows(on:rows:now:)`. Lỗi → bỏ qua im lặng như hook AI-Box.
   - `scripts/fixtures/demo-vocab.csv`: khoảng 40 dòng, header 7 cột `term,pos,ipa,meaning_vi,cefr,example,collection` (xem `ImportView.swift:70`, parser `ReadoKit/Vocab/CSVImport.swift:97`). 3 collection tên sách giả ("Atomic Habits", "The Hobbit", "Sapiens"), CEFR B1–C1, câu ví dụ **tự viết** (không trích sách — bản quyền).
   - `scripts/sim_screens.sh`: dựa trên `sim_aibox.sh` (tìm UDID, `Reado.app` trong `DerivedData`).

@@ -1,6 +1,6 @@
 # Plan: structure-review-r1 — review cấu trúc code + roadmap refactor/enhance
 
-> **Trạng thái:** open (2026-09-30) - review tĩnh cấu trúc code + roadmap refactor/enhance; T1 fen OK nhưng chưa code, còn lại đề xuất
+> **Trạng thái:** closed (2026-10-06) - review tĩnh 09-30, T1 fen OK nhưng không ai code; không còn theo dõi (workflow-docs-r1 D2)
 
 > Nguồn: fen nhờ "ngó cách cấu trúc code, xem có gì refactor/enhance" (2026-09-30). Review **tĩnh** (grep + đọc có chọn lọc) tại HEAD `3e8b0c2` trong session cloud không có Xcode — **chưa build/test gì**. Mọi `file:dòng` đúng tại HEAD đó; tới lượt task nào thì kiểm lại bằng `grep -n` trước khi sửa.
 > Trạng thái (2026-09-30): **T1 fen đã OK nhưng chưa code** (session cloud không build được → bàn giao local, xem `docs/journal/2026-09-30.md`); các task còn lại: đề xuất, chưa OK. 1 task = 1 session (CLAUDE.md §7); task đụng hợp đồng phải `/rplan` riêng.

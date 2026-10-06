@@ -1,5 +1,7 @@
 # Plan: pdf-reader-r1 — đọc PDF trong Reado, cửa thu từ vựng thứ hai
 
+> **Trạng thái:** open (2026-10-04) - T0–T4 xong, còn T5 eval prompt trên PDF thật
+
 ## Context
 
 Đọc PDF bây giờ phải đi đường vòng 5 bước: app khác → screenshot → Reado → chọn ảnh → crop.
