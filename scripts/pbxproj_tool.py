@@ -28,16 +28,11 @@ TARGETS = ("Reado", "ReadoTests")
 
 
 def find_pbxproj(root: Path) -> Path:
-    """Tìm project.pbxproj duy nhất, bỏ .xcode-packages / DerivedData."""
-    candidates = [
-        p for p in root.rglob("project.pbxproj")
-        if ".xcode-packages" not in p.as_posix() and "DerivedData" not in p.as_posix()
-    ]
-    if len(candidates) == 1:
-        return candidates[0]
-    if candidates:
-        raise SystemExit(f"Tìm thấy {len(candidates)} pbxproj, dùng --pbxproj: {candidates}")
-    raise SystemExit("Không tìm thấy project.pbxproj trong workspace")
+    """Đường dẫn cố định (rglob từng quét cả DerivedData, ~0,7s)."""
+    pbx = root / "app" / "Reado.xcodeproj" / "project.pbxproj"
+    if not pbx.exists():
+        raise SystemExit(f"Không thấy {pbx} — chạy từ gốc repo hoặc dùng --pbxproj")
+    return pbx
 
 
 def parse(content: str) -> dict:
@@ -140,13 +135,9 @@ def show_list(pbxproj: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Kiểm project.pbxproj synchronized folders")
-    ap.add_argument("action", choices=["check", "list", "add", "remove"])
+    ap.add_argument("action", choices=["check", "list"])
     ap.add_argument("--pbxproj", help="đường dẫn pbxproj (mặc định tự tìm)")
     args, _ = ap.parse_known_args()
-
-    if args.action in ("add", "remove"):
-        raise SystemExit("Không cần nữa: tạo/xoá file trong app/Reado hoặc app/ReadoTests là "
-                         "Xcode tự nhận (synchronized folders, ADR-046).")
 
     pbx = Path(args.pbxproj) if args.pbxproj else find_pbxproj(Path.cwd())
     if not pbx.exists():

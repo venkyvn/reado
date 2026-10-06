@@ -9,9 +9,10 @@
         --prompt app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift \
         --model qwen3.8-flash
 
---prompt nhận file .txt (template thô, placeholder {CEFR}/{PAGE_OCR}) hoặc .swift
-(rút thẳng literal multi-line string trong `Prompt.text`, cùng placeholder) — so
-trực tiếp với bản đang sửa trong ReadoKit, không cần chép tay ra .txt mỗi lần đổi prompt.
+--prompt nhận file .txt (template thô, placeholder {CEFR}/{PAGE_OCR}), .swift (rút literal
+multi-line string đầu tiên sau `func <--swift-func>(` — `text` mặc định, hoặc `pdfText`, trong đó
+placeholder pageText của Swift cũng thành {PAGE_OCR}) hoặc `git:<rev>` (Prompt.swift ở commit <rev>, khỏi giữ snapshot .txt).
+So trực tiếp với bản đang sửa trong ReadoKit, không cần chép tay ra .txt mỗi lần đổi prompt.
 --model/--base-url ghi đè meta.json khi model gốc đã đổi tên/ngừng ở provider.
 
 Không có --diagnostics → dùng thư mục mới nhất trong .tmp/diagnostics/.
@@ -19,7 +20,7 @@ Mỗi thư mục analyses/<id>/ cần sẵn page_ocr.txt + meta.json (model, bas
 — tự ghi bởi DebugTrace lúc phân tích thật, không phải input tay.
 
 Key đọc từ .env ở gốc repo lúc chạy (không in ra, không ghi vào kết quả) —
-cùng cú pháp khối PROVIDER=/API_KEY= như scripts/sim_aibox.sh dùng cho simulator.
+bộ đọc dùng chung scripts/lib/envkey.py (cùng bộ sim_aibox.sh dùng).
 Không dependency ngoài stdlib.
 
 Output: một file Markdown trong .tmp/prompt-eval/ (đã gitignore) — có text trang
@@ -27,6 +28,7 @@ Output: một file Markdown trong .tmp/prompt-eval/ (đã gitignore) — có tex
 (bản quyền sách).
 """
 import argparse
+import subprocess
 import json
 import re
 import sys
@@ -37,6 +39,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts" / "lib"))
+from envkey import pick_env_key  # noqa: E402
 
 
 def latest_diagnostics_dir() -> Path | None:
@@ -59,58 +63,40 @@ def load_json(path: Path) -> dict:
         return {}
 
 
-def load_prompt_template(path: Path) -> str:
-    """Trả về template thô (placeholder {CEFR}/{PAGE_OCR}). File .txt đọc nguyên;
-    file .swift rút literal multi-line string trong thân `func text(...)` của
-    Prompt.swift — để so trực tiếp bản đang sửa, không lệch do chép tay ra .txt."""
-    if path.suffix != ".swift":
-        return path.read_text(encoding="utf-8")
-    text = path.read_text(encoding="utf-8")
-    match = re.search(r'"""\n(.*?)\n([ \t]*)"""', text, re.DOTALL)
+PROMPT_SWIFT = "app/ReadoKit/Sources/ReadoKit/Analysis/Prompt.swift"
+
+
+def load_prompt_template(spec: str, swift_func: str = "text") -> tuple[str, str]:
+    """Trả về (tên hiển thị, template thô với placeholder {CEFR}/{PAGE_OCR}).
+    spec: file .txt (đọc nguyên) · file .swift (rút literal multi-line string đầu tiên sau
+    `func <swift_func>(` — `text` hoặc `pdfText`) · `git:<rev>` (Prompt.swift ở commit <rev>,
+    khỏi giữ snapshot .txt)."""
+    if spec.startswith("git:"):
+        rev = spec[4:]
+        proc = subprocess.run(["git", "show", f"{rev}:{PROMPT_SWIFT}"], cwd=ROOT,
+                              capture_output=True, text=True)
+        if proc.returncode != 0:
+            sys.exit(f"git show {rev}:{PROMPT_SWIFT} lỗi: {proc.stderr.strip()}")
+        text, name = proc.stdout, f"Prompt.swift@{rev}.{swift_func}"
+    else:
+        path = Path(spec)
+        if path.suffix != ".swift":
+            return path.name, path.read_text(encoding="utf-8")
+        text, name = path.read_text(encoding="utf-8"), f"{path.name}.{swift_func}"
+    start = re.search(rf"func {re.escape(swift_func)}\(", text)
+    if not start:
+        sys.exit(f"Không thấy `func {swift_func}(` trong {name}")
+    match = re.search(r'"""\n(.*?)\n([ \t]*)"""', text[start.end():], re.DOTALL)
     if not match:
-        sys.exit(f"Không tìm thấy literal \"\"\" ... \"\"\" trong {path}")
+        sys.exit(f"Không tìm thấy literal \"\"\" ... \"\"\" sau `func {swift_func}(` trong {name}")
     body, indent = match.group(1), match.group(2)
     lines = [line[len(indent):] if line.startswith(indent) else line
              for line in body.split("\n")]
     rebuilt = "\n".join(lines)
-    rebuilt = rebuilt.replace("\\(cefrLevel)", "{CEFR}").replace("\\(pageOCR)", "{PAGE_OCR}")
-    return rebuilt.replace("\\\\", "\\")
-
-
-def pick_env_key(env_path: Path) -> str | None:
-    """Giống pick_key trong scripts/sim_aibox.sh: khối cuối có PROVIDER=apibox,
-    hoặc API_KEY cuối cùng nếu không có khối apibox. Khối cách nhau bằng dòng
-    trống hoặc `---`."""
-    if not env_path.exists():
-        return None
-    blocks: list[list[str]] = []
-    current: list[str] = []
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        if line.strip() in ("", "---"):
-            if current:
-                blocks.append(current)
-                current = []
-            continue
-        current.append(line)
-    if current:
-        blocks.append(current)
-
-    def get(block: list[str], name: str) -> str | None:
-        for line in block:
-            if line.startswith(name + "="):
-                return line.split("=", 1)[1].strip()
-        return None
-
-    for block in blocks:
-        if get(block, "PROVIDER") == "apibox":
-            key = get(block, "API_KEY")
-            if key:
-                return key
-    for block in reversed(blocks):
-        key = get(block, "API_KEY")
-        if key:
-            return key
-    return None
+    for placeholder, token in (("\\(cefrLevel)", "{CEFR}"), ("\\(pageOCR)", "{PAGE_OCR}"),
+                               ("\\(pageText)", "{PAGE_OCR}")):
+        rebuilt = rebuilt.replace(placeholder, token)
+    return name, rebuilt.replace("\\\\", "\\")
 
 
 def extra_body_params(base_url: str) -> dict:
@@ -267,7 +253,8 @@ def render_vocab_lists(parsed_by_prompt: dict[str, dict | None], prompt_names: l
 
 def run(
     diagnostics_dir: Path,
-    prompt_paths: list[Path],
+    prompt_specs: list[str],
+    swift_func: str,
     limit: int,
     out_dir: Path,
     model_override: str | None,
@@ -282,7 +269,12 @@ def run(
     if not api_key:
         sys.exit(f"Không tìm được API_KEY trong {env_path} — kiểm tra file.")
 
-    prompt_templates = {p.name: load_prompt_template(p) for p in prompt_paths}
+    prompt_templates: dict[str, str] = {}
+    for spec in prompt_specs:
+        name, template = load_prompt_template(spec, swift_func)
+        while name in prompt_templates:
+            name += "#2"
+        prompt_templates[name] = template
     prompt_names = list(prompt_templates)
 
     folders = sorted(p for p in analyses_dir.iterdir() if p.is_dir())[:limit]
@@ -345,8 +337,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--diagnostics", type=Path, default=None,
                          help="Thư mục .tmp/diagnostics/<ts> — thiếu thì dùng bản mới nhất")
-    parser.add_argument("--prompt", type=Path, action="append", required=True,
-                         help="File template prompt (lặp lại để so nhiều bản)")
+    parser.add_argument("--prompt", type=str, action="append", required=True,
+                         help="File .txt/.swift hoặc git:<rev> (Prompt.swift ở commit đó); lặp lại để so nhiều bản")
+    parser.add_argument("--swift-func", choices=["text", "pdfText"], default="text",
+                         help="Hàm trong Prompt.swift để rút literal: text (ảnh/OCR) hoặc pdfText (lớp chữ PDF)")
     parser.add_argument("--limit", type=int, default=30, help="Số lần phân tích tối đa (mặc định 30)")
     parser.add_argument("--out-dir", type=Path, default=ROOT / ".tmp" / "prompt-eval")
     parser.add_argument("--model", type=str, default=None,
@@ -361,11 +355,11 @@ def main() -> None:
     if not diagnostics_dir.is_dir():
         sys.exit(f"Không thấy thư mục: {diagnostics_dir}")
 
-    for p in args.prompt:
-        if not p.exists():
-            sys.exit(f"Không thấy prompt template: {p}")
+    for spec in args.prompt:
+        if not spec.startswith("git:") and not Path(spec).exists():
+            sys.exit(f"Không thấy prompt template: {spec}")
 
-    out_path = run(diagnostics_dir, args.prompt, args.limit, args.out_dir, args.model, args.base_url)
+    out_path = run(diagnostics_dir, args.prompt, args.swift_func, args.limit, args.out_dir, args.model, args.base_url)
     print(f"Đã ghi: {out_path}")
 
 

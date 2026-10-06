@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T5 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T6–T11
+> **Trạng thái:** open (2026-10-06) - T1–T6 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T7–T11
 
 ## Vấn đề & bằng chứng
 
@@ -203,6 +203,7 @@ Phụ thuộc:
 - DoD: replay ≥ 2/4 thì bước 1b bắt buộc; dưới mức đó thì để tuỳ chọn. `reado-dev` xử lý theo D5.
 
 ### T6 — Scripts dùng chung + bỏ chờ cố định
+- ✅ Xong 2026-10-06. Bằng chứng: `bash -n`/`py_compile` sạch; `open home --fresh` rồi `shot` ×5 → 10 ảnh 186–223KB, không ảnh trắng, không cảnh báo; `sim_aibox.sh` chạy như cũ; `list` 23 dòng = 23 case enum; `pbxproj_tool.py check` 0,04s (trước 0,74s); full test 615/619 xanh. Chỉnh so với plan: poll theo "≥ 120KB và hai lần chụp lệch ≤ 3%" (ảnh trắng thật ~76KB chứ không 15KB; ảnh sau lệch nhẹ do animation nên không so bit-exact); gộp nhánh mặc định của `sim_screens.sh` vào cùng đường với `open`. `envkey.py` lấy khối apibox CUỐI có key (trước đây `prompt_eval` lấy khối đầu — nay khớp `sim_aibox`). **Chưa chạy được:** `prompt_eval.py --swift-func pdfText` trên thư mục diagnostics PDF (chưa có dữ liệu PDF thật; đã kiểm bộ rút literal `text`/`pdfText`/`git:HEAD` offline, không gọi API). `scripts/pull_diagnostics.sh` còn `BUNDLE_ID` riêng (`com.reado.app`) — file đang sửa dở của fen nên chưa đụng.
 - Files: `scripts/lib/sim.sh` (mới), `scripts/lib/envkey.py` (mới), `scripts/{test,sim_screens,sim_aibox}.sh`, `scripts/{prompt_eval,diag_summary,pbxproj_tool}.py`, `.claude/skills/{reado-ui,reado-diagnostics}/SKILL.md`.
 - Làm:
   - `lib/sim.sh` gồm `SIM_NAME`, `BUNDLE_ID`, `sim_udid`, `sim_boot`, `app_path`, `install_launch`. `test.sh` (dòng 85–96), `sim_screens.sh` và `sim_aibox.sh` cùng dùng. Trong `sim_screens.sh`, gộp nhánh `open` với nhánh mặc định.

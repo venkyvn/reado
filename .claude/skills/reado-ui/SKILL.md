@@ -16,13 +16,12 @@ paths: app/Reado/**/*.swift
 - **Thẻ giật đầu kéo:** `DragGesture(minimumDistance: 20)` cho `translation` ~20pt ở lần `onChanged` đầu → neo `dragAnchor` rồi trừ (`ReviewQueueView+Card.swift`).
 - **Alert không hiện dưới sheet** → `.appErrorAlert()` ở gốc mỗi `sheet`/`fullScreenCover` (`Shared/ErrorAlert.swift`).
 - **Alert quyền camera kẹt trên simulator** (qua cả uninstall) → `xcrun simctl shutdown <udid>` rồi `scripts/sim_screens.sh --fresh`.
-- **Ảnh đầu sau `open` có thể trắng** → `shot` lại lần 2 trước khi kết luận màn sai.
 
 ## Màn mới
 Thêm case vào `DebugLaunch.Screen` để `sim_screens.sh open` tới thẳng được. Không có case thì màn đó luôn là "chưa xem tay".
 
 ## Verify trước khi báo xong
 1. `scripts/test.sh build` xanh.
-2. `scripts/sim_screens.sh open <màn> --no-build [--theme forest|sepia|indigo|system] [--fresh]`, rồi `scripts/sim_screens.sh shot after-<màn>`. Danh sách màn và cờ khác: header `scripts/sim_screens.sh`.
+2. `scripts/sim_screens.sh open <màn> --no-build [--theme forest|sepia|indigo|system] [--fresh]`, rồi `scripts/sim_screens.sh shot after-<màn>`. Danh sách màn: `scripts/sim_screens.sh list`; cờ khác: header `scripts/sim_screens.sh`. Script tự đợi khung ổn định, ảnh không còn trắng; có cảnh báo `⚠️ ảnh … chưa ổn` thì xem bằng mắt.
 3. Đọc cả hai PNG light/dark trong `.tmp/screens/`, đối chiếu checklist cuối MASTER (accent thứ hai, Dynamic Type `accessibility-extra-large`, không bị ShellTabBar che, diff không có hex/số lẻ mới).
 4. Màn `open` không tới được → ghi "chưa xem tay", không báo xong.

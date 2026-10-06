@@ -80,17 +80,6 @@ def summarize_analysis(folder: Path, full: bool) -> None:
             preview = l.get("text", "")[:60]
             print(f"  [{reason}] {preview!r}")
 
-        # apple-ai-r1 T4 (ADR-063) — chỉ có khi soát OCR bật; log cũ không có
-        # khoá này thì im lặng bỏ qua (không in gì thêm).
-        fixes = ocr.get("fixes")
-        if fixes is not None:
-            rejected = ocr.get("fixRejected", 0)
-            ms = ocr.get("fixMs")
-            err = ocr.get("fixError")
-            print(f"OCR fix: {len(fixes)} áp / {rejected} loại / {ms} ms" + (f" lỗi={err!r}" if err else ""))
-            for f in fixes:
-                print(f"  {f.get('wrong')!r} → {f.get('right')!r}")
-
     analysis_path = folder / "analysis.json"
     if analysis_path.exists():
         analysis = load_json(analysis_path)
@@ -136,6 +125,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("root", help="Thư mục đã kéo về bằng scripts/pull_diagnostics.sh")
     parser.add_argument("--full", action="store_true", help="In cả nội dung segment EN")
+    parser.add_argument("--last", type=int, default=5, help="Chỉ tóm tắt N lần phân tích mới nhất (mặc định 5; 0 = tất cả)")
     args = parser.parse_args()
 
     root = Path(args.root)
@@ -146,7 +136,10 @@ def main() -> None:
     if analyses_dir:
         folders = sorted(p for p in analyses_dir.iterdir() if p.is_dir())
         print(f"{len(folders)} lần phân tích trong {analyses_dir}")
-        for folder in folders:
+        shown = folders[-args.last:] if args.last > 0 else folders
+        if len(shown) < len(folders):
+            print(f"(chỉ in {len(shown)} lần mới nhất — dùng --last 0 để in hết)")
+        for folder in shown:
             summarize_analysis(folder, args.full)
     else:
         print("Không thấy thư mục analyses/ — chưa phân tích lần nào, hoặc đường dẫn sai.")

@@ -16,6 +16,7 @@ ACTION="${1:-test}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/lib/evidence.sh"
+source "$ROOT/scripts/lib/sim.sh"
 
 # write_summary <file> <action> <exit_code> [result_line] — thời điểm + HEAD + action + RESULT + exit.
 write_summary() {
@@ -51,7 +52,6 @@ for f in s.get("testFailures", [])[:20]:
 '
 }
 
-SIM_NAME="iPhone Air"
 case "$ACTION" in
   build) TAG=build; LOG=/tmp/build-only.log ;;
   *)     TAG=last;  LOG=/tmp/build.log ;;
@@ -92,19 +92,9 @@ rm -rf "$RESULT"
 (cd "$ROOT" && python3 scripts/pbxproj_tool.py check)
 
 if [[ "$ACTION" != "build" ]]; then
-  UDID="$(xcrun simctl list devices available -j | python3 -c '
-import json, sys
-name = sys.argv[1]
-data = json.load(sys.stdin)
-for runtime_devices in data["devices"].values():
-    for d in runtime_devices:
-        if d["name"] == name:
-            print(d["udid"])
-            sys.exit(0)
-sys.exit("Không thấy simulator: " + name)
-' "$SIM_NAME")"
+  UDID="$(sim_udid)"
   echo "Simulator: $SIM_NAME ($UDID) — boot nếu cần…"
-  xcrun simctl bootstatus "$UDID" -b >/dev/null
+  sim_boot "$UDID"
   DEST="platform=iOS Simulator,id=$UDID"
 else
   DEST="platform=iOS Simulator,name=$SIM_NAME"
