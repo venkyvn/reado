@@ -64,7 +64,7 @@ done < <(grep -oE '(Theme|Typo|Spacing|Radius|Motion|Haptics|ShellTabBar|AppThem
 for n in $(grep -oE '^## ADR-[0-9]+' docs/decisions-log.md | grep -oE '[0-9]+'); do
   grep -qE "^\| $n \|" docs/decisions-log.md || problem "ADR-$n chưa có trong index đầu docs/decisions-log.md"
 done
-if [[ "$(git branch --show-current 2>/dev/null)" == "main" ]] && grep -q 'ADR-NEW-' docs/decisions-log.md; then
+if [[ "$(git branch --show-current 2>/dev/null)" == "main" ]] && grep -qE '^## ADR-NEW-[a-z0-9]' docs/decisions-log.md; then
   warn "còn ADR-NEW-<slug> trên main — đánh số thật + cập nhật index"
 fi
 
