@@ -314,6 +314,11 @@ Phụ thuộc:
 - Test: `git branch -r --no-merged origin/main` chỉ còn những nhánh có lý do giữ.
 - DoD: không còn quyết định nào chỉ nằm trên một nhánh chưa merge.
 
+## Handoff 2026-10-06 — còn lại trước khi khép
+- Bằng chứng cuối: full test 615/619 xanh, `code:` khớp `app/`; `audit.sh` 0 PROBLEM/0 WARN; `test_guard.py` 32/32. `91f8969` sửa `/rhandoff`: bước 4 chỉ còn `close_plan.sh` + `audit.sh`, bước 6 prefix theo §7b, bước 1b bỏ qua khi diff chỉ docs.
+- Còn mở: (1) đo tiêu chí thành công sau 30 commit `feat`/`fix`; (2) bài 5 câu sau `/clear` + thử kích hoạt skill (T4); (3) `prompt_eval --swift-func pdfText` chờ OW-10 (T6); (4) xoá 3 nhánh remote `claude/{eager-ptolemy-trkabr,magical-dijkstra-6axsi4,wizardly-newton-dk2pgu}` — fen chạy/approve (T11).
+- Đánh giá hiệu quả (đo cơ học, chưa đo kết quả): context tự nạp −~11,7KB/session; chưa có bằng chứng kết quả. Đóng băng workflow tới lúc đo; mỗi task thật ghi 3 dòng "friction" vào journal, sau ~3 task mới sửa tiếp theo dữ liệu.
+
 ## Ngoài plan này (mở plan riêng khi cần)
 - CI GitHub Actions (runner macOS, lane `kit`): cần chốt trước repo public hay private, vì private thì phút macOS tính hệ số cao. Bản nháp workflow nằm ở nhánh `origin/claude/upbeat-tesla-nc1rx2` (commit `6ae2ad4`) — giữ nhánh đó tới khi mở plan CI.
 - Target XCUITest để tự động hoá các nợ QA cần chạm, vuốt, cuộn: fen tạo target trong Xcode.
