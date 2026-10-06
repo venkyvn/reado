@@ -1,5 +1,6 @@
 ---
 description: Audit docs — link/anchor hỏng, slash lệnh, protocol lệch. Không sửa trừ khi fen bảo vá.
+model: haiku
 ---
 
 Audit repo Reado (read-only trừ khi fen nói "vá"). Cwd = gốc repo (`CLAUDE.md` nằm đó).

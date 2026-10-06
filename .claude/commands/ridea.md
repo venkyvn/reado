@@ -1,6 +1,7 @@
 ---
 description: Tư vấn kỹ thuật cho một idea thô của fen. Không plan, không code. Fen không phải chuyên gia — giải thích đơn giản.
 argument-hint: "[idea hoặc công nghệ fen thấy]"
+model: opus
 ---
 
 Fen đưa idea, **không** phải yêu cầu đã chốt. Coi mọi công nghệ / cách làm fen nhắc ("dùng X để…") là giả thuyết. **Đừng code, đừng ghi file, đừng `/rplan` hộ.**

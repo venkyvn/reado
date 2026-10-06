@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T4 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T5–T11
+> **Trạng thái:** open (2026-10-06) - T1–T5 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T6–T11
 
 ## Vấn đề & bằng chứng
 
@@ -192,6 +192,7 @@ Phụ thuộc:
 - DoD: đạt các test trên; `CLAUDE.md` không còn dòng "Chốt thêm 20xx".
 
 ### T5 — Reviewer subagent + định tuyến model
+- ✅ Xong 2026-10-06 (D5a; D6 bỏ qua — chỉ đặt `model:` ở frontmatter command, không đổi settings toàn cục). Replay Phụ lục D bằng subagent opus với đúng prompt của `reado-reviewer`: tìm ra **3/4** lỗi đã biết (làm tròn từng đoạn độc lập · `UITextChecker` static · hai bản Levenshtein); lỗi `lines[]` lệch chỉ chạm một phần (diag log in sai số đoạn). ≥ 2/4 → bước 1b của `/rhandoff` là **bắt buộc**. Reviewer còn báo thêm 2 P1 chưa rõ có thật: ghép đoạn `liveText` không căn chữ khi hai engine lệch số từ; `VocabSuspicion` bỏ qua từ viết hoa chữ đầu. Hai agent mới chỉ nhận ra sau khi mở session mới (`/agents`).
 - Files: `.claude/agents/reado-reviewer.md` (mới, Phụ lục C), `.claude/agents/reado-scout.md` (mới), `.claude/agents/reado-dev.md` (theo D5), frontmatter của `.claude/commands/{ridea,rplan,raudit,rhandoff}.md`.
 - Làm:
   - `reado-scout`: `model: haiku` (hoặc sonnet), `tools: Read, Grep, Glob`. Tra docs lớn và trả trích dẫn có `file:line`, tối đa 40 dòng.
