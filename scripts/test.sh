@@ -5,14 +5,17 @@
 #   scripts/test.sh test -only-testing:ReadoTests/LeechTests
 #   scripts/test.sh test-without-building              # chạy lại test, không build lại
 #   scripts/test.sh kit                                # ReadoKit trên macOS — không simulator, chạy nhanh
-# Log đầy đủ: /tmp/build.log (kit: /tmp/build-kit.log) · xcresult: .tmp/results/last.xcresult (kit: kit.xcresult)
-# Tóm tắt máy đọc: .tmp/results/last-summary.txt (kit: kit-summary.txt) — thời điểm, HEAD, action, RESULT, exit.
+# Log đầy đủ: /tmp/build.log (kit: /tmp/build-kit.log, build: /tmp/build-only.log)
+# xcresult: .tmp/results/last.xcresult (kit: kit.xcresult, build: build.xcresult)
+# Tóm tắt máy đọc: .tmp/results/last-summary.txt (kit: kit-summary.txt, build: build-summary.txt)
+#   — thời điểm, HEAD, action, code (tree hash app/), RESULT, exit. Lane build không đụng last-*.
 set -euo pipefail
 
 ACTION="${1:-test}"
 [[ $# -gt 0 ]] && shift
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib/evidence.sh"
 
 # write_summary <file> <action> <exit_code> [result_line] — thời điểm + HEAD + action + RESULT + exit.
 write_summary() {
@@ -21,6 +24,7 @@ write_summary() {
     echo "time: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "head: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
     echo "action: $action"
+    echo "code: $(code_tree "$ROOT" 2>/dev/null || echo unknown)"
     echo "${result_line:-RESULT: n/a (không chạy test)}"
     echo "exit: $status"
   } > "$file"
@@ -48,7 +52,11 @@ for f in s.get("testFailures", [])[:20]:
 }
 
 SIM_NAME="iPhone Air"
-RESULT="$ROOT/.tmp/results/last.xcresult"
+case "$ACTION" in
+  build) TAG=build; LOG=/tmp/build-only.log ;;
+  *)     TAG=last;  LOG=/tmp/build.log ;;
+esac
+RESULT="$ROOT/.tmp/results/$TAG.xcresult"
 mkdir -p "$ROOT/.tmp/results"
 
 # Lane nhanh: ReadoKit (logic thuần) trên macOS. Không cần simulator, không cần pbxproj check.
@@ -65,13 +73,14 @@ if [[ "$ACTION" == "kit" ]]; then
     test "$@" > /tmp/build-kit.log 2>&1
   KIT_STATUS=$?
   set -e
-  grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" /tmp/build-kit.log | tail -n 40
+  grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" /tmp/build-kit.log | tail -n 40 || true
   KIT_RESULT_LINE=""
   if [[ -d "$KIT_RESULT" ]]; then
-    KIT_SUMMARY_OUT="$(summarize_result "$KIT_RESULT")"
+    KIT_SUMMARY_OUT="$(summarize_result "$KIT_RESULT" || true)"
     echo "$KIT_SUMMARY_OUT"
-    KIT_RESULT_LINE="$(echo "$KIT_SUMMARY_OUT" | grep '^RESULT:' | head -1)"
+    KIT_RESULT_LINE="$(echo "$KIT_SUMMARY_OUT" | grep '^RESULT:' | head -1 || true)"
   fi
+  [[ -n "$KIT_RESULT_LINE" ]] || KIT_RESULT_LINE="RESULT: n/a (build lỗi hoặc không có test result)"
   write_summary "$ROOT/.tmp/results/kit-summary.txt" "kit" "$KIT_STATUS" "$KIT_RESULT_LINE"
   exit $KIT_STATUS
 fi
@@ -108,18 +117,19 @@ TMPDIR="$ROOT/.tmp" xcodebuild -project Reado.xcodeproj -scheme Reado \
   -derivedDataPath "$ROOT/DerivedData" \
   -clonedSourcePackagesDirPath "$ROOT/.xcode-packages" \
   -resultBundlePath "$RESULT" \
-  "$ACTION" "$@" > /tmp/build.log 2>&1
+  "$ACTION" "$@" > "$LOG" 2>&1
 STATUS=$?
 set -e
 
-grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" /tmp/build.log | tail -n 40
+grep -E "error:|Testing failed|Executed [0-9]+ tests|\*\* (BUILD|TEST) [A-Z]+ \*\*" "$LOG" | tail -n 40 || true
 
 RESULT_LINE=""
 if [[ "$ACTION" != "build" && -d "$RESULT" ]]; then
-  SUMMARY_OUT="$(summarize_result "$RESULT")"
+  SUMMARY_OUT="$(summarize_result "$RESULT" || true)"
   echo "$SUMMARY_OUT"
-  RESULT_LINE="$(echo "$SUMMARY_OUT" | grep '^RESULT:' | head -1)"
+  RESULT_LINE="$(echo "$SUMMARY_OUT" | grep '^RESULT:' | head -1 || true)"
+  [[ -n "$RESULT_LINE" ]] || RESULT_LINE="RESULT: n/a (build lỗi hoặc không có test result)"
 fi
-write_summary "$ROOT/.tmp/results/last-summary.txt" "$ACTION" "$STATUS" "$RESULT_LINE"
+write_summary "$ROOT/.tmp/results/$TAG-summary.txt" "$ACTION" "$STATUS" "$RESULT_LINE"
 
 exit $STATUS
