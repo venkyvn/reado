@@ -11,9 +11,8 @@
 
 - pdf-reader-r1 (FR-23, ADR-058): T0–T4 xong, còn T5 eval prompt trên PDF thật. `docs/plans/pdf-reader-r1.md`
 - ocr-quality-r1: T0–T4 + T7 xong; T6 chờ OW-12. `docs/plans/ocr-quality-r1.md`
-- workflow-docs-r1: T1–T8 xong, T9–T11 đang làm. `docs/plans/workflow-docs-r1.md`
 - Nợ xem tay: `docs/qa/pending.md` (ID `QA-NN`). Chờ fen quyết/đưa dữ liệu: §2 (ID `OW-NN`).
-- Khép gần đây: engagement-r1, vocab-identity-r1 (10-05) · pdf-nav-r1, home-eevas-r1 (10-04) · structure-review-r1, visual-polish-r1, apple-ai-r1 (10-06). Cũ hơn: `docs/journal/`.
+- Khép gần đây: workflow-docs-r1 (10-06) · engagement-r1, vocab-identity-r1 (10-05) · pdf-nav-r1, home-eevas-r1 (10-04) · structure-review-r1, visual-polish-r1, apple-ai-r1 (10-06). Cũ hơn: `docs/journal/`.
 
 ## 2. Chờ owner (không tự bắt đầu)
 

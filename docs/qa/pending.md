@@ -8,6 +8,12 @@
 - [ ] QA-V2 — Analysis (cần AI thật) · máy: thật · plan: docs/plans/done/visual-polish-r1.md
 - [ ] QA-V3 — fen xem tay 4 màn trên máy thật theo DoD (touch ≥ 44pt, contrast, Dynamic Type, Reduce Motion) · máy: thật · plan: docs/plans/done/visual-polish-r1.md
 
+## Từ workflow-docs-r1 (đóng 2026-10-06)
+- [ ] QA-W1 — đo tiêu chí thành công sau 30 commit `feat`/`fix`: brief bị sửa ≤ 15% commit, ≤ 2 file md mỗi commit `feat`, `CLAUDE.md` ≤ ~7,5KB; tiêu chí không đạt thì mở plan sửa riêng · máy: sim · plan: docs/plans/done/workflow-docs-r1.md
+- [ ] QA-W2 — session mới sau `/clear`: hỏi 5 câu (thêm file Swift, Q-09, test 1 lớp ReadoKit, ngưỡng leech, debug OCR) — câu cuối phải kích hoạt skill `reado-diagnostics`; đọc file trong `app/ReadoKit/` rồi hỏi luật migration · máy: sim · plan: docs/plans/done/workflow-docs-r1.md
+- [ ] QA-W3 — `prompt_eval.py --swift-func pdfText --limit 1` trên thư mục diagnostics PDF (chờ OW-10) · máy: thật · plan: docs/plans/done/workflow-docs-r1.md
+- [ ] QA-W4 — xoá 3 nhánh remote đã lỗi thời: `git push origin --delete claude/eager-ptolemy-trkabr claude/magical-dijkstra-6axsi4 claude/wizardly-newton-dk2pgu` (giữ `upbeat-tesla-nc1rx2` tới khi mở plan CI) · máy: sim · plan: docs/plans/done/workflow-docs-r1.md
+
 ## Từ structure-review-r1
 (không có nợ xem tay — plan là review tĩnh, T1 chưa từng code)
 
