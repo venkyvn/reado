@@ -2,7 +2,7 @@
 
 > **FROZEN 2026-09-14 (quyết định look):** glass trên chrome nổi, nội dung đọc đặc.
 > Quyết định này không đổi nếu fen chưa đồng ý. Phần chữ bên dưới được sửa cho khớp code (ADR-051).
-> Đối chiếu code lần cuối: `fe571bf`.
+> Đối chiếu code lần cuối: `f634bf8` (2026-10-06, chỉ sửa dòng banner tự ẩn).
 
 Mỗi luật kiểm được bằng diff hoặc ảnh chụp. Dòng `→` là lý do.
 Ngoại lệ đã có chủ ý: `CaptureView` tự vẽ toàn màn (ADR-036), `ShellCaptureButton` (nút chụp trong thanh tab: glass tô accent, `.interactive()`),
@@ -65,7 +65,7 @@ lưới heatmap `StreakCalendarView` và skeleton trong `AnalysisComponents` (bo
   → Kho và màn duyệt từ giữ cùng thứ tự dòng, không có capsule copy tay.
 - Nội dung cuộn trong shell phải chừa chỗ: `.safeAreaPadding(.bottom, ShellTabBar.reservedHeight)` hoặc đặt trong view đã có sẵn khoảng chừa này. Áp sẵn qua `shellScrollChrome()` cho `List`/`ScrollView` gốc — màn tự vẽ CTA riêng bằng `.safeAreaInset(edge: .bottom)` (vd `StreakCalendarView`, `ReadingSessionView`) phải TỰ cộng thêm `ShellTabBar.reservedHeight` vào padding đáy của CTA đó, vì `safeAreaInset` của `ShellTabBar` (gắn trên `TabView`) không truyền được vào màn push qua `navigationDestination`/`NavigationLink`.
   → Tab bar nổi đè lên nội dung. Nút Quên/Khó/Được/Dễ từng bị che; Hub (12 từ) và CTA "Ôn ngay" ở Lịch streak cũng từng bị che/chồng màu (xác nhận bằng ảnh, ux-redesign-r1 T10 — đã sửa).
-- Banner xác nhận không chặn (`ShellBanner`, ADR-053 — vd "Đã lưu N từ vào X · Xem") dùng `chromeGlass` như thanh tab, đặt TRÊN thanh tab qua `overlay(alignment: .bottom)` ở `RootView`, không phải alert/toast thư viện ngoài. Tự ẩn sau 4s; khi `UIAccessibility.isVoiceOverRunning` thì KHÔNG tự ẩn (đóng bằng nút ✕) — WCAG 2.2.1. Luôn có `AccessibilityNotification.Announcement` khi hiện.
+- Banner xác nhận không chặn (`ShellBanner`, ADR-053 — vd "Đã lưu N từ vào X · Xem") dùng `chromeGlass` như thanh tab, đặt TRÊN thanh tab qua `overlay(alignment: .bottom)` ở `RootView`, không phải alert/toast thư viện ngoài. Tự ẩn sau 4s (7s khi có dòng phụ — `ShellBanner.autoHideSeconds`); khi `UIAccessibility.isVoiceOverRunning` thì KHÔNG tự ẩn (đóng bằng nút ✕) — WCAG 2.2.1. Luôn có `AccessibilityNotification.Announcement` khi hiện.
   → Lưu xong không được chặn thao tác tiếp, nhưng VoiceOver cần đủ thời gian nghe/chạm trước khi biến mất.
 - Hiện/ẩn nội dung đi qua `Motion.run(reduceMotion:)` + `revealTransition()`. Haptic đi qua `Haptics.*`. Sheet/tab/push để hệ thống tự animate.
   → Một nhịp motion duy nhất, tôn trọng Reduce Motion, không làm hiệu ứng ăn mừng.

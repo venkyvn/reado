@@ -187,7 +187,7 @@ final class MigrationAndSeedTests: XCTestCase {
     }
 
     func testNoUniqueConstraintOnVocabTermNormalized() throws {
-        // AGENTS mục 3.1 — CỐ Ý không có unique(collection_id, term_normalized):
+        // CLAUDE.md §4 — CỐ Ý không có unique(collection_id, term_normalized):
         // một từ nhiều nghĩa được nhiều dòng; chống trùng ở FR-10.
         let db = try Fixtures.seededDB()
         let collectionID = try XCTUnwrap(

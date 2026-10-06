@@ -4,7 +4,7 @@ Công cụ học tiếng Anh qua việc đọc văn bản nguyên bản — sác
 liệu chuyên ngành: chụp một trang, nhận về bản song ngữ Anh–Việt theo từng đoạn
 cùng từ vựng đã trích xuất, rồi ôn lại số từ đó bằng spaced repetition.
 
-**Nền tảng:** iOS native (SwiftUI), local-first SQLite, AI qua proxy hybrid.
+**Nền tảng:** iOS native (SwiftUI), local-first SQLite, AI qua BYOK OpenAI-compat hoặc Apple Intelligence trên máy.
 
 ## Bắt đầu
 

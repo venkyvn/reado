@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T7 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T8–T11
+> **Trạng thái:** open (2026-10-06) - T1–T8 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T9–T11
 
 ## Vấn đề & bằng chứng
 
@@ -238,6 +238,7 @@ Phụ thuộc:
 - DoD: mọi ADR có trong index; không còn bản cũ nào của Q-xx đứng như quyết định hiện hành.
 
 ### T8 — Đưa lịch sử ra khỏi doc hợp đồng + sửa lệch nhỏ
+- ✅ Xong 2026-10-06 (D9a). Bằng chứng: checker exit 0; kit xanh 589/590; audit bước 6 (token MASTER) sạch; ROADMAP 74 → 46KB (§1/§2/§6 sang `archive-roadmap-2026-09.md`); PRD changelog 15KB sang `prd-changelog.md`, Version 0.17; `solution-design.md` §4 thành bia mộ, đoạn proxy còn lại là bia mộ/lịch sử; D9a: §7b cho phép `feat|fix|refactor|docs|chore|test`. Dòng "Đối chiếu code lần cuối" của MASTER ghi `f634bf8`.
 - Files: `ROADMAP.md`, `docs/journal/archive-roadmap-2026-09.md`, `docs/specs/prd.md`, `docs/specs/prd-changelog.md` (mới), `docs/specs/solution-design.md`, `docs/specs/db.md`, `README.md`, `docs/agent/coding-conventions.md`, `design-system/reado/MASTER.md`, `app/ReadoKit/Tests/ReadoKitTests/MigrationAndSeedTests.swift` (chỉ comment dòng 190).
 - Làm:
   - ROADMAP §2 và §6: dời nguyên văn sang file archive của T7; mỗi mục để lại một dòng trỏ.

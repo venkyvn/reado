@@ -4,7 +4,6 @@
 |---|---|
 | Status | Draft — tầng A là DDL máy; tầng B chưa implement |
 | Created | 2026-09-17 |
-| Last updated | 2026-10-04 (pdf-reader-r1 T0 — bảng `pdf_sources`, FR-23/ADR-058) |
 | Related | [research/vocabulary.md](docs/research/vocabulary.md) mục 6, [research/tech-stack.md](docs/research/tech-stack.md) mục 7 và 10.2, [research/review.md](docs/research/review.md), [prd.md](docs/specs/prd.md) |
 
 **Tài liệu này không thay** [vocabulary.md mục 6](docs/research/vocabulary.md#6-schema). Doc kia là *hình dạng logic* (tên cột, nullability, vì sao). File này là *dialect sẽ `CREATE`*: R1 trên iPhone, và ghi chú Later để khỏi nhồi envelope sync vào máy.

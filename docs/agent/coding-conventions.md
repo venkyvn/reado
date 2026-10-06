@@ -42,7 +42,7 @@ app/
     Tests/ReadoKitTests/  — bộ test hành vi chính (logic thuần); chạy macOS qua
                             `scripts/test.sh kit` LẪN iOS Simulator qua scheme
                             `Reado` (`Reado.xctestplan`, refactor-r4 T2)
-  ReadoTests/            — chỉ 4 file cần UIKit/Vision (OCR, ảnh) — không build
+  ReadoTests/            — chỉ các file cần UIKit/Vision (OCR, ảnh) — không build
                             được trên macOS, chạy iOS Simulator qua xcodebuild
 ```
 
@@ -52,7 +52,7 @@ app/
 - App layer không `import FSRS`, không `import CSQLite`.
 - Logic LIÊN QUAN dữ liệu (kể cả đọc overview) sống ở ReadoKit; View chỉ hiển thị.
 
-## 3. Dialect SQLite — đã chốt (db.md A.1, AGENTS mục 4)
+## 3. Dialect SQLite — đã chốt (db.md A.1, CLAUDE.md §4)
 
 - `uuid` TEXT thường có gạch nối; sinh client-side qua `Identifier.uuid()`.
 - Timestamp TEXT ISO-8601 **UTC hậu tố `Z`, không fractional** qua `ISOTimestamp` —
@@ -94,10 +94,10 @@ app/
 
 ## 7. Kiểm thử
 
-- Acceptance criteria của FR = test case (rulebook mục 4). Test hành vi logic
+- Acceptance criteria của FR = test case. Test hành vi logic
   thuần ở `app/ReadoKit/Tests/ReadoKitTests` — chạy nhanh bằng `scripts/test.sh
   kit` (macOS) khi đang sửa, scheme `Reado` (xcodebuild iOS Simulator) chạy lại
-  full trước `/rhandoff`. 4 file cần UIKit/Vision (OCR, nén ảnh) ở `app/ReadoTests`,
+  full trước `/rhandoff`. Các file cần UIKit/Vision (OCR, nén ảnh) ở `app/ReadoTests`,
   chỉ chạy được iOS Simulator.
 - **Không có target nào link app (`TEST_HOST`).** Hệ quả: `AppModel`/SwiftUI view
   KHÔNG unit-test được dù ở target nào. Test logic ở ReadoKit (enum error,
@@ -112,18 +112,18 @@ app/
   `DebugTrace.documentsDirectoryOverride` sang thư mục tạm ở `setUp`/`tearDown`
   (mẫu: `DebugTraceTests`, `AnalysisNetworkTestCase`). Tin cột `Executed N tests` / dòng
   `RESULT` của `scripts/test.sh`, không tin số trong commit cũ.
-- "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào ROADMAP.
+- "Xong" = toàn bộ criteria pass + lệnh đã chạy ghi bằng chứng vào plan.
 
-## 7b. Commit message — bắt buộc (owner chốt 2026-09-19)
+## 7b. Commit message — bắt buộc (owner chốt 2026-09-19; sửa 2026-10-06 theo thực tế, workflow-docs-r1 D9)
 
 Mỗi task = một commit riêng. Format chuẩn:
 
 ```
-feat(scope): tóm tắt bằng tiếng Việt — chi tiết cần thiết
+type(scope): tóm tắt bằng tiếng Việt — chi tiết cần thiết
 ```
 
-- **Prefix** luôn là `feat:` (gitmoji không dùng). Scope trong ngoặc đơn: `app`,
-  `kit`, `docs`, `test`, `chore`…
+- **Prefix** (`type`) là một trong `feat` · `fix` · `refactor` · `docs` · `chore` · `test` (gitmoji không dùng). Scope
+  trong ngoặc đơn: `app`, `kit`, tên plan/task…
 - `:` rồi một khoảng trắng rồi tóm tắt **tiếng Việt, mô tả FR/task đã làm**. Con
   người đọc vào là biết đổi gì, không cần mở diff.
 - Tách `-` nếu có hai việc khác loại trong cùng commit (chi tiết lẻ).
