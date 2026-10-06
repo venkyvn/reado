@@ -1193,6 +1193,8 @@ lập duy nhất — nó là một backend của adapter.
 
 ## 12. Open Questions
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 Những quyết định chưa chốt. PRD ghi nhận chúng thay vì đoán, vì mỗi câu trả lời
 đều thay đổi đáng kể phần triển khai.
 

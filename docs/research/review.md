@@ -479,6 +479,8 @@ Việc này thành **Q-11** trong PRD, mốc *cần chốt trước khi bật R2
 
 ## 9. Đã chốt và chưa chốt
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 ### Đã chốt — session sau không cần tranh luận lại
 
 | Quyết định | Cơ sở |
@@ -1091,6 +1093,8 @@ thiết kế sync.
    ghi kết quả vào mvp-plan-pwa-gen (ADR-044) mục 7.
 
 ## 8. Đã chốt với owner lúc code (2026-09-09)
+
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
 
 | ID | Câu hỏi | Quyết định của owner |
 |---|---|---|

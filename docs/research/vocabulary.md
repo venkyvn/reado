@@ -756,6 +756,8 @@ scheduler. Ba đường xử lý và lý do chưa chọn đường nào:
 
 ## 8. Đã chốt và chưa chốt
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 ### Đã chốt — session sau không cần tranh luận lại
 
 | Quyết định | Cơ sở |
@@ -1216,6 +1218,8 @@ hoạt một phần khác nhau, stability không bao giờ tăng đều.
 
 ## 5. Đã chốt và chưa chốt
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 ### Đã chốt — session sau không cần tranh luận lại
 
 | Quyết định | Cơ sở | Tình trạng |
@@ -1522,6 +1526,8 @@ Mirror từng criterion của FR-16 (PRD mục 6):
   cài đặt đổi đúng; `ai_api_key`/`ai_base_url` không bao giờ được ghi từ file.
 
 ## 9. Đã chốt và chưa chốt
+
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
 
 | Nhóm | Nội dung | Trạng thái |
 |---|---|---|

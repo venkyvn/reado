@@ -400,6 +400,8 @@ chốt lúc solution design. Không verify hai lần.
 
 ## 11. Đã chốt và chưa chốt
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 ### Đã chốt — session sau không cần tranh luận lại
 
 | Quyết định | Cơ sở |

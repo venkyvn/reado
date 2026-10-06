@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T6 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T7–T11
+> **Trạng thái:** open (2026-10-06) - T1–T7 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T8–T11
 
 ## Vấn đề & bằng chứng
 
@@ -227,6 +227,7 @@ Phụ thuộc:
 - DoD: không còn bản thứ hai của đoạn tìm UDID hay bộ đọc `.env`; không còn `sleep` cố định trong `sim_screens.sh`.
 
 ### T7 — Index ADR + một nguồn quyết định
+- ✅ Xong 2026-10-06 (D8a). Bằng chứng: 69 `## ADR-` = 69 dòng index (68 cũ + ADR-069 mô hình 5 tầng); checker exit 0; ROADMAP §1 dời sang `docs/journal/archive-roadmap-2026-09.md`, ROADMAP 79.5 → 74.2KB; banner "ảnh chụp lúc nghiên cứu" ở 10 mục "Đã chốt" (prompt-spec, tech-stack, review ×2, vocabulary ×3, solution-design §2, prd §12). Cột "Trạng thái" của index là phán đoán của tôi từ các ADR/PRD đảo nhau (không dùng `reado-scout` vì agent mới chưa nạp trong session này) — fen/lần review sau nên liếc các dòng `bị thay`/`một phần`, nhất là ADR-007/008 (giữ `hiệu lực`) và ADR-014 (không có ADR thay).
 - Files: `docs/decisions-log.md`, `ROADMAP.md` (§0, §1), mục "Đã chốt" ở `docs/research/{vocabulary,review,tech-stack}.md`, `docs/agent/prompt-spec.md` §9, `docs/specs/solution-design.md` §2, `docs/specs/prd.md` §12.
 - Làm:
   - Thêm index ở đầu `decisions-log.md`: `| ADR | Tiêu đề | Trạng thái | Thay bởi |`, đủ 68 ADR. Trạng thái là một trong: `hiệu lực` · `bị thay (ADR-xxx)` · `một phần (ADR-xxx)` · `bia mộ PWA`. Dùng `reado-scout` grep "đảo|thay|bỏ" theo từng số ADR. Sửa quy ước đầu file: thân ADR bất biến, index cập nhật mỗi khi có ADR mới.

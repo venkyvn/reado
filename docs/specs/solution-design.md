@@ -31,23 +31,25 @@ nhận hoàn chỉnh 2026-09-18. Doc này là bản đồ cho hai mốc:
 
 ## 2. Nền quyết định đã chốt (không tranh luận lại)
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 | # | Quyết định | Nguồn |
 |---|---|---|
 | Q-01 | **Native iOS (SwiftUI)**; không Android, không PWA sản phẩm; `web/` = prototype chỉ | ADR-026 (đảo ADR-001) |
 | Q-02 | **Local-first, SQLite trên máy**; dashboard/auth/sync = Later; FSRS chỉ chạy trên máy | ADR-027 (đảo ADR-002) |
 | Q-03 | **Hybrid:** proxy Reado (key `.env`) mặc định + user thêm agent OpenAI-compat (Keychain), chọn active cho FR-02 | ADR-028 (đảo ADR-003) |
-| Q-12 | Learning steps **tắt** — `enable_short_term = 0`; interval theo ngày | ROADMAP mục 1 |
-| — | FSRS = **`swift-fsrs` pin `4fbaf20` + `FSRSDefaults.defaultWv6`** (21 trọng số); `fsrs_version = 'fsrs-6'` ghi kèm | ROADMAP mục 1, tech-stack 3 |
+| Q-12 | Learning steps **tắt** — `enable_short_term = 0`; interval theo ngày | archive-roadmap-2026-09 §1 |
+| — | FSRS = **`swift-fsrs` pin `4fbaf20` + `FSRSDefaults.defaultWv6`** (21 trọng số); `fsrs_version = 'fsrs-6'` ghi kèm | archive-roadmap-2026-09 §1, tech-stack 3 |
 | — | Dữ liệu: uuid `TEXT` chữ thường có gạch nối · timestamp `TEXT` ISO-8601 **UTC `Z`** · `fsrs_params` `TEXT` JSON | tech-stack 7.2, db.md A.1 |
 | — | `cards.state` **bốn** giá trị; `review_logs` = ảnh chụp **TRƯỚC** khi chấm, cùng transaction với `cards`; **KHÔNG** unique trên `vocab_items` | rulebook mục 5 |
-| — | Capture = **camera/picker hệ thống**, không custom viewfinder; NFR-08 ≤ 3 thao tác | ROADMAP mục 1 |
+| — | Capture = **camera/picker hệ thống**, không custom viewfinder; NFR-08 ≤ 3 thao tác | archive-roadmap-2026-09 §1 |
 | — | Vuốt TRÁI = Again(1), PHẢI = Good(3); Hard/Easy là nút; undo nổi 1 bước (FR-12) | ADR-025 |
 | — | Song ngữ xen kẽ theo đoạn (ADR-007) + nút nhỏ ẩn/hiện bản dịch (ADR-030); card duyệt rút gọn mở inline (ADR-008) | ADR-007/008/030 |
 | Q-10 | **10 phiên đọc gần nhất mỗi collection có tên** (text + dịch + summary) vào `reading_sessions`; kho tạm **không** lưu phiên | ADR-029 |
-| — | Nhắc ôn R1 = **local notification** trên máy (owner chốt 2026-09-18); không Web Push; APNs cân nhắc Later | ROADMAP mục 1 |
-| — | Proxy = **Python + `google-genai`** (owner duyệt đề xuất 6.2, 2026-09-18); **hosted HTTPS**, không laptop-local | tech-stack 6, ROADMAP mục 1 |
+| — | Nhắc ôn R1 = **local notification** trên máy (owner chốt 2026-09-18); không Web Push; APNs cân nhắc Later | archive-roadmap-2026-09 §1 |
+| — | Proxy = **Python + `google-genai`** (owner duyệt đề xuất 6.2, 2026-09-18); **hosted HTTPS**, không laptop-local | tech-stack 6, archive-roadmap-2026-09 §1 |
 | — | Verify `example`: chạy ở **adapter đang active** (proxy cho `reado_proxy`, trên máy cho `openai_compat`) — **không verify hai lần** | tech-stack 10.4 |
-| — | `image_hash` là **idempotency key** cho FR-02; `analysis_events` ghi phía proxy (M-03/M-04) | tech-stack 10.1, ROADMAP mục 1 |
+| — | `image_hash` là **idempotency key** cho FR-02; `analysis_events` ghi phía proxy (M-03/M-04) | tech-stack 10.1, archive-roadmap-2026-09 §1 |
 | — | Key user → **Keychain** theo `analysis_agents.id`; ghi-only; không SQLite, không export (FR-16), không lên server Reado | db.md A.2, FR-21 |
 | — | `day_cutoff_hour` mặc định **4**, chỉnh được ở Settings R1 (ADR-031); `settings.timezone` IANA từ device | ADR-031, db.md |
 

@@ -465,6 +465,8 @@ Nói trước để kết quả xấu không bị hiểu thành thất bại c�
 
 ## 9. Đã chốt và chưa chốt
 
+> Ảnh chụp lúc nghiên cứu. Quyết định hiện hành: CLAUDE.md §5 + index ADR (`docs/decisions-log.md`).
+
 ### Đã chốt
 
 | Quyết định | Cơ sở |

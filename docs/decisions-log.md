@@ -4,8 +4,85 @@
 > lý do, ngày, và hệ quả. Không chứa câu hỏi hay tiến độ — xem ROADMAP.md.
 > (ADR-001..ADR-024 thuộc thế hệ PWA; ADR-026..028 ghi pivot v2 — task 0.2 trong ROADMAP.)
 >
-> Quy ước: ADR-001 là quyết định đầu tiên. Khi thêm mới, lấy số tiếp theo. Không
-> sửa nội dung ADR đã ghi — thêm ADR mới nếu quyết định bị đảo.
+> Quy ước: ADR-001 là quyết định đầu tiên. Khi thêm mới, lấy số tiếp theo. Thân ADR
+> đã ghi **bất biến** — thêm ADR mới nếu quyết định bị đảo. **Index** ngay dưới được
+> sửa: thêm dòng cho ADR mới và cập nhật cột "Trạng thái" của ADR bị đảo/sửa.
+
+## Index (cập nhật mỗi khi có ADR mới; thân các ADR bên dưới bất biến)
+
+Trạng thái: `hiệu lực` · `bị thay (ADR-xxx)` · `một phần (ADR-xxx)` — còn hiệu lực trừ phần ADR kia đổi · `bia mộ PWA` — thuộc thế hệ PWA, không còn áp dụng. Cột "Trạng thái" là phán đoán từ các ADR/PRD đảo nhau; nghi ngờ thì đọc thân ADR trong và sau số đó.
+
+| ADR | Tiêu đề | Trạng thái |
+|---|---|---|
+| 001 | Platform: PWA mobile-first | bị thay (ADR-026) |
+| 002 | Dữ liệu: Local-first, SQLite | bị thay (ADR-027) |
+| 003 | API key: BYOK (Bring Your Own Key) | bị thay (ADR-028) |
+| 004 | Lemmatize: Không lemmatize term_normalized | hiệu lực |
+| 005 | Learning steps: Tắt ở MVP | hiệu lực |
+| 006 | Buffer cuộn: 10 phiên đọc bền per collection | bị thay (ADR-029) |
+| 007 | UI-1: Bản song ngữ xen kẽ theo đoạn | hiệu lực |
+| 008 | UI-2: Card rút gọn mở inline | hiệu lực |
+| 009 | Chuẩn tương tác ôn tập: Vuốt + chạm + undo nổi | bị thay (ADR-025) |
+| 010 | Rich vocab: 3 cột TEXT JSON trên vocab_items | hiệu lực |
+| 011 | Targeted review: Chấm + log mode='cram', KHÔNG đụng FSRS state | bị thay (ADR-050) |
+| 012 | Import từ vựng: merge + remap id, cả JSON + TSV | hiệu lực |
+| 013 | Storage: SQLite-WASM trong Web Worker | bia mộ PWA |
+| 014 | Git: Commit chỉ chứa code trong app/ | bị thay (repo track toàn bộ từ 88eeee1, không có ADR riêng) |
+| 015 | Sync Later: Server là source of truth | hiệu lực (Later) |
+| 016 | UI Library: shadcn/ui | bia mộ PWA |
+| 017 | State Management: Zustand setup architecture | bia mộ PWA |
+| 018 | i18n: Setup nền tảng (tách UI strings + react-i18next) | bia mộ PWA |
+| 019 | Analytics: Query script từ Node (chạy trên export JSON) | bia mộ PWA |
+| 020 | Error Handling: Error Boundary + Toast notification | bia mộ PWA |
+| 021 | Code Splitting: React.lazy cho screens | bia mộ PWA |
+| 022 | A11y: Baseline accessibility | bia mộ PWA |
+| 023 | Unified scripts: check + e2e:all | bia mộ PWA |
+| 024 | Vuốt chấm mở trên CẢ hai mặt thẻ (sau khi lật xem detail) | bị thay (ADR-025) |
+| 025 | Chuẩn vuốt chấm (iOS v2): trái = Again · phải = Good — đảo ADR-009 | một phần (ADR-033) |
+| 026 | Platform: Native iOS (SwiftUI) — đảo ADR-001 | hiệu lực |
+| 027 | Dữ liệu: local-first SQLite **trên máy**; BE đầy lùi về Later — đảo ADR-002 | hiệu lực |
+| 028 | API key: hybrid — proxy mặc định + BYOK OpenAI-compat (Keychain) — đảo ADR-003 | một phần (ADR-049) |
+| 029 | Q-10: 10 phiên đọc bền per collection có tên (đảo v0.3 buffer-trôi) | hiệu lực |
+| 030 | Song ngữ: xen kẽ mặc định + nút nhỏ reveal | hiệu lực |
+| 031 | Settings R1: `day_cutoff_hour` có núm | hiệu lực |
+| 032 | FR-10 bộ lọc "đã thuộc": Q-06 / Q-08 / Q-09 | một phần (ADR-066) |
+| 033 | Vuốt chấm Tinder-style trên CẢ hai mặt thẻ (iOS v2) | hiệu lực |
+| 034 | A-01: OCR trên máy, một lần gọi agent text (dịch + vocab) | hiệu lực |
+| 035 | Agent tooling: chỉ Claude Code; protocol gộp vào CLAUDE.md | hiệu lực |
+| 036 | Camera tự vẽ bằng AVFoundation, bỏ `UIImagePickerController` | hiệu lực |
+| 037 | Log chẩn đoán DEBUG (`DebugTrace`) + OCR tự ngắt đoạn + prompt v5 | một phần (ADR-055) |
+| 038 | Đảo "chống gamification" thành ăn mừng tiến bộ đo được (J4/T1) | hiệu lực |
+| 039 | "Học thêm 10 từ" nới hạn mức trong bộ nhớ app, N cố định (T2) | bị thay (ADR-050) |
+| 040 | Nút loa đọc từ (TTS on-device) không thuộc NG-01/NG-02 (T2 ux-polish-r1) | hiệu lực |
+| 041 | Onboarding = checklist 3 bước trên Home, không trang mẫu (T5 ux-polish-r1) | một phần (ADR-054) |
+| 042 | OCR đổi sang `RecognizeDocumentsRequest` (iOS 26+), legacy làm fallback (ocr-line-drop) | một phần (ADR-064) |
+| 043 | Cram kéo về R1: nút "Ôn thêm" ở màn hết thẻ (cram-collection-r1) | một phần (ADR-050) |
+| 044 | Dọn repo: xoá docs/archive PWA-gen, script Phase 0, AGENTS/PROJECT.md (repo-hygiene-r1) | hiệu lực |
+| 045 | Visual polish: hướng "native tinh chỉnh" + token Spacing/Radius/Typo (visual-polish-r1) | một phần (ADR-051) |
+| 046 | pbxproj sang synchronized folders (repo-hygiene-r1 B1) | hiệu lực |
+| 047 | Thứ tự thẻ mới ưu tiên bộ vừa thêm từ (new-order-r1) | một phần (ADR-050) |
+| 048 | Bảng `encounters`: gặp lại từ cũ khi đọc, ngoài FSRS (reencounter-r1) | hiệu lực |
+| 049 | Bỏ proxy Reado, FR-02 chỉ còn BYOK — đảo phần proxy của ADR-028/Q-03 (remove-proxy-r1) | hiệu lực |
+| 050 | "Ôn thêm 20": trộn mới + ôn sớm thật, LIFO, heatmap theo phân vị — đảo ADR-011/039, sửa ADR-043/047 (extra-review-r1) | hiệu lực |
+| 051 | MASTER.md viết lại thành luật UI native, khớp token thật — sửa phần "không sửa" của ADR visual-polish-r1 | hiệu lực |
+| 052 | Shell 2 tab "Hôm nay · Thư viện", nút chụp trong thanh, Ôn là phiên toàn màn | hiệu lực |
+| 053 | Lưu từ không chặn: banner thay alert, đổi đích được ở màn duyệt, bản dịch Analysis hiện sẵn | hiệu lực |
+| 054 | Onboarding gộp vào hero Home, agent hỏng không giấu thẻ đến hạn | hiệu lực |
+| 055 | prompt-v6: dịch theo cụm + `phrases` + xếp hạng vocab + preselect top 5 | hiệu lực |
+| 056 | Q-13: gập item FR-10 "đã thuộc" thay vì xoá, liệt kê đủ nghĩa khi khoá lệch mức thuộc | hiệu lực |
+| 057 | Header Home kiểu nút tròn tách, streak từ hàng riêng lên pill toolbar, hero số phụ | hiệu lực |
+| 058 | Đọc PDF trong Reado, cửa thu từ vựng thứ hai — đảo NG-07 (pdf-reader-r1) | hiệu lực |
+| 059 | Điều hướng trang + Mục lục trong PDF reader — đảo dòng "mục lục" ngoài phạm vi của FR-23 (pdf-nav-r1) | một phần (ADR-060) |
+| 060 | Bỏ thanh kéo trang, thêm ẩn chrome khi chạm + tông nền đọc (tinh chỉnh ADR-059) | một phần (ADR-061/062) |
+| 061 | Nhiều tông giấy + kéo thả độ đậm, cố định màu viền trang (tinh chỉnh ADR-060) | một phần (ADR-062) |
+| 062 | Dọn tông nền đọc PDF ra `SettingsView`, bỏ Menu trên toolbar reader (tinh chỉnh ADR-060/061) | hiệu lực |
+| 063 | Apple Intelligence: agent mặc định + soát OCR trên máy (mở rộng Q-03/ADR-049) | một phần (ADR-064/065) |
+| 064 | Đổi OCR-fix mặc định TẮT; engine mặc định `liveText` (ghép Live Text + `documents`) — ocr-quality-r1 T0/T2/T3a | một phần (ADR-065) |
+| 065 | Gỡ hẳn OCR-fix bằng LLM — ocr-quality-r1 T7 | hiệu lực |
+| 066 | Đảo Q-09 cho FR-10: so khớp "đã thuộc" toàn app thay vì theo collection — vocab-identity-r1 T0 | hiệu lực |
+| 067 | Gộp từ trùng cũ (FR-24) — engagement-r1 T0 | hiệu lực |
+| 068 | Tăng gắn bó (engagement-r1): ý 1–6 của tang_gang_bo — engagement-r1 T0 | hiệu lực |
+| 069 | Mô hình docs 5 tầng + 3 nguyên tắc (workflow-docs-r1) | hiệu lực |
 
 ---
 
@@ -1586,3 +1663,21 @@
   `Prompt.version`. Ghi nhận, chưa sửa: bộ đếm overview dùng `Mastery.stabilityThreshold` cứng
   bỏ qua `known_stability` (`VocabRepository+Overview.swift`).
 - Plan: `docs/plans/done/engagement-r1.md`.
+
+## ADR-069 — Mô hình docs 5 tầng + 3 nguyên tắc (workflow-docs-r1)
+
+- **Ngày:** 2026-10-06
+- **Bối cảnh:** Bằng chứng mà workflow dựa vào (kết quả test, plan đang mở, quyết định đã chốt) từng sai mà không ai biết: summary test xanh cũ vẫn được nạp như kết quả mới, plan thiếu dòng trạng thái không hiện ở hook, Q-09 còn ghi "theo collection" ở ROADMAP dù đã có ADR-066, `CLAUDE.md` phình tới 13KB vì chép "Chốt thêm…".
+- **Quyết định:** Docs chia 5 tầng, mỗi tầng một luật:
+
+  | Tầng | File | Luật |
+  |---|---|---|
+  | Hiến pháp | `CLAUDE.md` (+ `app/ReadoKit/CLAUDE.md`), `vision.md`, `MASTER.md`, `coding-conventions.md` | Hiếm khi đổi, không ghi ngày |
+  | Hợp đồng | `prd.md`, `journeys.md`, `db.md`, `solution-design.md`, `prompt-spec.md` | Chỉ ghi hiện tại; bia mộ tối đa 1 dòng |
+  | Quyết định | `decisions-log.md` + index đầu file | Thân ADR bất biến; index được sửa |
+  | Trạng thái | brief (§1–2 ≤ 3KB), `docs/qa/pending.md`, plans | Dùng ID ổn định, không dùng số thứ tự |
+  | Lịch sử | journal, `prd-changelog.md`, `docs/journal/archive-*` | Agent không đọc mặc định |
+
+  Ba nguyên tắc: (1) mỗi sự thật có đúng một nhà, nơi khác chỉ trỏ tới; (2) việc máy kiểm được thì đưa vào script/hook, không viết thành lời dặn; (3) mỗi loại bằng chứng chỉ có một script ghi, và gắn với nội dung code (tree hash của `app/`), không gắn với thời điểm (HEAD).
+- **Hệ quả:** Quyết định hiện hành chỉ đọc ở `CLAUDE.md` §5 + index ADR này; mục "Đã chốt" trong research/spec là ảnh chụp lúc nghiên cứu. Giữ nguyên số mục `CLAUDE.md` §4–§7 vì ~25 chỗ trỏ theo số.
+- **Thay thế đã loại:** Không làm gì (sự cố đã xảy ra thật); viết lại toàn bộ docs một lượt (rủi ro vỡ con trỏ, mất bằng chứng lịch sử).

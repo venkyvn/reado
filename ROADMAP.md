@@ -21,12 +21,12 @@
 ## 0. Cách dùng file này
 
 1. **Bootstrap session mới:** `CLAUDE.md` → `/rstart` (session-brief) → file này
-   (nếu task đụng tiến độ) → làm việc → cập nhật mục 2 và mục 6 **cuối mỗi session**. Đừng tin trí nhớ.
+   (nếu task đụng tiến độ) → làm việc → chỉ sửa file này khi một FR đổi trạng thái (✅ + bằng chứng); tiến độ từng task ghi ở plan + journal.
 2. **Trạng thái item:** `⬜` chưa làm · `🔄` đang làm (kèm ngày + người) · `✅` xong (kèm ngày + bằng
    chứng) · `⛔` blocked (kèm lý do) · `📌` quyết định đã chốt.
 3. **Không xoá dòng đã xong** — đánh dấu ✅ giữ nguyên để truy vết, đúng quy ước bia mộ của repo.
 4. **"Xong" phải có bằng chứng thật**: lệnh đã chạy, kết quả, link file. Không ghi "xong" không bằng chứng.
-5. **Mâu thuẫn docs vs file này:** về *tiến độ điều hành*, file này thắng; về *spec sản phẩm*, docs
+5. **Mâu thuẫn docs vs file này:** file này chỉ ghi tiến độ; spec sản phẩm và quyết định (`CLAUDE.md` §5 + index ADR)
    thắng. Thấy mâu thuẫn → ghi vào mục 4, đừng im lặng sửa.
 6. **Nhật ký (mục 6) là append-only** — không sửa dòng cũ.
 7. **Trạng thái theo máy:** bản đồ máy cụ thể (code về chưa, env nào) nằm ở
@@ -41,42 +41,9 @@
 
 ---
 
-## 1. Quyết định đã chốt — thế hệ v2
+## 1. Quyết định đã chốt
 
-| # | Vấn đề | Quyết định (2026-09-17 trừ khi ghi khác) | Hệ quả trực tiếp |
-|---|---|---|---|
-| Q-01 | Platform | 📌 **Native iOS (SwiftUI)**. Không Android, không PWA sản phẩm. `web/` chỉ là prototype journeys | Code đi vào `app/` (Xcode). PWA hiện có trong `app/` sẽ được dọn đi ở task 1.1 |
-| Q-02 | Dữ liệu | 📌 **Local-first, SQLite trên máy**. Dashboard sản phẩm = Later | Offline review miễn phí (NFR-03). DDL theo [docs/db.md](docs/specs/db.md) tầng A |
-| Q-03 | API key | 📌 **Hybrid:** proxy Reado (key `.env` server) = mặc định; user thêm agent OpenAI-compat + key **Keychain**, chọn active cho FR-02 (FR-21) | Key sản phẩm không nằm trên client; key user không plaintext, không lên server. Proxy phải **hosted HTTPS** |
-| Q-12 | Learning steps trong ngày | 📌 **Tắt** (2026-09-08, giữ) | Interval tính theo ngày; `state='learning'` không xuất hiện ở R1 |
-| — | FSRS | 📌 **`swift-fsrs`** với **`FSRSDefaults.defaultWv6`** (21 trọng số). `FSRS()` không tham số = FSRS-5 — silent breakage (NG-09: không tự viết SRS) | Weight v6 + `fsrs_version` ghi vào DB |
-| — | Capture | 📌 **Camera / picker hệ thống**, không custom viewfinder; NFR-08 ≤ 3 thao tác từ mở app tới chụp | FR-01 làm theo thế |
-| — | Data type | 📌 uuid `TEXT` chữ thường có gạch nối · timestamp `TEXT` ISO-8601 **UTC hậu tố `Z`** · `fsrs_params` `TEXT` JSON + cột `fsrs_version` | Mapping đầy đủ: tech-stack mục 7.2 |
-| — | Schema | 📌 `cards.state` có **bốn** giá trị; `review_logs` lưu snapshot **TRƯỚC** khi chấm, cùng transaction với update `cards`; **KHÔNG** có `unique` trên `vocab_items` | Chống trùng ở FR-10 lúc trích xuất |
-| — | Slice build đầu | 📌 **Walking skeleton** = FR-01, FR-02, FR-03, FR-09, FR-11, FR-12 + `is_default` của FR-17 (kho luật mục 6). FR-21 **sau** skeleton | Phase 2 của file này |
-| — | Tombstones | 📌 FR-07 và FR-13 đã bỏ (không implement, không xoá dòng); NG-07 EPUB/ebook + chép file vào app (PDF đọc tại chỗ đã đảo sang FR-23, ADR-058 2026-10-04); NG-08 không hỏi ngữ pháp | Dính tới là dừng |
-| — | Reminder | 📌 Không Web Push (tech-stack mục 8.3). R1 nhắc ôn = **local notification** trên máy (owner chốt 2026-09-18); APNs khi Later cần nhắc lúc app không mở | Task 3.12 |
-| — | Gập hoa thường tiếng Việt (FR-20) | 📌 **Hạ chữ thường Unicode, GIỮ dấu** (owner chốt 2026-09-24): `"SÁCH"≈"sách"`, `"Đá"≈"đá"`, nhưng `"Đá" ≠ "Đã"` — dùng chung `normalizedTerm` lúc trim/insert (SQLite NOCASE chỉ gập ASCII) | Khớp collection FR-20 + cảnh báo trùng term |
-| — | Proxy framework | 📌 **Python + `google-genai`** — owner duyệt đề xuất 6.2 ngày 2026-09-18 (framework cụ thể kiểu FastAPI chốt trong SD 0.6) | Task 0.7 |
-| Q-10 | Buffer cuộn + session collection | 📌 **10 phiên đọc gần nhất PER NAMED COLLECTION** vào bảng `reading_sessions` (text + dịch + summary), để đọc lại trang cuối — chốt 2026-09-18 ([ADR-029](docs/decisions-log.md#adr-029--q-10-10-phiên-đọc-bền-per-collection-có-tên-đảo-v03-buffer-trôi), đảo v0.3 buffer-trôi). **Kho tạm KHÔNG lưu phiên**; phiên thứ 11 trôi (trim trong transaction) | Task 3.4 (FR-05/06) |
-| Q-06 | Lemmatize ở FR-10 | 📌 **Không lemmatize** — mỗi word form một dòng (`running` ≠ `run`, `took` ≠ `take`). Chốt 2026-09-22 (ADR-032) | `term_normalized` giữ nguyên form, khớp FR-20 |
-| Q-08 | Ngưỡng "đã thuộc" (FR-10) | 📌 **FSRS `stability ≥ 21 ngày`** = Anki "mature" (interval ≥ 21 ngày). Chốt 2026-09-22 (ADR-032), không đo bằng số lần | Bộ lọc FR-10: `state='review'` + `stability >= 21` |
-| Q-09 | Phạm vi so khớp "đã thuộc" | 📌 **Theo collection**, không toàn cục — nghĩa mới của từ cũ vẫn thêm khi sang sách khác. Chốt 2026-09-22 (ADR-032) | Truy vấn FR-10 scope theo collection đang chụp |
-
-**Chốt product-behavior cho UI ôn tập** (đối chiếu lại khi SD, không mù quáng):
-UI-1 song ngữ **xen kẽ theo đoạn** (ADR-007) · card duyệt **rút gọn mở inline** (ADR-008) ·
-📌 vuốt TRÁI = **Again(1)** · PHẢI = **Good(3)**, Hard/Easy là nút, chạm lật, undo nổi 1 bước, đủ 4 mức (ADR-025 — chốt 2026-09-18 theo journeys mục 4, **thay** ADR-009) ·
-rich vocab **4 tags / 3 synonyms / 3 antonyms** cột JSON (ADR-010, RV-1) ·
-export/import là phao cứu sinh nên làm sớm trong R1 (tinh thần cũ, scope v2 ở PRD mục 10).
-Các ADR thuần PWA-tech (016 shadcn · 017 zustand · 018 i18n · 021 lazy · 022 a11y web) **không** chuyển sang SwiftUI — quyết định lại lúc SD, không chép tự động.
-
-**CHƯA CHỐT — không tự quyết, không lấp:**
-Q-11 stability jitter hai chế độ R2 (chốt trước Phase 4) ·
-ngưỡng leech FR-19 = 6 (owner chốt 2026-09-24, không gộp Q-08) ·
-hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · model Gemini (chốt ở 0.8, bước A-01/A-02).
-`settings.timezone` đã có trên schema (seed từ device, task 1.3) — không còn thiếu.
-(Đã đóng 09-17/09-18: Q-01/02/03 pivot · local-vs-APNs = local cho R1 · framework proxy = Python · encrypted.txt = xoá · chỗ đặt code PWA cũ.
-Đã đóng 2026-09-22: Q-06 không lemmatize · Q-08 stability ≥ 21 · Q-09 theo collection.)
+Quyết định hiện hành: [CLAUDE.md](CLAUDE.md) §5 + index [docs/decisions-log.md](docs/decisions-log.md). Bảng Q-01…Q-13 thế hệ v2 (ảnh chụp 2026-09, nhiều dòng đã bị đảo) đã dời sang [docs/journal/archive-roadmap-2026-09.md](docs/journal/archive-roadmap-2026-09.md).
 
 ---
 
@@ -156,7 +123,7 @@ hosting vendor proxy (chốt lúc deploy — HTTPS + không cold-start 30s) · m
 | 3.10 | FR-20 CSV Import — scope v2: **CSV gộp, không JSON** (cập nhật lại docs/vocabulary.md cho khớp khi làm: bỏ nhánh JSON, giữ atomic/remap/preview) | Đi cùng phao cứu sinh; scope đã chốt | ✅ 2026-09-24 — 141/141 test xanh iPhone 18 Pro, commit `602ded5`. `CSVImport` (parse tab/comma quote-aware, delimiter-detect từ header, map cột theo tên; khớp collection **không hoa thường giữ dấu** qua `fold`=trim+`lowercased()` Unicode, trống→kho tạm, lạ→tạo mới; card `new`/due hôm nay mirror `saveCapture`; trùng term→cảnh báo không tự loại; atomic 1 transaction) + `ImportView` (fileImporter + preview sửa field/bỏ dòng + "Gộp (N)") + ExportView section "Nhập" + 12 test `CSVImportTests` |
 | 3.12 | Reminder ôn tập (nếu ∈ R1 — chốt local vs APNs ở 0.5) | Q-05 đã chốt **local** (0.5) — chỉ còn code | ✅ 2026-09-24 — 148/148 test xanh iPhone 18 Pro, commit `caa958f`. `LearningSettings` + `reminderEnabled`/`reminderMinutes` (default tắt/20:00) + Migration v2 (2 cột `settings`) + `ReminderService` (time/describe thuần) + `NotificationScheduler` (UNCalendarNotificationTrigger lặp hằng ngày) + SettingsView section "Nhắc ôn tập" (Toggle + wheel 15') + ReadoApp khôi phục lịch lúc khởi động + 7 test `ReminderTests` |
 | 3.4 | FR-05 Buffer cuộn ~10 trang + FR-06 tóm tắt trang | Q-10 **đã chốt** (ADR-029) — làm như T1 (J2 hub + sessions) | ✅ 2026-09-22 — commit `a7a2e15`, 165/165 test iPhone 18 Pro. `ReadingSessionRepository` (codec `{source_en,translation_vi}`, `listSessions` mới-trước, `insertInsideTransaction` chèn cùng transaction #4); `saveCapture` ghi phiên chỉ cho collection có tên + trim 10; `AnalysisView` picker đích; `CollectionDetailView` (J2 hub) ôn scoped + chụp vào bộ + list phiên → `ReadingSessionView` (ADR-007 xen kẽ + ADR-030 nút ẩn/hiện dịch + FR-06 summary gập). ⚠️ **Chưa làm "Từ session collect thêm"** — xem §4 |
-| 3.8 | FR-10 Lọc "đã thuộc" lúc trích xuất | Q-06/Q-08/Q-09 **đã chốt** (ADR-032, 2026-09-22) | ✅ 2026-10-02 — port `73f92a6` + gập thay vì xoá (ADR-056, q13-sense-filter-r1) + tính lại nhóm gập khi đổi đích (fr10-close-r1, `ReviewDraftBuilder.regroup`). Nợ: đánh giá độ phủ so khớp trên dữ liệu thật → gộp vào 3.13 |
+| 3.8 | FR-10 Lọc "đã thuộc" lúc trích xuất | Q-06/Q-08/Q-09 **đã chốt** (ADR-032, 2026-09-22; Q-09 đảo → ADR-066) | ✅ 2026-10-02 — port `73f92a6` + gập thay vì xoá (ADR-056, q13-sense-filter-r1) + tính lại nhóm gập khi đổi đích (fr10-close-r1, `ReviewDraftBuilder.regroup`). Nợ: đánh giá độ phủ so khớp trên dữ liệu thật → gộp vào 3.13 |
 | 3.11 | FR-21 đầy đủ: list agent OpenAI-compat + add key Keychain + chọn active cho FR-02 | Sau skeleton (PRD mục 10); còn chờ 0.7 proxy + 1.5 adapter | ⬜ |
 | 3.13 | Đo + ghi nhận NFR-01/NFR-02 (chưa chốt ngưỡng) + kiểm M-07 bằng dữ liệu thật | R1 chỉ đo, R2 mới chốt ngưỡng; M-07 cần dữ liệu thật → cuối | ⬜ |
 | 3.16 | FR-22 Gặp lại từ cũ khi đọc (reencounter-r1, ADR-048): T1 dữ liệu · T2 màn đọc · T3 thang tiến độ + Home | M-06; plan `docs/plans/done/reencounter-r1.md` | ✅ 2026-10-02 (migration v4 `encounters`, `EncounterRepository`, `EncounterMatcher`, export; gạch chân + popover + `seen` khi lưu trang; thang 4 mức, thanh 4 màu, `seen` vào thứ tự thẻ mới — fen xác nhận test xanh + xem tay UI; hàng Home "Gặp lại N từ" + `MasteryRing` đã thấm xác nhận cuối qua verify-nav-r1 T3 với dữ liệu thật) |
