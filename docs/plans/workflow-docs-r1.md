@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T10 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T11
+> **Trạng thái:** open (2026-10-06) - T1–T11 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua); còn đo tiêu chí thành công sau 30 commit rồi mới khép
 
 ## Vấn đề & bằng chứng
 
@@ -299,6 +299,7 @@ Phụ thuộc:
 - DoD: `/raudit` không còn pipeline viết tay; không commit được khi audit đỏ.
 
 ### T11 — Điều phối song song: số ADR + nhánh mồ côi
+- ✅ Xong 2026-10-06 (D8a; D7a làm nửa đầu: đối chiếu xong, **chưa xoá nhánh remote** — là thao tác push, chờ fen chạy/approve). Đối chiếu từng nhánh: `eager-ptolemy-trkabr` (1 commit sửa brief, đã lỗi thời — bỏ được) · `magical-dijkstra-6axsi4` (plan structure-review + journal 09-30, đã có trên main — bỏ được) · `wizardly-newton-dk2pgu` (plan fsrs-queue-fix-r1, đã khép ở `done/` — bỏ được) · `upbeat-tesla-nc1rx2` (**giữ**: workflow CI GitHub Actions ở commit `6ae2ad4` chỉ nằm trên nhánh này; ADR-047 của nó trùng số với main, đánh số lại khi mở plan CI). Còn `kind-brahmagupta`, `quirky-hawking`, `refactor/appmodel-split`, `apple-ai-r1` đã merge hết (0 commit ahead). Quy ước `ADR-NEW-<slug>` ghi ở đầu `decisions-log.md`, `/rplan`, `/rhandoff`; dòng cloud session ở `CLAUDE.md` §7 (7303 byte → ngưỡng WARN của audit nâng 7168 → 7500). Lệnh xoá khi fen đồng ý: `git push origin --delete claude/eager-ptolemy-trkabr claude/magical-dijkstra-6axsi4 claude/wizardly-newton-dk2pgu`.
 - Files: `docs/decisions-log.md` (quy ước đầu file), `.claude/commands/{rplan,rhandoff}.md`, `CLAUDE.md` §7 Workflow (thêm một dòng).
 - Làm:
   - Theo D8: trên nhánh viết `ADR-NEW-<slug>`; `/rhandoff` trên `main` (hoặc lúc merge) đổi sang số tiếp theo và cập nhật index.
@@ -314,7 +315,7 @@ Phụ thuộc:
 - DoD: không còn quyết định nào chỉ nằm trên một nhánh chưa merge.
 
 ## Ngoài plan này (mở plan riêng khi cần)
-- CI GitHub Actions (runner macOS, lane `kit`): cần chốt trước repo public hay private, vì private thì phút macOS tính hệ số cao.
+- CI GitHub Actions (runner macOS, lane `kit`): cần chốt trước repo public hay private, vì private thì phút macOS tính hệ số cao. Bản nháp workflow nằm ở nhánh `origin/claude/upbeat-tesla-nc1rx2` (commit `6ae2ad4`) — giữ nhánh đó tới khi mở plan CI.
 - Target XCUITest để tự động hoá các nợ QA cần chạm, vuốt, cuộn: fen tạo target trong Xcode.
 - Stop hook nhắc chạy test khi `app/**` đổi sau summary gần nhất (dùng `code:` của T1); phải kiểm `stop_hook_active`.
 - Chuyển repo trên máy NAB ra khỏi OneDrive.

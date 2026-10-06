@@ -94,6 +94,7 @@ Fen nhắc một công nghệ ("dùng X để…") là giả thuyết, không ph
 - Đụng hợp đồng (schema, FR mới, transaction, protocol module, Q mở) → `/rplan`, fen confirm rồi mới code.
 - Mỗi session một task trong "Tầng 2" của plan. Xong → `/rhandoff`; context dài → `/rhandoff` rồi `/clear`.
 - Commit chỉ sau khi fen approve; format: `docs/agent/coding-conventions.md` §7b.
+- Session cloud (`claude/*`) chỉ commit code + plan; không sửa brief, journal, ROADMAP; ADR ghi `ADR-NEW-<slug>`, số thật lấy khi merge vào `main`.
 - Không build/test được (cloud, simulator hỏng) → không bịa số test, không ghi "xong".
 
 **Bẫy môi trường**

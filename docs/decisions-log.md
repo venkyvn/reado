@@ -4,7 +4,7 @@
 > lý do, ngày, và hệ quả. Không chứa câu hỏi hay tiến độ — xem ROADMAP.md.
 > (ADR-001..ADR-024 thuộc thế hệ PWA; ADR-026..028 ghi pivot v2 — task 0.2 trong ROADMAP.)
 >
-> Quy ước: ADR-001 là quyết định đầu tiên. Khi thêm mới, lấy số tiếp theo. Thân ADR
+> Quy ước: ADR-001 là quyết định đầu tiên. Trên nhánh (kể cả session cloud `claude/*`) ghi `ADR-NEW-<slug>` — không lấy số; khi merge vào `main` (hoặc viết thẳng trên `main`) mới lấy số tiếp theo + thêm dòng index. Thân ADR
 > đã ghi **bất biến** — thêm ADR mới nếu quyết định bị đảo. **Index** ngay dưới được
 > sửa: thêm dòng cho ADR mới và cập nhật cột "Trạng thái" của ADR bị đảo/sửa.
 

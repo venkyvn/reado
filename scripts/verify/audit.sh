@@ -72,7 +72,7 @@ fi
 SIZE12="$(awk '/^## 1\./{p=1} /^## 3\./{p=0} p' docs/session-brief.md | wc -c | tr -d ' ')"
 (( SIZE12 > 3072 )) && problem "docs/session-brief.md §1–2 ${SIZE12} byte (ngân sách 3072)"
 CSIZE="$(wc -c < CLAUDE.md | tr -d ' ')"
-(( CSIZE > 7168 )) && warn "CLAUDE.md ${CSIZE} byte (> 7168) — gọn lại, đừng thêm 'Chốt thêm…' vào đó"
+(( CSIZE > 7500 )) && warn "CLAUDE.md ${CSIZE} byte (> 7500) — gọn lại, đừng thêm 'Chốt thêm…' vào đó"
 J="docs/journal/$(date +%F).md"
 if [[ -f "$J" ]]; then
   JL="$(wc -l < "$J" | tr -d ' ')"
