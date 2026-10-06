@@ -14,7 +14,7 @@
 | Thế hệ | v2 — native iOS + local-first SQLite + proxy hybrid (chốt 2026-09-17) |
 | Tiền nhiệm | `MVP_PLAN.md` (PWA-gen) → `mvp-plan-pwa-gen.md` (đã xoá, ADR-044) |
 | Phase hiện tại | **Phase 3 — đang chạy.** Đã xong 3.1 FR-16 Export (`d23e19a`) + 3.2 FR-19 Leech (`7ea032e`) + 3.3 FR-04 Capture failure (`fb7f53a`, 91/91 test) + 3.6 FR-14 Daily Progress (`7263fb1`, 98/98) + 3.7 FR-15 Settings (`e1f5d5a`, 107/107) + 3.5 FR-08 + FR-17 (`0a5de27`, 122/122) + 3.9 FR-18 (`5060ada`, 129/129) + **3.10 FR-20 (`602ded5`, 141/141)** + **3.12 Reminder (`caa958f`, 148/148)** + **shortcut Home FR-17 (`a48b1e6`, 158/158)** + **T0 cửa Dữ liệu (`2907666`)** + **T1 J2 hub + FR-05/06 (`a7a2e15`, 165/165)** + **T2 J-R1-P heatmap (`55c2685`, 171/171)**. Toàn bộ task không-gate-Q-*/proxy đã cạn. **Q-06/08/09 đã chốt 2026-09-22 (ADR-032).** Còn chặn: 3.8 (chỉ còn dữ liệu thật) · ngưỡng leech FR-19 (số lapse) · 3.11 (0.7 proxy + 1.5 adapter) · 3.13 (dữ liệu thật) · cram FR-18 (R2) · "Từ session collect thêm" (xem §4) |
-| Nguồn nội dung | [docs/prd.md](docs/specs/prd.md) (FR-01..FR-23) · [docs/research/tech-stack.md](docs/research/tech-stack.md) · [docs/agent-rulebook.md](docs/agent/agent-rulebook.md) (mục 6: walking skeleton) · [docs/journeys.md](docs/specs/journeys.md) (J1–J6 + J2b + J-R1-*, thứ tự prompt UI) · [docs/session-brief.md](docs/session-brief.md) |
+| Nguồn nội dung | [docs/prd.md](docs/specs/prd.md) (FR-01..FR-23) · [docs/research/tech-stack.md](docs/research/tech-stack.md) · [solution-design.md §10](docs/specs/solution-design.md) (walking skeleton) · [docs/journeys.md](docs/specs/journeys.md) (J1–J6 + J2b + J-R1-*, thứ tự prompt UI) · [docs/session-brief.md](docs/session-brief.md) |
 
 ---
 

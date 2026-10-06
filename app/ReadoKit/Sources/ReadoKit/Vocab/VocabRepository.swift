@@ -414,7 +414,7 @@ public enum VocabRepository {
     }
 
     /// Gập cho tìm kiếm (khác `normalizedTerm` — khoá so khớp FR-10 giữ dấu). Bỏ dấu + lower +
-    /// đ→d. SQLite NOCASE chỉ gập ASCII (CLAUDE.md §7) nên lọc ở tầng Swift.
+    /// đ→d. SQLite NOCASE chỉ gập ASCII (coding-conventions.md §9) nên lọc ở tầng Swift.
     public static func searchFold(_ s: String) -> String {
         let folded = s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "vi_VN"))
         return folded.replacingOccurrences(of: "đ", with: "d")

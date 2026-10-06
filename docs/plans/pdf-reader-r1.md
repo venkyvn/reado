@@ -252,7 +252,7 @@ Mọi chỗ còn nói "PDF bị cấm" phải sửa. Lệnh kiểm cuối:
 | `docs/specs/solution-design.md` | §7.1 Protocol: thêm `analyzeText`. §8 Capture: thêm mục con "8b PDF (FR-23)" — reader, `PDFPageText`, chấm chất lượng, rơi về OCR. §5 DDL: trỏ db.md bảng thứ 9 |
 | `docs/agent/prompt-spec.md` | Mục mới "3b. Prompt PDF (`Prompt.pdfText`, `pdfVersion`)": khác v6 ở đâu, vì sao ghép gạch nối là ngoại lệ, câu cụt đầu/cuối trang. §8: eval PDF dùng `prompt_eval.py --swift-func pdfText`. §9 Đã chốt: thêm dòng |
 | `docs/research/vocabulary.md` | :852, :1340–1345, :1487 là research cũ, **không viết lại**. Chỉ thêm một dòng "> Đã đảo một phần: ADR-058 (2026-10-04) — PDF đọc tại chỗ là cửa thứ hai" ngay dưới mỗi chỗ |
-| `docs/agent/agent-rulebook.md` | Thêm hàng: "PDF reader, lớp chữ, chấm chất lượng, bookmark → ADR-058 + solution-design §8b + db.md `pdf_sources`" |
+| `CLAUDE.md` §3 (thay `agent-rulebook.md`, đã gộp) | Thêm hàng: "PDF reader, lớp chữ, chấm chất lượng, bookmark → ADR-058 + solution-design §8b + db.md `pdf_sources`" |
 | `ROADMAP.md` | :17 `FR-01..FR-22` → `FR-01..FR-23`. :57 hàng Tombstones: bỏ "NG-07 một input path là ảnh chụp" → "NG-07 EPUB/ebook". Thêm checklist FR-23 (T1–T5 của plan này). Later: đánh dấu trang đã phân tích, lối tắt Home "Đọc tiếp", "Đọc lại bằng OCR", ô mật khẩu PDF, EPUB |
 | `CLAUDE.md` §5 | Thêm "**Chốt thêm 2026-10-04:** đọc PDF trong Reado (FR-23) — đảo NG-07, ADR-058; EPUB vẫn ngoài." Không thêm luật cứng §4 |
 | `docs/session-brief.md` | Hàng đợi: pdf-reader-r1 (T0 xong, T1–T5 chờ) |

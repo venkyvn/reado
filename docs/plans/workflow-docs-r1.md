@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T3 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T4–T11
+> **Trạng thái:** open (2026-10-06) - T1–T4 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T5–T11
 
 ## Vấn đề & bằng chứng
 
@@ -177,6 +177,7 @@ Phụ thuộc:
 - DoD: 0 PROBLEMS; mọi plan ngoài `done/` có dòng 3 đúng format; không còn plan untracked.
 
 ### T4 — `CLAUDE.md`, skill, `app/ReadoKit/CLAUDE.md`
+- ✅ Xong 2026-10-06 (D4a). Bằng chứng: `CLAUDE.md` 13160 → 7143 byte, mọi dòng luật cứng cũ còn (+4 dòng mới), không còn "Chốt thêm"; checker exit 0; `agent-rulebook.md` đã xoá, con trỏ sống ở ROADMAP/pdf-reader-r1 đã sửa (decisions-log, journal, plan done giữ nguyên). **Chưa làm:** bài hỏi 5 câu sau `/clear` và thử kích hoạt skill — cần session mới, fen/agent chạy ở session sau.
 - Files: `CLAUDE.md`, `app/ReadoKit/CLAUDE.md` (mới), `.claude/skills/reado-diagnostics/SKILL.md` (mới), `.claude/skills/reado-ui/SKILL.md`, `docs/agent/agent-rulebook.md` (theo D4), mọi file trỏ tới `agent-rulebook.md`, `app/ReadoKit/Sources/ReadoKit/Vocab/VocabRepository.swift:417` (chỉ comment).
 - Làm:
   - Ghi nguyên văn 4 file ở Phụ lục E (fen đã duyệt nội dung); chỉ sửa khi test dưới fail.
