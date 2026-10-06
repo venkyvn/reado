@@ -1,6 +1,6 @@
 # scripts/verify — kiểm tra docs
 
-Chỉ còn `check-doc-links.mjs`. Các script Phase 0 thời PWA (`verify.mjs`, `ab-compress.mjs`)
+Gồm `check-doc-links.mjs`, `audit.sh` (gom mọi kiểm tra docs/workflow máy kiểm được — `/raudit` chỉ chạy script này; `.claude/hooks/guard.py` chạy nó trước mỗi `git commit`, exit 1 thì commit bị chặn) và `test_guard.py` (bảng case của guard). Khép plan: `scripts/close_plan.sh <id> "<tóm tắt>"`. Các script Phase 0 thời PWA (`verify.mjs`, `ab-compress.mjs`)
 đã xoá — xem `docs/decisions-log.md` (ADR xoá script Phase 0) và `git log -- scripts/verify`.
 
 ## Kiểm tra link docs (`check-doc-links.mjs`)

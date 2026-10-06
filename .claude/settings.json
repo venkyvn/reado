@@ -24,7 +24,14 @@
       "Bash(sed -n *)",
       "Bash(head *)",
       "Bash(tail *)",
-      "Bash(wc *)"
+      "Bash(wc *)",
+      "Bash(scripts/verify/audit.sh)",
+      "Bash(python3 scripts/verify/test_guard.py)",
+      "Bash(scripts/close_plan.sh *)",
+      "Bash(scripts/sim_screens.sh *)",
+      "Bash(python3 scripts/diag_summary.py *)",
+      "Bash(scripts/pull_diagnostics.sh *)",
+      "Bash(git mv *)"
     ],
     "deny": [
       "Read(./DerivedData/**)",
@@ -32,14 +39,19 @@
       "Read(./app/Reado.xcodeproj/project.pbxproj)",
       "Read(./.env)"
     ],
-    "additionalDirectories": ["/tmp"]
+    "additionalDirectories": [
+      "/tmp"
+    ]
   },
   "hooks": {
     "SessionStart": [
       {
         "matcher": "startup|clear|compact",
         "hooks": [
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh" }
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh"
+          }
         ]
       }
     ],
@@ -47,7 +59,10 @@
       {
         "matcher": "Read|Grep|Edit|Write|MultiEdit|Bash",
         "hooks": [
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.py" }
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.py"
+          }
         ]
       }
     ]

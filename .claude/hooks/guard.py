@@ -10,6 +10,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 
 ROOT = os.path.realpath(
@@ -209,6 +210,25 @@ def _search_violation(cmd: str) -> str | None:
     return None
 
 
+def _commit_audit_problems(cmd: str) -> str | None:
+    """`git commit` → chạy scripts/verify/audit.sh; có PROBLEM thì trả danh sách để chặn. Env
+    READO_SKIP_COMMIT_AUDIT chặn đệ quy (audit.sh chạy test_guard.py chạy lại guard này)."""
+    if os.environ.get("READO_SKIP_COMMIT_AUDIT") or not re.search(r"\bgit\s+commit\b", cmd):
+        return None
+    audit = os.path.join(ROOT, "scripts", "verify", "audit.sh")
+    if not os.path.exists(audit):
+        return None
+    try:
+        proc = subprocess.run([audit], cwd=ROOT, capture_output=True, text=True, timeout=120,
+                              env={**os.environ, "READO_SKIP_COMMIT_AUDIT": "1"})
+    except Exception:
+        return None  # audit lỗi hạ tầng thì đừng chặn oan
+    if proc.returncode == 0:
+        return None
+    problems = [l for l in proc.stdout.splitlines() if l.startswith(("PROBLEM:", "audit:"))]
+    return "Không commit được khi audit đỏ (scripts/verify/audit.sh):\n" + "\n".join(problems)
+
+
 def block(msg: str) -> None:
     print(msg, file=sys.stderr)
     sys.exit(2)
@@ -251,6 +271,9 @@ def main() -> None:
         violation = _search_violation(cmd)
         if violation:
             block(violation)
+        audit_problems = _commit_audit_problems(cmd)
+        if audit_problems:
+            block(audit_problems)
         if re.search(r"(^|[;&|]\s*)swift\s+(build|test)\b", cmd):
             block(
                 "Cấm `swift build`/`swift test` (đụng cache ~/Library) — "

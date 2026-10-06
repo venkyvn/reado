@@ -4,6 +4,7 @@
 Mỗi case: (tool, input, exit mong đợi). 0 = cho qua, 2 = chặn. Nguồn: docs/plans/workflow-docs-r1.md Phụ lục B.
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -58,6 +59,7 @@ def run(tool: str, tool_input: dict) -> tuple[int, str]:
         input=json.dumps({"tool_name": tool, "tool_input": tool_input}),
         capture_output=True,
         text=True,
+        env={**os.environ, "READO_SKIP_COMMIT_AUDIT": "1"},  # bảng case không phụ thuộc trạng thái audit
     )
     return p.returncode, p.stderr.strip()
 

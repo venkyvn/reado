@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T9 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T10–T11
+> **Trạng thái:** open (2026-10-06) - T1–T10 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T11
 
 ## Vấn đề & bằng chứng
 
@@ -279,6 +279,7 @@ Phụ thuộc:
 - DoD: fen mở `docs/qa/pending.md` là đi được một lượt kiểm trên máy thật.
 
 ### T10 — Scripts hoá kiểm tra + cổng commit + permission
+- ✅ Xong 2026-10-06. Bằng chứng: `audit.sh` exit 0 trên HEAD sạch (2,8s); plan nháp thiếu dòng 3 → audit exit 1 và `guard.py` trả exit 2 với danh sách PROBLEM cho `git commit`; `close_plan.sh` chạy trên plan nháp: dòng 3 `closed`, vào `done/`, checker exit 0 (plan nháp đã xoá); `test_guard.py` 32/32; allow list thêm 7 lệnh, `git commit` vẫn ngoài allow. Dòng 3 sai/closed ngoài done/untracked là PROBLEM (để cổng chặn được); CLAUDE.md > 7168 byte, journal > 8 dòng, ADR-NEW- trên main là WARN. Vòng token MASTER chỉ quét `app/Reado`, `app/ReadoKit/Sources`, `app/ReadoTests` (quét cả `app/` kẹt vì `.build`). Chưa làm: `.cursor/skills/raudit/SKILL.md` (file local máy NAB, không có trên máy này).
 - Files: `scripts/verify/audit.sh` (mới), `scripts/close_plan.sh` (mới), `.claude/hooks/guard.py`, `.claude/commands/{raudit,rhandoff}.md`, `.claude/settings.json`, `scripts/verify/README.md`. File local trên máy NAB (không track): `.cursor/skills/raudit/SKILL.md`.
 - Làm:
   - `audit.sh` gom bước 1–6 của `/raudit` và thêm:
