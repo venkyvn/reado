@@ -59,8 +59,8 @@ echo
 if [[ -f docs/session-brief.md ]]; then
   SECTION12="$(awk '/^## 1\./{p=1} /^## 3\./{p=0} p' docs/session-brief.md)"
   SIZE12="$(printf '%s' "$SECTION12" | wc -c | tr -d ' ')"
-  if (( SIZE12 > 8192 )); then
-    echo "⚠️ docs/session-brief.md §1–2 đã ${SIZE12} byte (ngân sách ~8192) — gọn lại, chuyển nội dung khớp sang docs/journal/ (xem /raudit)."
+  if (( SIZE12 > 3072 )); then
+    echo "⚠️ docs/session-brief.md §1–2 đã ${SIZE12} byte (ngân sách 3072) — gọn lại: mỗi plan một dòng ở §1, việc xem tay sang docs/qa/pending.md (xem /raudit)."
     echo
   fi
   echo "$SECTION12"

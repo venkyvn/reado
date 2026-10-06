@@ -1,6 +1,6 @@
 # Plan: workflow-docs-r1 — sửa bằng chứng test, workflow Claude Code, scripts và docs cho agent
 
-> **Trạng thái:** open (2026-10-06) - T1–T8 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T9–T11
+> **Trạng thái:** open (2026-10-06) - T1–T9 xong; D1–D9 theo phương án "khuyên" (D6 bỏ qua), đang làm tiếp T10–T11
 
 ## Vấn đề & bằng chứng
 
@@ -260,6 +260,7 @@ Phụ thuộc:
 - DoD: `ROADMAP.md` ≤ khoảng 45KB; `prd.md` nhẹ đi khoảng 15KB; doc sống không còn mô tả proxy như hiện hành.
 
 ### T9 — Tách brief: chờ quyết và nợ xem tay
+- ✅ Xong 2026-10-06. Bằng chứng: brief §1–2 7807 → 1943 byte (ngân sách hook + `/raudit` đã hạ 8192 → 3072); `docs/qa/pending.md` có QA-09…QA-16e + QA-V1..V3 + bảng ánh xạ `§2.N → ID`; brief §2 còn 6 `OW-NN` (01, 03, 06, 10, 12, 13); grep `§2.N` trên file sống (trừ journal/done/pending) ra 0; checker exit 0; `/rhandoff` bước 3 rút còn plan + journal ≤ 5 dòng, brief/ROADMAP chỉ khi đổi. Plan `ocr-quality-r1` đã dùng `OW-12`.
 - Files: `docs/session-brief.md`, `docs/qa/pending.md` (mới), `.claude/commands/rhandoff.md`, ngân sách trong `.claude/hooks/session-context.sh` và `.claude/commands/raudit.md`, các plan và ROADMAP đang trỏ `§2.N`.
 - Làm:
   - `docs/qa/pending.md`: mỗi nợ xem tay là một mục `QA-NN`, giữ số cũ (§2.9 thành QA-09). Dạng `- [ ] QA-15a — <việc> · máy: sim/thật · plan: <đường dẫn>`. Đầu file có bảng ánh xạ `§2.N → QA-NN/OW-NN`; không sửa journal hay plan đã đóng.
